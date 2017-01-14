@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v11.1d_2016-08-31/LGPL Deployment (2016-08-31)
+  Version v11.0p_2017-01-14/LGPL Deployment (2017-01-14)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -39,9 +39,9 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
 
-if (window.isc && isc.version != "SNAPSHOT_v11.1d_2016-08-31/LGPL Deployment" && !isc.DevUtil) {
+if (window.isc && isc.version != "v11.0p_2017-01-14/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v11.1d_2016-08-31/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'v11.0p_2017-01-14/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -607,6 +607,8 @@ makeButton : function (properties, a,b,c,d) {
         properties = isc.addProperties({}, properties, this.getCloseIconProperties(properties, canClose));
     properties.locatorParent = this.parentElement;
 
+    if (properties._autoAssignedID) delete properties.ID;
+
     return this.invokeSuper("TabBar", "makeButton", properties, a,b,c,d);
 },
 
@@ -635,7 +637,6 @@ getCloseIconProperties : function(properties, canClose) {
 addTabs : function (tabs, position) {
     if (!position && this.tabBarPosition == isc.Canvas.LEFT) position = 0;
     this.addButtons(tabs, position);
-
     if (isc.Browser.isSGWT) this._clearSgwtTabReferences();
 
     // Hide any new buttons that belong on "more" tab and show "more" if needed
@@ -722,7 +723,7 @@ draw : function (a,b,c,d) {
     // the setSelected() behavior to bring the selected tab in front of the baseLine
     if (selectedTab) {
 
-        selectedTab.setSelected(true);
+        if (selectedTab.setSelected) selectedTab.setSelected(true);
     }
 },
 
@@ -1032,6 +1033,29 @@ scrollForward : function (animated) {
 
 scrollBack : function (animated) {
     this._scrollForward(true, animated);
+},
+
+// If there is an "add icon", it counts as a tab. But if we have that
+// icon we cannot consider a valid position any beyond that point.
+dragReorderMove : function () {
+    var currentPosition = this.getDropPosition();
+    var firstInvalidPos = this.canAddTabs ? this.tabs.length - 1 : this.tabs.length;
+    if (this.canAddTabs && currentPosition >= firstInvalidPos) {
+        return this.ns.EH.STOP_BUBBLING;
+    }
+
+    return this.Super("dragReorderMove", arguments);
+},
+
+// If there is an "add icon", it counts as a tab. But if we have that
+// icon we cannot consider a valid position any beyond that point.
+dragReorderStop : function () {
+    var currentPosition = this.dragCurrentPosition;
+    var firstInvalidPos = this.canAddTabs ? this.tabs.length - 1 : this.tabs.length;
+    if (this.canAddTabs && currentPosition > firstInvalidPos) {
+        return this.ns.EH.STOP_BUBBLING;
+    }
+    return this.Super("dragReorderStop", arguments);
 }
 
 });
@@ -1054,7 +1078,6 @@ scrollBack : function (animated) {
 // at simple prompts and confirmations, such as buttons with default actions, and single-method
 // +link{classMethod:isc.warn(),shortcuts} for common application dialogs.
 //
-// @inheritsFrom Layout
 // @treeLocation Client Reference/Layout
 // @visibility external
 //<
@@ -1319,7 +1342,7 @@ isc.Window.addProperties({
 
     modalMaskConstructor: "ScreenSpan",
 
-    //>    @attr    window.autoCenter        (Boolean : autoCenter : [IRW])
+    //>    @attr    window.autoCenter        (Boolean : false : [IRW])
     //      If true, this Window widget will automatically be centered on the page when shown.
     //      If false, it will show up in the last position it was placed (either programmatically,
     //      or by user interaction).
@@ -3732,14 +3755,14 @@ show : function (a,b,c,d) {
     }
 
     if (this._shouldAutoFocus()) {
-        this.focusAtEnd(true);
+        // see the doc in shouldAutoFocus()
+        this.focusInNextTabElement();
     }
 
 },
 
-// internal attribute to determine whether Window.show() will attempt to focus on the first
-// focusable entry in the Window.
-// It seems like it's always appropriate to do that, but base it on a flag just in case - checked
+// internal attribute to determine whether Window.show() will call focusInNextTabElement() - it
+// seems like it's always appropriate to do that, but base it on a flag just in case - checked
 // in _shouldAutoFocus()
 //autoFocus: null,
 
@@ -7938,7 +7961,6 @@ isc.defineClass("PortalLayout", "Layout").addProperties({
 // </pre>
 // </smartgwt>
 //
-//  @inheritsFrom Window
 //  @treeLocation Client Reference/Control
 //  @visibility external
 //<
@@ -9233,7 +9255,7 @@ isc.addGlobal("say", function (message, callback, properties) {
 //>    @classMethod    isc.ask()
 // Show a modal dialog with a message, icon, and "Yes" and "No" buttons. See +link{dialog.askIcon}.
 // <P>
-// The callback will receive boolean true for an OK button click, boolean false for a No button
+// The callback will receive boolean true for a Yes button click, boolean false for a No button
 // click, or null if the Dialog is dismissed via the close button.
 //
 //    @param    message            (string)    message to display
@@ -10181,6 +10203,7 @@ isc.MultiSortPanel.addProperties({
     levelUpButtonDefaults: {
         _constructor: "ImgButton",
         src: "[SKINIMG]common/arrow_up.gif",
+        height: 22,
         width: 20,
         imageType: "center",
         showDisabled: false,
@@ -10211,6 +10234,7 @@ isc.MultiSortPanel.addProperties({
     levelDownButtonDefaults: {
         _constructor: "ImgButton",
         src: "[SKINIMG]common/arrow_down.gif",
+        height: 22,
         width: 20,
         imageType: "center",
         showDisabled: false,
@@ -11084,7 +11108,6 @@ isc.MultiSortDialog.addMethods({
 // <code>pane</code> property which will be displayed in the main pane when that tab is
 // selected.
 //
-//  @inheritsFrom Canvas
 //  @treeLocation Client Reference/Layout
 //  @visibility external
 //<
@@ -11326,7 +11349,7 @@ isc.TabSet.addProperties({
 
     //> @attr tab.enableWhen (AdvancedCriteria : null : IR)
     // Criteria to be evaluated to determine whether this Tab should be enabled.  Re-evaluated
-    // whenever data in the +link{tab.ruleScope} changes.
+    // whenever data in the +link{canvas.ruleScope, tab.ruleScope} changes.
     // <P>
     // It works the same as +link{canvas.enableWhen}
     //
@@ -12553,6 +12576,9 @@ makeTabBar : function () {
         // the tabSet should manage the tabs and call the appropriate actions on the tabBar.
         tabs:tabs,
 
+        // Passes in the user-specified value for canAddTabs
+        canAddTabs: this.canAddTabs,
+
         align:this.tabBarAlign,
 
         // tabBar is set vertical or not depending on the value of tabBarPosition.
@@ -13326,7 +13352,7 @@ reorderTab : function (tab, moveToPosition) {
         if (this.editProxy) this.editProxy.reorderTabsEditModeExtras(index, moveToPosition);
         //<EditMode
 
-        this.tabsReordered();
+        this.tabsReordered(tab, moveToPosition);
     }
 
 },
@@ -13465,7 +13491,7 @@ getTabObject : function (tab) {
 // implementation.
 //
 // @param    tab   (int | ID | name | Canvas)
-// @return (Tab) the tab Canvas, or null if not found or TabSet not drawn yet
+// @return (StatefulCanvas) the tab Canvas, or null if not found or TabSet not drawn yet
 //
 // @visibility external
 //<
@@ -14693,7 +14719,7 @@ parentVisibilityChanged : function (newVisibility, a,b,c,d) {
 },
 
 // documented where the string method is registered
-tabsReordered : function () {},
+tabsReordered : function (tabCanvas, tabIndex) {},
 
 // Adding tabs
 // ----------------------------------------------------------------------------------------
@@ -14776,10 +14802,12 @@ isc.TabSet.registerStringMethods({
     showTabContextMenu : "tabSet,tab",
 
     //> @method tabSet.tabsReordered
-    // Noficiation method executed when one or more tabs in the TabSet are reordered.
+    // Notification method executed when one or more tabs in the TabSet are reordered.
+    // @param tabCanvas (StatefulCanvas) the live Canvas representing the tab that was moved
+    // @param tabIndex (Integer) the new index of the tab in the tabSet
     // @visibility external
     //<
-    tabsReordered : ""
+    tabsReordered : "tabCanvas,tabIndex"
 
 });
 
@@ -14824,7 +14852,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v11.1d_2016-08-31/LGPL Deployment (2016-08-31)
+  Version v11.0p_2017-01-14/LGPL Deployment (2017-01-14)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v11.1d_2016-08-31/LGPL Deployment (2016-08-31)
+  Version v11.0p_2017-01-14/LGPL Deployment (2017-01-14)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -89,15 +89,15 @@ isc._start = new Date().getTime();
 
 // versioning - values of the form ${value} are replaced with user-provided values at build time.
 // Valid values are: version, date, project (not currently used)
-isc.version = "SNAPSHOT_v11.1d_2016-08-31/LGPL Deployment";
-isc.versionNumber = "SNAPSHOT_v11.1d_2016-08-31";
-isc.buildDate = "2016-08-31";
+isc.version = "v11.0p_2017-01-14/LGPL Deployment";
+isc.versionNumber = "v11.0p_2017-01-14";
+isc.buildDate = "2017-01-14";
 isc.expirationDate = "";
 
-isc.scVersion = "11.1d";
-isc.scVersionNumber = "11.1";
-isc.sgwtVersion = "6.1d";
-isc.sgwtVersionNumber = "6.1";
+isc.scVersion = "11.0p";
+isc.scVersionNumber = "11.0";
+isc.sgwtVersion = "6.0p";
+isc.sgwtVersionNumber = "6.0";
 
 // these reflect the latest stable version relative to the branch from which this build is
 // created.  So for example for 11.0d/6.0d, this will be 10.1/5.1.  But for 10.0/5.0 this will
@@ -2617,20 +2617,17 @@ addHistoryEntry : function (historyId, title, data) {
 
 
     // clean up the history stack if the ID of the current URL isn't at the top of the stack.
-    var currentId = this._lastHistoryId;
+    var currentId = this._getHistory(location.href);
 
     // if no data was passed in, store explicit null rather than leaving undefined
     // we use this to detect that this was a registered history entry (this session)
     var undef;
     if (data === undef) data = null;
 
-    // disallow sequentual duplicate entries
-    if (currentId == historyId) {
-        // treat it as overwrite of data
-        if (this.historyState.data.hasOwnProperty(historyId)) {
-            this.historyState.data[historyId] = data;
-            this._saveHistoryState();
-        }
+    // disallow sequentual duplicate entries - treat it as overwrite of data
+    if (currentId == historyId && this.historyState.data.hasOwnProperty(historyId)) {
+        this.historyState.data[historyId] = data;
+        this._saveHistoryState();
         return;
     }
 
@@ -2661,34 +2658,31 @@ addHistoryEntry : function (historyId, title, data) {
 
     this._saveHistoryState();
 
-    if (this.usePushState) {
-        window.history.pushState(historyId, '', this._addHistory(location.href, historyId));
-    } else {
-        if (isc.Browser.isIE) {
-            if (historyId != null && document.getElementById(historyId) != null) {
-                this.logWarn("Warning - attempt to add synthetic history entry with id that conflicts"
-                             +" with an existing DOM element node ID - this is known to break in IE");
-            }
-
-            // navigate the iframe forward
-            //
-
-            // if this is the very-first synthetic history entry, add an extra entry for the
-            // current URL
-            if (currentId == null) {
-                // the title for this first entry is the title of this page - which is the <title>
-                // if there's one on the page, or, failing that, the href of the page.
-                var initTitle = location.href;
-                var docTitle = document.getElementsByTagName("title");
-                if (docTitle.length) initTitle = docTitle[0].innerHTML;
-                this._iframeNavigate("_isc_H_init", initTitle);
-            }
-            this._iframeNavigate(historyId, title);
-        } else {
-            // Moz/FF
-            // update the visible URL (this actually creates the history entry)
-            location.href = this._addHistory(location.href, historyId);
+    if (isc.Browser.isIE) {
+        if (historyId != null && document.getElementById(historyId) != null) {
+            this.logWarn("Warning - attempt to add synthetic history entry with id that conflicts"
+                        +" with an existing DOM element node ID - this is known to break in IE");
         }
+
+        // navigate the iframe forward
+        //
+
+        // if this is the very-first synthetic history entry, add an extra entry for the
+        // current URL
+        if (currentId == null) {
+            // the title for this first entry is the title of this page - which is the <title>
+            // if there's one on the page, or, failing that, the href of the page.
+            var initTitle = location.href;
+            var docTitle = document.getElementsByTagName("title");
+            if (docTitle.length) initTitle = docTitle[0].innerHTML;
+            this._iframeNavigate("_isc_H_init", initTitle);
+        }
+        this._iframeNavigate(historyId, title);
+    } else {
+        // Moz/FF
+        // update the visible URL (this actually creates the history entry)
+        location.href = this._addHistory(location.href, historyId);
+        this._lastHistoryId = historyId;
     }
     this._lastURL = location.href;
 
@@ -2698,7 +2692,6 @@ addHistoryEntry : function (historyId, title, data) {
         setTimeout(this._finishAddingHistoryEntry, 0);
     }
     this._finishAddingHistoryEntryTEAScheduled = true;
-    this._lastHistoryId = historyId;
 },
 
 _finishAddingHistoryEntry : function () {
@@ -2759,12 +2752,6 @@ _getIsomorphicDir : function () {
     return window.isomorphicDir ? window.isomorphicDir : "../isomorphic/";
 },
 
-// prefer pushState if browser supports it and not explicitly disabled
-usePushState: window.history != null && window.history.pushState != null && window.isc_history_usePushState !== false,
-// valid values: 'queryParam', 'hashFragment'
-pushStateMode: "hashFragment",
-pushStateQueryParamName: "hid",
-
 // this method is called before pageLoad at the end of this file
 _init : function () {
     this.logInfo("History initializing");
@@ -2805,15 +2792,10 @@ _init : function () {
     // get the form auto-fill data out.
     if (isc.Browser.isIE) {
         isc.SA_Page.onLoad(function () { this._completeInit() }, this);
-    } else {
+    } else if (isc.Browser.isMoz || isc.Browser.isOpera || (isc.Browser.isSafari && isc.Browser.safariVersion >= 500)) {
+        // in Moz, the form auto-fill values are available synchronously right after
+        // document.write(), but in IE the values are not present until page load.
         this._completeInit();
-    }
-
-    if (this.usePushState) {
-        this._initialURL = location.href;
-        window.onpopstate = function (event) {
-            isc.History._fireHistoryCallback(event.state);
-        }
     }
 },
 
@@ -2902,10 +2884,7 @@ _completeInit : function () {
     // and also use anchors on the page.  User hits an anchor, hits back, and all animations
     // stop. Nice one guys.
     this._lastURL = location.href;
-    if (!this.usePushState) {
-        // no need to poll if we have pushState support
-        this._historyTimer = window.setInterval("isc.History._statHistory()", this._historyStatInterval);
-    }
+    this._historyTimer = window.setInterval("isc.History._statHistory()", this._historyStatInterval);
 
     // fire the initial history callback here
     // Note In IE we use an IFRAME to track state across page transitions.
@@ -2918,7 +2897,12 @@ _completeInit : function () {
     // In this second case we'll essentially get two calls to the history callback method.
     // We catch this by simply suppressing firing the history callback twice in a row with the
     // same history entry ID.
-    isc.SA_Page.onLoad(this._fireInitialHistoryCallback, this);
+
+    if (isc.Browser.isIE || isc.Browser.isMoz || isc.Browser.isOpera ||
+        (isc.Browser.isSafari && isc.Browser.safariVersion >= 500))
+    {
+        isc.SA_Page.onLoad(this._fireInitialHistoryCallback, this);
+    }
 },
 
 _fireInitialHistoryCallback : function () {
@@ -2941,32 +2925,13 @@ _fireInitialHistoryCallback : function () {
 // encoded/decoded by these.
 
 _addHistory : function (url, historyId) {
-    if (this.usePushState && this.pushStateMode == "queryParam") {
-        url = this._initialURL;
-        var paramName = this.pushStateQueryParamName;
-        if (new RegExp("(\\?|&)"+paramName+"=").test(url)) {
-            // already contains this query param - overwrite value
-            url = url.replace(new RegExp("(\\?|&)"+paramName+"=(.*?)(&|$)"), "$1"+paramName+"="+encodeURIComponent(historyId)+"$3");
-        } else {
-            url += (url.contains("?") ? "&" : "?") + encodeURIComponent(paramName)+"="+encodeURIComponent(historyId);
-        }
-        return url;
-    } else {
-        var match = url.match(/([^#]*).*/);
-        return match[1]+"#"+encodeURI(historyId);
-    }
+    var match = url.match(/([^#]*).*/);
+    return match[1]+"#"+encodeURI(historyId);
 },
 
 _getHistory : function (url) {
-    if (this.usePushState && this.pushStateMode == "queryParam") {
-        url = this._initialURL;
-        var paramName = this.pushStateQueryParamName;
-        var match = new RegExp("(\\?|&)"+paramName+"=(.*?)(&|$)").exec(url);
-        return match ? decodeURIComponent(match[2]) : null;
-    } else {
-        var match = location.href.match(/([^#]*)#(.*)/);
-        return match ? decodeURIComponent(match[2]) : null;
-    }
+    var match = location.href.match(/([^#]*)#(.*)/);
+    return match ? decodeURI(match[2]) : null;
 },
 
 
@@ -3111,7 +3076,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v11.1d_2016-08-31/LGPL Deployment (2016-08-31)
+  Version v11.0p_2017-01-14/LGPL Deployment (2017-01-14)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

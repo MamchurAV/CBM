@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v11.1d_2016-08-31/LGPL Deployment (2016-08-31)
+  Version v11.0p_2017-01-14/LGPL Deployment (2017-01-14)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -39,13 +39,6223 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
 
-if (window.isc && isc.version != "SNAPSHOT_v11.1d_2016-08-31/LGPL Deployment" && !isc.DevUtil) {
+if (window.isc && isc.version != "v11.0p_2017-01-14/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v11.1d_2016-08-31/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'v11.0p_2017-01-14/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
 }
+
+
+
+
+
+//> @interface List
+// An interface for an ordered collection of items.
+// <P>
+// This is the interface that is expected by list-oriented display components such as the
+// ListGrid.  The JavaScript native Array object is retrofitted to support the List interface.
+// Also, a valid List can be created by mixing the List interface into any class that supports:
+// <ul>
+// <li> for read-only support: get(position), getLength()
+// <li> for modifiable support: set(position), addAt(object, position), removeAt(position)
+// </ul>
+// <P>
+// NOTE: this interface is compatible with the java.util.List interface, except that:
+// <ul>
+// <li> for removal by index, removeAt() must be called instead of remove().  In Java, remove()
+// is an overloaded method that takes either an int or Object, whereas in JavaScript, a
+// Number is an Object.
+// <li> Iterators don't exist.
+// </ul>
+// Some methods from the Java List interface have been omitted from the documentation to avoid
+// redundancy.
+//
+// @treeLocation Client Reference/System
+// @visibility external
+//<
+isc.ClassFactory.defineInterface("List");
+
+// Read-only
+// --------------------------------------------------------------------------------------------
+// - basics that must be implemented
+//   "get", "getLength",
+//
+// - routines that can be implemented in terms of basics
+//   - trivial routines
+//     "isEmpty", "itemIsPresent", "rangeIsPresent", "first", "last",
+//   - routines to consider for a custom implementation for performance
+//     "indexOf", "lastIndexOf", "contains", "containsAll", "intersect",
+//     "getItems", "getRange", "duplicate",
+
+// Modification
+// --------------------------------------------------------------------------------------------
+// - basics that must be implemented
+//   "set", "addAt", "removeAt",
+//   - NOTE: technically, set() and setLength() are sufficient as a minimal interface, however,
+//     this means that addAt() and removeAt() would need to be implemented by
+//     lengthening/shortening the List and then setting every slot beyond the modified point,
+//     which seems like a very silly default implementation.
+
+// - routines that can be implemented in terms of basics
+//   - trivial routines
+//     "add", "addList",
+//   - routines to consider for a custom implementation for performance
+//      "setLength", "addListAt", "remove", "removeList", "sort", "sortByProperty"
+
+//   - notifications
+//     "dataChanged", "_startChangingData", "_doneChangingData",
+
+
+
+
+isc.List.addInterfaceMethods({
+
+init : function () {
+    if (!this.data) this.data = [];
+},
+
+// --------------------------------------------------------------------------------------------
+// Read-only Interface
+// --------------------------------------------------------------------------------------------
+
+// Basics that must be implemented
+// --------------------------------------------------------------------------------------------
+
+//> @method     list.get()
+// Return the item at a particular position
+// @group access
+//
+// @param pos (Number) position of the element to get
+// @return    (object) whatever's at that position, or <code>undefined</code> if not found
+//
+// @visibility external
+//<
+// expected to be implemented by target
+
+//>    @method        list.getLength()
+// Return the number of items in this list
+//
+// @group access
+//
+//        @return    (Number)    number of items in the list
+// @visibility external
+//<
+// expected to be implemented by target
+
+// Implementable in terms of basics
+// --------------------------------------------------------------------------------------------
+
+//>    @method        list.isEmpty()
+// Return whether or not this array is empty
+//
+// @group access
+//        @return    (boolean)    true == this array is empty, false == some items in the array
+// @visibility external
+//<
+// [stolen from Array]
+
+//>    @method        list.first()
+// Return the first item in this list
+//
+// @group access
+//        @return    (any)    first item in the list
+// @visibility external
+//<
+first : function () {
+    return this.get(0);
+},
+
+//>    @method        list.last()
+// Return the last item in this list
+//
+// @group access
+//        @return    (any)    last item in the list
+// @visibility external
+//<
+last : function () {
+    return this.get(this.getLength()-1);
+},
+
+// Below might need custom implementations for performance
+// --------------------------------------------------------------------------------------------
+
+//>    @method        list.indexOf()
+// Return the position in the list of the first instance of the specified object.
+// <p>
+// If pos is specified, starts looking after that position.
+// <p>
+// Returns -1 if not found.
+//
+// @group access
+//        @param    obj         (any)        object to look for
+//        @param    [pos]     (number)    earliest index to consider
+//        @param    [endPos] (number)    last index to consider
+//
+//        @return    (number)            position of the item, if found, -1 if not found
+// @visibility external
+//<
+indexOf : function (obj, pos, endPos) {
+    // normalize position to the start of the list
+    if (pos == null) pos = 0;
+    if (endPos == null) endPos = this.getLength() - 1;
+
+    for (var i = pos; i <= endPos; i++) {
+        if (this.get(i) == obj) return i;
+    }
+
+    // not found -- return the not found flag
+    return -1;
+},
+
+//>    @method        list.lastIndexOf()
+// Return the position in the list of the last instance of the specified object.
+// <p>
+// If pos is specified, starts looking before that position.
+// <p>
+// Returns -1 if not found.
+//
+// @param    obj        (any)        object to look for
+// @param    [pos]     (number)    last index to consider
+// @param    [endPos] (number)    earliest index to consider
+//
+// @return    (number)            position of the item, if found, -1 if not found
+//
+// @group access
+// @visibility external
+//<
+lastIndexOf : function (obj, pos, endPos) {
+    // normalize position to the end of the list
+    if (pos == null) pos = this.getLength() - 1;
+    if (endPos == null) endPos = 0;
+
+    for (var i = pos; i >= endPos; i--)
+        if (this.get(i) == obj) return i;
+
+    // not found -- return the not found flag
+    return -1;
+},
+
+//>    @method        list.findIndex()
+// Find the index of the first Object where property == value in the object.
+// <P>
+// Pass an Object instead to match multiple properties.
+// <P>
+// Note: for string values, matches are case sensitive.
+//
+// @param propertyName (String or Object or AdvancedCriteria) property to match, or if an Object is passed, set of
+//                                        properties and values to match
+// @param [value] (any) value to compare against (if propertyName is a string)
+// @return (int) index of the first matching Object or -1 if not found
+//
+// @group access, find
+// @visibility external
+//<
+// [stolen from Array]
+
+//>    @method        list.findNextIndex()
+// Like +link{findIndex()}, but inspects a range from <code>startIndex</code> to <code>endIndex</code>.
+// <smartclient>
+// <p>
+// For convenience, findNextIndex() may also be called with a function (called the predicate
+// function) for the <code>propertyName</code> parameter. In this usage pattern, the predicate
+// function is invoked for each value of the list until the predicate returns a true value.
+// The predicate function is passed three parameters: the current value, the current index, and
+// the list. The value of <code>this</code> when the predicate function is called is the
+// <code>value</code> parameter. For example:
+// <pre>var currentUserRecord = recordList.findNextIndex(0, function (record, i, recordList) {
+//    if (record.username == currentUsername && !record.accountDisabled) {
+//        return true;
+//    }
+//});</pre>
+// </smartclient>
+//
+// @param startIndex (int) first index to consider.
+// @param propertyName (String or Function or Object or AdvancedCriteria) property to match;
+// <smartclient>or, if a function is passed, the predicate function to call;</smartclient>
+// or, if an object is passed, set of properties and values to match.
+// @param [value] (any) value to compare against (if <code>propertyName</code> is a string)
+// <smartclient>or the value of <code>this</code> when the predicate function is invoked (if
+// <code>propertyName</code> is a function)</smartclient>
+// @param [endIndex] (int) last index to consider (inclusive).
+// @return (int) index of the first matching value or -1 if not found.
+// @group access, find
+// @visibility external
+//<
+
+findNextIndex : function (start, property, value, endPos, getContext) {
+    var length = this.getLength();
+    if (start == null) start = 0;
+    else if (start >= length) return -1;
+    if (endPos == null) endPos = length - 1;
+    if (property == null) return -1;
+
+    if (isc.isA.String(property)) {
+        // single property to match
+        for (var i = start; i <= endPos; i++) {
+            var item = this.get(i, getContext);
+            if (item && item[property] == value) return i;
+        }
+        // return -1 if we didn't find the object
+        return -1;
+
+    } else if (isc.isA.Function(property)) {
+        var predicate = property,
+            thisArg = value;
+        for (var i = start; i <= endPos; i++) {
+            value = this.get(i, getContext);
+            if (predicate.call(thisArg, value, i, this)) return i;
+        }
+        return -1;
+
+    } else {
+        // "property" is an object specifying a set of properties to match
+        return this.findNextMatch(property, start, endPos);
+    }
+},
+
+//>    @method list.find()
+// Like +link{findIndex()}, but returns the object itself instead of its index.
+//
+// @param propertyName (String or Object or AdvancedCriteria) property to match, or if an Object is passed, set of
+//                                        properties and values to match
+// @param [value] (any) value to compare against (if propertyName is a string)
+// @return (Object) first matching object or null if not found
+//
+// @group access, find
+// @visibility external
+//<
+// [stolen from Array]
+
+//>    @method list.findAll()
+// Find all objects where property == value in the object.
+// <P>
+// Pass an Object as the <code>propertyName</code> argument to match multiple properties.
+//
+// @param propertyName (String or Object or AdvancedCriteria) property to match, or if an Object is passed, set of
+//                                        properties and values to match
+// @param [value] (any) value to compare against (if propertyName is a string)
+// @return (Array) all matching Objects or null if none found
+//
+// @group access, find
+// @visibility external
+//<
+findAll : function (property, value) {
+
+    if (property == null) return null;
+
+    if (isc.isA.String(property)) {
+        var matches = null,
+            l = this.getLength()
+        ;
+        // single property to match
+        for (var i = 0; i < l; i++) {
+            var item = this.get(i);
+            if (item && item[property] == value) {
+                if (matches == null) matches = [];
+                matches.add(item);
+            }
+        }
+        return matches;
+    } else {
+        // "property" is an object specifying a set of properties to match
+        return this.findAllMatches(property);
+    }
+},
+
+//>    @method        list.contains()
+// Return if this list contains the specified object.
+// <P>
+// If pos is specified, starts looking after that position.
+//
+// @group access
+//        @param    obj        (any)        item to look for
+//        @param    [pos]    (number)    optional position in the list to look after
+//
+//        @return    (boolean)    true == item was found, false == not found
+// @visibility external
+//<
+// [stolen from Array]
+
+//> @method     list.containsAll()
+// Return whether this list contains all the item in the specified list.
+//
+// @group access
+//      @param list     (List)      items to look for
+//      @return (boolean)   whether all items were found
+// @visibility external
+//<
+// [stolen from Array]
+
+//>    @method        list.intersect()
+// Return the list of items that are in both this list and the passed-in list(s).
+//
+//        @group    arrayMath
+//
+//        @param    lists    (all List arguments)        lists to intersect with
+//        @return    (List)    intersection
+// @visibility external
+//<
+// [stolen from Array]
+
+//> @method     list.equals()
+// Return whether this list is equal to another list.
+// <P>
+// Two lists are equal only if they have the same length and all contained items are in the same
+// order and are also equal.
+//
+// @group access
+//      @param list     (List)      list to check for equality
+//      @return (boolean)   whether the specified list is equal to this list
+// @visibility external
+//<
+// [stolen from Array]
+
+//>    @method        list.getItems()
+// Return the items at a list of specified positions.
+//
+// @group access
+//        @param    itemList    (List of Number)        array of positions
+//
+//        @return    (array)        subset of the array, in the same order as itemList
+// @visibility external
+//<
+// [stolen from Array]
+
+//>    @method        list.getRange()
+// Return the items between position start and end, non-inclusive at the end.
+//
+// @group access
+//        @param    start    (number)    start position
+//        @param    end        (number)    end position
+//
+//        @return    (Array)        subset of the array from start -&gt; end-1
+// @visibility external
+//<
+getRange : function (start, end) {
+    if (end == null) end = this.getLength() - 1;
+    var output = [];
+    for (var i = start; i < end; i++) {
+        output[output.length] = this.get(i);
+    }
+    return output;
+},
+
+// see ResultSet.getCachedRow()
+getCachedRow : function (rowNum) { return this.get(rowNum); },
+
+//>    @method        list.duplicate()    (A)
+// Return an Array that is a shallow copy of the list, that is, containing the same items.
+//
+// @group access
+//        @return    (Array)        new array, pointing to the same items
+// @visibility external
+//<
+duplicate : function () {
+    return this.getClass().create().addList(this);
+},
+
+// --------------------------------------------------------------------------------------------
+// Modification Interface
+// --------------------------------------------------------------------------------------------
+
+// Basics that must be implemented
+// --------------------------------------------------------------------------------------------
+
+//> @method     list.set()
+// Change the array element at a particular position.
+// <P>
+// set() can be used to expand the length of the list.
+//
+// @param pos (number) position in the list to change
+// @param obj (object) new value for that position
+// @return    (object) previous value at that position, or <code>undefined</code> if not found
+//
+// @group modification
+// @visibility external
+//<
+// expected to be implemented by target
+
+//>    @method        list.addAt()
+// Add a single item to this array at a specific position in the list, sliding other items over
+// to fit.
+//
+// @group modification
+//        @param        obj    (object)    object to add
+//        @param        pos    (number)    position in the list to add at
+//
+//        @return            (object)    object that was added
+// @visibility external
+//<
+// expected to be implemented by target
+
+//>    @method        list.removeAt()
+// Remove the item at the specified position, rearranging all subsequent items to fill the gap
+//
+// @group modification
+//        @param    pos    (number)    position to remove
+//
+//        @return    (any)    item that was removed
+// @visibility external
+//<
+// expected to be implemented by target
+
+// Implementable in terms of basics
+// --------------------------------------------------------------------------------------------
+
+//>    @method        list.add()
+// Add an object to this list, at the end
+//
+// @group modification
+//        @param    object    (any)    object to add
+//
+//        @return    (any)            pointer to the object passed in
+// @visibility external
+//<
+// As implemented below, if no position is specified, the object will be added to the end of
+// the list.
+// Note that array.add will attempt to preserve sort order if it is currently sorted when
+// add() is called with no explicit position param.
+
+add : function (object, secondArg) {
+    var undef;
+    if (secondArg !== undef) {
+        // support calling as add(object, index)
+        return this.addAt(object, secondArg);
+    }
+    this.addAt(object, this.getLength());
+
+    // return the object that was added
+    return object;
+},
+
+//>    @method        list.addList()
+// Add a list of items to this array.
+// <P>
+// Note: you can specify that a subset range be added by passing start and end indices
+//
+// @group modification
+//        @param    list    (array)        list of items to add
+//        @param    [listStartRow]    (number)    optional start index in list
+//        @param    [listEndRow]    (number)    optional end index in list (non-inclusive)
+//
+//        @return    (list)                list of items that were added
+// @visibility external
+//<
+// [stolen from Array]
+
+// Below might need custom implementations for performance
+// --------------------------------------------------------------------------------------------
+
+//>    @method        list.setLength()
+// Set the length of this list.
+// <P>
+// If the length of the list is shortened, any elements past the new length of the list are removed.
+// If the length is increased, all positions past the old length have the value
+// <code>undefined</code>.
+//
+// @group modification
+//        @param    length    (number)    new length
+// @visibility external
+//<
+setLength : function (length) {
+    this._startChangingData();
+    if (length > this.getLength()) {
+        // pad the list with empty slots
+        var undef;
+        while (length > this.getLength()) this.add(undef);
+    } else {
+        // remove everything beyond the specified length
+        while (length < this.getLength()) this.removeAt(this.getLength()-1);
+    }
+    this._doneChangingData();
+},
+
+// Below methods need to shift indices of all existing items
+// --------------------------------------------------------------------------------------------
+
+//>    @method        list.addListAt()
+// Add list of items list to this array at item pos.  All items after array[pos] will slide down to
+// fit new items.
+//
+// @group modification
+//        @param    list    (array)        new array of items
+//        @param    pos        (number)    position in this list to put the new items
+//
+//        @return    (array)        the list of items that was added
+// @visibility external
+//<
+addListAt : function (list, pos) {
+    this._startChangingData();
+
+    var length = list.getLength();
+    for (var i = 0; i < length; i++) {
+        this.addAt(list.get(i), pos+i);
+    }
+
+    this._doneChangingData();
+
+    // return the list that was added
+    return list;
+},
+
+//>    @method        list.remove()
+// Remove first instance of the passed object from this array, sliding other items around to
+// fill gaps.
+//
+// @group modification
+// @param obj (any) item to remove
+//
+// @return (boolean) true if a matching object was found and removed, false if no matching
+// object was found and the list remains unchanged.
+// @visibility external
+//<
+remove : function (obj) {
+
+    // return removed item, per java.util.List
+    // if (isc.isA.Number(obj)) return this.removeAt(obj);
+
+    var index = this.indexOf(obj);
+    if (index == -1) return false;
+
+    this._startChangingData();
+
+    var length = this.getLength();
+    for (var i = index; i < length; i++) this.set(i, this.get(i+1));
+    this.setLength(length-1);
+
+    this._doneChangingData();
+
+    return true; // indicating object was removed, per java.util.Collection
+},
+
+//>    @method        list.removeList()
+// Remove all instances of objects in the specified list from this list, sliding the remaining
+// objects around to fill gaps.
+//
+// @group modification
+//        @param    list    (array)        list of items to remove
+//
+//        @return    (list)    list of items passed in
+// @visibility external
+//<
+removeList : function (removeList) {
+    if (removeList == null) return null;
+
+    // get ready to change data...
+    this._startChangingData();
+
+    var changed = false;
+    for (var i = 0; i < this.getLength(); i++) {
+        var item = this.get(i);
+
+        // remove the current item and stay at the same position in the list
+        if (removeList.contains(item)) {
+            changed = true;
+            this.removeAt(i);
+            i--;
+        }
+    }
+    this._doneChangingData();
+
+    // return whether the list was changed
+    return removeList;
+},
+
+
+
+//> @method    list.sort()
+// Sorts the elements of the List in place.
+// <P>
+// The optional comparator function should take two parameters "a" and "b" which are the two list
+// items to compare, and should return:
+// <ul>
+// <li> a value less than zero, if "a" is less than "b" such that "a" should appear earlier in the
+//      list
+// <li> zero, if "a" and "b" are equal
+// <li> a value greater than zero, if "a" is greater than "b" such that "b" should appear earlier in
+//      the list
+// </ul>
+//
+//     @param    [comparator]  (function) comparator function to use
+//     @return   (List)                   the list itself
+// @visibility external
+//<
+sort : function (comparator) {
+    // dump all the items to a native Array and sort them
+    var items = this.getRange(0, this.getLength());
+    items.sort(comparator);
+
+    // then set every slot in the current List
+    for (var i = 0; i < items.length; i++) this.set(i, items[i]);
+
+    return this;
+},
+
+//>    @method list.getProperty()
+// Return a new Array where the value of item i is the value of "property" of item i in this
+// array.  If an item doesn't have that property or is null, return item will be null.
+//
+// @param property (string)    name of the property to look for
+//
+// @return (Array) array of the values of property in each item of this list
+// @group iteration
+// @visibility external
+//<
+getProperty : function (property) {
+    var values = [];
+    // then set every slot in the current List
+    for (var i = 0; i < this.getLength(); i++) {
+        var item = this.get(i);
+        values[i] = item != null ? item[property] : null;
+    }
+    return values;
+},
+
+
+//>    @method        list.sortByProperty()
+// Sort a list of objects by a given property of each item.
+// <P>
+// The optional normalizer, if passed as a function, is called for each item in the List, and
+// should return whatever value should be used for sorting, which does not have to agree with
+// the property value. By passing a normalizer function you can achieve any kind of sorting
+// you'd like, including sorting by multiple properties.
+// <P>
+// NOTE: string sort is case INsensitive by default
+//
+//        @group    sorting
+//
+//        @param    property      (string)    name of the property to sort by
+//        @param    up              (boolean)    true == sort ascending, false == sort descending
+//        @param    [normalizer] (function or ValueMap)
+//              May be specified as a function, with signature
+//              <code>normalize(item, propertyName, context)</code>, where <code>item</code> is
+//              a pointer to the item in the array, <code>propertyName</code> is the
+//              property by which the array is being sorted, and <code>context</code> is the
+//              arbitrary context passed into this method. Normalizer function should return
+//              the value normalized for sorting.<br>
+//              May also be specified as a ValueMap which maps property values to sortable values.
+//      @param [context] (any) Callers may pass an arbitrary context into the sort method, which
+//                          will then be made available to the normalizer function
+//      @return (List) the list itself
+//
+// @visibility external
+//<
+sortByProperty : function (property, direction, normalizer, context) {
+    // dump all the items to a native Array and sort them
+    var items = this.getRange(0, this.getLength());
+    items.sortByProperty(property, direction, normalizer, context);
+
+    // then set every slot in the current List
+    for (var i = 0; i < items.length; i++) this.set(i, items[i]);
+
+    return this;
+},
+
+
+//> @method list.getValueMap()
+// Get a map of the form <code>{ item[idField] -&gt; item[displayField] }</code>, for all
+// items in the list.  Note that if more than one item has the same <code>idProperty</code>,
+// the value for the later item in the list will clobber the value for the earlier item.
+//
+// @param idField (string)  Property to use as ID (data value) in the valueMap
+// @param displayField (string) Property to use a display value in the valueMap
+// @return (object) valueMap object
+// @visibility external
+//<
+// imported as part of isc._stealArrayMethods
+
+
+// DataChanged notification
+// --------------------------------------------------------------------------------------------
+
+//>    @method        list.dataChanged()    (A)
+// Method called when this array changes in some way.  Observe the method to react to changes in
+// this list.
+// <P>
+// Note: dataChanged() will only fire when items are added, removed or rearranged.  If a list
+// contains objects, dataChanged() will not fire if changes are made to objects within the list
+// without changing their position within the list.  If an observer of dataChanged() needs to react
+// to such a change, you can manually fire dataChanged() by simply calling it.
+// <P>
+// Note: may be called multiple times as the result of a multi-item add or remove, etc.
+//
+// @group modification
+// @visibility external
+//<
+dataChanged : function () {
+
+    if (this.onDataChanged) this.onDataChanged()
+}
+
+//>    @method        list._startChangingData()    (A)
+//            Internal method to indicate that data will be changed within the context of a function.
+//            Each occurance of a call to this method should be matched with an occurance of
+//            _doneChangingData() -- when they balance, the public dataChanged() method will be called
+//            exactly once.  This lets observers of the dataChanged() method only get called once for
+//            a set of changes.
+//
+//            For example, clearRange() calls clearItem() repeatedly; we don't want each of
+//             these "nested" calls to clearItem to generate a dataChanged message,
+//             (we only want one when clearRange is done).  However, clearItem() when called by
+//             itself (outside of any higher-level operation) *should* call dataChanged when it
+//             is done.
+//
+//<
+// [stolen from Array]
+
+//>    @method        list._doneChangingData()    (A)
+//            Internal method to indicate that we're done changing data in the current scope.
+//            See list._startChangingData()
+//<
+// [stolen from Array]
+
+});
+
+// steal methods from Array
+isc._stealArrayMethods = function () {
+    var methodList = [
+                      // these are internal helpers only
+                      "containsSubstring", "containsAllSubstring", "intersectDates", "intersectSubstring",
+                      // methods that are implemented using only the List API on Array (because
+                      // performance difference doesn't matter)
+                      "isEmpty", "contains", "containsAll", "intersect", "equals",
+                      "getItems", "addList", "getValueMap", "removeEvery",
+                      "_startChangingData", "_doneChangingData", "_isChangingData",
+                      // old ISC backcompat
+                      "getItem", "setItem", "removeItem", "clearAll",
+                      // find
+                      "find", "findIndex", "findAllIndices", "findNextMatch", "findAllMatches", "findByKeys",
+                      // Java.util.List compat
+                      "size", "subList", "addAll", "removeAll", "clear"];
+    // NOTE: applyMask won't work here, since the input is an Array instance, which is
+    // ambiguous with passing an Array full of objects to mask.
+    var methods = {};
+    for (var i = 0; i < methodList.length; i++) {
+        var methodName = methodList[i];
+        methods[methodName] = Array.prototype[methodName];
+    }
+
+    isc.List.addInterfaceMethods(methods);
+}
+isc._stealArrayMethods();
+
+
+// Override isA.List to return true for arrays as well as lists
+// we have to do this here after the List interface has been defined...
+isc.addMethods(isc.isA, {
+//> @classMethod isA.List()
+// Does <code>object</code> implement the  <code>List</code> interface?
+// @param   object  (object)    object to test
+// @return (boolean) <code>true</code> if the object is an Array or belongs to another class that
+//                   implements the <code>List</code> API.
+// @visibility external
+//<
+_$List:"List",
+List : function (object) {
+    if (object == null) return false;
+    if (isc.isA.Array(object)) return true;
+    // standard implementation for objects inheriting from interfaces/classes
+    return object.isA && object.isA(this._$List);
+}
+
+});
+
+
+
+
+//>    @class    Tree
+//
+// A Tree is a data model representing a set of objects linked into a hierarchy.
+// <P>
+// A Tree has no visual presentation, it is displayed by a +link{TreeGrid} or +link{ColumnTree}
+// when supplied as +link{treeGrid.data} or +link{columnTree.data}.
+// <P>
+// A Tree can be constructed out of a List of objects interlinked by IDs or via explicitly
+// specified Arrays of child objects.  See +link{attr:Tree.modelType} for an explanation of how
+// to pass data to a Tree.
+// <P>
+// Typical usage is to call +link{treeGrid.fetchData()} to cause automatic creation of a
+// +link{ResultTree}, which is a type of Tree that automatically handles loading data on
+// demand.  For information on DataBinding Trees, see +link{group:treeDataBinding}.
+//
+// @implements List
+// @treeLocation Client Reference/System
+// @visibility external
+//<
+isc.ClassFactory.defineClass("Tree", null, "List");
+
+// List.getProperty() needs to be explicitly installed because there is a Class.getProperty()
+isc.Tree.addProperties({
+    getProperty : isc.List.getInstanceProperty("getProperty")
+})
+
+//> @groupDef ancestry
+// Parent/child relationships
+//<
+
+//> @groupDef openList
+// Managing the list of currently visible nodes based on the open state of parents
+// <P>
+// This state may move to the TreeGrid
+// @visibility internal
+//<
+
+isc.Tree.addClassProperties({
+
+//>    @type    DisplayNodeType
+//
+// Flag passed to functions as displayNodeType, telling the function whether it should work on
+// folders, leaves or both at once.
+//        @group    ancestry
+// @visibility external
+//
+//    @value    null/unset                      operate on both folders and leaves
+FOLDERS_AND_LEAVES:null,
+//     @value    "folders"                       operate on folders only, ignoring leaves
+FOLDERS_ONLY: "folders",
+//    @value    "leaves"                        operate on leaves only, ignoring folders
+LEAVES_ONLY: "leaves",
+//<
+
+//>    @type    LoadState
+// Trees that dynamically load nodes keep track of whether each node has loaded its children.
+//
+//    @value    isc.Tree.UNLOADED                    children have not been loaded and are not loading
+UNLOADED: "unloaded",
+//    @value    isc.Tree.LOADING                    currently in the process of loading
+LOADING: "loading",
+//    @value    isc.Tree.FOLDERS_LOADED                folders only are already loaded
+FOLDERS_LOADED: "foldersLoaded",
+//    @value    isc.Tree.LOADED                        already fully loaded
+LOADED: "loaded",
+//    @value    isc.Tree.LOADED_PARTIAL_CHILDREN    children form a ResultSet having only a partial
+//                                                cache (applies only to the "paged"
+//                                                +link{resultTree.fetchMode,fetchMode})
+LOADED_PARTIAL_CHILDREN: "loadedPartialChildren",
+// @group loadState
+// @visibility external
+//<
+
+//> @type TreeModelType
+//
+// @value "parent" In this model, each node has an ID unique across the whole tree and a
+// parent ID that points to its parent.  The name of the unique ID property can be specified
+// via +link{attr:Tree.idField} and the name of the parent ID property can be specified via
+// +link{attr:Tree.parentIdField}.  The initial set of nodes can be passed in as a list to
+// +link{attr:Tree.data} and also added as a list later via +link{method:Tree.linkNodes}.
+// Whether or not a given node is a folder is determined by the value of the property specified
+// by +link{attr:Tree.isFolderProperty}.
+// <br><br>
+// The "parent" modelType is best for integrating with relational storage (because nodes can
+// map easily to rows in a table) and collections of Beans and is the model used for DataBound
+// trees.
+PARENT:"parent",
+//
+// @value "children" In this model, nodes specify their children as a list of nodes.  The
+// property that holds the children nodes is determined by +link{attr:Tree.childrenProperty}.
+// Nodes are not required to have an ID that is unique across the whole tree (in fact, no ID is
+// required at all).  Node names (specified by the +link{attr:Tree.nameProperty}, unique within
+// their siblings, are optional but not required.  Whether or not a given node is a folder is
+// determined by the presence of the children list (+link{attr:Tree.childrenProperty}).
+CHILDREN:"children",
+//
+// @visibility external
+//<
+
+//> @type TreeFilterMode
+// Mode for applying criteria to a tree.
+// @value "strict" only nodes that actually match criteria are shown.  If a parent does not
+//                 match the criteria, it will not be shown, even if it has children that do
+//                 match the criteria
+STRICT:"strict",
+// @value "keepParents" parent nodes are kept if they have children which match the criteria,
+//                      or, in a tree with
+//                      +link{resultTree.loadDataOnDemand,loadDataOnDemand:true}, if they have
+//                      not loaded children yet.
+KEEP_PARENTS:"keepParents",
+// @group treeFilter
+// @visibility external
+//<
+
+autoID: 0
+
+});
+
+
+//
+//    add instance defaults to the tree
+//
+isc.Tree.addProperties({
+
+//> @attr tree.modelType (TreeModelType: "children" : IRWA)
+//
+// Selects the model used to construct the tree representation.  See +link{TreeModelType} for
+// the available options and their implications.
+// <P>
+// If the "parent" modelType is used, you can provide the initial parent-linked data set to the
+// tree via the +link{attr:Tree.data} attribute.  If the "children" modelType is used, you can
+// provide the initial tree structure to the Tree via the +link{attr:Tree.root} attribute.
+//
+// @see attr:Tree.data
+// @see attr:Tree.root
+//
+// @visibility external
+// @example nodeTitles
+//<
+modelType: "children",
+
+//> @attr tree.isFolderProperty (String: "isFolder": IRW)
+//
+// Name of property that defines whether a node is a folder.  By default this is set to
+// +link{TreeNode.isFolder}.
+//
+// @see TreeNode.isFolder
+// @visibility external
+//<
+isFolderProperty: "isFolder",
+
+//> @attr tree.defaultIsFolder (boolean : null : IR)
+// Controls whether nodes are assumed to be folders or leaves by default.
+// <P>
+// Nodes that have children or have the +link{isFolderProperty} set to true will be considered
+// folders by default.  Other nodes will be considered folders or leaves by default according
+// to this setting.
+// <p>
+// See also +link{resultTree.defaultIsFolder} for more details on how
+// <code>defaultIsFolder</code> interacts with
+// +link{treeGrid.loadDataOnDemand,loading data on demand}.
+//
+// @visibility external
+//<
+
+//> @attr tree.reportCollisions (Boolean : true : IR)
+// If new nodes are added to a tree with modelType:"parent" which have the same
+// +link{tree.idField,id field value} as existing nodes, the existing nodes are removed when
+// the new nodes are added.
+// <P>
+// If reportCollisions is true, the Tree will log a warning in the developer console about this.
+// <P>
+// Note that if an id collision occurs between a new node and its ancestor, the ancestor will be
+// removed and the new node will not be added to the tree.
+// @visibility external
+//<
+reportCollisions:true,
+
+// Whether to automatically create child -> parent links if modelType is "children"
+// (so children are provided as arrays under the childrenProperty)
+autoSetupParentLinks:true,
+
+//> @attr tree.pathDelim (String : "/" : IRWA)
+//
+// Specifies the delimiter between node names.  The pathDelim is used to construct a unique
+// path to each node. A path can be obtained for any node by calling
+// +link{method:Tree.getPath} and can be used to find any node in the tree by calling
+// +link{method:Tree.find}.  Note that you can also hand-construct a path - in other words
+// you are not required to call +link{method:Tree.getPath} in order to later use
+// +link{method:Tree.find} to retrieve it.
+// <br><br>
+// The pathDelim can be any character or sequence of characters, but must be a unique string
+// with respect to the text that can appear in the +link{attr:Tree.nameProperty} that's used
+// for naming the nodes.  So for example, if you have the following tree:
+// <pre>
+// one
+//   two
+//     three/four
+// </pre>
+// Then you will be unable to find the <code>three/four</code> node using
+// +link{method:Tree.find} if your tree is using the default pathDelim of /.
+// In such a case, you can use a different pathDelim for the tree.  For example if you used |
+// for the path delim, then you can find the <code>three/four</code> node in the tree above by
+// calling <code>tree.find("one|two|three/four")</code>.
+// <br><br>
+// The pathDelim is used only by +link{method:Tree.getPath} and +link{method:Tree.find} and
+// does not affect any aspect of the tree structure or other forms of tree navigation (such as
+// via +link{method:Tree.getChildren}).
+//
+// @see attr:Tree.nameProperty
+// @see method:Tree.find
+// @visibility external
+//<
+pathDelim:"/",
+
+// not documented:
+// parentProperty : always generated, // direct pointer to parent node
+
+treeProperty : "_isc_tree", // internal property pointing back to the origin tree
+
+//>    @attr tree.nameProperty     (string : "name" : IRW)
+//
+// Name of the property on a +link{TreeNode} that holds a name for the node that is unique
+// among its immediate siblings, thus allowing a unique path to be used to identify the node,
+// similar to a file system.  Default value is "name".  See +link{TreeNode.name} for usage.
+//
+// @see TreeNode.name
+// @visibility external
+// @example nodeTitles
+//<
+nameProperty:"name",
+
+//>    @attr tree.titleProperty    (string : "title" : IRW)
+//
+// Name of the property on a +link{TreeNode} that holds the title of the node as it should be
+// shown to the user.  Default value is "title".  See +link{TreeNode.title} for usage.
+//
+// @visibility external
+//<
+titleProperty:"title",
+
+//> @attr tree.idField    (string : "id" : IRA)
+//
+// Name of the property on a +link{TreeNode} that holds an id for the node which is unique
+// across the entire Tree.  Required for all nodes for trees with modelType "parent".
+// Default value is "id".  See +link{TreeNode.id} for usage.
+//
+// @see TreeNode.id
+// @visibility external
+// @example nodeTitles
+//<
+
+//> @attr tree.parentIdField (string : "parentId" : IRA)
+//
+// For trees with modelType "parent", this property specifies the name of the property
+// that contains the unique parent ID of a node.  Default value is "parentId".  See
+// +link{TreeNode.parentId} for usage.
+//
+// @see TreeNode.parentId
+// @visibility external
+// @example nodeTitles
+//<
+
+//>    @attr    tree.childrenProperty    (string : "children" : IRW)
+//
+// For trees with the modelType "children", this property specifies the name of the property
+// that contains the list of children for a node.
+//
+// @see attr:Tree.modelType
+// @visibility external
+// @example childrenArrays
+//<
+childrenProperty:"children",
+
+//>    @attr    tree.openProperty    (string : null : IRWA)
+//
+// The property consulted by the default implementation of +link{Tree.isOpen()} to determine if the
+// node is open or not.  By default, this property is auto-generated for you, but you can set
+// it to a custom value if you want to declaratively specify this state, but be careful - if
+// you display this Tree in multiple TreeGrids at the same time, the open state will not be
+// tracked independently - see +link{group:sharingNodes} for more info on this.
+//
+// @group    openList
+// @see group:sharingNodes
+// @visibility external
+// @example initialData
+//<
+
+//>    @attr    tree.cacheOpenList    (boolean : true : IRWA)
+//        @group    openList
+//            If true, we cache the open list and only recalculate it
+//            if the tree has been marked as dirty.  If false, we get the openList
+//            every time.
+//<
+cacheOpenList:true,
+
+//>    @attr    tree.openListCriteria    (string|function : null : IRWA)
+//        @group    openList
+//            Criteria for whether or not nodes are included in the openList
+//<
+
+
+//> @attr tree.data             (List of TreeNode : null : IR)
+//
+// Optional initial data for the tree. How this data is interpreted depends on this tree's
+// +link{tree.modelType}.
+// <P>
+// If <code>modelType</code> is <code>"parent"</code>, the list that you provide will be passed
+// to +link{method:Tree.linkNodes}, integrating the nodes into the tree.
+// <p>
+// In this case the root node may be supplied explicitly via +link{Tree.root}, or auto generated,
+// picking up its <code>id</code> via +link{Tree.rootValue}. Any nodes in the data with no
+// explicitly specified +link{treeNode.parentId} will be added as children to this root element.
+// <P>
+// To create this tree:
+// <pre>
+// foo
+//   bar
+// zoo
+// </pre>
+// with modelType:"parent", you can do this:
+// <pre>
+// Tree.create({
+//   data: [
+//     {name: "foo", id: "foo"},
+//     {name: "bar", id: "bar", parentId: "foo"},
+//     {name: "zoo", id: "zoo"}
+// });
+// </pre>
+// Or this (explicitly specified root):
+// <pre>
+// Tree.create({
+//   root: {id: "root"},
+//   data: [
+//     {name: "foo", id: "foo", parentId: "root"},
+//     {name: "bar", id: "bar", parentId: "foo"},
+//     {name: "zoo", id: "zoo", parentId: "root"}
+// });
+// </pre>
+// Or this (explicitly specified rootValue):
+// <pre>
+// Tree.create({
+//   rootValue: "root",
+//   data: [
+//     {name: "foo", id: "foo", parentId: "root"},
+//     {name: "bar", id: "bar", parentId: "foo"},
+//     {name: "zoo", id: "zoo", parentId: "root"}
+// });
+// </pre>
+// Specifying the root node explicitly allows you to give it a name, changing the way path
+// derivation works (see +link{Tree.root} for more on naming the root node).
+// <P>
+// For <code>modelType:"children"</code> trees, the data passed in will be assumed to be an
+// array of children of the tree's root node.
+//
+// @see attr:Tree.modelType
+// @see TreeNode
+// @visibility external
+// @example nodeTitles
+//<
+
+//> @attr tree.rootValue             (string|number : null : IR)
+//
+// If you are using the "parent" modelType and did not specify a root node via +link{Tree.root}
+// with an id (+link{Tree.idField}), then you can provide the root node's id via this property.
+// See the example in +link{Tree.data} for more info.
+//
+// @see Tree.data
+// @visibility external
+// @example nodeTitles
+//<
+
+//>    @attr    tree.root        (TreeNode : null : IRW)
+//
+// If you're using the "parent" modelType, you can provide the root node configuration via this
+// property.  If you don't provide it, one will be auto-created for you with an empty name.
+// Read on for a description of what omitting the name property on the root node means for path
+// derivation.
+// <p>
+// If you're using the "children" modelType, you can provide the initial tree data via this
+// property.  So, for example, to construct the following tree:
+// <pre>
+// foo
+//   bar
+// zoo
+// </pre>
+// You would initialize the tree as follows:
+// <smartclient>
+// <pre>
+// Tree.create({
+//     root: { name:"root", children: [
+//         { name:"foo", children: [
+//             { name: "bar" }
+//         ]},
+//         { name: "zoo" }
+//     ]}
+// });
+// </pre>
+// Note that if you provide a <code>name</code> property for the root node, then the path to
+// any node underneath it will start with that name.  So in the example above, the path to the
+// <code>bar</code> node would be <code>root/foo/bar</code> (assuming you're using the default
+// +link{attr:Tree.pathDelim}.  If you omit the name attribute on the root node, then its name
+// is automatically set to the +link{attr:Tree.pathDelim} value.  So in the example above, if
+// you omitted <code>name:"root"</code>, then the path to the <code>bar</code> node would be
+// <code>/foo/bar</code>.
+// </smartclient>
+// <smartgwt>
+// <pre>
+// Tree tree = new Tree();
+// tree.setRoot(
+//     new TreeNode("root",
+//         new TreeNode("foo",
+//             new TreeNode("bar")),
+//         new TreeNode("zoo")
+//     )
+// );
+// </pre>
+// </smartgwt>
+// <br><br>
+// Note: if you initialize a Tree with no <code>root</code> value, a root node will be
+// auto-created for you.  You can then call +link{method:Tree.add} to construct the tree.
+//
+// @see Tree.modelType
+// @see Tree.setRoot()
+//
+// @visibility external
+// @example childrenArrays
+//<
+
+//discardParentlessNodes
+
+//> @attr tree.discardParentlessNodes (Boolean : false : IRA)
+// If this tree has +link{Tree.modelType,modelType:"parent"}, should nodes in the data array for the
+// tree be dropped if they have an explicitly specified value for the +link{attr:Tree.parentIdField}
+// which doesn't match any other nodes in the tree. If set to false these nodes will be added as
+// children of the root node.
+// @visibility external
+//<
+discardParentlessNodes:false,
+
+//> @attr Tree.indexByLevel (boolean : false : IR)
+// If enabled, the tree keeps an index of nodes by level, so that +link{tree.getLevelNodes()}
+// can operate more efficiently
+//<
+indexByLevel: false,
+
+//> @object TreeNode
+//
+// Every node in the tree is represented by a TreeNode object which is an object literal with a
+// set of properties that configure the node.
+// <p>
+// When a Tree is supplied as +link{TreeGrid.data} to +link{TreeGrid}, you can also set
+// properties from +link{ListGridRecord} on the TreeNode (e.g. setting
+// +link{ListGridRecord.enabled}:<code>false</code> on the node).
+//
+// @treeLocation Client Reference/Grids/TreeGrid
+// @treeLocation Client Reference/System/Tree
+// @visibility external
+//<
+
+
+//> @attr treeNode.enabled  (boolean : null : IR)
+// @include ListGridRecord.enabled
+// @visibility external
+//<
+
+//> @attr treeNode.canDrag  (boolean : null : IRA)
+// Governs whether this node can be dragged. Only has an effect if this node is displayed in
+// a +link{TreeGrid} where +link{TreeGrid.canDragRecordsOut}, +link{TreeGrid.canReorderRecords}
+// or +link{TreeGrid.canReparentNodes} is <code>true</code>.
+// @visibility external
+//<
+
+//> @attr treeNode.canAcceptDrop (boolean : null : IRA)
+//
+// Governs whether dragged data (typically other <code>treeNode</code>s) may be dropped over
+// this node. Only has an effect if this node is displayed in a +link{TreeGrid} where
+// +link{TreeGrid.canAcceptDroppedRecords}, +link{TreeGrid.canReorderRecords} or
+// +link{TreeGrid.canReparentNodes} is true.
+//
+// @visibility external
+//<
+
+//> @attr treeNode.isFolder (Boolean or String : null : IR)
+//
+// Set to <code>true</code> or a string that is not equal to (ignoring case)
+// <code>"false"</code> to explicitly mark this node as a folder.  See +link{Tree.isFolder} for
+// a full description of how the +link{Tree} determines whether a node is a folder or not.
+// <p>
+// Note: the name of this property can be changed by setting +link{Tree.isFolderProperty}.
+//
+// @see Tree.isFolderProperty
+// @visibility external
+//<
+
+//> @attr treeNode.name (String : null, but see below : IR)
+//
+// Provides a name for the node that is unique among its immediate siblings, thus allowing a
+// unique path to be used to identify the node, similar to a file system.  See
+// +link{Tree.getPath()}.
+// <p>
+// If the nameProperty is not set on a given node, the +link{TreeNode.id} will be used instead.  If
+// this is also missing, +link{tree.getName()} and +link{tree.getPath()} will auto-generate a
+// unique name for you.  Thus names are not required, but if the dataset you are using already
+// has usable names for each node, using them can make APIs such as +link{tree.find()} more
+// useful.  Alternatively, if your dataset has unique ids consider providing those as
+// +link{TreeNode.id}.
+// <P>
+// If a value provided for the nameProperty of a node (e.g. node.name) is not a
+// string, it will be converted to a string by the Tree via ""+value.
+// <p>
+// This property is also used as the default title for the node (see +link{Tree.getTitle()})
+// if +link{TreeNode.title} is not specified.
+// <p>
+// Note: the name of this property can be changed by setting +link{Tree.nameProperty}.
+//
+// @see Tree.nameProperty
+// @see Tree.pathDelim
+// @see Tree.getPath
+// @see Tree.getTitle
+// @visibility external
+//<
+
+//> @attr treeNode.title (HTML : null : IR)
+//
+// The title of the node as it should appear next to the node icon in the +link{Tree}.  If left
+// unset, the value of +link{TreeNode.name} is used by default.  See the description in
+// +link{Tree.getTitle()} for full details.
+// <p>
+// Note: the name of this property can be changed by setting +link{Tree.titleProperty}.
+//
+// @see Tree.titleProperty
+// @see Tree.getTitle()
+// @visibility external
+//<
+
+//> @attr treeNode.id (String or Number: null : IR)
+//
+// Specifies the unique ID of this node.
+// <P>
+// Required for trees with +link{Tree.modelType} "parent".  With modelType:"parent", the unique
+// ID of a node, together with the unique ID of its parent (see +link{TreeNode.parentId}) is
+// used by +link{Tree.linkNodes} to link a list of nodes into a tree.
+// <p>
+// Note: the name of this property can be changed by setting +link{Tree.idField}.
+//
+// @see TreeNode.parentId
+// @see Tree.linkNodes()
+// @see Tree.modelType
+// @see Tree.idField
+// @visibility external
+//<
+
+//> @attr treeNode.parentId (String or Number : null : IR)
+//
+// For trees with modelType:"parent", this property specifies the unique ID of this node's
+// parent node.
+// The unique ID of a node, together with the unique ID of its parent is used by
+// +link{method:Tree.linkNodes} to link a list of nodes into a tree.
+// <p>
+// Note: the name of this property can be changed by setting +link{Tree.parentIdField}.
+//
+// @see TreeNode.id
+// @see Tree.linkNodes()
+// @see Tree.modelType
+// @see Tree.parentIdField
+// @visibility external
+//<
+
+//> @attr treeNode.children (List of TreeNode : null : IRW)
+//
+// For trees with the modelType "children", this property specifies the children of this
+// TreeNode.
+// <p>
+// Note: the name of this property can be changed by setting +link{Tree.childrenProperty}
+//
+// @see Tree.modelType
+// @see Tree.childrenProperty
+// @visibility external
+//<
+
+//> @attr   treeNode.icon   (SCImgURL : null : [IRW])
+// This Property allows the developer to customize the icon displayed next to a node.
+// Set <code>node.icon</code> to the URL of the desired icon to display and
+// it will be shown instead of the standard +link{treeGrid.nodeIcon} for this node.<br>
+// Note that if +link{TreeNode.showOpenIcon} and/or +link{TreeNode.showDropIcon}
+// is true for this node, customized icons for folder nodes will be appended with the
+// +link{treeGrid.openIconSuffix} or +link{treeGrid.dropIconSuffix} suffixes on state change
+// as with the standard +link{TreeGrid.folderIcon} for this treeGrid.  Also note that for
+// custom folder icons, the +link{treeGrid.closedIconSuffix} will never be appended.
+// <P>You can change the name of this property by setting
+// +link{TreeGrid.customIconProperty}.
+// @group treeIcons
+// @visibility external
+//<
+
+//> @attr   treeNode.showOpenIcon (Boolean : false : [IRWA])
+// For folder nodes showing custom icons (set via +link{treeNode.icon}),
+// this property allows the developer to specify on a per-node basis whether an
+// open state icon should be displayed when the folder is open.
+// Set <code>node.showOpenIcon</code> to true to show the open state
+// icons, or false to suppress this.<br>
+// If not specified, this behavior is determined by +link{TreeGrid.showCustomIconOpen}
+// for this node.
+// <P>You can change the name of this property by setting
+// +link{TreeGrid.customIconOpenProperty}.
+// @see treeGrid.customIconProperty
+// @see treeGrid.showCustomIconOpen
+// @visibility external
+// @group treeIcons
+//<
+showOpenIcon: false,
+
+//> @attr   treeNode.showDropIcon (Boolean : false : [IRWA])
+// For folder nodes showing custom icons (set via +link{treeNode.icon}),
+// this property allows the developer to specify on a per-node basis whether a
+// drop state icon should be displayed when the
+// user drop-hovers over this folder.<br>
+// Set <code>node.showDropIcon</code> to true to show the drop state
+// icon, or false to suppress this.<br>
+// If not specified, this behavior is determined by +link{treeGrid.showCustomIconDrop}
+// for this node.
+// <P>You can change the name of this property by setting
+// +link{TreeGrid.customIconDropProperty}.
+// @see treeGrid.customIconProperty
+// @see treeGrid.showCustomIconDrop
+// @visibility external
+// @group treeIcons
+//<
+showDropIcon: false,
+
+
+//>    @attr    tree.sortProp            (string : null : IRW)
+//        @group    openList
+//            Name of the property to sort by.
+//            Set to null because we don't sort by default.
+//<
+
+
+//>    @attr    tree.sortDirection                (SortDirection : "ascending" : IRW)
+//            Sort ascending by default
+//<
+sortDirection: "ascending",
+
+//>    @attr tree.showRoot (Boolean : false : IRW)
+// Controls whether the implicit root node is returned as part of the visible tree,
+// specifically, whether it is returned in +link{getOpenList()}, which is the API view
+// components typically use to get the list of visible nodes.
+// <p>
+// Default is to have the root node be implicit and not included in the open list, which means
+// that the visible tree begins with the children of root.  This allows multiple nodes to
+// appear at the top level of the tree.
+// <P>
+// You can set <code>showRoot:true</code> to show the single, logical root node as the only
+// top-level node.  This property is only meaningful for Trees where you supplied a value for
+// +link{Tree.root}, otherwise, you will see an automatically generated root node that is
+// meaningless to the user.
+//
+// @visibility external
+//<
+showRoot: false,
+
+//>    @attr tree.autoOpenRoot            (Boolean : true : IRW)
+//
+// If true, the root node is automatically opened when the tree is created or
+// +link{Tree.setRoot()} is called.
+//
+// @visibility external
+//<
+autoOpenRoot: true,
+
+//>    @attr tree.separateFolders    (Boolean : false : IRW)
+// Should folders be sorted separately from leaves or should nodes be ordered according to
+// their sort field value regardless of whether the node is a leaf or folder?
+// @see tree.sortFoldersBeforeLeaves
+// @visibility external
+//<
+separateFolders:false,
+
+//>    @attr tree.sortFoldersBeforeLeaves (Boolean : true : IRW)
+// If +link{tree.separateFolders} is true, should folders be displayed above or below leaves?
+// When set to <code>true</code> folders will appear above leaves when the
+// <code>sortDirection</code> applied to the tree is +link{type:SortDirection,"ascending"}
+// @visibility external
+//<
+sortFoldersBeforeLeaves:true,
+
+//>    @attr tree.defaultNodeTitle (string : "Untitled" : IRW)
+//
+// Title assigned to nodes without a +link{attr:Tree.titleProperty} value or a
+// +link{attr:Tree.nameProperty} value.
+//
+// @visibility external
+//<
+defaultNodeTitle:"Untitled",
+
+//>    @attr tree.defaultLoadState (LoadState : isc.Tree.UNLOADED : IRW)
+//        @group    loadState
+//            default load state for nodes where is has not been explicitly set
+//<
+// ResultTree defines a setter for this property.
+defaultLoadState: isc.Tree.UNLOADED
+
+});
+
+//
+//    add methods to the tree
+//
+isc.Tree.addMethods({
+//>    @method    tree.init()    (A)
+// Initialize the tree.<br><br>
+//
+// Links the initially provided nodes of the tree according to the tree.modelType.
+// <br><br>
+//
+// Gives the tree a global ID and places it in the global scope.
+//
+//        @group    creation
+//
+//        @param    [all arguments]    (object)    objects with properties to override from default
+//
+// @see group:sharingNodes
+//<
+init : function () {
+    this.setupProperties();
+
+    // if a root wasn't specified, create one
+    this.setRoot(this.root || this.makeRoot());
+
+    // load breadth-first on init if so configured
+    if (this.loadOnInit && this.loadBatchSize >= 0) this.loadSubtree(null, null, true);
+},
+
+setupProperties : function () {
+    // make sure we have a global ID, but avoid doing this more than once as subclasses may
+    // already have set up an ID
+    if (this.ID == null || window[this.ID] != this) isc.ClassFactory.addGlobalID(this);
+
+    // use a unique property for the parent link so that nodes moved between trees can't get
+    // confused.  Advanced usages may still override.
+    if (!this.parentProperty) this.parentProperty = "_parent_"+this.ID;
+
+    // we rely on being able to scribble the isFolderProperty on nodes - if the user set this
+    // to null or the empty string, create a unique identifier.
+    if (!this.isFolderProperty) this.isFolderProperty = "_isFolder_"+this.ID;
+
+    // initialize here instead of in addProperties() so we can detect if the user provided
+    // explicit values - used by ResultTree.
+    if (this.idField == null) this.idField = "id";
+    if (this.parentIdField == null) this.parentIdField = "parentId";
+
+    // set the openProperty if it wasn't set already
+    if (!this.openProperty) this.openProperty = "_isOpen_" + this.ID;
+
+    // Create an empty _levelNodes array if we're indexing by level
+    if (this.indexByLevel) this._levelNodes = [];
+
+    // An auto-generated property name to store precomputed lengths of open lists
+    this._cachedLengthProperty = "_cachedLength_" + this.ID;
+
+    // An auto-generated property name to store a boolean flag for whether the lengths of the
+    // ancestors of a node will be updated to reflect changes to the node or one of its
+    // descendants.  The value of the property is actually a number (or undefined) and it
+    // is said to have a true value when the number is greater than zero.
+    this._recursionCountProperty = "_recursionCount_" + this.ID;
+},
+
+//> @method tree.duplicate()
+// Create a copy of tree. If includeData is <code>true</code>, the tree nodes are copied.
+// Otherwise, just the tree settings and an empty root node are in the new tree.
+//
+// @param [includeData] (bool)  Should tree nodes be copied?
+// @param [includeLoadState] (bool)  Should tree node loadState be retained?
+// @return (tree) copy of tree.
+// @group creation
+// @visibility internal
+//<
+_knownProperties : ["autoOpenRoot", "childrenProperty", "defaultIsFolder",
+                    "defaultNodeTitle", "discardParentlessNodes", "idField",
+                    "isFolderProperty", "modelType", "nameProperty",
+                    "parentIdField", "pathDelim", "reportCollisions", "rootValue",
+                    "showRoot", "titleProperty", "isMultiDSTree", "dataSource", "operation" ],
+_$openProperty: "openProperty",
+_copyKnownProperties : function (newTree) {
+    var undef;
+
+    // Copy known properties
+    for (var i = 0; i < this._knownProperties.length; i++) {
+        var propertyName = this._knownProperties[i],
+            value = this[propertyName];
+        if (value !== undef) {
+            newTree[propertyName] = value;
+        }
+    }
+
+    // Handle some special dynamic properties
+    var value = this[this._$openProperty];
+    if (value !== undef && !value.startsWith("_isOpen_")) {
+        newTree[this._$openProperty] = value;
+    }
+},
+duplicate : function (includeData, includeLoadState) {
+
+    // Create a new tree object
+    var newTree = isc.Tree.create();
+    this._copyKnownProperties(newTree);
+
+    // Create a clean root node
+    newTree.setRoot(this.getCleanNodeData(this.getRoot(), false, false, includeLoadState));
+
+    // Copy nodes
+    if (includeData) {
+        var nodes = this.getOpenList(null, isc.Tree.FOLDERS_AND_LEAVES, null, null, null, null, true);
+        nodes = this.getCleanNodeData(nodes, false, false, includeLoadState);
+        newTree._linkNodes(nodes);
+    }
+
+    return newTree;
+},
+
+
+destroy : function () {
+    this.destroyed = true;
+    if (this._openNormalizer != null) this._openNormalizer.call(window);
+
+    isc.ClassFactory.dereferenceGlobalID(this);
+    this.Super("destroy", arguments);
+},
+
+//>    @method    tree.makeRoot()
+//        @group    creation
+//             Make a new, empty root node.
+//
+//        @return    (object)     new root node.
+//<
+makeRoot : function () {
+    var root = {};
+    var undef;
+    if (this.idField !== undef) root[this.idField] = this.rootValue;
+    root[this.treeProperty] = this.ID;
+    return root;
+},
+
+// Convert a node to a folder and return any change in the length of the node's parent
+// resulting from that conversion.  Callers are expected to add the change in length to all
+// parents of the node.
+convertToFolder : function (node) {
+
+    var pagedResultTree = (
+            isc.ResultTree != null && isc.isA.ResultTree(this) && this.isPaged()),
+        prevState = pagedResultTree && this.getLoadState(node),
+        wasFolder = this.isFolder(node),
+        changesParentLength = !wasFolder && node != this.root,
+        origLength, parent;
+    if (changesParentLength) {
+        parent = this.getParent(node);
+        changesParentLength = (parent != null);
+        if (changesParentLength) {
+            origLength = this._getNodeLengthToParent(node, parent);
+        }
+    }
+
+    // Mark the node as a folder.
+    node[this.isFolderProperty] = true;
+
+
+    if (pagedResultTree) {
+        var newState = this.getLoadState(node),
+            prevFlag = (
+                prevState === isc.Tree.LOADED ||
+                prevState === isc.Tree.LOADED_PARTIAL_CHILDREN),
+            newFlag = (
+                newState === isc.Tree.LOADED ||
+                newState === isc.Tree.LOADED_PARTIAL_CHILDREN);
+
+        if (prevFlag != newFlag) {
+            // Only update the _visibleDescendantsCachedProperty if it has been set before on
+            // the node.
+            var parent = this.getParent(node);
+            if (isc.isA.Boolean(node[this._visibleDescendantsCachedProperty])) {
+                this._setVisibleDescendantsCached(node, null, parent, false);
+            }
+        }
+    }
+
+    // Update the length of the node.
+    var cachedLength = node[this._cachedLengthProperty];
+    if (cachedLength == null) cachedLength = 0;
+    node[this._cachedLengthProperty] = cachedLength + this._getDeltaLength(node, wasFolder, true);
+
+
+    // Return any change in the length of the parent caused by converting the node to
+    // a folder.
+    if (changesParentLength) {
+        return this._getNodeLengthToParent(node, parent) - origLength;
+    } else {
+        return 0;
+    }
+},
+
+//>    @method    tree.makeNode()
+//             Make a new, empty node from just a path
+//            NOTE: creates any parents along the chain, as necessary
+//        @group    creation
+//        @return    (TreeNode)     new node
+//<
+// autoConvertParents forces the conversion of nodes in the parent chain to leaf or folder status as
+// necessary to avoid dups.  For example, makeNode('foo') followed by makeNode('foo/') would
+// normally create a leaf foo and a folder foo.  If autoConvertParents is set to true, there would
+// only be the folder foo regardless of the makeNode() call order.
+//
+makeNode : function (path, autoConvertParents) {
+
+    // first try to find the node -- if we can find it, just return it
+    var node = this.find(path);
+    if (node) {
+        if (autoConvertParents) {
+            var deltaLength = this.convertToFolder(node);
+            if (deltaLength != 0 && node != this.root) {
+                this._updateParentLengths(this.getParent(node), deltaLength);
+            }
+        }
+        return node;
+    }
+
+    // The path will be in the format:
+    // "root/p1/p2/p3/newLeaf" or
+    // "/p1/p2/p3/newFolder/"
+    //      where p1 etc are existing parents
+
+    // get the parent path for this node
+    var pathComponents = path.split(this.pathDelim);    // array:['','p1','p2','p3','newNode']
+
+    // The path must start at the root - if it doesn't, assume it was intended to
+    var rootName = this.getRoot()[this.nameProperty];
+    if (rootName.endsWith(this.pathDelim)) {
+        rootName = rootName.substring(0, rootName.length - this.pathDelim.length);
+    }
+
+    if (pathComponents[0] != rootName) pathComponents.addAt(rootName, 0);
+
+    // If we're making a folder rather than a leaf, the path passed in will finish with the path
+    // delimiter, so we'll have a blank at the end of the array
+    var newNodeName = pathComponents[pathComponents.length - 1],
+        makingLeaf = (newNodeName != isc.emptyString);
+
+    if (!makingLeaf) {
+        // chop off the empty slot at the end
+        pathComponents.length = pathComponents.length -1;
+        newNodeName = pathComponents[pathComponents.length - 1]
+    }
+//    this.logWarn("makingLeaf: " + makingLeaf + ", pathComponents:" + pathComponents);
+
+    var parentPath = pathComponents.slice(0, (pathComponents.length -1)).join(this.pathDelim)
+                     + this.pathDelim;
+
+
+    // get a pointer to the parent
+    var parent = this.find(parentPath);
+
+
+    if (parent == null) {
+        parent = this.find(parentPath.substring(0, parentPath.length - this.pathDelim.length));
+    }
+
+    // We need to create the parent if it doesn't exist, or is a leaf, and we're not converting
+    // parents.  Call ourselves recursively to get the parent.
+    // NOTE: this should bottom out at the root, which should always be defined
+    if (!parent) {
+        parent = this.makeNode(parentPath, autoConvertParents);
+    } else if (!this.isFolder(parent)) {
+        // If necessary convert the leaf parent to a folder
+        var deltaLength = this.convertToFolder(parent);
+        if (deltaLength != 0 && parent != this.root) {
+            this._updateParentLengths(this.getParent(parent), deltaLength);
+        }
+    }
+
+    // make the actual node
+    var node = {};
+
+    // set the name and path of the node
+    node[this.nameProperty] = newNodeName;
+
+    // making a folder - convert the node to a folder
+    if (!makingLeaf) {
+        var deltaLength = this.convertToFolder(node);
+        if (deltaLength != 0 && node != this.root) {
+            this._updateParentLengths(this.getParent(node), deltaLength);
+        }
+    }
+
+    // and add it to the tree
+    return this._add(node, parent);
+},
+
+
+//>    @method    tree.isRoot()
+//
+// Return true if the passed node is the root node.
+//
+// @param    node    (TreeNode)     node to test
+// @return            (Boolean)    true if the node is the root node
+//
+// @visibility external
+//<
+isRoot : function (node) {
+    return this.root == node;
+},
+
+//>    @method    tree.setupParentLinks()    (A)
+//            Make sure the parent links are set up in all children of the root.
+//            This lets you create a simple structure without back-links, while
+//             having the back-links set up automatically
+//        @group    ancestry
+//
+//        @param    [node]    (TreeNode)    parent node to set up child links to
+//                                     (default is this.root)
+//<
+setupParentLinks : function (node) {
+    // if the node wasn't passed in, use the root
+    if (!node) node = this.root;
+    return this._traverse(node, true, false, false, false);
+},
+
+// Recursively traverse the tree to implement setupParentLinks() and to assign the correct
+// node lengths to the node and its descendants.  The setupParentLinks and assignCachedLengths
+// are boolean arguments.  The node is the tree node and is expected to exist.  The last
+// argument, recurse, is a boolean flag used internally to determine whether the current
+// execution is at the top level of recursive calls to this method.
+_traverse : function (node, setupParentLinks, assignCachedLengths, canonicalizeChildren, recurse) {
+
+
+    if (setupParentLinks && node[this.idField] != null) {
+        this.nodeIndex[node[this.idField]] = node;
+    }
+
+    // get the children array of the node
+    var children = node[this.childrenProperty];
+
+
+    if (children) {
+        if (setupParentLinks) {
+            // current assumption whenever loading subtrees is that if any children are returned
+            // for a node, it's the complete set, and the node is marked "loaded"
+            this.setLoadState(node, isc.Tree.LOADED);
+        }
+
+        // handle the children property containing a single child object.
+        if (!(isc.isAn.Array(children) || isc.isA.ResultSet(children))) {
+            children = node[this.childrenProperty] = [children];
+        }
+    }
+
+    if (children) {
+        // for each child
+        var isArray = isc.isAn.Array(children),
+            isResultSet = !isArray && isc.isA.ResultSet(children);
+
+        var length = (isResultSet ? children._getCachedLength() : children.getLength());
+        for (var i = 0; i < length; ++i) {
+            var child = (isArray ? children[i] : children.getCachedRow(i));
+
+            // if the child is null, skip it
+            if (!child) continue;
+
+            if (setupParentLinks) {
+                // set the parentId on the child if it isn't set already
+                if (child[this.parentIdField] == null && node[this.idField] != null)
+                    child[this.parentIdField] = node[this.idField];
+
+                // set the child's parent to the parent
+                child[this.parentProperty] = node;
+
+                this._addToLevelCache(child, node);
+            }
+
+            // If the child is a folder, call this method recursively on the child.
+            if (this.isFolder(child)) {
+                this._traverse(
+                    child, setupParentLinks, assignCachedLengths, canonicalizeChildren, true);
+            } else if (setupParentLinks && child[this.idField] != null) {
+                this.nodeIndex[child[this.idField]] = child; // link into the nodeIndex
+            }
+
+            // Assign the _cachedLengthProperty on the child.  This is done after the recursive
+            // call as the child's length can depend on the node lengths of its children.
+            if (assignCachedLengths) {
+                child[this._cachedLengthProperty] = this._getNodeLength(child);
+            }
+        }
+    }
+
+    if (canonicalizeChildren && children) {
+
+        children = node[this.childrenProperty] = this._canonicalizeChildren(node, children, true);
+        if (isc.isA.ResultSet(children)) {
+            if (!(children.lengthIsKnown() && children.allMatchingRowsCached())) {
+                this._setVisibleDescendantsCached(node, false, null, false);
+            }
+        }
+    }
+
+    // If this is the top level of the recursion, then the _cachedLengthProperty has been set
+    // on all nodes except for the original node.  Set node[this._cachedLengthProperty] here.
+    if (assignCachedLengths && !recurse) {
+        node[this._cachedLengthProperty] = this._getNodeLength(node);
+    }
+},
+
+//> @method tree.linkNodes()
+// Adds an array of tree nodes into a Tree of +link{modelType} "parent".
+// <P>
+// The provided TreeNodes must contain, at a minimum, a field containing a unique ID for the
+// node (specified by +link{attr:Tree.idField}) and a field containing the ID of the node's
+// parent node (specified by +link{attr:Tree.parentIdField}).
+// <P>
+// This method handles receiving a mixture of leaf nodes and parent nodes, even out of order and
+// with any tree depth.
+// <P>
+// Nodes may be passed with the +link{childrenProperty} already populated with an Array of
+// children that should also be added to the Tree, and this is automatically handled.
+//
+// @param nodes (Array of TreeNode) list of nodes to link into the tree.
+//
+// @see attr:Tree.data
+// @see attr:Tree.modelType
+// @visibility external
+//<
+connectByParentID : function (records, idProperty, parentIdProperty, rootValue, isFolderProperty) {
+    this._linkNodes(records, idProperty, parentIdProperty, rootValue, isFolderProperty);
+},
+connectByParentId : function (records, idProperty, parentIdProperty, rootValue, isFolderProperty) {
+    this._linkNodes(records, idProperty, parentIdProperty, rootValue, isFolderProperty);
+},
+
+
+// NOTE: this does not handle multi-column (multi-property) primary keys
+linkNodes : function (records, idProperty, parentIdProperty, rootValue, isFolderProperty, contextNode, suppressDataChanged) {
+    return this._linkNodes(records, idProperty, parentIdProperty, rootValue, isFolderProperty, contextNode, suppressDataChanged);
+},
+_linkNodes : function (records, idProperty, parentIdProperty, rootValue, isFolderProperty, contextNode, suppressDataChanged) {
+
+    if (this.modelType == "fields") {
+        this.connectByFields(records);
+        return;
+    }
+
+    records = records || this.data;
+    idProperty = (idProperty != null) ? idProperty : this.idField;
+    parentIdProperty = (parentIdProperty != null) ? parentIdProperty : this.parentIdField;
+    rootValue = (rootValue != null) ? rootValue : this.rootValue;
+
+    var newNodes = [];
+    newNodes.addList(records);
+
+    // build a local index of the nodes passed in. this will allow us to find parents within the
+    // tree without having to do multiple array.finds (so it'll be linear time lookup)
+    var localNodeIndex = {};
+    for (var i = 0; i < newNodes.length; i++) {
+        var id = newNodes[i][idProperty];
+        if (id != null) localNodeIndex[id] = newNodes[i];
+    }
+
+    for (var i = 0; i < newNodes.length; i++) {
+        var node = newNodes[i];
+
+        // We look up parent chains and add interlinked nodes in parent order
+        // so if we already have this node in the tree, skip it
+        if (this.nodeIndex[node[idProperty]] == node) continue;
+        if (node == null) continue;
+
+        // Our parentId property may point to another node passed in (potentially in a chain)
+        // In this case, ensure we link these parents into the tree first.
+        var newParentId = node[parentIdProperty],
+            newParent = newParentId != null ? localNodeIndex[newParentId] : null,
+            newParents = []
+        ;
+
+        while (newParent != null) {
+            if (newParent) newParents.add(newParent);
+            newParentId = newParent[parentIdProperty];
+            // Note: don't infinite loop if parentId==id - that's bad data, really, but such
+            // datasets exist in the wild..
+            newParent = newParentId != null && newParentId != node[parentIdProperty] ? localNodeIndex[newParentId] : null;
+        }
+
+        for (var ii = newParents.length; ii--; ) {
+            if (this.logIsDebugEnabled(this._$treeLinking)) {
+                this.logDebug("linkNodes running - adding interlinked parents to the tree in "+
+                    " reverse hierarchical order -- currently adding node with id:"+
+                    newParents[ii][idProperty], this._$treeLinking);
+            }
+            this._linkNode(newParents[ii], idProperty, parentIdProperty,
+                           contextNode, rootValue);
+            // at this point the parent is linked into the real tree --
+            // blank out the entry in the local index so other nodes linked to it do
+            // the right thing
+            delete localNodeIndex[newParents[ii][idProperty]];
+        }
+        // Actually link in this node
+        this._linkNode(node, idProperty, parentIdProperty, contextNode, rootValue);
+        // blank out this slot - this will avoid us picking up this node in the newParents
+        // array of other nodes when it has already been added to the tree if appropriate
+        delete localNodeIndex[node[idProperty]];
+    }
+
+    this._clearNodeCache(true);
+    if (!suppressDataChanged) this.dataChanged();
+},
+
+// old synonyms for backcompat
+connectByParentID : function (records, idProperty, parentIdProperty, rootValue, isFolderProperty) {
+    this._linkNodes(records, idProperty, parentIdProperty, rootValue, isFolderProperty);
+},
+connectByParentId : function (records, idProperty, parentIdProperty, rootValue, isFolderProperty) {
+    this._linkNodes(records, idProperty, parentIdProperty, rootValue, isFolderProperty);
+},
+
+// _linkNode - helper to actually attach a node to our tree - called from the for-loop in _linkNodes()
+// returns true if the node was successfully added to the tree.
+_$treeLinking:"treeLinking",
+_linkNode : function (node, idProperty, parentIdProperty, contextNode, rootValue) {
+
+    var logDebugEnabled = this.logIsDebugEnabled(this._$treeLinking);
+
+    var id = node[idProperty],
+        parentId = node[parentIdProperty],
+        undef,
+        nullRootValue = (rootValue == null),
+        // Note explicit === for emptyString comparison necessary as
+        // 0 == "", but zero is a valid identifier
+        nullParent = (parentId == null || parentId == -1 || parentId === isc.emptyString),
+        parent = this.nodeIndex[parentId];
+
+    if (parent) {
+        if (logDebugEnabled) {
+            this.logDebug("found parent " + parent[idProperty] +
+                         " for child " + node[idProperty], this._$treeLinking);
+        }
+        this.__add(node, parent);
+    } else if (!nullRootValue && parentId == rootValue) {
+
+        if (logDebugEnabled) {
+            this.logDebug("root node: " + node[idProperty], this._$treeLinking);
+        }
+        // this is a root node
+        this.__add(node, this.root);
+
+    } else {
+        // Drop nodes with an explicit parent we can't find if discardParentlessNodes is true
+        if (!nullParent && this.discardParentlessNodes) {
+            this.logWarn("Couldn't find parent: " + parentId + " for node with id:" + id,
+                         this._$treeLinking);
+        } else {
+
+            var defaultParent = contextNode || this.root;
+            // if a contextNode was supplied, use that as the default parent node for all
+            // nodes that are missing a parentId - this is for loading immediate children
+            // only, without specifying a parentId
+            if (logDebugEnabled) {
+                this.logDebug("child:" + node[idProperty] +
+                              (nullParent ? " has no explicit parent " :
+                                        (" unable to find specified parent:" + parentId)) +
+                              "- linking to default node " +
+                              defaultParent[idProperty], this._$treeLinking);
+            }
+            this.__add(node, defaultParent);
+        }
+    }
+},
+
+connectByFields : function (data) {
+    if (!data) data = this.data;
+    // for each record
+    for (var i = 0; i < data.length; i++) {
+        this.addNodeByFields(data[i]);
+    }
+},
+
+addNodeByFields : function (node) {
+    // go through each field in this.fields in turn, descending through the hierarchy, creating
+    // hierarchy as necessary
+
+
+    var parent = this.root;
+    for (var i = 0; i < this.fieldOrder.length; i++) {
+        var fieldName = this.fieldOrder[i],
+            fieldValue = node[fieldName];
+
+        var folderName = isc.isA.String(fieldValue) ? fieldValue :
+                                                      fieldValue + isc.emptyString,
+            childNum = this.findChildNum(parent, folderName),
+            child;
+        if (childNum != -1) {
+            //this.logWarn("found child for '" + fieldName + "':'" + fieldValue + "'");
+            child = this.getChildren(parent).get(childNum);
+        } else {
+            // if there's no child with this field value, create one
+            //this.logWarn("creating child for '" + fieldName + "':'" + fieldValue + "'");
+            child = {};
+            child[this.nameProperty] = folderName;
+            this._add(child, parent);
+            var deltaLength = this.convertToFolder(child);
+            if (deltaLength != 0) {
+                this._updateParentLengths(parent, deltaLength);
+            }
+        }
+        parent = child;
+    }
+    // add the new node to the Tree
+    //this.logWarn("adding node at: " + this.getPath(parent));
+    this._add(node, parent);
+},
+
+//>    @method    tree.getRoot()
+//
+// Returns the root node of the tree.
+//
+// @return  (TreeNode)    the root node
+//
+// @visibility external
+//<
+getRoot : function () {
+    return this.root;
+},
+
+//>    @method    tree.setRoot()
+//
+// Set the root node of the tree.
+//
+// @param   newRoot (TreeNode)    new root node
+// @param   autoOpen (boolean)  set to true to automatically open the new root node.
+//
+// @visibility external
+//<
+setRoot : function (newRoot, autoOpen) {
+
+    // assign the new root
+    this.root = newRoot;
+
+    // avoid issues if setRoot() is used to re-root a Tree on one of its own nodes
+    var newRootFromSameTree = (newRoot && isc.endsWith(this.parentProperty, this.ID));
+    if (newRootFromSameTree) newRoot[this.parentProperty] = null;
+
+
+    var calcLength = !(newRootFromSameTree && this.root[this._cachedLengthProperty] != null);
+
+    // make sure root points to us as its tree
+    this.root[this.treeProperty] = this.ID;
+
+    if (this.rootValue == null) this.rootValue = this.root[this.idField];
+
+    // If the root node has no name, assign the path property to it.  This is for backcompat
+    // and also a reasonable default.
+    var rootName = this.root[this.nameProperty];
+    if (rootName == null || rootName == isc.emptyString) {
+        var wasFolder = !calcLength && this.isFolder(this.root);
+
+        this.root[this.nameProperty] = this.pathDelim;
+        // Setting the name can change the folderness of the node so update the root node's
+        // length.
+        if (!calcLength) {
+            this.root[this._cachedLengthProperty] += this._getDeltaLength(
+                this.root, wasFolder, this.isFolder(this.root));
+        }
+    }
+
+    // Set the initial cached length of the new root node.
+    if (calcLength) {
+        var isFolder = this.isFolder(this.root);
+        this.root[this._cachedLengthProperty] = (
+            (isFolder && this.openDisplayNodeType != isc.Tree.LEAVES_ONLY) ||
+            (!isFolder && this.openDisplayNodeType != isc.Tree.FOLDERS_ONLY) ? 1 : 0);
+    }
+
+    var pagedResultTree = (
+            isc.ResultTree != null && isc.isA.ResultTree(this) && this.isPaged());
+    if (pagedResultTree) {
+        if (this.root[this._visibleDescendantsCachedProperty] == null) {
+            this.root[this._visibleDescendantsCachedProperty] = true;
+            this._setVisibleDescendantsCached(this.root, null, null, true);
+        }
+    }
+
+    // the root node is always a folder
+    if (!this.isFolder(this.root)) {
+        this.convertToFolder(this.root);
+    }
+
+    // NOTE: this index is permanent, staying with this Tree instance so that additional sets of
+    // nodes can be incrementally linked into the existing structure.
+    this.nodeIndex = {};
+
+    // (re)create the structure of the Tree according to the model type
+    if ("parent" == this.modelType) {
+        // nodes provided as flat list (this.data); each record is expected to have a property
+        // which is a globally unique ID (this.idField) and a property which has the globally
+        // unique ID of its parent (this.parentIdField).
+
+        // assemble the tree from this.data if present
+        // Pass in the param to suppress dataChanged since we'll fire that below
+        if (this.data) {
+            this._linkingNodes = true;
+            this._linkNodes(null, null, null, null, null, null, true);
+            delete this._linkingNodes;
+        }
+    } else if ("fields" == this.modelType) {
+
+        // nodes provided as flat list; a list of fields, in order, defines the Tree
+        if (this.data) this.connectByFields();
+
+    } else if ("children" == this.modelType) {
+
+        // Each parent has an array of children.  Traverse the tree, starting at the root,
+        // to setup the parent links (assuming this.autoSetupParentLinks is true) and to
+        // assign the initial node lengths (i.e. _cachedLengthProperty) on all of the nodes.
+        this._traverse(this.root, this.autoSetupParentLinks, true, false, false);
+
+        if (this.data) {
+            var data = this.data;
+            this.data = null;
+            this._addList(data, this.root);
+        }
+    } else {
+        this.logWarn("Unsupported modelType: " + this.modelType);
+    }
+
+    // Slot the root node into nodeIndex
+    this.setupParentLinks();
+
+    // open the new root if autoOpen: true passed in or this.autoOpenRoot is true.  Suppress
+    // autoOpen if autoOpen:false passed in
+    if (autoOpen !== false && (this.autoOpenRoot || autoOpen)) {
+        this.openFolder(newRoot);
+    }
+
+    // Slot the root node into nodeIndex, and, for paged ResultTrees, change the container
+    // of the children of any node with a valid childCountProperty value from an array to
+    // a ResultSet.
+    this._traverse(this.root, true, false, pagedResultTree, false);
+
+    // mark the tree as dirty and note that the data has changed
+    this._clearNodeCache();
+    this.dataChanged();
+},
+
+// get a copy of these nodes without all the properties the Tree scribbles on them.
+// Note the intent here is that children should in fact be serialized unless the caller has
+// explicitly trimmed them.
+getCleanNodeData : function (nodeList, includeChildren, cleanChildren, includeLoadState) {
+
+    return isc.Tree.getCleanNodeData(nodeList, includeChildren, true, includeLoadState, this);
+},
+
+//
+// identity methods -- override these for your custom trees
+//
+
+//>    @method    tree.getName()
+//
+// Get the 'name' of a node.  This is node[+link{Tree.nameProperty}].  If that value has not
+// been set on the node, a unique value (within this parent) will be auto-generated and
+// returned.
+//
+// @param    node    (TreeNode)    node in question
+// @return            (string)    name of the node
+//
+// @visibility external
+//<
+_autoName : 0,
+getName : function (node) {
+    var ns = isc._emptyString;
+
+    if (!node) return ns;
+
+    var name = node[this.nameProperty];
+    if (name == null) name = node[this.idField];
+    if (name == null) {
+        // unnamed node: give it a unique name.
+
+
+        // never assign an autoName to a node not from our tree
+        if (!this.isDescendantOf(node, this.root) && node != this.root) return null;
+
+        // assign unique autoNames per tree so we don't get cross-tree name collisions on D&D
+        if (!this._autoNameBase) this._autoNameBase = isc.Tree.autoID++ + "_";
+        name = this._autoNameBase+this._autoName++;
+        // set a flag noting that we auto-assigned this name.
+        // This is useful in databinding for us to determine whether path-based state
+        // information can be reliably mapped to new data, for example on cache
+        // invalidation.
+        node._autoAssignedName = true;
+    }
+
+    // convert to string because we call string methods on this value elsewhere
+    if (!isc.isA.String(name)) name = ns+name;
+
+    // cache
+    node[this.nameProperty] = name;
+    return name;
+},
+
+//>    @method    tree.getTitle()
+//
+// Return the title of a node -- the name as it should be presented to the user.  This method
+// works as follows:
+// <ul>
+// <li> If a +link{attr:Tree.titleProperty} is set on the node, the value of that property is
+// returned.
+// <li> Otherwise, if the +link{attr:Tree.nameProperty} is set on the node, that value is
+// returned, minus any trailing +link{attr:Tree.pathDelim}.
+// <li> Finally, if none of the above yielded a title, the value of
+// +link{attr:Tree.defaultNodeTitle} is returned.
+// </ul>
+// You can override this method to return the title of your choice for a given node.
+// <br><br>
+// To override the title for an auto-constructed tree (for example, in a databound TreeGrid),
+// override +link{method:TreeGrid.getNodeTitle} instead.
+//
+// @param node  (TreeNode) node for which the title is being requested
+// @return      (string) title to display
+//
+// @see method:TreeGrid.getNodeTitle
+//
+// @visibility external
+//<
+getTitle : function (node) {
+    if (!node) return null;
+    // if the node has an explicit title, return that
+    if (node[this.titleProperty] != null) return node[this.titleProperty];
+
+    // otherwise derive from the name
+    var name = node[this.nameProperty];
+    if (name == null) name = this.defaultNodeTitle;
+    return (isc.endsWith(name, this.pathDelim)
+                ? name.substring(0,name.length-this.pathDelim.length)
+                : name);
+},
+
+//>    @method    tree.getPath()
+//
+// Returns the path of a node - a path has the following format:
+// <code>([name][pathDelim]?)*</code>
+// <br><br>
+// For example, in this tree:
+// <pre>
+// root
+//   foo
+//     bar
+// </pre>
+// Assuming that +link{attr:Tree.pathDelim} is the default <code>/</code>, the <code>bar</code>
+// node would have the path <code>root/foo/bar</code> and the path for the <code>foo</code>
+// node would be <code>root/foo</code>.
+// <br><br>
+// Once you have a path to a node, you can call find(path) to retrieve a reference to the node
+// later.
+//
+// @param    node    (TreeNode)    node in question
+// @return            (string)    path to the node
+//
+// @see method:Tree.getParentPath
+// @visibility external
+//<
+getPath : function (node) {
+    var parent = this.getParent(node);
+    if (parent == null) return this.getName(node);
+
+    var parentName = this.getName(parent);
+    return this.getPath(parent) +
+            (parentName == this.pathDelim ? isc.emptyString : this.pathDelim) +
+                this.getName(node);
+},
+
+//>    @method    tree.getParentPath()
+//
+// Given a node, return the path to its parent.  This works just like
+// +link{method:Tree.getPath} except the node itself is not reported as part of the path.
+//
+// @param    node    (TreeNode)    node in question
+// @return            (string) path to the node's parent
+//
+// @see method:Tree.getPath
+// @visibility external
+//<
+getParentPath : function (node) {
+    // get the node's path
+    var name = this.getName(node),
+        path = this.getPath(node);
+
+    // return the path minus the name of the node
+    return path.substring(0, path.length - name.length - this.pathDelim.length);
+},
+
+//>    @method    tree.getParent()
+//
+// Returns the parent of this node.
+//
+// @param   node    (TreeNode)    node in question
+// @return  (node)              parent of this node
+//
+// @visibility external
+//<
+getParent : function (node) {
+    if (node == null) return null;
+    return node[this.parentProperty];
+},
+
+//>    @method    tree.getParents()
+//
+// Given a node, return an array of the node's parents with the immediate parent first.  The
+// node itself is not included in the result.  For example, for the following tree:
+// <pre>
+// root
+//   foo
+//     bar
+// </pre>
+// Calling <code>tree.getParents(bar)</code> would return: <code>[foo, root]</code>.  Note that
+// the returned array will contain references to the nodes, not the names.
+//
+// @param   node    (TreeNode)            node in question
+// @return          (Array)             array of node's parents
+//
+// @visibility external
+//<
+getParents : function (node) {
+    var list = [],
+        parent = this.getParent(node);
+    // while parents exist
+    while (parent) {
+        // add them to the list
+        list.add(parent);
+
+        // if the parent is the root, jump out!
+        //    this lets us handle subTrees of other trees
+        if (parent == this.root) break;
+
+        // and get the next parent in the chain
+        parent = this.getParent(parent);
+    }
+    // return the list of parents
+    return list;
+},
+
+//>    @method    tree.getLevel()    (A)
+//
+// Return the number of levels deep this node is in the tree.  For example, for this tree:
+// <pre>
+// root
+//   foo
+//     bar
+// </pre>
+// Calling <code>tree.getLevel(bar)</code> will return <code>2</code>.
+// <P>
+// Note +link{showRoot} defaults to false so that multiple nodes can be shown at top level.  In
+// this case, the top-level nodes still have root as a parent, so have level 1, even though
+// they have no visible parents.
+//
+// @param   node    (TreeNode)    node in question
+// @return          (number)    number of parents the node has
+//
+// @visibility external
+//<
+getLevel : function (node) {
+    return this.getParents(node).length;
+},
+
+// Given a node, iterate up the parent chain and return an array containing each level for
+// which the node or its ancestor has a following sibling
+// Required for treeGrid connectors
+// We could improve performance here by cacheing this information on each node and having this
+// method be called recursively on parents rather than iterating through the parents' array
+// for every node this method is called on.
+_getFollowingSiblingLevels : function (node) {
+    var levels = [],
+        parents = this.getParents(node),
+        level = parents.length;
+    // note that parents come back ordered with the root last so iterate through them forwards
+    // to iterate up the tree
+    for (var i = 0; i < level; i++) {
+        var children = this.getChildren(parents[i]),
+            childrenLength = (
+                isc.isA.ResultSet(children) ?
+                    children._getCachedLength() : children.getLength());
+        if (children.indexOf(node) != childrenLength - 1) {
+            levels.add(level - i);
+        }
+        node = parents[i];
+    }
+    return levels;
+},
+
+//>    @method    tree.isFolder()
+//
+// Determines whether a particular node is a folder.  The logic works as follows:<br><br>
+// <ul>
+// <li> If the +link{TreeNode} has a value for the +link{attr:Tree.isFolderProperty}
+// (+link{TreeNode.isFolder} by default) that value is returned.
+// <li> Next, the existence of the +link{attr:Tree.childrenProperty} (by default
+// +link{TreeNode.children}) is checked on the +link{TreeNode}.  If the node has the children
+// property defined (regardless of whether it actually has any children), then isFolder()
+// returns true for that node.
+// </ul>
+// <smartclient>
+// <P>
+// You can override this method to provide your own interpretation of what constitutes a folder.
+// However, you cannot change the return value for a node after the associated folder is loaded.
+// </smartclient>
+//
+// @param    node    (TreeNode)    node in question
+// @return            (Boolean)    true if the node is a folder
+//
+// @visibility external
+//<
+isFolder : function (node) {
+    if (node == null) return false;
+
+    // explicit isFolder set
+    var isFolder = node[this.isFolderProperty];
+    if (isFolder != null) return isFolder;
+
+    // has a children array (may have zero actual children currently, but having a children
+    // array is sufficient for us to regard this as a folder).  Note that we scribble the
+    // children array on the nodes even in modelTypes other than "children", so this check
+    // is correct for other modelTypes as well.
+    if (node[this.childrenProperty]) return true;
+
+    // infer folderness from the name of the node
+    // XXX 10/13/2005 : this is purposefully not documented.  We have it here for backcompat
+    // with trees that may have relied on this, but disclosing this will confuse people -
+    // they'll start to think about having to tack on the path delimiter on their nodes to
+    // signify folderness, which in turn translates into confusion about when you should or
+    // should not supply the slash or give back a trailing slash from e.g. getPath()
+    var name = this.getName(node);
+
+    // if there's no name, we have no way of knowing
+       if (name == null) return false;
+
+    // if the last character is the pathDelim, it's a folder.
+    return isc.endsWith(name, this.pathDelim);
+},
+
+//>    @method    tree.isLeaf()
+//
+// Returns true if the passed in node is a leaf.
+//
+// @param   node    (TreeNode)    node in question
+// @return          (Boolean)   true if the node is a leaf
+//
+// @visibility external
+// @see isFolder()
+//<
+isLeaf : function (node) {
+    return ! this.isFolder(node);
+},
+
+//> @method tree.isFirst() (A)
+// Note: because this needs to take the sort order into account, it can be EXTREMELY expensive!
+// @group ancestry
+// Return true if this item is the first one in its parent's list.
+//
+// @param  node (TreeNode)  node in question
+// @return (boolean)  true == node is the first child of its parent
+//<
+isFirst : function (node) {
+    var parent = this.getParent(node);
+    if (! parent) return true;
+
+    var kids = this.getChildren(parent, this.opendisplayNodeType,
+            this._openNormalizer, this.sortDirection, null, this._sortContext);
+    if (isc.isA.ResultSet(kids)) {
+        return (kids._getCachedLength() > 0 && kids.getCachedRow(0) == node);
+    } else {
+        return (kids.first() == node);
+    }
+},
+
+//>    @method    tree.isLast()    (A)
+//         Note: because this needs to take the sort order into account, it can be EXTREMELY expensive!
+//        @group    ancestry
+//            Return true if this item is the last one in its parent's list.
+//
+//        @param    node    (TreeNode)    node in question
+//        @return            (boolean)    true == node is the last child of its parent
+//<
+isLast : function (node) {
+    var parent = this.getParent(node);
+    if (! parent) return true;
+
+    var kids = this.getChildren(parent, this.opendisplayNodeType,
+            this._openNormalizer, this.sortDirection, null, this._sortContext);
+    if (isc.isA.ResultSet(kids)) {
+        var length = kids._getCachedLength();
+        return (length > 0 && kids.getCachedRow(length - 1) == node);
+    } else {
+        return (kids.last() == node);
+    }
+},
+
+
+//
+//    finding a node
+//
+
+//>    @method    tree.findById()    (A)
+//
+// Find the node with the specified ID.  Specifically, it returns the node whose idField
+// matches the id passed to this method. If the tree is using the "parent" modelType, this
+// lookup will be constant-time.  For all other modelTypes, the tree will be searched
+// recursively.
+//
+// @group   location
+// @param   id (string)    ID of the node to return.
+// @return  (object)       node with appropriate ID, or null if not found.
+//
+// @see attr:Tree.idField
+// @see method:Tree.find
+//
+// @visibility external
+//<
+findById : function (id) {
+    return this.find(this.idField, id);
+},
+
+
+//>    @method    tree.find()
+//
+// Find nodes within this tree using a string path or by attribute value(s).
+//
+// This method can be called with 1 or 2 arguments.
+//
+// If a single String argument is supplied, the value of the argument is treated as the path to the node.  If a
+// single argument of type Object is provided, it is treated as a set of field name/value
+// pairs to search for (see +link{List.find}).
+// <br>
+// If 2 arguments are supplied, this method will treat the first argument as a fieldName, and
+// return the first node encountered where <code>node[fieldName]</code> matches the second
+// argument.  So for example, given this tree:
+// <pre>
+// foo
+//   zoo
+//     bar
+//   moo
+//     bar
+// </pre>
+// Assuming your +link{attr:Tree.pathDelim} is the default <code>/</code> and <code>foo</code>
+// is the name of the root node, then
+// <code>tree.find("foo/moo/bar")</code> would return the <code>bar</code> node under the
+// <code>moo</code> node.
+// <br>
+// <br>
+// <code>tree.find("name", "bar")</code> would return the first <code>bar</code> node because
+// it is the first one in the list whose <code>name</code> (default value of
+// +link{attr:Tree.nameProperty}) property matches the value
+// <code>bar</code>.  The two argument usage is generally more interesting when your tree nodes
+// have some custom unique property that you wish to search on.  For example if your tree nodes
+// had a unique field called "UID", their serialized form would look something like this:
+// <pre>
+// { name: "foo", children: [...], UID:"someUniqueId"}
+// </pre>
+// You could then call <code>tree.find("UID", "someUniqueId")</code> to find that node.  Note
+// that the value doesn't have to be a string - it can be any valid value, but since this
+// data generally comes from the server, the typical types are string, number, and boolean.
+// Also note that a find() on the +link{idField} will be constant time, and that find() will
+// not work on the idField if idField is set to a property that is not unique or not present
+// on all nodes in the Tree.
+// <br><br>
+// The usage where you pass a single object is interesting when your tree nodes have a number
+// of custom properties that you want to search for in combination.  Say your tree nodes had
+// properties for "color" and "shape"; <code>tree.find({color: "green", shape: "circle"})</code>
+// would return the first node in the tree where both properties matched.
+// <br><br>
+// When searching by path, trailing path delimiters are ignored.  So for example
+// <code>tree.find("foo/zoo/bar")</code> is equivalent to
+// <code>tree.find("foo/zoo/bar/")</code>
+//
+// @group location
+// @param fieldNameOrPath   (string)    Either the path to the node to be found, or the name of
+//                                      a field which should match the value passed as a second
+//                                      parameter
+// @param [value]          (any)     If specified, this is the desired value for the
+//                                   appropriate field
+// @return (object) the node matching the supplied criteria or null if not found
+//
+// @see attr:Tree.root
+// @see attr:Tree.pathDelim
+// @see attr:Tree.nameProperty
+//
+// @visibility external
+//<
+// NOTE: This should be a good generic implemention, try overriding findChildNum instead.
+find : function (fieldName, value) {
+    var undef;
+    if (value === undef && isc.isA.String(fieldName)) return this._findByPath(fieldName);
+
+    if (value !== undef) {
+        // constant time lookup when we have nodeIndex
+        if (fieldName == this.idField) return this.nodeIndex[value];
+        // special-case root, which may not appear in getDescendants() depending on this.showRoot
+        if (this.root[fieldName] == value) return this.root;
+        // Use 'getDescendants()' to retrieve both open and closed nodes.
+        return this.getDescendants(undef, undef, undef, true).find(fieldName, value);
+    } else {
+        // fieldName is an Object, so use the multi-property option of List.find()
+        var searchList = this.getDescendants(undef, undef, undef, true);
+        searchList.add(this.root);
+        return searchList.find(fieldName);
+    }
+},
+
+findAll : function (fieldName, value) {
+    // Use 'getDescendants()' to retrieve both open and closed nodes.
+    var undef;
+    return this.getDescendants(undef, undef, undef, true).findAll(fieldName, value);
+},
+
+// Find a node within this tree by path.
+_findByPath : function (path) {
+
+
+
+    // return early for cases of referring to just root
+    if (path == this.pathDelim) return this.root;
+    var rootPath = this.getPath(this.root);
+    if (path == rootPath) return this.root;
+
+    var node = this.root,
+        lastDelimPosition = 0,
+        delimLength = this.pathDelim.length;
+
+    // if the path starts with a references to root, start beyond it
+    if (isc.startsWith(path, rootPath)) {
+        lastDelimPosition = rootPath.length;
+    } else if (isc.startsWith(path, this.pathDelim)) {
+        lastDelimPosition += delimLength;
+    }
+
+    //this.logWarn("path: " + path);
+
+    while (true) {
+        var delimPosition = path.indexOf(this.pathDelim, lastDelimPosition);
+
+        //this.logWarn("delimPosition: " + delimPosition);
+
+        // skip over two delims in a row (eg "//") and trailing (single) delimeter
+        if (delimPosition == lastDelimPosition) {
+            //this.logWarn("extra delimeter at: " + delimPosition);
+            lastDelimPosition += delimLength;
+            continue;
+        }
+
+        var moreDelims = (delimPosition != -1),
+            // name of the child to look for at this level
+            name = path.substring(lastDelimPosition, moreDelims ? delimPosition : path.length),
+            // find the node number of that child
+            nodeNum = this.findChildNum(node, name);
+
+        //this.logWarn("name: " + name);
+
+        if (nodeNum == -1) return null;
+
+        node = node[this.childrenProperty].getCachedRow(nodeNum);
+
+        // if there are no more delimeters we're done
+        if (!moreDelims) return node;
+
+        // advance the lastDelimiter
+        lastDelimPosition = delimPosition + delimLength;
+
+        // if we got all the way to the end of the path, we're done:  return the node
+        if (lastDelimPosition == path.length) return node;
+    }
+},
+
+//>    @method    tree.findChildNum()    (A)
+//        @group    location
+//            Given a parent and the name of a child, return the number of that child.
+//
+//         Note: names of folder nodes will have pathDelim stuck to the end
+//
+//        @param    parent    (TreeNode)    parent node
+//        @param    name    (string)    name of the child node to find
+//        @return            (number)    index number of the child, -1 if not found
+//<
+findChildNum : function (parent, name) {
+    var children = this.getChildren(parent);
+
+    if (children == null) {
+        return -1;
+    }
+    if (name == null) return -1;
+
+    var length = (
+            isc.isA.ResultSet(children) ? children._getCachedLength() : children.getLength()),
+        nameHasDelim = isc.endsWith(name, this.pathDelim),
+        delimLength = this.pathDelim.length;
+    for (var i = 0; i < length; i++) {
+
+        var child = children.getCachedRow(i);
+        if (child != null) {
+            var childName = this.getName(child),
+                lengthDiff = childName.length - name.length;
+
+            if (lengthDiff == 0 && childName == name) return i;
+
+            if (lengthDiff == delimLength) {
+                // match if childName has trailing delim and name does not
+                if (isc.startsWith(childName, name) &&
+                    isc.endsWith(childName, this.pathDelim) && !nameHasDelim)
+                {
+                    return i;
+                }
+            } else if (nameHasDelim && lengthDiff == -delimLength) {
+                // match if name has trailing delim and childName does not
+                if (isc.startsWith(name, childName)) return i;
+            }
+        }
+    }
+
+    // not found, return -1
+    return -1;
+},
+
+
+//> @method     tree.findIndex()
+// Like +link{list.findIndex()}, but operates only on the list of currently opened nodes.  To search all loaded nodes
+// open or closed, use +link{findNodeIndex()}.
+//
+// @param propertyName (String or Object or AdvancedCriteria) property to match, or if an Object is passed, set of
+//                                        properties and values to match
+// @param [value] (any) value to compare against (if propertyName is a string)
+// @return (int) index of the first matching Object or -1 if not found
+//
+// @group access, find
+// @visibility external
+//<
+
+//> @method tree.findNodeIndex()
+// Like +link{findIndex()}, but searches all tree nodes regardless of their open/closed state.
+//
+// @param propertyName (String or Object or AdvancedCriteria) property to match, or if an Object is passed, set of
+//                                        properties and values to match
+// @param [value] (any) value to compare against (if propertyName is a string)
+// @return (int) index of the first matching Object or -1 if not found
+//
+// @group access, find
+// @visibility external
+//<
+findNodeIndex : function (propertyName, value) {
+    return this.getNodeList().findIndex(propertyName, value);
+},
+
+//> @method     tree.findNextIndex()
+// Like +link{findIndex()}, but inspects a range from <code>startIndex</code> to <code>endIndex</code>.  Note
+// that as in +link{findIndex()}, only open nodes are included.  To include both open and closed nodes, use
+// +link{findNextNodeIndex()}.
+// <smartclient>
+// <p>
+// For convenience, findNextIndex() may also be called with a function (called the predicate
+// function) for the <code>propertyName</code> parameter. In this usage pattern, the predicate
+// function is invoked for each value of the list until the predicate returns a true value.
+// The predicate function is passed three parameters: the current value, the current index, and
+// the list. The value of <code>this</code> when the predicate function is called is the
+// <code>value</code> parameter. For example:
+// <pre>var currentUserRecord = recordList.findNextIndex(0, function (record, i, recordList) {
+//    if (record.username == currentUsername && !record.accountDisabled) {
+//        return true;
+//    }
+//});</pre>
+// </smartclient>
+//
+// @param startIndex (int) first index to consider.
+// @param propertyName (String or Function or Object or AdvancedCriteria) property to match;
+// <smartclient>or, if a function is passed, the predicate function to call;</smartclient>
+// or, if an object is passed, set of properties and values to match.
+// @param [value] (any) value to compare against (if <code>propertyName</code> is a string)
+// <smartclient>or the value of <code>this</code> when the predicate function is invoked (if
+// <code>propertyName</code> is a function)</smartclient>
+// @param [endIndex] (int) last index to consider (inclusive).
+// @return (int) index of the first matching value or -1 if not found.
+// @group access, find
+// @visibility external
+//<
+
+//> @method tree.findNextNodeIndex()
+// Like +link{findNextIndex()}, but includes both open and closed nodes.
+// @param propertyName (String or Function or Object or AdvancedCriteria) property to match;
+// <smartclient>or, if a function is passed, the predicate function to call;</smartclient>
+// or, if an object is passed, set of properties and values to match.
+// @param [value] (any) value to compare against (if <code>propertyName</code> is a string)
+// <smartclient>or the value of <code>this</code> when the predicate function is invoked (if
+// <code>propertyName</code> is a function)</smartclient>
+// @param [endIndex] (int) last index to consider (inclusive).
+// @return (int) index of the first matching value or -1 if not found.
+// @group access, find
+// @visibility external
+//<
+findNextNodeIndex : function (startIndex, propertyName, value, endIndex) {
+    return this.getNodeList().findNextIndex(startIndex, propertyName, value, endIndex);
+},
+
+//>    @method    tree.getChildren()
+//
+// Returns all children of a node.  If the node is a leaf, this method returns null.
+// <P>
+// For databound trees the return value could be a +link{class:ResultSet} rather than a simple
+// array - so it's important to access the return value using the +link{interface:List}
+// interface instead of as a native Javascript Array.
+// <smartclient>
+// The case that a ResultSet may be returned can only happen if the tree is a
+// +link{class:ResultTree} and the +link{resultTree.fetchMode} is set to "paged".
+// </smartclient>
+// <smartgwt>
+// If the underlying set of children is incomplete then this method will return only those
+// nodes that have already been loaded from the server.
+// </smartgwt>
+//
+// @param node (TreeNode) The node whose children you want to fetch.
+// @return (List of TreeNode) List of children for the node, including an empty List if the
+//                            node has no children.  For a leaf, returns null.
+// @see tree.getChildrenResultSet()
+// @visibility external
+//<
+
+getChildren : function (parentNode, displayNodeType, normalizer, sortDirection, criteria,
+                        context, returnNulls, treatEmptyFoldersAsLeaves, dontUseNormalizer) {
+
+
+    // If separateFolders is true, we need to have an openNormalizer so we can sort/separate
+    // leaves and folders
+    // This will not actually mark the tree as sorted by any property since we're not setting up
+    // a sortProp.
+
+    if (!dontUseNormalizer &&
+        normalizer == null && this._openNormalizer == null && this.separateFolders)
+    {
+
+        if (this._sortSpecifiers != null) this.setSort(this._sortSpecifiers);
+        else this.sortByProperty();
+
+        if (!this._openNormalizer) this._makeOpenNormalizer();
+        normalizer = this._openNormalizer;
+    }
+
+    if (parentNode == null) parentNode = this.root;
+
+    // if we're passed a leaf, it has no children, return empty array
+    if (this.isLeaf(parentNode)) return null;
+
+    // if the parentNode doesn't have a child array, create one
+    if (parentNode[this.childrenProperty] == null) {
+        if (returnNulls) return null;
+        var children = [];
+        parentNode[this.childrenProperty] = children;
+        // just return the new empty children array
+        return children;
+    }
+
+    var pagedResultTree = isc.ResultTree && isc.isA.ResultTree(this) && this.isPaged(),
+        list = parentNode[this.childrenProperty],
+        subset;
+
+    // If a criteria was passed in, remove all items that don't pass the criteria.
+    if (criteria) {
+        subset = [];
+
+        var listLength = (pagedResultTree && isc.isA.ResultSet(list) ?
+                list._getCachedLength() : list.getLength());
+        for (var i = 0; i < listLength; ++i) {
+            var childNode = list.getCachedRow(i);
+            if (childNode != null) {
+                // CALLBACK API:  available variables:  "node,parent,tree"
+                if (this.fireCallback(
+                        criteria, "node,parent,tree", [childNode, parentNode, this]))
+                {
+                    subset[subset.length] = childNode;
+                }
+            }
+        }
+
+        list = subset;
+    }
+
+    // Reduce the list if a displayNodeType was specified.
+    if (displayNodeType == isc.Tree.FOLDERS_ONLY) {
+        // If only folders were specified, get the subset that are folders.
+        subset = [];
+        var listLength = (pagedResultTree && isc.isA.ResultSet(list) ?
+                list._getCachedLength() : list.getLength());
+        for (var i = 0; i < listLength; ++i) {
+            var childNode = list.getCachedRow(i);
+            if (childNode != null) {
+                var isFolder = this.isFolder(childNode);
+                if (isFolder && treatEmptyFoldersAsLeaves) {
+                    var c = childNode[this.childrenProperty];
+                    isFolder = !(c != null && c.isEmpty());
+                }
+                if (isFolder) {
+                    subset[subset.length] = childNode;
+                }
+            }
+        }
+    } else if (displayNodeType == isc.Tree.LEAVES_ONLY) {
+        // If only leaves were specified, get the subset that are leaves.
+        subset = [];
+        var listLength = (pagedResultTree && isc.isA.ResultSet(list) ?
+                list._getCachedLength() : list.getLength());
+        for (var i = 0; i < listLength; ++i) {
+            var childNode = list.getCachedRow(i);
+            if (childNode != null) {
+                var isLeaf = this.isLeaf(childNode);
+                if (!isLeaf && treatEmptyFoldersAsLeaves) {
+                    var c = childNode[this.childrenProperty];
+                    isLeaf = (c != null && c.isEmpty());
+                }
+                if (isLeaf) {
+                    subset[subset.length] = childNode;
+                }
+            }
+        }
+    } else {
+        // Otherwise return the entire list (folders and leaves).
+        subset = list;
+    }
+
+
+    if (this.isSubsetSortDirty(subset) && (normalizer ||
+         (!pagedResultTree || !isc.isA.ResultSet(subset)) && dontUseNormalizer == false))
+    {
+
+
+        var sortProps = this._sortSpecifiers ? this._sortSpecifiers.getProperty("property") : [];
+
+
+        var isOpenNormalizer = normalizer === this._openNormalizer;
+        if (this._sortSpecifiers && normalizer && (!isOpenNormalizer || !pagedResultTree)) {
+
+
+            var  ascendingComparator = null,
+                descendingComparator = null;
+            if (isc.Browser.isFirefox && isOpenNormalizer) {
+                 ascendingComparator = this._openAscendingComparator;
+                descendingComparator = this._openDescendingComparator;
+            }
+
+            // Update the normalizer on each sort-spec if one isn't present.
+            for (var spec = this._sortSpecifiers.length; spec--; ) {
+                var specObj = this._sortSpecifiers[spec];
+                if (!specObj.normalizer) {
+                    specObj.normalizer = normalizer;
+                    specObj._comparator = (
+                        Array.shouldSortAscending(specObj.direction) ?
+                            ascendingComparator : descendingComparator);
+                }
+            }
+        }
+
+        // we now support sorting on all of the groupByFields
+        var groupByField = !this._groupByField ? null :
+              (isc.isAn.Array(this._groupByField) ? this._groupByField : [this._groupByField]);
+
+        if (// we're not in a grouped LG OR
+                !groupByField ||
+                // the special 'alwaysSortGroupHeaders' flag is set (indicating group headers have
+                // multiple meaningful field values, as when we show summaries in headers) OR
+                this.alwaysSortGroupHeaders
+                ||
+                //// we're not grouping on the first sortField and this isn't a group-node OR
+                (!groupByField.contains(sortProps[0]) && parentNode != this.getRoot()) ||
+                //// we're sorting the group-nodes and the sort-field IS the first groupByField
+                (groupByField.contains(sortProps[0]))
+        ) {
+            if (this._sortSpecifiers) {
+
+                if (pagedResultTree && isc.isA.ResultSet(subset)) {
+                    subset = subset.getAllVisibleRows() || [];
+                }
+
+                if (parentNode.groupMembers) {
+                    // The parentNode is a group-node in a grid.  Process it if it's also
+                    // being sorted.
+                    var process = (this._sortSpecifiers.find("property",
+                            parentNode.groupName) != null);
+
+                    var isRoot = parentNode == this.getRoot();
+                    // if it's the rootNode, process it anyway (there'll be no groupName)
+                    process = process || isRoot;
+
+                    if (process) {
+                        subset.map(function (record) {
+                            if (record._isGroup) {
+                                // if the record is a group, add values to it for the fields
+                                // being sorted, such that we sort them properly according to
+                                // the sort specifiers
+                                if (parentNode.groupValue && !record[parentNode.groupName] && isRoot) {
+                                    record[parentNode.groupName] = parentNode.groupValue;
+                                }
+                                if (!record[record.groupName]) {
+                                    record[record.groupName] = record.groupValue;
+                                }
+                            }
+                        });
+                    }
+                }
+
+                // remove any summary-rows from the subset before sorting, and then add them
+                // back afterwards, so they're always at the end of the subset
+                var summaryRows = subset.findAll(this._summaryRecordFlag, true) || [];
+                if (summaryRows.length > 0) subset.removeList(summaryRows);
+                subset.setSort(this._sortSpecifiers);
+                this.markSubsetAsSorted(subset);
+
+                // Summary rows may be implemented as children or siblings of the
+                // header nodes (depending on whether we want them to show up
+                // when the group is collapsed).
+                if (summaryRows.length > 0) {
+                    var addAsChildren = [];
+                    for (var i = 0; i < summaryRows.length; ) {
+                        if (summaryRows[i] == null) break;
+                        var groupSummaries = [],
+                            currentSummaryRow = summaryRows[i],
+                            // summaryTargetNode flag set up in ListGrid grouping
+                            // logic
+                            target = currentSummaryRow[this._summaryTargetNode];
+                        if (target == null) {
+                            addAsChildren.add(currentSummaryRow);
+                            i++;
+                            continue;
+                        } else {
+
+                            do {
+                                groupSummaries.add(currentSummaryRow);
+                                currentSummaryRow = summaryRows[i+1];
+                                i++;
+                            } while (currentSummaryRow &&
+                                     currentSummaryRow[this._summaryTargetNode] == target);
+                            // Slot in the summaries as siblings after the
+                            // summary header node.
+                            subset.addListAt(groupSummaries, subset.indexOf(target)+1);
+                        }
+                    }
+                    if (addAsChildren.length > 0) {
+                        subset.addListAt(addAsChildren, subset.length);
+                    }
+                }
+            }
+        }
+    }
+
+
+    return subset;
+},
+
+//> @method tree.getChildrenResultSet()
+// Returns a ResultSet that provides access to any partially-loaded children of a node.  If the
+// node is a leaf, this method returns null.
+// @param node (TreeNode) The node whose children you want to fetch.
+// @return (ResultSet) List of children for the node, including an empty ResultSet if the node
+// has no children.  For a leaf, returns null.
+// @see tree.getChildren()
+// @see tree.allChildrenLoaded()
+// @visibility external
+//<
+getChildrenResultSet : function (node) {
+    var children = this.getChildren(node);
+    return (isc.isA.ResultSet(children) ? children : null);
+},
+
+//>    @method    tree.getFolders()
+//
+// Returns all the first-level folders of a node.
+// <br><br>
+// For load on demand trees (those that only have a partial representation client-side), this
+// method will return only nodes that have already been loaded from the server.
+//
+// @param   node    (TreeNode)    node in question
+// @return  (List)              List of immediate children that are folders
+//
+// @visibility external
+//<
+
+getFolders : function (node, normalizer, sortDirection, criteria, context) {
+    var folders = this.getChildren(node, isc.Tree.FOLDERS_ONLY, normalizer, sortDirection,
+                                   criteria, context);
+
+    return folders;
+},
+
+//>    @method    tree.getLeaves()
+//
+// Return all the first-level leaves of a node.
+// <br><br>
+// For load on demand trees (those that only have a partial representation client-side), this
+// method will return only nodes that have already been loaded from the server.
+//
+// @param   node    (TreeNode)    node in question
+// @return          (List)      List of immediate children that are leaves.
+//
+// @visibility external
+//<
+
+getLeaves : function (node, normalizer, sortDirection, criteria, context) {
+    var leaves = this.getChildren(node, isc.Tree.LEAVES_ONLY, normalizer, sortDirection,
+                                  criteria, context);
+
+    return leaves;
+},
+
+//> @method Tree.getLevelNodes()
+// Get all nodes of a certain depth within the tree, optionally starting from
+// a specific node.  Level 0 means the immediate children of the passed node,
+// so if no node is passed, level 0 is the children of root
+// @param depth (integer) level of the tree
+// @param [node] (TreeNode) option node to start from
+// @return (Array of TreeNode)
+//<
+getLevelNodes : function (depth, node) {
+
+    if (this.indexByLevel && (node == null || node == this.getRoot())) {
+        return this._levelNodes[depth] || [];
+    } else {
+        if (!node) node = this.getRoot();
+        var children = this.getChildren(node);
+
+        if (depth == 0) {
+
+            if (isc.isA.ResultSet(children)) {
+                return children.getAllLoadedRows();
+            } else {
+                return children;
+            }
+        }
+        var result = [];
+        if (children) {
+            var length = (isc.isA.ResultSet(children) ?
+                    children._getCachedLength() : children.getLength());
+            for (var i = 0; i < length; ++i) {
+                var child = children.getCachedRow(i),
+                    nestedChildren = (
+                        child != null && this.getLevelNodes(depth - 1, child));
+                if (nestedChildren) result.addList(nestedChildren);
+            }
+        }
+        return result;
+    }
+},
+
+getDepth : function () {
+    if (this._levelNodes) return this._levelNodes.length;
+    return null;
+},
+
+//>    @method    tree.hasChildren()
+//
+// Returns true if this node has any children.
+//
+// @param    node            (TreeNode)            node in question
+// @return                    (Boolean)            true if the node has children
+//
+// @visibility external
+//<
+
+hasChildren : function (node, displayNodeType) {
+    var children = this.getChildren(node, displayNodeType);
+    return (children != null && !children.isEmpty());
+},
+
+//>    @method    tree.hasFolders()
+//
+// Return true if this this node has any children that are folders.
+//
+// @param    node    (TreeNode)    node in question
+// @return         (Boolean)   true if the node has children that are folders
+//
+// @visibility external
+//<
+hasFolders : function (node) {
+    return this.hasChildren(node, isc.Tree.FOLDERS_ONLY);
+},
+
+//>    @method    tree.hasLeaves()
+//
+//  Return whether this node has any children that are leaves.
+//
+//    @param    node    (TreeNode)    node in question
+//    @return            (Boolean)   true if the node has children that are leaves
+//
+// @visibility external
+//<
+hasLeaves : function (node) {
+    return this.hasChildren(node, isc.Tree.LEAVES_ONLY);
+},
+
+
+//>    @method    tree.isDescendantOf()
+//            Is one node a descendant of the other?
+//
+//        @param    child    (TreeNode)    child node
+//        @param    parent    (TreeNode)    parent node
+//        @return            (Boolean)    true == parent is an ancestor of child
+// @visibility external
+//<
+isDescendantOf : function (child, parent) {
+    if (child == parent) return false;
+    var nextParent = child;
+    while (nextParent != null) {
+        if (nextParent == parent) return true;
+        nextParent = nextParent[this.parentProperty];
+    }
+    return false;
+},
+
+//>    @method    tree.getDescendants()
+//
+// Returns the list of all descendants of a node.  Note: this method can be very slow,
+// especially on large trees because it assembles a list of all descendants recursively.
+// Generally, +link{method:Tree.find} in combination with +link{method:Tree.getChildren} will
+// be much faster.
+// <br><br>
+// For load on demand trees (those that only have a partial representation client-side), this
+// method will return only nodes that have already been loaded from the server.
+//
+// @param   [node]  (TreeNode)    node in question (the root node is assumed if none is specified)
+// @return  (List)              List of descendants of the node.
+//
+// @visibility external
+//<
+
+getDescendants : function (node, displayNodeType, condition, dontSkipUnloadedFolders) {
+    if (!node) node = this.root;
+
+    // create an array to hold the descendants
+    var list = [];
+
+    // if condition wasn't passed in, set it to an always true condition
+    // XXX convert this to a function if a string, similar to getChildren()
+    if (!condition) condition = isc.Class.RET_TRUE;
+
+    // if the node is a leaf, return the empty list
+    if (this.isLeaf(node)) return list;
+
+    // skip unloaded folders
+    if (!dontSkipUnloadedFolders && this.getLoadState(node) != isc.Tree.LOADED) {
+        return list;
+    }
+    // iterate through all the children of the node
+    // Note that this can't depend on getChildren() to subset the nodes,
+    //    because a folder may have children that meet the criteria but not meet the criteria itself.
+
+    var children = this.getChildren(node);
+    if (!children) {
+        return list;
+    }
+
+
+
+    // for each child
+    var length = (isc.isA.ResultSet(children) ?
+            children._getCachedLength() : children.getLength());
+    for (var i = 0; i < length; ++i) {
+        // get a pointer to the child
+        var child = children.getCachedRow(i);
+
+        if (child == null) {
+            // Do nothing.
+        } else if (this.isFolder(child)) { // if that child is a folder
+            // if we're not exluding folders, add the child
+            if (displayNodeType != isc.Tree.LEAVES_ONLY && condition(child)) {
+                list[list.length] = child;
+            }
+
+            // now concatenate the list with the descendants of the child
+            list = list.concat(
+                this.getDescendants(
+                    child, displayNodeType, condition, dontSkipUnloadedFolders));
+
+        } else {
+            // if we're not excluding leaves, add the leaf to the list
+            if (displayNodeType != isc.Tree.FOLDERS_ONLY && condition(child)) {
+                list[list.length] = child;
+            }
+        }
+    }
+    // finally, return the entire list
+    return list;
+},
+
+//>    @method    tree.getDescendantFolders()
+//
+// Returns the list of all descendants of a node that are folders.  This works just like
+// +link{method:Tree.getDescendants}, except leaf nodes are not part of the returned list.
+// Like +link{method:Tree.getDescendants}, this method can be very slow for large trees.
+// Generally, +link{method:Tree.find} in combination with +link{method:Tree.getFolders}
+// will be much faster.
+// <br><br>
+// For load on demand trees (those that only have a partial representation client-side), this
+// method will return only nodes that have already been loaded from the server.
+//
+// @param   [node]      (TreeNode)    node in question (the root node is assumed if none is specified)
+// @return  (List)        List of descendants of the node that are folders.
+//
+// @visibility external
+//<
+
+getDescendantFolders : function (node, condition) {
+     return this.getDescendants(node, isc.Tree.FOLDERS_ONLY, condition)
+},
+//>    @method    tree.getDescendantLeaves()
+//
+// Returns the list of all descendants of a node that are leaves.  This works just like
+// +link{method:Tree.getDescendants}, except folders are not part of the returned list.
+// Folders are still recursed into, just not returned.  Like +link{method:Tree.getDescendants},
+// this method can be very slow for large trees.  Generally, +link{method:Tree.find} in
+// combination with +link{method:Tree.getLeaves} will be much faster.
+// <br><br>
+// For load on demand trees (those that only have a partial representation client-side), this
+// method will return only nodes that have already been loaded from the server.
+//
+// @param   [node]      (TreeNode)    node in question (the root node is assumed if none specified)
+// @return  (List)        List of descendants of the node that are leaves.
+//
+// @visibility external
+//<
+
+getDescendantLeaves : function (node, condition) {
+    return this.getDescendants(node, isc.Tree.LEAVES_ONLY, condition)
+},
+
+
+//>    @method    tree.dataChanged()    (A)
+//
+// Called when the structure of this tree is changed in any way.  Intended to be observed.
+// <br><br>
+// Note that on a big change (many items being added or deleted) this may be called multiple times
+//
+// @visibility external
+//<
+dataChanged : function () {},
+
+
+//
+// adding nodes
+//
+
+//> @groupDef sharingNodes
+//
+// For local Trees, that is, Trees that don't use load on demand, SmartClient supports setting
+// up the Tree structure by setting properties such as "childrenProperty", directly on data
+// nodes.  This allows for simpler, faster structures for many common tree uses, but can create
+// confusion if nodes need to be shared across Trees.
+// <P>
+// <b>using one node in two places in one Tree</b>
+// <P>
+// To do this, either clone the shared node like so:<pre>
+//
+//     tree.add(isc.addProperties({}, sharedNode));
+//
+// </pre> or place the shared data in a shared subobject instead.
+// <P>
+// <b>sharing nodes or subtrees across Trees</b>
+// <P>
+// Individual nodes within differing tree structures can be shared by two Trees only if
+// +link{Tree.nameProperty}, +link{Tree.childrenProperty}, and +link{Tree.openProperty} have
+// different values in each Tree.
+// <P>
+// As a special case of this, two Trees can maintain different open state across a single
+// read-only structure as long as just "openProperty" has a different value in each Tree.
+//
+// @title Sharing Nodes
+// @visibility external
+//<
+
+
+//>    @method    tree.add()
+//
+// Add a single node under the specified parent.  See +link{ResultTree,"Modifying ResultTrees"}
+// when working with a <code>ResultTree</code> for limitations.
+//
+// @param    node        (TreeNode)    node to add
+// @param    parent        (String or TreeNode)    Parent of the node being added.  You can pass
+//                                          in either the +link{TreeNode} itself, or a path to
+//                                            the node (as a String), in which case a
+//                                            +link{method:Tree.find} is performed to find
+//                                            the node.
+// @param    [position]    (number)    Position of the new node in the children list. If not
+//                                    specified, the node will be added at the end of the list.
+// @return (TreeNode or null) The added node. Will return null if the node was not added (typically
+//    because the specified <code>parent</code> could not be found in the tree).
+//
+// @see group:sharingNodes
+// @see method:Tree.addList
+// @visibility external
+//<
+// Note: the node passed in is directly integrated into the tree, so you will see properties
+// written onto it, etc. We may want to duplicate it before adding, then return a pointer
+// to the node as added.
+add : function (node, parent, position) {
+    return this._add(node, parent, position);
+},
+_add : function (node, parent, position) {
+    if (parent == null && this.modelType == isc.Tree.PARENT) {
+        var parentId = node[this.parentIdField];
+        if (parentId != null) parent = this.findById(parentId);
+    }
+    // normalize the parent parameter into a node
+    if (isc.isA.String(parent)) {
+        parent = this.find(parent);
+    } else if (!this.getParent(parent) && parent !== this.getRoot()) {
+        // if parent is not in the tree, bail
+        isc.logWarn('Tree.add(): specified parent node:' + this.echo(parent) +
+                    ' is not in the tree, returning');
+        return null;
+    }
+    // if the parent wasn't found, return null
+    // XXX note that we could actually add to the root, but that's probably not what you want
+    if (! parent) {
+        // get the parentName of the node
+        var parentPath = this.getParentPath(node);
+        if (parentPath) parent = this.find(parentPath);
+        if (! parent) return null;
+    }
+
+    // we'll need to resort the children of this parent
+    var children = parent[this.childrenProperty];
+    if (children) this.markSubsetSortDirty(children);
+
+    this.__add(node, parent, position);
+
+    this._clearNodeCache(true);
+
+    // call the dataChanged method
+    this.dataChanged();
+
+    return node;
+},
+
+_reportCollision : function (ID) {
+    if (this.reportCollisions) {
+        this.logWarn("Adding node to tree with id property set to:"+ ID +
+            ". A node with this ID is already present in this Tree - that node will be " +
+            "replaced. Note that this warning may be disabled by setting the " +
+            "reportCollisions attribute to false.");
+    }
+},
+
+// internal interface, used by _linkNodes(), _addList(), and any other place where we are adding a
+// batch of new nodes to the Tree.  This implementation doesn't call _clearNodeCache() or
+// dataChanged() and assumes you passed in the parent node as a node object, not a string.
+
+__add : function (node, parent, position) {
+    var pagedResultTree = (
+            isc.ResultTree != null && isc.isA.ResultTree(this) && this.isPaged());
+
+
+    var info = {};
+    parent[this._recursionCountProperty] = 1 + (parent[this._recursionCountProperty] || 0);
+    this._preAdd(node, parent, true, info);
+    var deltaParentLength = info.deltaParentLength,
+        grandParent = info.grandParent,
+        origParentLength = info.origParentLength,
+        children = info.children;
+
+
+    // If position wasn't specified, set it as the last item.
+    // NOTE: Specifying position > children.length is technically wrong but happens easily
+    // with a remove followed by an add.
+    if (position == null || position > children.length) {
+        children.add(node);
+    } else {
+        // add the node to the parent - addAt is slower, so only do this if your position was
+        // passed in
+        children.addAt(node, position);
+    }
+
+    this._postAdd(node, parent, position, info);
+    var grandChildren = (pagedResultTree
+            ? this._canonicalizeChildren(node, info.grandChildren, false) : info.grandChildren);
+
+    if (pagedResultTree) {
+        var fromParent = (parent[this.canReturnOpenSubfoldersProperty] != null),
+            openSubfoldersAllowed = (fromParent ?
+                parent[this.canReturnOpenSubfoldersProperty] : this.canReturnOpenFolders);
+
+        if (!openSubfoldersAllowed &&
+            this.isOpen(node) &&
+            grandChildren != null && !grandChildren.isEmpty())
+        {
+            this.logWarn(
+                "Adding the open folder node '" + this.getPath(node) + "' as a child of the " +
+                "parent node '" + this.getPath(parent) + "' is contradictory to the setting " +
+                "of the " + (fromParent ? "'" + this.canReturnOpenSubfoldersProperty + "' " +
+                "property of the parent node." : "'canReturnOpenFolders' property of the tree."));
+        }
+    }
+
+    var deltaLength = 0;
+    if (pagedResultTree && isc.isA.ResultSet(grandChildren)) {
+        if (!(grandChildren.lengthIsKnown() && grandChildren.allMatchingRowsCached())) {
+            this._setVisibleDescendantsCached(node, false, parent, false);
+        }
+    } else if (grandChildren != null) {
+        // If the node has children, recursively add them to the node.  This ensures that
+        // their parent link is set up correctly.
+
+        // Handle children being specified as a single element recursively.
+        // _add will slot the element into the new children array.
+        if (!isc.isAn.Array(grandChildren)) {
+            this.__add(grandChildren, node);
+        } else if (grandChildren.length > 0) {
+            this.__addList(grandChildren, node);
+        }
+
+        // if a children array is present, mark the node as loaded even if the children array
+        // is empty - this is a way of indicating an empty folder in XML or JSON results
+        this.setLoadState(node, isc.Tree.LOADED);
+    }
+
+
+    if ((--parent[this._recursionCountProperty]) == 0) {
+        delete parent[this._recursionCountProperty];
+
+        if (grandParent) {
+            // Check if changes in the length of the parent affect the length of the grandParent.
+            deltaParentLength += (this._getNodeLengthToParent(parent, grandParent) - origParentLength);
+
+            // Update the lengths of some of the ancestors.
+            this._updateParentLengths(grandParent, deltaParentLength);
+        }
+    }
+},
+
+_removeCollision : function (collision) {
+
+    var pagedResultTree = (
+            isc.ResultTree != null && isc.isA.ResultTree(this) && this.isPaged());
+    if (pagedResultTree) {
+        var parent = this.getParent(collision),
+            siblings = (parent != null ? this.getChildren(parent) : null);
+
+        if (isc.isA.ResultSet(siblings)) {
+            var j = siblings.indexOf(collision);
+            if (j != -1) {
+
+                siblings.fillCacheData([null], j);
+            }
+            return;
+        }
+    }
+
+    // Otherwise simply remove the collision node.
+    this._remove(collision);
+},
+
+_findCollision : function (node) {
+
+    var ID = node[this.idField];
+    if (ID != null && this.modelType == isc.Tree.PARENT) {
+        // note: in modelType:"children", while we do maintain a nodeIndex, an idField is not
+        // required and the tree does not depend on globally unique ids
+        var collision = this.findById(ID);
+        if (collision) {
+            return collision;
+        }
+    }
+    return null;
+},
+
+
+_preAdd : function (node, parent, removeCollisions, info) {
+
+
+    // convert name to a string - we rely on this fact in getTitle() and possibly other
+    // places.  Also, ultimately getName() will convert it to a string anyway and at that
+    // point, if new values are not strings from the start, sorting won't work as expected (the
+    // non-strings will be segregated from the strings).
+    this.getName(node);
+
+    // convert the parent node to a folder if necessary
+    var deltaParentLength = info.deltaParentLength = this.convertToFolder(parent);
+
+    var grandParent = info.grandParent = (parent != this.root && this.getParent(parent)),
+        origParentLength = info.origParentLength = (
+            grandParent && this._getNodeLengthToParent(parent, grandParent));
+
+    var collision = this._findCollision(node);
+    if (collision) {
+        var ID = collision[this.idField];
+        this._reportCollision(ID);
+        if (removeCollisions) {
+            this._removeCollision(collision);
+        }
+    }
+
+    var children = parent[this.childrenProperty];
+    if (!children) children = parent[this.childrenProperty] = [];
+    info.children = children;
+
+    // if the children attr contains a single object, assume it to be a single child of
+    // the node.
+
+    var childrenResultSet = info.childrenResultSet = isc.isA.ResultSet(children);
+    if (children != null && !isc.isAn.Array(children) && !childrenResultSet) {
+        parent[this.childrenProperty] = children = [children];
+    }
+
+    // parentId-based loading can be used without the parentId
+    // appearing in the child nodes, for example, if loading nodes from a large XML structure,
+    // we may use the parentId to store the XPath to the parent, and load children via accessing
+    // the parentElement.childNodes Array.
+    //
+    // set the parentId on the node if it isn't set already
+    var idField = this.idField
+    // just do this unconditionally - it doesn't make sense for the parentId field of the child
+    // not to match the idField of the parent.
+    node[this.parentIdField] = parent[idField];
+    // link to the parent
+    node[this.parentProperty] = parent;
+
+    // Set the node to the default LoadState.
+    delete node._loadState;
+},
+
+
+_postAdd : function (node, parent, position, info) {
+    var idField = this.idField;
+
+    // Link to the Tree (by String ID, not direct pointer).
+    node[this.treeProperty] = this.ID;
+
+    // Update nodeIndex.
+    // If we don't do a null check there are cases where null values get added into the
+    // nodeIndex and children get added to the wrong parent, i.e. when using autoFetch and
+    // modeltype 'children' within a treegrid.
+    if (node[idField] != null) this.nodeIndex[node[idField]] = node;
+
+    if (!info.childrenResultSet) {
+        // Current assumption whenever loading subtrees is that if any
+        // children are returned for a node, it's the complete set, and the node is marked "loaded".
+        this.setLoadState(parent, isc.Tree.LOADED);
+    }
+
+    this._addToLevelCache(node, parent, position);
+
+    // Set the cached length of the node.
+    var nodeIsFolder = this.isFolder(node);
+    node[this._cachedLengthProperty] = (
+        this.openDisplayNodeType != (nodeIsFolder ? isc.Tree.LEAVES_ONLY : isc.Tree.FOLDERS_ONLY) ? 1 : 0);
+
+    var grandChildren = info.grandChildren = node[this.childrenProperty],
+        deltaLength;
+    if (grandChildren != null) {
+        node[this.childrenProperty] = [];
+        deltaLength = this._getNodeLengthToParent(node, parent);
+    } else {
+        deltaLength = this._getNodeLengthToParent(node, parent);
+
+        // canonicalize the isFolder flag on the node
+        var wasFolder = this.isFolder(node),
+            isFolder = node[this.isFolderProperty];
+
+        // convert to boolean
+        if (isFolder != null && !isc.isA.Boolean(isFolder)) {
+            isFolder = isc.booleanValue(isFolder, true);
+        }
+
+        // ResultTree nodes that don't specify isFolder default to isFolder: true,
+        // But Trees work exactly the opposite way
+        if (isFolder == null && this.defaultIsFolder) isFolder = true;
+
+        if (isFolder && !wasFolder) {
+            deltaLength += this.convertToFolder(node);
+        }
+        node[this.isFolderProperty] = isFolder;
+    }
+
+    // Add deltaLength to the length of the parent.
+
+    parent[this._cachedLengthProperty] += deltaLength;
+},
+
+_addToLevelCache : function (nodes, parent, position) {
+    if (!this.indexByLevel) return;
+
+    var level = this.getLevel(parent);
+    if (!this._levelNodes[level]) this._levelNodes[level] = [];
+    var levelNodes = this._levelNodes[level];
+
+    // Special case - array is empty, just add the node to the end
+    if (levelNodes.length == 0) {
+        if (!isc.isAn.Array(nodes)) {
+            levelNodes.push(nodes);
+        } else {
+            levelNodes.concat(nodes);
+        }
+    } else {
+        // Make sure none of these nodes is already cached
+        if (!isc.isAn.Array(nodes)) {
+            if (levelNodes.contains(nodes)) return;
+        } else {
+            var cleanNodes = [];
+            for (var j = 0; j < nodes.length; j++) {
+                if (!levelNodes.contains(nodes[j])) {
+                    cleanNodes.push(nodes[j]);
+                }
+            }
+        }
+        // Slot the node(s) into the level cache at the correct position
+        var startedThisParent = false,
+            siblingCount = 0,
+            i = 0;
+        for (i; i < levelNodes.length; i++) {
+            if (this.getParent(levelNodes[i]) == parent) {
+                startedThisParent = true;
+            } else if (startedThisParent) {
+                break;
+            } else {
+                continue;
+            }
+            // Exact equality is important - position 0 means first, position null means last
+            if (siblingCount === position) {
+                break;
+            }
+            siblingCount++;
+        }
+
+        if (!isc.isAn.Array(nodes)) {
+            levelNodes.splice(i, 0, nodes);
+        } else {
+            // Using concat() because splice, push and unshift all insert the array itself,
+            // not the array's contents, and a solution involving a Javascript loop would
+            // presumably cause far more churn in the array than passing everything in a
+            // single native call and letting the browser deal with it
+            if (i == 0) {
+                this._levelNodes[level] = cleanNodes.concat(levelNodes);
+            } else if (i == levelNodes.length) {
+                this._levelNodes[level] = levelNodes.concat(cleanNodes);
+            } else {
+                this._levelNodes[level] =
+                            levelNodes.slice(0, i).concat(cleanNodes, levelNodes.slice(i));
+            }
+        }
+    }
+},
+
+//>    @method    tree.addList()
+//
+// Add a list of nodes to some parent.  See +link{ResultTree,"Modifying ResultTrees"}
+// when working with a <code>ResultTree</code> for limitations.
+//
+// @param   nodeList      (List of TreeNode) The list of nodes to add
+// @param    parent        (String or TreeNode)    Parent of the nodes being added.  You can pass
+//                                          in either the +link{TreeNode} itself, or a path to
+//                                            the node (as a String), in which case a
+//                                            +link{method:Tree.find} is performed to find
+//                                            the node.
+// @param    [position]    (number)    Position of the new nodes in the children list. If not
+//                                    specified, the nodes will be added at the end of the list.
+// @return    (List)    List of added nodes.
+//
+// @see group:sharingNodes
+// @visibility external
+//<
+addList : function (nodeList, parent, position) {
+    return this._addList(nodeList, parent, position);
+},
+_addList : function (nodeList, parent, position) {
+    // normalize the parent property into a node
+    if (isc.isA.String(parent)) parent = this.find(parent);
+
+    // if the parent wasn't found, return null
+    if (!parent) return null;
+
+    // we'll need to resort the children of this parent
+    var children = parent[this.childrenProperty];
+    if (children) this.markSubsetSortDirty(children);
+
+    this.__addList(nodeList, parent, position);
+
+    if (!this._deferDataChanged) {
+        this._clearNodeCache(true);
+        this.dataChanged();
+    }
+
+    return nodeList;
+},
+
+__addList : function (nodeList, parent, position) {
+    // Simply call add repeatedly for each child.
+    var length = (
+            isc.isA.ResultSet(nodeList) ? nodeList._getCachedLength() : nodeList.getLength());
+    for (var i = 0; i < length; ++i) {
+        var node = nodeList.getCachedRow(i);
+        if (node != null) {
+            this.__add(node, parent, position != null ? (position + i) : null);
+        }
+    }
+},
+
+
+// Structural changes
+// --------------------------------------------------------------------------------------------
+
+//>    @method    tree.move()
+//
+// Moves the specified node to a new parent.
+//
+// @param    node        (TreeNode)    node to move
+// @param    newParent    (TreeNode)    new parent to move the node to
+// @param    [position]    (Integer)    Position of the new node in the children list. If not
+//                                    specified, the node will be added at the end of the list.
+// @visibility external
+//<
+move : function (node, newParent, position) {
+    return this._move(node, newParent, position);
+},
+_move : function (node, newParent, position) {
+    this.moveList([node], newParent, position);
+},
+
+
+// In some cases - EG treeGrid drag/drop, we want to slot a node before a specific
+// sibling.
+// In this case if any node(s) being moved are being reordered within a parent, the
+// final position may differ from what you'd expect (not necessarily index-of-next-node -1)
+moveBefore : function (node, nextNode) {
+    this.moveListBefore([node], nextNode);
+},
+moveListBefore : function (nodes, nextNode) {
+    var parentNode = this.getParent(nextNode);
+    var siblings = this.getChildren(parentNode),
+        position = siblings.indexOf(nextNode),
+        offset = 0;
+
+    // adjust the target position to account for nodes which are currently
+    // before the target position and will be shifted forward.
+    for (var i = 0; i < position; i++) {
+        if (nodes.contains(siblings[i])) {
+            offset += 1;
+        }
+    }
+    this.moveList(nodes, parentNode, position-offset);
+},
+
+
+//>    @method    tree.moveList()
+//            Move a list of nodes under a new parent.
+//
+//        @group    dataChanges
+//
+//        @param    nodeList    (List of TreeNode)    list of nodes to move
+//        @param    newParent    (TreeNode)    new parent node
+//        @param    [position]    (number)    position to place new nodes at.
+//                                        If not specified, it'll go at the end
+//<
+moveList : function (nodeList, newParent, position) {
+
+    for (var i = nodeList.length, duplicated = false; i--; ) {
+        var node = nodeList[i];
+        if (node == newParent || this.isDescendantOf(newParent, node)) {
+            if (!duplicated) {
+
+                duplicated = true;
+                nodeList = nodeList.duplicate();
+            }
+
+            this.logWarn(
+                "Tree.moveList():  Specified node '" + this.getPath(node) + "' is an " +
+                "ancestor of the new parent node '" + this.getPath(newParent) + "' and " +
+                "therefore cannot be made a child of that parent.  The specified node will " +
+                "remain where it is.");
+            nodeList.removeAt(i);
+        }
+    }
+    if (nodeList.length == 0) {
+
+        return;
+    }
+
+    // internal flag that prevents dataChanged from firing 3 times (from the individual
+    // remove/add calls, and then at the end of this method)
+    this._deferDataChanged = true;
+
+    // remove the nodes from their old parents
+    this._removeList(nodeList);
+
+    // Note: we've removed all nodes from the list now, so no need to adjust the target
+    // position to account for reshuffling etc - that's already happened.
+    // just make sure that if the parent's child list has shortened because some
+    // nodes from this parent were removed, we don't leave gaps.
+
+    var children = this.getChildren(newParent);
+    if (children) {
+        var childrenLength = (isc.isA.ResultSet(children) ?
+                children._getCachedLength() : children.getLength());
+        if (position > childrenLength) {
+            position = childrenLength;
+        }
+    }
+
+    // add the nodes to the new parent
+    this._addList(nodeList, newParent, position);
+    // call the dataChanged method to notify anyone who's observing it
+    delete this._deferDataChanged;
+    this._clearNodeCache(true);
+    this.dataChanged();
+},
+
+//>    @method    tree.remove()
+//
+// Removes a node, along with all its children.  See +link{ResultTree,"Modifying ResultTrees"}
+// when working with a <code>ResultTree</code> for limitations.
+//
+// @param    node    (TreeNode)    node to remove
+// @return            (Boolean)    true if the tree was changed as a result of this call
+//
+// @visibility external
+//<
+remove : function (node, noDataChanged) {
+    return this._remove(node, noDataChanged);
+},
+_remove : function (node, noDataChanged) {
+    // get the parent of the node
+    var parent = this.getParent(node);
+    if (! parent) return false;
+
+//    this.logWarn("removing: " + isc.Log.echoAll(node) + " from: " + isc.Log.echoAll(parent));
+
+    // get the children list of the parent and the name of the node
+    var children = this.getChildren(parent);
+    if (children) {
+        // Figure out the child number.
+        var position = children.indexOf(node);
+        if (position != -1) {
+            this.__remove(node, parent, children, position);
+
+            // This can be expensive if we're called iteratively for a large set of nodes  -
+            // e.g. via _removeList(), so consult noDataChanged flag.
+            if (!noDataChanged) {
+                // Mark the entire tree as dirty.
+                this._clearNodeCache(true);
+                // Call the dataChanged method to notify anyone who's observing it.
+                this.dataChanged();
+            }
+            return true;
+        }
+    }
+
+    return false;
+},
+
+
+__remove : function (node, parent, children, position) {
+    var pagedResultTree = (
+            isc.ResultTree != null && isc.isA.ResultTree(this) && this.isPaged());
+
+
+    parent[this._recursionCountProperty] = 1 + (parent[this._recursionCountProperty] || 0);
+
+    var info = {};
+    this._preRemove(node, parent, info);
+    var deltaLength = info.deltaLength,
+        grandParent = info.grandParent,
+        origParentLength = info.origParentLength;
+
+    // Remove the node
+    children.remove(node);
+
+    this._postRemove(node, parent, info);
+
+    // Update the length of the ancestors according to the removal of the child node.
+    // If the removed node was the last of the parent's children, then the parent will look
+    // like a leaf to the grandparent, which may affect the lengths of the grandparent and
+    // more distant ancestors.
+    var grandParent = info.grandParent;
+
+    if ((--parent[this._recursionCountProperty]) == 0) {
+        delete parent[this._recursionCountProperty];
+        if (grandParent) {
+            var deltaParentLength = (
+                    this._getNodeLengthToParent(parent, grandParent) - origParentLength);
+            this._updateParentLengths(grandParent, deltaParentLength);
+        }
+    }
+},
+
+_preRemove : function (node, parent, info) {
+    // Recursively remove the node and its children from the node index.  We do this rather
+    // than call _remove() because we don't want to remove the children from the node
+    // itself, just from the tree's cache
+    this._removeFromNodeIndex(node);
+
+    info.deltaLength = -this._getNodeLengthToParent(node, parent);
+    var grandParent = info.grandParent = (parent != this.root && this.getParent(parent));
+    info.origParentLength = grandParent && this._getNodeLengthToParent(parent, grandParent);
+
+    this._removeFromLevelCache(node);
+
+    delete node[this.parentProperty];
+    delete node[this.treeProperty];
+},
+
+_postRemove : function (node, parent, info) {
+
+    // Update the length of the parent according to the removal of the child node.
+    var deltaLength = info.deltaLength;
+
+    parent[this._cachedLengthProperty] += deltaLength;
+},
+
+_removeFromNodeIndex : function (node) {
+    delete this.nodeIndex[node[this.idField]];
+    var children = this.getChildren(node, null, null, null, null, null, true);
+    if (!children) return;
+    var length = (isc.isA.ResultSet(children) ?
+            children._getCachedLength() : children.getLength());
+    for (var i = 0; i < length; ++i) {
+        var child = children.getCachedRow(i);
+        if (child != null) {
+            this._removeFromNodeIndex(child);
+        }
+    }
+},
+
+//>    @method    tree.removeList()
+//
+// Remove a list of nodes (not necessarily from the same parent), and all children of those
+// nodes.  See +link{ResultTree,"Modifying ResultTrees"} when working with a
+// <code>ResultTree</code> for limitations.
+//
+// @param    nodeList    (List of TreeNode)    list of nodes to remove
+// @return                (boolean)    true if the tree was changed as a result of this call
+//
+// @visibility external
+//<
+removeList : function (nodeList) {
+    return this._removeList(nodeList);
+},
+_removeList : function (nodeList) {
+    // this is our return value
+    var changed = false;
+
+    // simply call remove for each node that was removed
+
+    // We can be passed the result of tree.getChildren() - if that happens, then remove() will
+    // operate on the same array that we're iterating over, which means nodeList will shrink as
+    // we iterate, so count down from nodeList.length instead of counting up.
+    // Also note that getChildren() may return a ResultSet so the nodeList argument may be a
+    // ResultSet.
+    var i = (isc.isA.ResultSet(nodeList) ? nodeList._getCachedLength() : nodeList.getLength());
+    while (i--) {
+        var node = nodeList.getCachedRow(i);
+        if (node != null) {
+            if (this._remove(node, true)) {
+                changed = true;
+            }
+        }
+    }
+
+    // call the dataChanged method to notify anyone who's observing it
+    if (changed && !this._deferDataChanged) {
+        this._clearNodeCache(true);
+        this.dataChanged();
+    }
+
+    return changed;
+},
+
+_removeFromLevelCache : function (node, level) {
+    if (!this.indexByLevel) return;
+
+    level = level || this.getLevel(node) - 1;
+
+    // Remove index entries for descendants first
+    var nodeChildren = this.getChildren(node);
+    if (nodeChildren) {
+        var length = (isc.isA.ResultSet(nodeChildren) ?
+                nodeChildren._getCachedLength() : nodeChildren.getLength());
+        for (var i = 0; i < length; ++i) {
+            var child = nodeChildren.getCachedRow(i);
+            if (child != null) {
+                this._removeFromLevelCache(child, level + 1);
+            }
+        }
+    }
+
+    if (this._levelNodes[level]) {
+        var levelNodes = this._levelNodes[level];
+        for (var i = 0; i < levelNodes.length; i++) {
+            if (levelNodes[i] == node) {
+                levelNodes.splice(i, 1);
+                break;
+            }
+        }
+    }
+},
+
+
+// Loading and unloading of children
+// --------------------------------------------------------------------------------------------
+
+
+//>    @method    tree.getLoadState()
+// What is the loadState of a given folder?
+//
+// @param node (TreeNode) folder in question
+// @return (LoadState) state of the node
+// @group loadState
+// @visibility external
+//<
+getLoadState : function (node) {
+    if (!node) return null;
+    if (this.isLeaf(node)) return isc.Tree.LOADED;
+    if (!node._loadState) return this.defaultLoadState;
+    return node._loadState;
+},
+
+//>    @method    tree.isLoaded()
+// For a databound tree, has this folder either already loaded its children or is it in the
+// process of loading them.
+//
+// @param node (TreeNode) folder in question
+// @return (Boolean) folder is loaded or is currently loading
+// @group loadState
+// @visibility external
+//<
+isLoaded : function (node) {
+    var loadState = this.getLoadState(node);
+    return (
+        loadState == isc.Tree.LOADED ||
+        loadState == isc.Tree.LOADING ||
+        loadState == isc.Tree.LOADED_PARTIAL_CHILDREN);
+},
+
+// helper to support ResultTree.hideLoadingNodes
+isLoading : function (node) {
+    return this.getLoadState(node) == isc.Tree.LOADING;
+},
+
+//>    @method    tree.allChildrenLoaded()
+// For a databound tree, do the children of this folder form a ResultSet with a full cache.
+// <P>
+// Note that this method only applies to +link{resultTree.fetchMode} "paged".
+// @param node (TreeNode) folder in question
+// @return (Boolean) folder's children are a ResultSet with a full cache
+// @group loadState
+// @see tree.getChildrenResultSet()
+// @visibility external
+//<
+allChildrenLoaded : function (node) {
+    var loadState = this.getLoadState(node);
+    return (loadState == isc.Tree.LOADED);
+},
+
+//>    @method    tree.setLoadState()
+// Set the load state of a particular node.
+// @group loadState
+// @param node (TreeNode) node in question
+// @param newState (string) new state to set to
+// @return (boolean) folder is loaded or is currently loading
+//<
+setLoadState : function (node, newState) {
+    var prevState = this.getLoadState(node);
+    node._loadState = newState;
+    newState = this.getLoadState(node);
+
+    // The load state of the node affects the _visibleDescendantsCachedProperty set on the
+    // nodes of paged ResultTrees.  Update the value of that property of the node if necessary.
+    var prevFlag = (
+            prevState === isc.Tree.LOADED ||
+            prevState === isc.Tree.LOADED_PARTIAL_CHILDREN),
+        newFlag = (
+            newState === isc.Tree.LOADED ||
+            newState === isc.Tree.LOADED_PARTIAL_CHILDREN),
+        pagedResultTree = (
+            isc.ResultTree != null && isc.isA.ResultTree(this) && this.isPaged());
+    if (pagedResultTree && (prevFlag != newFlag)) {
+        // Only update the _visibleDescendantsCachedProperty if it has been set before on the
+        // node.
+        var parent = this.getParent(node);
+        if (isc.isA.Boolean(node[this._visibleDescendantsCachedProperty])) {
+            this._setVisibleDescendantsCached(node, null, parent, false);
+        }
+    }
+},
+
+//>    @method    tree.loadRootChildren()
+//            Load the root node's children.
+//            Broken out into a special function so you can override more cleanly
+//                 (default implementation just calls loadChildren)
+//      @param  [callback]  (callback) StringMethod to fire when loadChildren() has loaded data.
+//        @group    loadState
+//<
+loadRootChildren : function (callback) {
+    this.loadChildren(this.root, callback);
+},
+
+//>    @method    tree.loadChildren()
+// Load the children of a given node.
+// <P>
+// For a databound tree this will trigger a fetch against the Tree's DataSource.
+//
+//
+// @param node    (TreeNode)    node in question
+// @param [callback] (DSCallback) Optional callback (stringMethod) to fire when loading
+//                      completes. Has a single param <code>node</code> - the node whose
+//                      children have been loaded, and is fired in the scope of the Tree.
+// @group loadState
+// @visibility external
+//<
+loadChildren : function (node, callback) {
+    if (!node) {
+        node = this.root;
+    }
+    var pagedResultTree = (
+            isc.ResultTree != null && isc.isA.ResultTree(this) && this.isPaged());
+    if (pagedResultTree) {
+        this._loadChildren(node, 0, this.resultSize, callback);
+    } else {
+        this._loadChildren(node, null, null, callback);
+    }
+},
+
+
+_loadChildren : function (node, start, end, callback) {
+
+
+    // mark the node as loaded
+    this.setLoadState(node, isc.Tree.LOADED);
+    if (callback) {
+        //Fire the callback in the scope of this tree
+        this.fireCallback(callback, "node", [node], this);
+    }
+},
+
+//>    @method    tree.unloadChildren()
+// Unload the children of a folder, returning the folder to the "unloaded" state.
+//
+// @param node (TreeNode) folder in question
+// @group loadState
+// @deprecated It's recommended that you instead use +link{tree.reloadChildren()} to reload the
+// children of a folder, or +link{tree.removeChildren()} if you need to clear the cached children
+// of a folder to add specific local data.
+// @visibility external
+//<
+// NOTE internal parameter:    [displayNodeType]    (DisplayNodeType)    Type of children to drop
+unloadChildren : function (node, displayNodeType, markAsLoaded) {
+    if (node == null || this.isLeaf(node)) {
+        return;
+    }
+
+    var droppedChildren, newChildren, newLoadState;
+    if (displayNodeType == isc.Tree.LEAVES_ONLY) {
+        // set the children array to just the folders
+        droppedChildren = this.getLeaves(node);
+        newChildren = this.getFolders(node);
+        // and mark the node as only the folders are loaded
+        newLoadState = isc.Tree.FOLDERS_LOADED;
+    } else {
+        // clear out the children Array
+        droppedChildren = node[this.childrenProperty];
+        newChildren = [];
+        // and mark the node as unloaded
+        newLoadState = isc.Tree.UNLOADED;
+    }
+
+    var parent, origLength;
+    if (droppedChildren) {
+        parent = (node != this.root && this.getParent(node));
+        origLength = parent && this._getNodeLengthToParent(node, parent);
+
+        for (var i = 0; i < droppedChildren.getLength(); i++) {
+            var droppedChild = droppedChildren.get(i);
+
+            // skip anything that doesn't appear to be a valid child node of parent
+            if (!isc.isAn.Object(droppedChild) || droppedChild[this.idField] == null) continue;
+
+            // take the droppedChildren out of the node index
+            // NOTE: we shouldn't just call _remove() to do this.  unloadChildren() is essentially
+            // discarding cache, whereas calling _remove() in a dataBound tree would actually kick off a
+            // DataSource "remove" operation
+            this._removeFromNodeIndex(droppedChild);
+
+
+            node[this._cachedLengthProperty] -= this._getNodeLengthToParent(droppedChild, node);
+        }
+    }
+
+    node[this.childrenProperty] = newChildren;
+    this.setLoadState(node, markAsLoaded ? isc.Tree.LOADED : newLoadState);
+
+    if (droppedChildren && parent) {
+        // Update the lengths of the ancestors of the dropped children.  The children's parent,
+        // node, already has had its length updated.  Now just update the length of the node's
+        // ancestors.
+        var deltaLength = (this._getNodeLengthToParent(node, parent) - origLength);
+        this._updateParentLengths(parent, deltaLength);
+    }
+
+    // mark the tree as dirty and note that the data has changed
+    this._clearNodeCache(true);
+    this.dataChanged();
+},
+
+//>    @method    tree.reloadChildren()
+// Reload the children of a folder.
+//
+// @param node (TreeNode) node in question
+// @see removeChildren()
+// @group loadState
+// @visibility external
+//<
+
+reloadChildren : function (node, displayNodeType) {
+    this.unloadChildren(node, displayNodeType);
+    this.loadChildren(node, displayNodeType);
+},
+
+//>    @method    tree.removeChildren()
+// Removes all children of the node and sets it to a loaded state.  For non-+link{ResultTree}s,
+// or non-+link{ResultTree.fetchMode,paged} <code>ResultTree</code>s, +link{add()} or
+// +link{addList()} can then be used to provide new children.  For
+// +link{ResultTree.fetchMode,paged} <code>ResultTrees</code>, +link{DataSource.updateCaches()}
+// must be used to insert nodes into the cache as local data, since such
+// <code>ResultTree</code>s are considered read-only, and +link{add} and +link{addList()} are
+// not perrmitted.
+//
+// @param node (TreeNode) folder in question
+// @see getLoadState()
+// @see reloadChildren()
+// @group loadState
+// @visibility external
+//<
+
+removeChildren : function (node, displayNodeType) {
+
+    this.unloadChildren(node, displayNodeType, true);
+},
+
+//>    @method    tree.setChildren()
+// Replaces the existing children of a parent node, leaving the node in the loaded state.
+// Only a flat list of children nodes is supported, as in +link{addList()}.
+//
+// @param parent                (TreeNode) parent of children
+// @param newChildren   (List of TreeNode) children to be set
+//
+// @see removeChildren()
+// @see dataSource.updateCaches()
+//
+// @group loadState
+// @visibility external
+//<
+setChildren : function (parent, newChildren) {
+    // remove current children
+    this.removeChildren(parent);
+    // add new children to parent
+    this.addList(newChildren || [], parent);
+},
+
+//
+//    open and close semantics for a set of tree nodes
+//
+
+
+// clears the open node cache (used by getOpenList())
+// and optionally the all node cache (used by getNodeList()).
+_clearNodeCache : function (allNodes) {
+    if (allNodes) this._allListCache = null;
+    this._openListCache = null;
+},
+
+//>    @method    tree.isOpen()
+//
+// Whether a particular node is open or closed (works for leaves and folders).
+//
+// @param    node    (TreeNode)    node in question
+// @return  (Boolean)           true if the node is open
+//
+// @visibility external
+//<
+isOpen : function (node) {
+    return node != null && !!node[this.openProperty];
+},
+
+
+//>    @method    tree.getOpenFolders()
+//        Return the list of sub-folders of this tree that have been marked as open.
+//        Note: unlike tree.getOpenList(), this only returns *folders* (not files),
+//            and this will return nodes that are open even if their parent is not open.
+//        @group    openList
+//
+//        @param    node    (TreeNode)    node to start with.  If not passed, this.root will be used.
+//<
+getOpenFolders : function (node) {
+    if (node == null) node = this.root;
+    var openProperty = this.openProperty;
+    var openNodes = this.getDescendantFolders(node, function (node) {
+        return node[openProperty];
+    });
+    if (this.isOpen(node)) openNodes.add(node);
+    return openNodes;
+},
+
+//>    @method    tree.getOpenFolderPaths()
+//        Return the list of sub-folders of this tree that have been marked as open.
+//        Note: unlike tree.getOpenList(), this only returns *folders* (not files),
+//            and this will return nodes that are open even if their parent is not open.
+//        @group    openList
+//
+//        @param    node    (TreeNode)    node to start with.  If not passed, this.root will be used.
+//<
+getOpenFolderPaths : function (node) {
+    var openNodes = this.getOpenFolders(node);
+    for (var i = 0; i < openNodes.length; i++) {
+        openNodes[i] = this.getPath(openNodes[i]);
+    }
+    return openNodes;
+},
+
+//>    @method    tree.changeDataVisibility()    (A)
+// Open or close a node.<br><br>
+//
+// Note that on a big change (many items being added or deleted) this may be called multiple times.
+//
+//        @group    openList
+//
+//        @param    node        (TreeNode)    node in question
+//        @param    newState    (boolean)    true == open, false == close
+//      @param  [callback] (callback) Optional callback (stringMethod) to fire when loading
+//                      completes. Has a single param <code>node</code> - the node whose
+//                      children have been loaded, and is fired in the scope of the Tree.
+//<
+changeDataVisibility : function (node, newState, callback) {
+//!DONTOBFUSCATE  (obfuscation breaks the inline function definitions)
+
+    // if they're trying to open a leaf return false
+    if (this.isLeaf(node)) {
+        if (callback) {
+            // Fire the callback in the scope of this tree
+            this.fireCallback(callback, "node", [node], this);
+        }
+        return false;
+    }
+
+    // mark the node as open or closed
+    var state = node[this.openProperty],
+        closedToOpen = !state && newState,
+        openToClosed = state && !newState;
+
+    // If the node's openness has changed then its cached length may also have changed.
+    if (closedToOpen || openToClosed) {
+        var parent = (node != this.root && this.getParent(node)) || null,
+            prevLength = parent && this._getNodeLengthToParent(node, parent),
+            newLength = (this.openDisplayNodeType != isc.Tree.LEAVES_ONLY ? 1 : 0);
+
+        node[this.openProperty] = newState;
+
+        if (closedToOpen) {
+            // node went from closed to open so its length includes the lengths of the children.
+            var childrenInOpenList = this.getChildren(
+                    node, isc.Tree.FOLDERS_AND_LEAVES, null,
+                    this.sortDirection, this.openListCriteria, this._sortContext,
+                    true, true, true),
+                loadingMarker = (
+                    isc.ResultSet != null ? isc.ResultSet.getLoadingMarker() : null);
+            // If getChildren returned null, convert to an empty array
+
+            if (childrenInOpenList == null) childrenInOpenList = [];
+            var i = (isc.isA.ResultSet(childrenInOpenList) ?
+                    childrenInOpenList._getCachedLength() : childrenInOpenList.getLength());
+
+
+            var pagedResultTree = (
+                    isc.ResultTree != null && isc.isA.ResultTree(this) && this.isPaged()),
+                knownLengthNulls = pagedResultTree;
+            if (pagedResultTree) {
+                var openSubfoldersAllowed = (
+                        node[this.canReturnOpenSubfoldersProperty] != null ?
+                        node[this.canReturnOpenSubfoldersProperty] : this.canReturnOpenFolders),
+                    defaultChildLength = (
+                        this.openDisplayNodeType == isc.Tree.FOLDERS_AND_LEAVES ? 1 : 0);
+
+                knownLengthNulls = !(openSubfoldersAllowed || defaultChildLength == 0);
+            }
+
+            while (i--) {
+                var child = childrenInOpenList.getCachedRow(i);
+                if (child != null && child != loadingMarker) {
+                    newLength += this._getNodeLengthToParent(child, node);
+                } else if (knownLengthNulls) {
+                    ++newLength;
+                }
+            }
+        }
+
+
+        var prevCachedLength = node[this._cachedLengthProperty];
+        node[this._cachedLengthProperty] = newLength;
+
+        // Add the change in length to all ancestors.
+        if (parent) {
+            var deltaLength = this._getNodeLengthToParent(node, parent) - prevLength;
+            this._updateParentLengths(parent, deltaLength);
+        }
+
+        // Incrementally add/remove the node to/from the _openListCache array.
+        var affectsOpenListCache = (
+                this._openListCache != null &&
+                // If the node is the root then this optimization would just be regenerating
+                // the open list anyway.  It would be better not to do anything here and let
+                // the open list be regenerated lazily by _getOpenList().
+                parent != null &&
+                // If the `openDisplayNodeType` allows only leaves then only the leaves under
+                // the root folder will ever appear in the open list, so the node and its
+                // descendants cannot appear in the open list.
+                this.openDisplayNodeType != isc.Tree.LEAVES_ONLY &&
+                // Skip if there are no nodes to add/remove from the open list.
+                (closedToOpen ? newLength > prevCachedLength : newLength < prevCachedLength) &&
+                this._includeNodeLengthInParent(node, parent));
+        for (var n = node, p = parent; p != null && affectsOpenListCache; ) {
+            n = p;
+            p = this.getParent(p);
+            affectsOpenListCache = (p == null || this._includeNodeLengthInParent(n, p));
+        }
+        if (parent == null) {
+            this._clearNodeCache(false);
+        } else if (affectsOpenListCache) {
+            // Count the number of nodes preceding `node` in the open list.  Add one to get
+            // the starting index of the descendants of `node` in the open list.  This will
+            // be passed to splice() to add/remove nodes starting at that index.
+            var loadingMarker = (isc.ResultSet != null ? isc.ResultSet.getLoadingMarker() : null),
+                foldersInOpenList = (this.openDisplayNodeType != isc.Tree.LEAVES_ONLY),
+                // When getting lists of children, the displayNodeType must match all folders
+                // (so that we can find a specific folder `n` in each iteration of the
+                // following loop) and it must incorporate the current `openDisplayNodeType`
+                // (so that all nodes with nonzero length are counted).
+                displayNodeType = (
+                    this.openDisplayNodeType == isc.Tree.FOLDERS_ONLY
+                        ? isc.Tree.FOLDERS_ONLY : isc.Tree.FOLDERS_AND_LEAVES),
+                openListIndex = (foldersInOpenList && this.showRoot ? 1 : 0);
+            for (var n = node, p = parent; p != null; ) {
+                var children = this.getChildren(
+                        p, displayNodeType, this._openNormalizer, this.sortDirection,
+                        this.openListCriteria, this._sortContext, true);
+                if (children == null) children = [];
+
+                var length = (isc.ResultSet != null && isc.isA.ResultSet(children) ?
+                        children._getCachedLength() : children.getLength());
+
+
+                for (var i = 0; i < length; ++i) {
+                    var child = children.getCachedRow(i);
+                    if (child == n) {
+                        if (foldersInOpenList) {
+                            ++openListIndex;
+                        }
+                        // Break from the loop.
+                        i = length;
+                    } else if (!(child == null || child == loadingMarker)) {
+                        openListIndex += this._getNodeLengthToParent(child, p);
+                    }
+                }
+
+                n = p;
+                p = this.getParent(p);
+            }
+
+
+            if (closedToOpen) {
+                var args = this.getOpenList(
+                        node, this.openDisplayNodeType, this._openNormalizer,
+                        this.sortDirection, this.openListCriteria, this._sortContext, false);
+
+
+                // Set the first two arguments so that no nodes are removed from the
+                // _openListCache and that nodes are added starting at the `openListIndex`.
+                if (foldersInOpenList) {
+                    args[0] = 0;
+                    args.unshift(openListIndex);
+                } else {
+                    args.unshift(openListIndex, 0);
+                }
+
+                this._openListCache.splice.apply(this._openListCache, args);
+            } else { // openToClosed
+                this._openListCache.splice(openListIndex, prevCachedLength - newLength);
+            }
+        }
+    } else {
+        node[this.openProperty] = newState;
+    }
+
+    // if the node is not loaded, load it!
+    if (newState && !this.isLoaded(node)) {
+        this.loadChildren(node, callback);
+    } else if (callback) {
+        // Fire the callback in the scope of this tree
+        this.fireCallback(callback, "node", [node], this);
+    }
+},
+
+//>    @method    tree.toggleFolder()
+//            Toggle the open state for a particular node
+//        @group    openList
+//
+//        @param    node    (TreeNode)    node in question
+//<
+toggleFolder : function (node) {
+    this.changeDataVisibility(node, !this.isOpen(node));
+},
+
+
+//>    @method    tree.openFolder()
+//
+// Open a particular node
+//
+// @param    node    (TreeNode)    node to open
+// @param  [callback] (callback) Optional callback (stringMethod) to fire when loading
+//                      completes. Has a single param <code>node</code> - the node whose
+//                      children have been loaded, and is fired in the scope of the Tree.
+// @see ResultTree.dataArrived
+// @visibility external
+//<
+openFolder : function (node, callback) {
+    if (node == null) node = this.root;
+
+    // if the node is not already set to the newState
+    if (!this.isOpen(node)) {
+        // call the dataChanged method to notify anyone who's observing it
+        this.changeDataVisibility(node, true, callback);
+    } else if (callback) {
+        // Fire the callback in the scope of this tree
+        this.fireCallback(callback, "node", [node], this);
+    }
+},
+
+
+//>    @method    tree.openFolders()
+//
+// Open a set of folders, specified by path or as pointers to nodes.
+//
+// @param    nodeList    (List of TreeNode)        List of nodes or node paths.
+//
+// @see ResultTree.dataArrived
+// @visibility external
+//<
+openFolders : function (nodeList) {
+    for (var i = 0; i < nodeList.length; i++) {
+        var node = nodeList[i];
+        if (node == null) continue;
+        if (isc.isA.String(node)) node = this.find(node);
+        if (node != null) {
+            this.openFolder(node);
+        }
+    }
+},
+
+//>    @method    tree.closeFolder()
+//
+// Closes a folder
+//
+// @param    node    (TreeNode)    folder to close
+//
+// @visibility external
+//<
+closeFolder : function (node) {
+    // if the node is not already set to the newState
+    if (this.isOpen(node)) {
+        // call the dataChanged method to notify anyone who's observing it
+        this.changeDataVisibility(node, false);
+    }
+},
+
+//>    @method    tree.closeFolders()
+//
+// Close a set of folders, specified by path or as pointers to nodes.
+//
+// @param    nodeList    (List of TreeNode)        List of nodes or node paths.
+//
+// @visibility external
+//<
+closeFolders : function (nodeList) {
+    for (var i = 0; i < nodeList.length; i++) {
+        var node = nodeList[i];
+        if (node == null) continue;
+        if (isc.isA.String(node)) node = this.find(node);
+        if (node != null) {
+            this.closeFolder(node);
+        }
+    }
+},
+
+//>    @method    tree.openAll()
+//
+// Open all nodes under a particular node.
+//
+// @param    [node]    (TreeNode)    node from which to open folders (if not specified, the root
+//                              node is used)
+// @visibility external
+// @example parentLinking
+//<
+openAll : function (node) {
+    if (!node) node = this.root;
+    if (node == this.root) {
+        // Mark the open node list as dirty.  This avoids an optimization to incrementally
+        // maintain the _openListCache array that would not work very well for a bulk operation
+        // like this.
+        this._clearNodeCache(false);
+    }
+    var nodeList = this.getDescendants(node, isc.Tree.FOLDERS_ONLY);
+    for (var i = 0, length = nodeList.length; i < length; i++) {
+        // if the node is not already set to the newState
+        if (!this.isOpen(nodeList[i])) {
+            // call the dataChanged method to notify anyone who's observing it
+            this.changeDataVisibility(nodeList[i], true);
+        }
+    }
+    // make the node itself open
+    this.changeDataVisibility(node, true);
+},
+
+//>    @method    tree.closeAll()
+// Close all nodes under a particular node
+//
+// @param    [node]    (TreeNode)    node from which to close folders (if not specified, the root
+//                              node is used)
+//
+// @visibility external
+//<
+closeAll : function (node) {
+    if (!node) node = this.root;
+    if (node == this.root) {
+        // Mark the open node list as dirty.  This avoids an optimization to incrementally
+        // maintain the _openListCache array that would not work very well for a bulk operation
+        // like this.
+        this._clearNodeCache(false);
+    }
+    var nodeList = this.getDescendants(node, isc.Tree.FOLDERS_ONLY);
+    for (var i = 0, length = nodeList.length; i < length; i++) {
+        // if the node is not already set to the newState
+        if (this.isOpen(nodeList[i])) {
+            // call the dataChanged method to notify anyone who's observing it
+            this.changeDataVisibility(nodeList[i], false);
+        }
+    }
+
+    // close the node as well, unless (node==this.root and this.showRoot == false)
+    //    this way we make sure you won't close an invisible root,
+    //  leaving no way to re-open it.
+    if (!(node == this.root && this.showRoot == false)) this.changeDataVisibility(node, false);
+},
+
+setOpenDisplayNodeType : function (openDisplayNodeType) {
+    var prevOpenDisplayNodeType = this.openDisplayNodeType;
+    this.openDisplayNodeType = openDisplayNodeType;
+    if (prevOpenDisplayNodeType != openDisplayNodeType) {
+        this._clearNodeCache(true);
+    }
+},
+
+setOpenListCriteria : function (openListCriteria) {
+    var prevOpenListCriteria = this.openListCriteria;
+    this.openListCriteria = openListCriteria;
+    if (prevOpenListCriteria != openListCriteria) {
+        this._clearNodeCache(true);
+    }
+},
+
+setSortProp : function (sortProp) {
+    var prevSortProp = this.sortProp;
+    this.sortProp = sortProp;
+    if (prevSortProp != sortProp) {
+        this._clearNodeCache(true);
+    }
+},
+
+setSortDirection : function (sortDirection) {
+    var prevSortDirection = this.sortDirection;
+    this.sortDirection = sortDirection;
+    if (prevSortDirection != sortDirection) {
+        this._clearNodeCache(true);
+    }
+},
+
+//> @method tree.setShowRoot()
+// Setter for +link{Tree.showRoot}.
+// @param showRoot (Boolean) new <code>showRoot</code> value
+// @visibility external
+//<
+setShowRoot : function (showRoot) {
+    var prevShowRoot = this.showRoot;
+    this.showRoot = showRoot;
+    if (this.openDisplayNodeType != isc.Tree.LEAVES_ONLY) {
+        if (!prevShowRoot && showRoot) {
+            // Add the root to the _allListCache and the _openListCache.
+            if (this._allListCache != null) {
+                this._allListCache.unshift(this.root);
+            }
+            if (this._openListCache != null) {
+                this._openListCache.unshift(this.root);
+            }
+        } else if (prevShowRoot && !showRoot) {
+
+            // Remove the root from the _allListCache and the _openListCache.
+            if (this._allListCache != null) {
+                this._allListCache.shift();
+            }
+            if (this._openListCache != null) {
+                this._openListCache.shift();
+            }
+        }
+    }
+},
+
+//> @method tree.setSeparateFolders()
+// Setter for +link{Tree.separateFolders}.
+// @param separateFolders (Boolean) new <code>separateFolders</code> value
+// @visibility external
+//<
+setSeparateFolders : function (separateFolders) {
+    var prevSeparateFolders = this.separateFolders;
+    this.separateFolders = separateFolders;
+    if (prevSeparateFolders ? !separateFolders : separateFolders) {
+        this._clearNodeCache(true);
+    }
+},
+
+//> @method tree.setSortFoldersBeforeLeaves()
+// Setter for +link{Tree.sortFoldersBeforeLeaves}.
+// @param sortFoldersBeforeLeaves (Boolean) new <code>sortFoldersBeforeLeaves</code> value
+// @visibility external
+//<
+setSortFoldersBeforeLeaves : function (sortFoldersBeforeLeaves) {
+    var prevSortFoldersBeforeLeaves = this.sortFoldersBeforeLeaves;
+    this.sortFoldersBeforeLeaves = sortFoldersBeforeLeaves;
+    if (prevSortFoldersBeforeLeaves ? !sortFoldersBeforeLeaves : sortFoldersBeforeLeaves) {
+        this._clearNodeCache(true);
+    }
+},
+
+
+
+
+
+//>    @method    tree.getOpenList()
+// Return a flattened list of all nodes that are visible under some parent based on whether the node
+// itself or any folders underneath it are open.  Returned list will include the passed node.
+// <p>
+// If the passed in node is a leaf, this method returns null.
+//
+// @param [node]            (TreeNode)            node in question
+// @return                    (List of TreeNode)              flattened list of open nodes
+//
+// @visibility external
+//<
+
+getOpenList : function (node, displayNodeType, normalizer, sortDirection, criteria, context,
+                        getAll, dontUseNormalizer)
+{
+    // default to the tree root
+    if (! node) node = this.root;
+
+    // default the normalizer to this._openNormalizer and sortDirection to this.sortDirection
+    if (dontUseNormalizer) normalizer = null;
+    else if (normalizer == null) normalizer = this._openNormalizer;
+    if (sortDirection == null)        sortDirection = this.sortDirection;
+    if (context == null) context = this._sortContext;
+    // if the node is a leaf, return the empty list since it's not going to have any children
+    if (this.isLeaf(node)) {
+        // prevents mysterious crash if an isFolder() override claims root is a leaf
+        if (node == this.root) return [];
+        return null;
+    }
+
+    // create an array to hold the descendants
+    var list = [];
+
+    // add the node if we're not skipping folders (except if the node is the root and showRoot is false)
+    if (displayNodeType != isc.Tree.LEAVES_ONLY && (node != this.root || this.showRoot)) {
+        list[list.length] = node;
+    }
+
+    // if this node is closed or loading, just return the list and don't look for children
+    if (!getAll && !this.isOpen(node) || this.hideLoadingNodes && this.isLoading(node)) {
+        return list;
+    }
+
+    // iterate through all the children of the node
+    var children = this.getChildren(node, isc.Tree.FOLDERS_AND_LEAVES, normalizer,
+                       sortDirection, criteria, context, false, false, dontUseNormalizer);
+    // for each child
+    var loadingMarker = (isc.ResultSet != null ? isc.ResultSet.getLoadingMarker() : null),
+        length = (isc.ResultSet != null && isc.isA.ResultSet(children) ?
+            children._getCachedLength() : children.getLength());
+    for (var i = 0; i < length; ++i) {
+        // get a pointer to the child
+        var child = children.getCachedRow(i);
+        if (child == null || child == loadingMarker) {
+            //>DEBUG
+            //alert("getOpenList: child # " + i + " of folder " + node.path + " is null!");
+            //<DEBUG
+            continue;
+        }
+
+        // if the child is a folder, recurse, but check that it actually has children -
+        // otherwise we eat a function call, array alloc, empty concat, and a bunch of other
+        // checks (top of this function) all for nothing.  This is a typical case for loading a
+        // large set of folders from the server in loadOnDemand mode
+        //
+        var grandChildren = child[this.childrenProperty];
+        if (grandChildren && !grandChildren.isEmpty()) {
+            // now concatenate the list with the descendants of the child
+            list = list.concat(this.getOpenList(child, displayNodeType, normalizer,
+                                                sortDirection, criteria, context, getAll,
+                                                dontUseNormalizer));
+        } else {
+            // if we're not excluding leaves, add the leaf to the list
+
+            if (displayNodeType != isc.Tree.FOLDERS_ONLY) {
+                list[list.length] = child;
+            }
+        }
+    }
+
+    // finally, return the entire list
+    return list;
+},
+// _getOpenListAsync() is an asynchronous method equivalent to getOpenList().
+_getOpenListAsync : function (node, displayNodeType, normalizer, sortDirection, criteria, context, getAll,
+            thisArg, timerEventProp, batchSize, callback, state) {
+
+    var node0 = node,
+        done = false,
+        list,
+        indexStack, childrenStack,
+        i, children;
+    if (state == null) {
+        // default to the tree root
+        if (! node) node0 = node = this.root;
+
+        // default the normalizer to this._openNormalizer and sortDirection to this.sortDirection
+        if (normalizer == null)         normalizer = this._openNormalizer;
+        if (sortDirection == null)        sortDirection = this.sortDirection;
+        if (context == null) context = this._sortContext;
+
+        // create an array to hold the descendants
+        list = [];
+
+        // if the node is a leaf, return the empty list since it's not going to have any children
+        if (this.isLeaf(node)) {
+            // prevents mysterious crash if an isFolder() override claims root is a leaf
+            var ret = (node == this.root ? [] : null);
+            callback.call(thisArg, ret);
+            return;
+        }
+
+        indexStack = [];
+        childrenStack = [];
+        state = {
+            list: list,
+            node: node,
+            indexStack: indexStack,
+            childrenStack: childrenStack
+        };
+    } else {
+        list = state.list;
+        node = state.node;
+        indexStack = state.indexStack;
+        childrenStack = state.childrenStack;
+        i = indexStack.last();
+        children = childrenStack.last();
+    }
+
+    for (var count = 0; !done && count < batchSize; ++count) {
+        if (node != null) {
+            // if the node is a leaf, return the empty list since it's not going to have any children
+            if (this.isLeaf(node)) {
+                node = null;
+                continue;
+            }
+
+            // add the node if we're not skipping folders (except if the node is the root and showRoot is false)
+            if (displayNodeType != isc.Tree.LEAVES_ONLY && (node != this.root || this.showRoot)) {
+                list[list.length] = node;
+            }
+
+            // if this node is closed, return the list
+            if (!getAll && !this.isOpen(node)) {
+                node = null;
+                continue;
+            }
+
+            // iterate through all the children of the node
+            i = 0;
+            children = this.getChildren(node, displayNodeType, normalizer, sortDirection,
+                                        criteria, context);
+            indexStack.push(i);
+            childrenStack.push(children);
+        }
+
+        // Set the node to null to skip the above checks in the next few iterations of the outer,
+        // loop.  All that remains is to check this node's children (who have been pushed onto
+        // childrenStack).
+        node = null;
+
+        // for each child
+        var escapeToOuterLoop = false,
+            length = (isc.isA.ResultSet(children) ?
+                children._getCachedLength() : children.getLength());
+        for (; !escapeToOuterLoop && i < length && count < batchSize; ++i) {
+            // get a pointer to the child
+            var child = children.getCachedRow(i);
+            if (child == null) {
+                //>DEBUG
+                //alert"getOpenList: child # " + i + " of folder " + node.path + " is null!");
+                //<DEBUG
+                continue;
+            }
+
+            // if the child is a folder, recurse, but check that it actually has children -
+            // otherwise we eat a function call, array alloc, empty concat, and a bunch of other
+            // checks (top of this function) all for nothing.  This is a typical case for loading a
+            // large set of folders from the server in loadOnDemand mode
+            //
+            var grandChildren = child[this.childrenProperty];
+            if (grandChildren && !grandChildren.isEmpty()) {
+                // now concatenate the list with the descendants of the child
+                escapeToOuterLoop = true;
+                node = state.node = child;
+                continue;
+            } else {
+                // if we're not excluding leaves, add the leaf to the list
+
+                if (displayNodeType != isc.Tree.FOLDERS_ONLY) {
+                    list[list.length] = child;
+                }
+                ++count;
+            }
+        }
+
+        // `i` is supposed to be an alias variable for the last index in the indexStack.
+        indexStack[indexStack.length - 1] = i;
+        if (!escapeToOuterLoop && i >= length) {
+            if (indexStack.length > 1) {
+                indexStack.pop();
+                childrenStack.pop();
+                i = indexStack.last();
+                children = childrenStack.last();
+            } else {
+                done = true;
+            }
+        }
+    }
+
+    if (done) {
+        // finally, return the entire list
+        callback.call(thisArg, list);
+    } else {
+        state.node = node;
+        thisArg[timerEventProp] = this.delayCall(
+            "_getOpenListAsync",
+            [node0, displayNodeType, normalizer, sortDirection, criteria, context, getAll,
+             thisArg, timerEventProp, batchSize, callback, state], 0);
+    }
+},
+
+//>    @method    tree._getOpenList()    (A)
+// Internal routine to set the open list if it needs to be set
+//        @group    openList
+//<
+_getOpenList : function () {
+    // if the _openListCache hasn't been calculated,
+    //        or we're not supposed to cache the openList
+    if (!this._openListCache || !this.cacheOpenList) {
+        // recalculate the open list
+        this._openListCache = this.getOpenList(this.root, this.openDisplayNodeType,
+                                               this._openNormalizer, this.sortDirection,
+                                               this.openListCriteria);
+    }
+    return this._openListCache;
+},
+
+//> @method tree.getNodeList()
+// Return a flattened list of all nodes in the tree.
+//<
+getNodeList : function (onlyOpen, dontSort) {
+    // Call _getOpenList() if:
+    // - we only need opened nodes
+    // - either dontSort is not true or we have a (sorted) cache anyway, so the hint
+    //   not to use the normalizer is unnecessary information.
+    // If we don't have an _openListCache and dontSort is true, then we will want to
+    // respect the request to not apply the normalizer, as this is probably faster that recalculating
+    // the _openListCache, which will apply the normalizer.
+    if (onlyOpen && (dontSort != true || (this._openListCache && this.cacheOpenList))) {
+        return this._getOpenList();
+
+    } else if (dontSort) {
+        return this.getOpenList(this.root, this.openDisplayNodeType,
+                                null, null, this.openListCriteria, null, (onlyOpen != true),
+                                dontSort);
+
+    // if the _allListCache hasn't been calculated,
+    // or we're not supposed to cache the openList
+    } else if (!this._allListCache || !this.cacheAllList) {
+        // recalculate the node list
+        this._allListCache = this.getAllNodes(this.root);
+    }
+    return this._allListCache;
+},
+// _getNodeListAsync() is an asynchronous method equivalent to getNodeList().
+_getNodeListAsync : function (thisArg, timerEventProp, batchSize, callback) {
+    // if the _allListCache hasn't been calculated,
+    // or we're not supposed to cache the openList
+    if (! this._allListCache || !this.cacheAllList) {
+        // recalculate the node list
+        var me = this;
+        this._getAllNodesAsync(this.root, thisArg, timerEventProp, batchSize, function (nodes) {
+            me._allListCache = nodes;
+            callback.call(thisArg, nodes);
+        });
+    } else {
+        return this._allListCache;
+    }
+},
+
+//> @method tree.getAllNodes()
+// Get all the nodes that exist in the tree under a particular node, as a flat list, in
+// depth-first traversal order.
+//
+// @params [node] optional node to start from.  Default is root.
+// @return (Array of TreeNode) all the nodes that exist in the tree
+// @visibility external
+//<
+getAllNodes : function (node) {
+    return this.getOpenList(node, null, null, null, null, null, true);
+},
+// _getAllNodesAsync() is an asynchronous method equivalent to getAllNodes().
+_getAllNodesAsync : function (node, thisArg, timerEventProp, batchSize, callback) {
+    this._getOpenListAsync(node, null, null, null, null, null, true, thisArg, timerEventProp,
+                           batchSize, callback);
+},
+
+// List API
+// --------------------------------------------------------------------------------------------
+
+//>    @method    tree.getLength()
+//
+// Returns the number of items in the current open list.
+//
+// @return        (number)    number of items in open list
+//
+// @see method:Tree.getOpenList
+// @visibility external
+//<
+getLength : function () {
+
+    var length = (this.root[this._cachedLengthProperty] - (
+        !this.showRoot && this.openDisplayNodeType != isc.Tree.LEAVES_ONLY ? 1 : 0));
+
+    // assert (length == this._getOpenList().length);
+
+   return length;
+},
+
+// _getLengthAsync() is an asynchronous version of getLength().
+_getLengthAsync : function (thisArg, timerEventProp, batchSize, callback) {
+    callback.call(thisArg, this.getLength());
+},
+
+//> @method tree.get()
+// Get the item in the openList at a particular position.
+// @param pos (Number) position of the node to get
+// @return (TreeNode) node at that position
+// @group openList, Items
+//<
+get : function (pos) {
+    return this._getOpenList()[pos];
+},
+
+// see ResultSet.getCachedRow()
+getCachedRow : function (rowNum) {
+    return this.get(rowNum);
+},
+
+//>    @method    tree.getRange()
+//            Get a range of items from the open list
+//        @group    openList, Items
+//
+//      @param  start (number) start position
+//      @param  end   (number) end position (NOT inclusive)
+//      @return       (Array of TreeNode) list of nodes in the open list
+//<
+getRange : function (start, end) {
+    if (!(0 <= start && start < end)) return [];
+    return this._getOpenList().slice(start, end);
+},
+
+//>    @method    tree.indexOf()
+// @include list.indexOf
+//<
+indexOf : function (node, pos, endPos) {
+    return this._getOpenList().indexOf(node, pos, endPos);
+},
+
+//>    @method    tree.lastIndexOf()
+// @include list.lastIndexOf
+//<
+lastIndexOf : function (node, pos, endPos) {
+    return this._getOpenList().lastIndexOf(node, pos, endPos);
+},
+
+//>    @method    tree.getAllItems()
+//            Get the entire list (needed by Selection)
+//        @group    openList, Items
+//
+//        @return        (TreeNode)    all nodes in the open list
+//<
+getAllItems : function () {
+    return this._getOpenList();
+},
+
+
+
+//>    @method    tree.sortByProperty()
+// Handle a 'sortByProperty' call to change the default sort order of the tree
+//        @group    sorting
+//
+//        @param    [property]    (string)    name of the property to sort by
+//        @param    [direction]        (boolean)    true == sort ascending
+//        @param    [normalizer](function)    sort normalizer (will be derived if not specified)
+//<
+sortByProperty : function (property, direction, normalizer, context) {
+    if (!property && this.separateFolders == false) {
+        // if we were called without a sort-property and this.sortProp is set, use it...
+        if (this.sortProp) property = this.sortProp;
+        else property = this.titleProperty;
+    }
+    if (!direction) direction = this.sortDirection;
+    this.setSort([{
+        property: property,
+        direction: (isc.isA.String(direction) ? direction :
+            (direction == true) ? "ascending" : "descending"),
+        normalizer: normalizer,
+        context: context
+    }]);
+},
+
+getSort : function () {
+    return this._sortSpecifiers;
+},
+
+// helper APIs to track whether setSort() should be called on a subset (Array, ResultSet, etc.)
+isSubsetSortDirty : function (subset) {
+    return this._sortSpecifierCounter != subset._sortSpecifierCounter;
+},
+markSubsetSortDirty : function (subset) {
+    delete subset._sortSpecifierCounter;
+},
+markSubsetAsSorted : function (subset) {
+    subset._sortSpecifierCounter = this._sortSpecifierCounter;
+},
+
+_sortSpecifierCounter: 1,
+setSort : function (sortSpecifiers) {
+    // bump a counter each time setSort() is called
+    this._sortSpecifierCounter++;
+
+    if (!sortSpecifiers || !sortSpecifiers.length) {
+        if (this.sortProp) {
+            var direction = this.sortDirection;
+            sortSpecifiers = [
+                {
+                    property: this.sortProp,
+                    direction: (isc.isA.String(direction) ? direction :
+                        (direction == true) ? "ascending" : "descending")
+                }
+            ];
+        }
+    } else {
+        // duplicate the sortSpecifiers. We manipulate them directly
+        // (adding sort-normalizer, for example) and we don't want upstream code
+        // to be affected
+
+        var dup = [];
+        var ds = this.dataSource ? isc.DS.getDataSource(this.dataSource) : null;
+        for (var i = 0; i < sortSpecifiers.length; i++) {
+            var item = sortSpecifiers[i];
+            if (item) {
+                if (item.context  && !isc.isA.String(item.context)) {
+                    var undef,
+                        dsField = ds ? ds.getField(item.property) : null,
+                        field = item.context.getField(item.property) || dsField;
+
+                    var displayField = field && field.displayField;
+                    if (displayField === undef) displayField = dsField && dsField.displayField;
+                    var sortByDisplayField = field && field.sortByDisplayField;
+                    if (sortByDisplayField === undef) sortByDisplayField = dsField && dsField.sortByDisplayField;
+
+                    if (displayField && (sortByDisplayField != false)) {
+                        var opDs = (field && field.optionDataSource) ||
+                                    (dsField && dsField.optionDataSource);
+                        if (opDs) {
+                            opDs = isc.DataSource.getDataSource(field.optionDataSource);
+                        }
+
+                        if (!opDs || opDs == isc.DataSource.getDataSource(this.dataSource)) {
+                        //if (!field.optionDataSource || opDs == isc.DataSource.getDataSource(this.dataSource)) {
+                            this.logInfo("Field:" + field.name + " has displayField:" + displayField +
+                                " (with optionDataSource:" + opDs + "). " +
+                                "Sorting by displayField. Set field.sortByDisplayField to false to disable this.",
+                                "sorting");
+                            // store the original fieldName as the owningProperty - used when editing
+                            // this sortSpecifier later, in a MultiSort[Panel/Dialog]
+                            item.owningField = item.property;
+                            if (!item.sortByField) {
+                                item.property = field.displayField;
+                            } else {
+                                item.sortByProperty = field.displayField;
+                            }
+                        }
+                    }
+                }
+                dup.add(isc.addProperties({}, item));
+            }
+        }
+        sortSpecifiers = dup;
+    }
+
+    this._sortSpecifiers = sortSpecifiers;
+
+    // mark as dirty so any list who points to us will be redrawn
+    this._clearNodeCache(true);
+
+    this._makeOpenNormalizer();
+
+    // always hang onto the context
+    this._sortContext = sortSpecifiers && sortSpecifiers.length > 0 ? sortSpecifiers[0].context : null;
+
+    // call the dataChanged method to notify anyone who's observing it
+    this.dataChanged();
+},
+
+//>    @method    tree._makeOpenNormalizer()    (A)
+// Create a normalizer function according to the sortProp and sortDirection variables
+//        @group    sorting
+//<
+_makeOpenNormalizer : function () {
+    var tree = this,
+        separateFolders = this.separateFolders != false,
+        sortProps = this._sortSpecifiers,
+        titleProperty = this.titleProperty;
+
+    var folderPrefix,
+        leafPrefix;
+    if (this.sortFoldersBeforeLeaves) {
+        folderPrefix = "0:";
+        leafPrefix = "1:";
+    } else {
+        folderPrefix = "1:";
+        leafPrefix = "0:";
+    }
+
+    sortProps.removeEmpty();
+    if (sortProps.isEmpty()) {
+        this._openNormalizer = isc.Class.NO_OP;
+        return;
+    }
+
+    var propNames = sortProps.getProperty("property");
+
+
+    if ((!separateFolders || propNames.length > 1 || !!propNames[0]) &&
+        !propNames.contains(titleProperty))
+    {
+        propNames.add(titleProperty);
+    }
+
+    this._openNormalizer = function (obj, property) {
+        if (tree == null || tree.destroyed) {
+            tree = null;
+            return;
+        }
+
+        var value = "";
+
+        if (separateFolders) {
+            value += (tree.isFolder(obj) ? folderPrefix : leafPrefix);
+        }
+
+        for (var i = 0; i < propNames.length; ++i) {
+            var innerProp = propNames[i];
+            if (!innerProp) continue;
+
+            var isTitle = innerProp == titleProperty;
+
+            var prop = isTitle ? tree.getTitle(obj) : obj[innerProp];
+            if (prop == null) continue;
+
+
+            if (isc.isA.Number(prop)) {
+                if (prop > 0) {
+                    prop = "1" + prop.stringify(12, true);
+                } else {
+                    prop = 999999999999 + prop;
+                    prop = "0" + prop.stringify(12, true);
+                }
+            } else if (isc.isA.Date(prop)) {
+                prop = prop.getTime();
+            }
+
+            if (isTitle) {
+                value += String(prop).toLowerCase() + ":";
+            } else {
+                value += prop + ":";
+            }
+        }
+
+        return value;
+    };
+
+
+    if (isc.Browser.isFirefox) {
+        this._openAscendingComparator = function (first, second) {
+            if (first == null || second == null) {
+                return Array.compareAscending(first, second);
+            }
+            var m = first.length,
+                n = second.length;
+            if (m == 0 || n == 0) {
+                return Array.compareAscending(first, second);
+            }
+
+            var i = 0,
+                j = first.indexOf(":", i),
+                k = 0,
+                l = second.indexOf(":", k);
+            if (j == -1) j = m;
+            if (l == -1) l = n;
+
+            for (;;) {
+                var cmp = Array.compareAscending(
+                    first.substring(i, j), second.substring(k, l));
+                if (cmp != 0) {
+                    return cmp;
+                } else {
+                    i = j + 1;
+                    k = l + 1;
+                    if (i >= m) {
+                        if (k >= n) {
+                            return 0;
+                        } else {
+                            return -1;
+                        }
+                    } else if (k >= n) {
+                        return 1;
+                    } else {
+                        j = first.indexOf(":", i);
+                        l = second.indexOf(":", k);
+                        if (j == -1) j = m;
+                        if (l == -1) l = n;
+                    }
+                }
+            }
+        };
+
+        // Same as above, except with `compareDescending` instead of `compareAscending`,
+        // `return 1` instead of `return -1`, and `return -1` instead of `return 1`.
+        this._openDescendingComparator = function (first, second) {
+            if (first == null || second == null) {
+                return Array.compareDescending(first, second);
+            }
+            var m = first.length,
+                n = second.length;
+            if (m == 0 || n == 0) {
+                return Array.compareDescending(first, second);
+            }
+
+            var i = 0,
+                j = first.indexOf(":", i),
+                k = 0,
+                l = second.indexOf(":", k);
+            if (j == -1) j = m;
+            if (l == -1) l = n;
+
+            for (;;) {
+                var cmp = Array.compareDescending(
+                    first.substring(i, j), second.substring(k, l));
+                if (cmp != 0) {
+                    return cmp;
+                } else {
+                    i = j + 1;
+                    k = l + 1;
+                    if (i >= m) {
+                        if (k >= n) {
+                            return 0;
+                        } else {
+                            return 1;
+                        }
+                    } else if (k >= n) {
+                        return -1;
+                    } else {
+                        j = first.indexOf(":", i);
+                        l = second.indexOf(":", k);
+                        if (j == -1) j = m;
+                        if (l == -1) l = n;
+                    }
+                }
+            }
+        };
+    }
+    return;
+},
+
+// Loading batches of children: breadth-first loading up to a maximum
+// ---------------------------------------------------------------------------------------
+
+loadBatchSize:50,
+loadSubtree : function (node, max, initTime) {
+    if (!node) node = this.getRoot();
+    if (max == null) max = this.loadBatchSize;
+
+    //this.logWarn("loading subtree of node: " + this.echoLeaf(node) +
+    //             "up to max: " + max);
+
+    this._loadingBatch = initTime ? 2 : 1;
+
+    var count = 0,
+        stopDepth = 1;
+    // load at increasing depth until we hit max or run out of children
+    while (count < max) {
+        var numLoaded = this._loadToDepth(max, node, count, stopDepth++);
+        if (numLoaded == 0) break; // nothing left to load
+        count += numLoaded;
+    }
+
+    this._loadingBatch = null;
+
+    if (count > 0) this._clearNodeCache(true);
+},
+
+// allows loadChildren() to detect we're loading a batch of children and defer loading a folder
+// that doesn't have interesting children
+loadingBatch : function (initOnly) {
+    if (initOnly) return this._loadingBatch == 2;
+    else return this._loadingBatch;
+},
+
+_loadToDepth : function (max, node, count, stopDepth) {
+
+    var numLoaded = 0;
+    if (!this.isOpen(node)) {
+        if (!this.isLoaded(node)) this.loadChildren(node);
+
+        // NOTE: we assume that during batch loading, folders can decline to actually load or
+        // open, and these should remain closed
+        if (this.isLoaded(node)) {
+            if (this.openFolder(node) === false) return numLoaded;
+        }
+
+        var nodeChildren = node[this.childrenProperty];
+        if (nodeChildren) {
+            var nodeChildrenLength = (isc.isA.ResultSet(nodeChildren) ?
+                    nodeChildren._getCachedLength() : nodeChildren.getLength());
+            numLoaded += nodeChildrenLength;
+            count += nodeChildrenLength;
+        }
+    }
+
+    var childNodes = node[this.childrenProperty];
+
+    if (count >= max || stopDepth == 0 || childNodes == null) return numLoaded;
+
+    var length = (isc.isA.ResultSet(childNodes) ?
+            childNodes._getCachedLength() : childNodes.getLength());
+    for (var i = 0; i < length; ++i) {
+        var child = childNodes.getCachedRow(i);
+        if (child != null) {
+            var loaded = this._loadToDepth(max, child, count, stopDepth - 1);
+
+            numLoaded += loaded;
+            count += loaded;
+
+            //this.logWarn("recursed into: " + this.getTitle(child) +
+            //             " and loaded: " + loaded +
+            //             ", total count: " + count);
+
+            if (count >= max) return numLoaded;
+        }
+    }
+    return numLoaded;
+},
+
+// Tree Filtering
+// ---------------------------------------------------------------------------------------
+
+//> @method tree.getFilteredTree()
+// Filters this tree by the provided criteria, returning a new Tree containing just the nodes
+// that match the criteria.
+// <P>
+// If <code>filterMode</code> is "keepParents", parents are retained if
+// any of their children match the criteria even if those parents do not match the criteria.
+//
+// @param criteria (Criteria or AdvancedCriteria) criteria to filter by
+// @param [filterMode] (TreeFilterMode) mode to use for filtering, defaults to "strict"
+// @param [dataSource] (DataSource) dataSource to use for filtering, if this Tree does not
+//                                  already have one
+// @param [requestProperties] (DSRequest) Request properties block. This allows developers to specify
+//  properties that would impact the filter such as +link{DSRequest.textMatchStyle}
+// @return (Tree) filtered tree
+// @group treeFilter
+// @visibility external
+//<
+getFilteredTree : function (criteria, filterMode, dataSource, context) {
+    filterMode = filterMode || isc.Tree.STRICT;
+
+    var dataSource = this.dataSource || dataSource;
+    if (!dataSource) {
+        isc.logWarn("Cannot apply filter to Tree without dataSource");
+        return null;
+    }
+
+    // Filter the tree in-place to avoid moving nodes around as we add
+    // missing parent nodes back in place. We also retain loadState.
+    var tree = this.duplicate(true, true);
+    if (isc.ResultTree && isc.isA.ResultTree(tree) && tree.isPaged()) {
+        tree.setCriteria(isc.DataSource.combineCriteria(criteria, tree.criteria));
+    }
+    tree._filterChildren(criteria, filterMode, dataSource, tree.getRoot(), context);
+    return tree;
+},
+
+// Returns true if any children match criteria
+_filterChildren : function (criteria, filterMode, dataSource, parent, context) {
+
+    var strict = (filterMode == isc.Tree.STRICT),
+        keepParents = !strict;
+
+    var children = parent[this.childrenProperty];
+    if (children == null || children.isEmpty()) return false;
+
+    var haveMatchingNodes = false;
+
+    if (isc.isA.String(dataSource)) dataSource = isc.DS.get(dataSource);
+
+
+    var isResultSet = isc.isA.ResultSet(children);
+    strict = strict || isResultSet;
+
+    var i = (isResultSet ? children._getCachedLength() : children.getLength());
+    while (i--) {
+        var node = children.getCachedRow(i);
+        if (node != null) {
+            var hasImmediateMatches = false,
+                nodeChildren = node[this.childrenProperty];
+
+            if (keepParents) {
+                if (nodeChildren != null && !nodeChildren.isEmpty()) {
+                    hasImmediateMatches = this._filterChildren(criteria, filterMode, dataSource, node, context);
+                }
+                haveMatchingNodes = haveMatchingNodes || hasImmediateMatches;
+            }
+
+            // Don't have to filter parent node (this child) if keeping parent nodes
+            // and there are matching children.
+            if (!hasImmediateMatches || strict) {
+
+                var matches = dataSource.applyFilter([node], criteria, context);
+                if (matches != null && matches.length > 0) {
+                    haveMatchingNodes = true;
+
+                    if (strict && nodeChildren != null && !nodeChildren.isEmpty()) {
+                        this._filterChildren(criteria, filterMode, dataSource, node, context);
+                    }
+                } else {
+                    this._remove(node, parent, children, i);
+                }
+            }
+        }
+    }
+    return haveMatchingNodes;
+},
+
+
+_includeNodeLengthInParent : function (node, parent) {
+
+    // The parent must be open.
+    return this.isOpen(parent);
+},
+
+
+_isNodeVisibleToParent : function (node, parent) {
+    if (!this._includeNodeLengthInParent(node, parent)) {
+        return false;
+    } else {
+        // Even if the node is technically a folder, if it has no children then, at this point,
+        // it is treated as a leaf.
+        var grandChildren = node[this.childrenProperty],
+            isFolder = this.isFolder(node) && (grandChildren && grandChildren.length);
+        return (this.openDisplayNodeType != (isFolder ? isc.Tree.LEAVES_ONLY : isc.Tree.FOLDERS_ONLY));
+    }
+},
+
+
+_getNodeLengthToParent : function (node, parent) {
+
+
+    if (this._includeNodeLengthInParent(node, parent)) {
+
+        var length = node[this._cachedLengthProperty],
+            grandChildren = node[this.childrenProperty],
+            isFolder = this.isFolder(node),
+            treatAsFolder = (grandChildren && grandChildren.length);
+
+        // Even if the node is technically a folder, if it has no children then, at this point,
+        // it is treated as a leaf.  This can result in a difference of +/-1 in the length of
+        // the node according to the parent.
+        if (isFolder != treatAsFolder) {
+            length += (
+                -(this.openDisplayNodeType != (isFolder ? isc.Tree.LEAVES_ONLY : isc.Tree.FOLDERS_ONLY) ? 1 : 0) +
+                (this.openDisplayNodeType != (treatAsFolder ? isc.Tree.LEAVES_ONLY : isc.Tree.FOLDERS_ONLY) ? 1 : 0));
+        }
+
+        return length;
+    } else {
+        return 0;
+    }
+},
+
+_getNodeLength : function (node) {
+    var isFolder = this.isFolder(node),
+        isOpen = isFolder && this.isOpen(node),
+        length = (this.openDisplayNodeType != (isFolder ? isc.Tree.LEAVES_ONLY :
+                                                          isc.Tree.FOLDERS_ONLY) ? 1 : 0);
+    if (isOpen) {
+        var childrenInOpenList = this.getChildren(node, this.openDisplayNodeType, null,
+                this.sortDirection, this.openListCriteria, this._sortContext, null, null, true),
+            loadingMarker = (
+                isc.ResultSet != null ? isc.ResultSet.getLoadingMarker() : null),
+            i = (isc.ResultSet != null && isc.isA.ResultSet(childrenInOpenList) ?
+                childrenInOpenList._getCachedLength() : childrenInOpenList.getLength());
+
+
+        var pagedResultTree = (
+                isc.ResultTree != null && isc.isA.ResultTree(this) && this.isPaged()),
+            knownLengthNulls = pagedResultTree;
+        if (pagedResultTree) {
+            var openSubfoldersAllowed = (
+                    node[this.canReturnOpenSubfoldersProperty] != null ?
+                    node[this.canReturnOpenSubfoldersProperty] : this.canReturnOpenFolders),
+                defaultChildLength = (
+                    this.openDisplayNodeType == isc.Tree.FOLDERS_AND_LEAVES ? 1 : 0);
+
+            knownLengthNulls = !(openSubfoldersAllowed || defaultChildLength == 0);
+        }
+
+        while (i--) {
+            var child = childrenInOpenList.getCachedRow(i);
+            if (child != null && child != loadingMarker) {
+                length += this._getNodeLengthToParent(child, node);
+            } else if (knownLengthNulls) {
+                ++length;
+            }
+        }
+    }
+
+    return length;
+},
+
+
+_getDeltaLength : function (node, wasFolder, isFolder) {
+    if (wasFolder != isFolder) {
+        var wasLeaf = !wasFolder,
+            isLeaf = !isFolder,
+            deltaLength = (
+                // The node was a folder (leaf) and now is no longer a folder (leaf)
+                // so subtract 1 from the length if the node was displayed in the
+                // open list.
+                -((wasLeaf && this.openDisplayNodeType != isc.Tree.FOLDERS_ONLY) ||
+                (wasFolder && this.openDisplayNodeType != isc.Tree.LEAVES_ONLY) ? 1 : 0) +
+
+                // The node is a new folder (leaf) so add 1 if it is now going to be
+                // displayed in the open list.
+                ((isLeaf && this.openDisplayNodeType != isc.Tree.FOLDERS_ONLY) ||
+                (isFolder && this.openDisplayNodeType != isc.Tree.LEAVES_ONLY) ? 1 : 0));
+
+
+        return deltaLength;
+    } else {
+        return 0;
+    }
+},
+
+
+_updateParentLengths : function (parent, deltaLength) {
+
+    if (deltaLength != 0) {
+        for (;;) {
+
+            parent[this._cachedLengthProperty] += deltaLength;
+            var recursionFlag = ((parent[this._recursionCountProperty] || 0) > 0);
+            if (!(parent == this.root || recursionFlag)) {
+                var grandParent = this.getParent(parent);
+                if (this._includeNodeLengthInParent(parent, grandParent)) {
+                    parent = grandParent;
+                    continue;
+                }
+            }
+            break;
+        }
+    }
+}
+});    // END isc.Tree.addMethods()
+
+isc.Tree.addClassMethods({
+    // Tree Discovery
+    // ---------------------------------------------------------------------------------------
+    // utilities for discovering the tree structure of a block of data heuristically
+
+    // heuristically find a property that appears to contain child objects.
+    // Searches through an object and find a property that is either Array or Object valued.
+    // Returns the property name they were found under.
+    // mode:
+    // "any" assume the first object or array value we find is the children property
+    // "array" assume the first array we find is the children property, no matter the contents
+    // "object" assume the first object or array of objects we find is the children property
+    //          (don't allow arrays that don't have objects)
+    // "objectArray" accept only an array of objects as the children property
+    findChildrenProperty : function (node, mode) {
+        if (!isc.isAn.Object(node)) return;
+
+        if (!mode) mode = "any";
+
+        var any = (mode == "any"),
+            requireObject = (mode == "object"),
+            requireArray = (mode == "array"),
+            requireObjectArray = (mode == "objectArray");
+
+        for (var propName in node) {
+            var propValue = node[propName];
+            // note: isAn.Object() matches both Array and Object
+            if (isc.isAn.Object(propValue)) {
+                if (any) return propName;
+                if (isc.isAn.Array(propValue)) {
+                    // array of objects always works
+                    if (isc.isAn.Object(propValue[0])) return propName;
+                    // simple array satisfies all but "object" and "objectArray"
+                    if (!requireObject && !requireObjectArray) return propName;
+                } else {
+                    // object works only for "object" and "any" ("any" covered above)
+                    if (requireObject) return propName;
+                }
+            }
+        }
+    },
+
+    // given a hierarchy of objects with children under mixed names, heuristically discover the
+    // property that holds children and copy it to a single, uniform childrenProperty.  Label each
+    // discovered child with a configurable "typeProperty" set to the value of the property
+    // that held the children.
+    discoverTree : function (nodes, settings, parentChildrenField) {
+        if (!settings) settings = {}; // less null checks
+
+        var childrenMode = settings.childrenMode || "any";
+
+        // scanMode: how to scan for the childrenProperty
+        // "node": take each node individually
+        // "branch": scan direct siblings as a group, looking for best fit
+        // "level": scan entire tree levels as a group, looking for best fit
+        var scanMode = settings.scanMode || "branch";
+
+        // tieMode: what to do if there is more than one possible childrenProperty when using
+        // scanMode "branch" or "level"
+        // "node": continue, but pick childrenProperty on a per-node basis (will detect
+        //             mixed)
+        // "highest": continue, picking the childrenProperty that occurred most as the single
+        //            choice
+        // "stop": if there's a tie, stop at this level (assume no further children)
+        // NOT SUPPORTED YET: "branch": if using scanMode:"level", continue but with scanMode
+        //                              "branch"
+        var tieMode = settings.tieMode || "node";
+
+            // what to rename the array of children once discovered
+        var newChildrenProperty = settings.newChildrenProperty ||
+                                  isc.Tree.getInstanceProperty("childrenProperty"),
+            typeProperty = settings.typeProperty || "nodeType",
+            // for string leaf nodes (if allowed), what property to store the string under in
+            // the auto-created object
+            nameProperty = settings.nameProperty || "name";
+
+        if (!isc.isAn.Array(nodes)) nodes = [nodes];
+
+        // go through all the nodes on this level and figure out what property occurs most
+        // often as a children property.  This allows us to handle edge cases where the
+        // property occurs sometimes as an Array and sometimes singular
+        var globalBestCandidate;
+        if (scanMode == "level" || scanMode == "branch") {
+            var candidateCount = {};
+            for (var i = 0; i < nodes.length; i++) {
+                var node = nodes[i],
+                    childrenProperty = null;
+
+                // optimization: this node was up-converted from a String, it can't have
+                // children
+                if (node._fromString) continue;
+
+                childrenProperty = this.findChildrenProperty(node, childrenMode);
+
+                if (childrenProperty == null) continue;
+
+                candidateCount[childrenProperty] = (candidateCount[childrenProperty] || 0);
+                candidateCount[childrenProperty]++;
+            }
+            var counts = isc.getValues(candidateCount),
+                candidates = isc.getKeys(candidateCount);
+
+            if (candidates.length == 0) {
+                // no children property could be found
+                return;
+            } else if (candidates.length == 1) {
+                // use the only candidate
+                globalBestCandidate = candidates[0];
+            } else if (tieMode == "node") {
+                // multiple candidates found, don't set globalBestCandidate and we will
+                // automatically go per-node
+            } else if (tieMode == "stop") {
+                return;
+            } else { // tieMode == "highest"
+                // pick highest and proceed
+                var max = counts.max(),
+                    maxIndex = counts.indexOf(max);
+                globalBestCandidate = candidates[maxIndex];
+            }
+
+            //this.logWarn("counts are: " + this.echo(candidateCount) +
+            //             ", globalBestCandidate: " + globalBestCandidate);
+        }
+
+        var allChildren = [];
+        for (var i = 0; i < nodes.length; i++) {
+            var node = nodes[i];
+
+            // default to the globalBestCandidate if there is one
+            var bestCandidate = globalBestCandidate;
+
+            if (node._fromString) continue; // can't have children
+
+            // determine the best children property individually per node if we haven't already
+            // determined it by scanning all nodes
+            if (!bestCandidate) {
+                bestCandidate = this.findChildrenProperty(node, childrenMode);
+                //this.logWarn("individual bestCandidate: " + bestCandidate +
+                //             " found for node: " + this.echo(node));
+            }
+
+            // no children found
+            if (bestCandidate == null) continue;
+
+            // normalize children to an Array (even if absent, if a single bestCandidate
+            // property was determined for the level)
+            var children = node[bestCandidate];
+            if (children != null && !isc.isAn.Array(children)) children = [children];
+            else if (children == null) children = [];
+
+            // copy discovered children to the normalized childrenProperty
+            node[newChildrenProperty] = children;
+
+            // mark all children with a "type" property indicating the property they were found
+            // under.  Needed because this information is missing once we normalize all children
+            // arrays to appear under the same property name
+            for (var j = 0; j < children.length; j++) {
+                var child = children[j];
+                // if we end up with Strings in the children (valid only with childrenMode
+                // "array") auto-convert them to Objects
+                if (isc.isA.String(child)) {
+                    children[j] = child = {
+                        name:child,
+                        _fromString:true
+                    }
+                }
+                child[typeProperty] = bestCandidate;
+            }
+
+            // proceed with this node's children
+            if (scanMode == "level") {
+                allChildren.addAll(children);
+            } else {
+                this.discoverTree(children, settings, bestCandidate);
+            }
+        }
+        if (scanMode == "level" && allChildren.length > 0) this.discoverTree(allChildren, settings);
+    },
+
+    getCleanNodeData : function (nodeList, includeChildren, cleanChildren, includeLoadState,
+                                tree)
+    {
+        if (nodeList == null) return null;
+
+        var nodes = [], wasSingular = false;
+        if (!isc.isAn.Array(nodeList)) {
+            nodeList = [nodeList];
+            wasSingular = true;
+        }
+
+        // known imperfections:
+        // - by default, isFolderProperty is "isFolder", we write this into nodes and sent it when
+        //   saving
+        // - we create empty children arrays for childless nodes, and save them
+
+        for (var i = 0; i < nodeList.length; i++) {
+            var treeNode = nodeList[i],
+                node = {};
+            if (tree == null) {
+                var treeID = treeNode._isc_tree;
+                if (treeID) tree = window[treeID];
+            }
+
+            // copy the properties of the tree node, dropping some Tree/TreeGrid artifacts
+            for (var propName in treeNode) {
+
+                if ((tree != null && propName == tree.parentProperty) ||
+                    // currently hardcoded
+                    (!includeLoadState && propName == "_loadState") ||
+                    propName == "_isc_tree" ||
+
+                    propName == "__ref" ||
+                    propName == "__module" ||
+                    // the openProperty and isFolderProperty are documented and settable, and if
+                    // they've been set should be saved, so only remove these properties if they
+                    // use the prefix that indicates they've been auto-generated (NOTE: this prefix
+                    // is obfuscated)
+                    propName.startsWith("_isOpen_") ||
+                    propName.startsWith("_isFolder_") ||
+
+                    // default nameProperty from ResultTree, which by default does not have
+                    // meaningful node names
+                    propName.startsWith("__nodePath") ||
+                    // class of child nodes, set up by ResultTree
+                    propName == "_derivedChildNodeType" ||
+
+                    propName == "_autoAssignedName" ||
+
+
+
+
+                    // shared nodes may have parentProperty from other trees
+                    propName.startsWith("_parent_") ||
+
+                    // from selection model
+                    propName.startsWith("_selection_") ||
+
+                    // from grouped grid
+                    propName.startsWith("_groupTree_") ||
+
+                    // Explicit false passed as 'includeChildren' param.
+                    (includeChildren == false &&
+                     tree &&
+                     propName == tree.childrenProperty) ||
+
+                    // Do not copy the precalculated length of the tree node.
+                    propName.startsWith("_cachedLength_") ||
+
+                    // Do not copy a recursion flag on the tree node.
+                    propName.startsWith("_recursionCount_") ||
+
+                    // Do not copy a flag used for paged ResultTrees.
+                    propName.startsWith("_visibleDescendantsCached_") ||
+
+                    // Do not copy temporary state used during initial loads of children.
+                    propName.startsWith("_initialLoadingState_") ||
+                    propName.startsWith("_initialLoadingFetchCount_"))
+                {
+                    continue;
+                }
+                node[propName] = treeNode[propName];
+
+                // Clean up the children as well (if there are any)
+                if (cleanChildren &&
+                    tree &&
+                    propName == tree.childrenProperty &&
+                    isc.isAn.Array(node[propName]))
+                {
+                    node[propName] = isc.Tree.getCleanNodeData(node[propName],
+                                                               includeChildren, cleanChildren,
+                                                               includeLoadState, tree);
+                }
+            }
+            nodes.add(node);
+        }
+        if (wasSingular) return nodes[0];
+        return nodes;
+    }
+});
 
 
 
@@ -1029,8 +7239,7 @@ deselect : function (item) {
 // @return (boolean) true == selection actually changed, false == no change
 // @visibility external
 //<
-
-selectList : function (list, newState, selectionChanged, caller, skipDataCheck) {
+selectList : function (list, newState, selectionChanged, caller) {
 
 
     if (newState == null) newState = true;
@@ -1092,7 +7301,7 @@ selectList : function (list, newState, selectionChanged, caller, skipDataCheck) 
                 index = data.fastIndexOf(item);
             }
             // Skip anything which isn't actually in our data
-            if ((index == null || index == -1) && !skipDataCheck) {
+            if (index == null || index == -1) {
 
                 continue;
             }
@@ -1165,8 +7374,8 @@ selectList : function (list, newState, selectionChanged, caller, skipDataCheck) 
 //        @return                (boolean)    true == selection actually changed, false == no change
 // @visibility external
 //<
-deselectList : function (list, caller, skipDataCheck) {
-    return this.selectList(list, false, null, caller, skipDataCheck);
+deselectList : function (list, caller) {
+    return this.selectList(list, false, null, caller);
 },
 
 
@@ -1638,7 +7847,6 @@ _getItemListAsync : function (thisArg, timerEventProp, batchSize, callback) {
 //
 //  Displays one or more records "horizontally" with one property per line.
 //
-//  @inheritsFrom Canvas
 //  @implements DataBoundComponent
 //  @treeLocation Client Reference/Grids
 //  @visibility external
@@ -1790,8 +7998,8 @@ isc.DetailViewer.addProperties({
     // +link{detailViewer.dateFormatter}, or for fields of type <code>"datetime"</code>
     // +link{detailViewer.datetimeFormatter}. Otherwise the
     // default is to use the system-wide default normal date format, configured via
-    // +link{DateUtil.setNormalDisplayFormat()}.  Specify any valid
-    // +link{type:DateDisplayFormat} to change the format used by this item.
+    // +link{Date.setNormalDisplayFormat()}.  Specify any valid +link{type:DateDisplayFormat} to
+    // change the format used by this item.
     //
     // @see listGrid.dateFormatter
     // @see listGrid.datetimeFormatter
@@ -2404,7 +8612,7 @@ isc.DetailViewer.addProperties({
     // specified those properties will take precedence over the component level settings.
     // <P>
     // If unset, date values will be formatted according to the system wide
-    // +link{DateUtil.setNormalDisplayFormat(),normal display format}.
+    // +link{Date.setNormalDisplayFormat(),normal display format}.
     //
     // @visibility external
     //<
@@ -2414,7 +8622,7 @@ isc.DetailViewer.addProperties({
     //> @attr detailViewer.datetimeFormatter (DateDisplayFormat : null : [IRW])
     // Display format to use for fields specified as type 'datetime'.  Default is to use the
     // system-wide default long ("normal") date time format, configured via
-    // +link{DateUtil.setNormalDatetimeDisplayFormat()}.  Specify any
+    // +link{Date.setNormalDatetimeDisplayFormat()}.  Specify any
     // valid +link{type:DateDisplayFormat} to change the display format for datetimes used by this
     // viewer.
     // <smartclient>
@@ -5138,6 +11346,8 @@ setOverflow : function (overflow) {
 // Mode that caches rendered chunks of the grid area to avoid redrawing as a user revisits the
 // same area of the grid without having changed anything.  Currently incomplete.
 
+
+
 // === cacheDOM mode limitations
 // - can't have fixedRecordHeights:false
 // - does not support row animation
@@ -5655,12 +11865,21 @@ getTablePrintHTML : function (colNum, startRow, endRow, discreteCols, asyncCallb
 screenReader_suppressHandleFocus:true,
 
 draw : function () {
+
+    this._clearCellValueCacheForDraw();
+
     // don't write tabIndex/ focus/blur handlers onto the handle if we're
     // going to write them onto a row element.
     if (isc.screenReader && this.screenReader_suppressHandleFocus) {
         this.clipHandleIsFocusHandle = this.isEmpty();
     }
     return this.Super("draw", arguments);
+},
+
+// Notification from draw() - clear our cellValueCache so we don't show stale values
+
+_clearCellValueCacheForDraw : function () {
+    this._clearCellValueCache();
 },
 
 
@@ -5689,6 +11908,22 @@ handleKeyDown : function (event, eventInfo) {
     delete this._setFocusRunning;
 
     return rv;
+},
+
+
+handleFocusIn : function (event,eventInfo) {
+
+    if (isc.Browser.isIE && isc.EH.leftButtonDown()) {
+        var nodeName = event && event.nativeTarget ? event.nativeTarget.nodeName : null;
+        if (nodeName == "TD" || nodeName == "SPAN") {
+            this.logDebug(
+                "GridRenderer: Intercepting native focus from mouseDown on table cell and resetting to handle.",
+                "nativeFocus");
+            this.focus();
+        }
+    }
+    return this.Super("handleFocusIn", arguments);
+
 },
 
 // allowRowSpanning: If set to false we never call getRowSpan even if the method is present.
@@ -6025,7 +12260,7 @@ getTableHTML : function (colNum, startRow, endRow, discreteCols, asyncCallback, 
         }
         output.append(
 
-            "<TABLE", (isc.Browser.isIE ? " unselectable='on'" : null), " role='presentation' BORDER=0",
+            "<TABLE", (isc.Browser.isIE && (isc.screenreader || !this.canSelectText) ? " unselectable='on'" : null), " role='presentation' BORDER=0",
             widthHTML,
             ((!fragment && !this.isPrinting) ? " ID=" + this.getTableElementId() : null),
             (this.tableStyle && isc.Browser.isDOM ?
@@ -6118,9 +12353,9 @@ getTableHTML : function (colNum, startRow, endRow, discreteCols, asyncCallback, 
             valignAttrSlot = 6, valignSlot = 7, widthSlot = 8,
             minHeightCSSSlot = 10, cssStartSlot = 11, styleSlot = 18,
             cellIDSlot, cellIDs, divStartSlot = 21, cellValueSlot = 24;
-        cellHTML[0] = "<TD";
+        cellHTML[0] = "<TD ";
 
-        if (isc.Browser.isIE) cellHTML[0] += " unselectable='on'";
+        if (isc.Browser.isIE && (isc.screenreader || !this.canSelectText)) cellHTML[0] += " unselectable='on'";
         // [1] ARIA attributes if enabled
         // [2] height attribute, if set (per row)
         // [3] height value, if set (per row)
@@ -6820,7 +13055,6 @@ getPrintFooters : function (startCol, endCol) {
     return "";
 },
 
-
 setFocus : function (focus, reason) {
     // If this method gets called recursively, simply call Super
 
@@ -6864,21 +13098,7 @@ setFocus : function (focus, reason) {
         delete this._preFocusScrollPosition;
     }
 
-    if (isc.Browser.isIE && focus) {
-        this.delayCall("_checkNativeFocus", null, 0);
-    }
-
     return rv;
-},
-
-_checkNativeFocus : function () {
-    // called on a zero delay from setFocus(), specifically for IE - if the current
-    // activeElement is a TD, refocus in the grid body
-    var ae = this.getActiveElement();
-    if (ae && ae.nodeName == "TD") {
-        //this.logWarn("Catching native focus issue");
-        this.focus()
-    }
 },
 
 // Helper to put native focus into a row if we're in screenReader mode.
@@ -7294,7 +13514,29 @@ _$spacerDivTemplate:[
 _getCellValue : function (record, rowNum, colNum) {
     //!DONTCOMBINE
     var isPrinting = this.isPrinting,
-        value = this.getCellValue(record, rowNum, colNum, this);
+        // We may want to dynamically ignore the cached cell value in some cases
+
+        useCache = !this.bypassCellValueCache(record,rowNum,colNum),
+
+        cachedValue = useCache && this._cachedCellValues != null ?
+                         this._getCachedCellValue(record, rowNum, colNum) : null,
+        value = cachedValue ? cachedValue.value : this.getCellValue(record, rowNum, colNum, this);
+
+    if (rowNum == 0 && colNum == 0 && this.logIsInfoEnabled("cellValueCache")) {
+        var isDebugEnabled = this.logIsDebugEnabled("cellValueCache");
+        this.logInfo("getCellValue(0,0): " +
+            (cachedValue != null
+              ? "Using cached cell value" + (isDebugEnabled ? " of:" + value  : "")
+              : "Not using cached cell value"
+            ) +
+            (isDebugEnabled
+              ?  "\nStack:\n" + this.getStackTrace()
+              : "(enable debug logging for stacktrace)"),
+            "cellValueCache");
+    }
+    // Cache the cell value for re-use
+    if (useCache && !cachedValue) this._cacheCellValue(value, record, rowNum, colNum);
+
     // If a record has an associated component to display, add a spacer underneath the record
     // to force the contents to draw above the component.
 
@@ -7311,8 +13553,7 @@ _getCellValue : function (record, rowNum, colNum) {
                     h = this.grid && this.grid.getRowHeight ?
                             this.grid.getRowHeight(record, rowNum) : maxCellHeight
                 ;
-                isc._fillNumber(spacerDivTemplate, (details.requiredHeight - h),
-                                2, 5, false);
+                isc._fillNumber(spacerDivTemplate, (details.requiredHeight - h), 2, 5, false);
                 value = spacerDivTemplate.join(isc.emptyString);
 
                 //isc.logWarn("In _getCellValue:  details are "+isc.echoAll(details));
@@ -7368,6 +13609,74 @@ _getCellValue : function (record, rowNum, colNum) {
 },
 _writeEmbeddedComponentSpacer : function (record) {
     return (record && this.grid && this.grid._hasEmbeddedComponents(record));
+},
+
+// disable all cell-value cacheing logic for now
+neverCacheCellValues:true,
+
+
+
+_cacheCellValue : function (value, record, rowNum, colNum) {
+
+    if (this.neverCacheCellValues) return;
+
+    if (rowNum == 0 && this.logIsInfoEnabled("cellValueCache")) {
+        this.logInfo(
+            "Cacheing cell value (for first row) "
+                + (this.logIsDebugEnabled("cellValueCache") ? this.getStackTrace() : ""),
+            "cellValueCache");
+    }
+
+    var undef;
+    if (value === undef) value = this._undefMarker;
+    else if (value === null) value = this._nullMarker;
+
+    if (this._cachedCellValues == null) {
+        this._cachedCellValues = [];
+    }
+    if (this._cachedCellValues[rowNum] == null) {
+        this._cachedCellValues[rowNum] = [];
+    }
+    this._cachedCellValues[rowNum][colNum] = {value:value, record:record};
+},
+
+
+bypassCellValueCache:function (record,rowNum,colNum) {
+    return this.isPrinting;
+},
+_getCachedCellValue : function (record, rowNum, colNum) {
+
+    var cachedObject = (this._cachedCellValues
+                        && this._cachedCellValues[rowNum]
+                        && this._cachedCellValues[rowNum][colNum]);
+
+    // Return {value:<value>} - this allows upstream code to detect the case where
+    // we have cached a meaningful null/undef value for a cell
+    if (cachedObject && cachedObject.record == record) {
+        return cachedObject;
+    }
+    return null;
+},
+_clearCachedCellValue : function (rowNum, colNum) {
+    if (this.logIsInfoEnabled("cellValueCache")) {
+            this.logInfo(
+                "Dropping cached cell value (for " + [rowNum,colNum] + ") "
+                + (this.logIsDebugEnabled("cellValueCache") ? this.getStackTrace() : ""),
+                "cellValueCache");
+    }
+
+    if (this._cachedCellValues && this._cachedCellValues[rowNum]) {
+        this._cachedCellValues[rowNum][colNum] = null;
+    }
+},
+_clearCellValueCache : function () {
+    if (this.logIsInfoEnabled("cellValueCache")) {
+            this.logInfo(
+                "Dropping all cached cell values "
+                + (this.logIsDebugEnabled("cellValueCache") ? this.getStackTrace() : ""),
+                "cellValueCache");
+    }
+    delete this._cachedCellValues;
 },
 
 getCellValue : function (record, rowNum, colNum) {
@@ -8282,8 +14591,11 @@ showSelectedStyle:true,
 // <li>overriding this function
 // </ul>
 // <p>
-// In addition to this +link{gridRenderer.getCellCSSText,getCellCSSText()} may be overriden to provide custom cssText to
-// apply on top of the styling attributes derived from the named style.
+// In addition to this, +link{gridRenderer.getCellCSSText,getCellCSSText()} may be overriden to
+// provide custom cssText to apply on top of the styling attributes derived from the named
+// style.
+// <smartgwt><p>
+// <b>Note: This is an override point.</b></smartgwt>
 //
 //        @param    record        (ListGridRecord)    record object for this row and column
 //        @param    rowNum      (number)    number of the row
@@ -8309,32 +14621,36 @@ getCellStyle : function (record, rowNum, colNum) {
 
 getCellStyleName : function (styleIndex, record, rowNum, colNum) {
 
-    // Are we dynamically determining the baseStyle from this.getBaseStyle() ?
-    // If so, concat baseStyle with the appropriate suffix
-    var baseStyle
-    if (this.getBaseStyle) {
-        baseStyle = this.getBaseStyle(record, rowNum, colNum);
-    } else {
-        baseStyle = this.baseStyle;
-    }
-
-    if (styleIndex == 0) return baseStyle; // styleIndex 0 is the empty suffix
-
-    // Very critical path- cache calculated baseStyle+suffix combinations centrally
-    // and use across grids.
-    if (isc.GridRenderer.calculatedStyleNames == null) {
-        isc.GridRenderer.calculatedStyleNames = {};
-    }
-    var cacheObject = isc.GridRenderer.calculatedStyleNames;
     var standardSuffixes = isc.GridRenderer.standardStyleSuffixes;
 
-    if (cacheObject[baseStyle] == null) {
-        cacheObject[baseStyle] = [];
-        for (var i = 1; i < standardSuffixes.length; i++) {
-            cacheObject[baseStyle][i] = baseStyle + standardSuffixes[i];
+    // Are we dynamically determining the baseStyle from this.getBaseStyle() ?
+    // If so, concat baseStyle with the appropriate suffix
+    if (this.getBaseStyle) {
+
+        var baseStyle = this.getBaseStyle(record, rowNum, colNum);
+        // check if the baseStyle returned is exactly the same String instance as
+        // this.baseStyle, in which case we can use the precomputed style combinations.  This
+        // would happen if someone defined a custom getBaseStyle that usually returns
+        // this.baseStyle, infrequently returning special values.
+        if (baseStyle !== this.baseStyle) {
+
+            // append the appropriate suffix to the baseStyle
+            if (styleIndex == 0) return baseStyle; // styleIndex 0 is the empty suffix
+            return baseStyle + standardSuffixes[styleIndex];
         }
     }
-    return cacheObject[baseStyle][styleIndex];
+
+    // In this case we're using the default baseStyle
+
+    // Cache the entire set of cellStyles
+    if (!this._cellStyles) {
+        this._cellStyles = [];
+        for (var i = 0; i < standardSuffixes.length; i++) {
+            this._cellStyles[i] = this.baseStyle + standardSuffixes[i];
+        }
+    }
+    // return the style
+    return this._cellStyles[styleIndex];
 },
 
 // return the index of the current state.  The index is a bitfield containing flags for each of
@@ -9193,9 +15509,16 @@ refreshCellStyle : function (row, col, className) {
 // @visibility external
 //<
 refreshCell : function (rowNum, colNum) {
+    this._clearCachedCellValueForRefreshCell(rowNum,colNum);
     this.refreshCellStyle(rowNum, colNum);
     // refresh the value too unless it's already been refreshed as part of styling
     if (!this.shouldRefreshCellHTML()) this.refreshCellValue(rowNum, colNum);
+},
+
+// Notification from refreshCell() - clear our cachedCellValue so we don't show stale values
+
+_clearCachedCellValueForRefreshCell : function (rowNum,colNum) {
+    this._clearCachedCellValue(rowNum, colNum);
 },
 
 //>    @method        gridRenderer.refreshRow()    ([A])
@@ -9873,6 +16196,10 @@ _getViewportFillRows : function () {
     // round down for the index of the first row to stick into the viewport
     var firstVisible = Math.floor(this.getScrollTop() / avgRowHeight);
 
+    if (firstVisible > this.getTotalRows()) {
+        firstVisible = Math.ceil(viewportHeight / this.cellHeight);
+    }
+
 
 
     var nRecords;
@@ -9892,7 +16219,6 @@ _getViewportFillRows : function () {
     }
     // [firstVisible, lastVisible] is an *inclusive* range, so subtract one here
     var lastVisible = firstVisible + nRecords - 1;
-
     // if we're showing an explicit spacer at the top, it'll shift the rows down
     // take that into account now
     if (this.startSpace) {
@@ -9910,7 +16236,6 @@ _getViewportFillRows : function () {
 
     if (!vscrolling) return [firstVisible, lastVisible];
 
-
     // when using virtual scrolling, calculate the rows that need to be drawn to fill the
     // viewport based on the target row that needs to be scrolled into view (scrollTop is
     // irrelevant)
@@ -9924,7 +16249,6 @@ _getViewportFillRows : function () {
     if (this._rowOffset < 0) startCoord += Math.floor(this._rowOffset / this.cellHeight);
     if (startCoord < 0) startCoord = 0;
     var endCoord = startCoord + Math.ceil(viewportHeight / this.cellHeight);
-
     return [startCoord, endCoord];
 
 },
@@ -10425,8 +16749,7 @@ _showHover : function (record, rowNum, colNum, cellValueIsClipped) {
         if (!isCellHoverSuppressed) {
             if (!useStandardCellHover) {
                 if (this._getShowClippedValuesOnHover() && cellValueIsClipped) {
-                    content = this.cellValueHoverHTML(record, rowNum, colNum,
-                        this.defaultCellValueHoverHTML(record, rowNum, colNum));
+                    content = this.cellValueHoverHTML(record, rowNum, colNum, this.defaultCellValueHoverHTML(record, rowNum, colNum));
                 }
             } else {
                 content = this.cellHoverHTML(record, rowNum, colNum);
@@ -10731,6 +17054,12 @@ _cellRightMouseDown : function (record, rowNum, colNum) {
     // perform right-mouse style selection
     if (this.canSelectOnRightMouse) this.selectOnRightMouseDown(record, rowNum, colNum);
 },
+
+// If the user clicks on the GridRenderer, causing it to receive focus, and the
+// browser natively scrolls a parent to bring the top/left of the GR into view -
+// reset this scroll as it'll interfere with the intended user interaction
+
+disableNativeScrollOnMouseDownFocus:true,
 
 // We override Canvas._scrolled() here to prevent keyboard-navigation-triggered scrolling from
 // firing a synthetic mouse event which can corrupt the tracking of the navigation location.
@@ -11244,7 +17573,9 @@ getColumnAutoSize : function (columnNum, startRow, endRow) {
                 for (var i = 0; i < numCells; ++i) {
                     returnVal[i] = cells[i].offsetWidth;
 
-                    if (isc.Browser.hasTextOverflowEllipsis) {
+                    if (isc.Browser.hasTextOverflowEllipsis &&
+                        this.adjustForSubPixelSizing(columnNum[i]))
+                    {
                         var c = Math.ceil(returnVal[i]);
 
                         returnVal[i] = (returnVal[i] == c ? c + 1 : c);
@@ -11270,6 +17601,11 @@ getColumnAutoSize : function (columnNum, startRow, endRow) {
     return returnVal;
 },
 
+
+adjustForSubPixelSizing : function (colNum) {
+    return true;
+},
+
 // Overridden in ListGrid to handle the case where we're grouped and so have some
 // col-spanning cells in group header rows (which need to be skipped)
 _getValidAutoFitRowNum : function () {
@@ -11283,12 +17619,18 @@ _getValidAutoFitRowNum : function () {
 // clear anything we've cached about the HTML table we draw
 redraw : function (a,b,c,d) {
     this._resetEmbeddedComponents();
+    this._clearCellValueCacheForRedraw();
     this.invokeSuper(isc.GridRenderer, "redraw", a,b,c,d);
     // if we're redrawing in response to the end of 'fast scrolling', the suppresDrawAhead flag
     // will have been set in markForRedraw()
     // clear this now
     delete this._suppressDrawAheadDirection;
 
+},
+// Notification from redraw() - clear our cellValueCache so we don't show stale values
+
+_clearCellValueCacheForRedraw : function () {
+    this._clearCellValueCache();
 },
 
 modifyContent : function () {
@@ -11552,6 +17894,8 @@ isc.GridRenderer._gridAPIs = {
     // <p>
     // "CSS text" means semicolon-separated style settings, suitable for inclusion in a CSS
     // stylesheet or in a STYLE attribute of an HTML element.
+    // <smartgwt><p>
+    // <b>Note: This is an override point.</b></smartgwt>
     //
     // @see getCellStyle()
     //
@@ -11974,6 +18318,7 @@ isc.GridRenderer._gridAPIs = {
     //<
     cellSelectionChanged : "cellList",
 
+
     // IDs for legacy test tools; JSDoc above
     getRowElementId : "rowNum,physicalRowNum",
     getCellElementId : "rowNum,physicalRowNum,colNum,physicalColNum",
@@ -11997,6 +18342,7 @@ isc.GridRenderer.registerStringMethods(isc.GridRenderer._gridAPIs);
 
 
 
+
 isc.defineClass("SelectionOrRollOverCanvas", "Canvas").addProperties({
     cssPointerEvents: "none"
 });
@@ -12005,7 +18351,6 @@ isc.defineClass("SelectionOrRollOverCanvas", "Canvas").addProperties({
 // A ListGrid is a +link{DataBoundComponent} that displays a list of objects in a grid, where
 // each row represents one object and each cell in the row represents one property.
 //
-//  @inheritsFrom VLayout
 //  @implements DataBoundComponent
 //  @treeLocation Client Reference/Grids
 //  @visibility external
@@ -12641,17 +18986,6 @@ isc.defineClass("GridBody", isc.GridRenderer).addProperties({
         return returnVal;
     },
 
-    // Override 'getSizeMayChangeOnRedraw' to return true when autoFitData is set.
-    getSizeMayChangeOnRedraw : function () {
-        var fitVertical = (this.autoFitData == "both"),
-            fitHorizontal = fitVertical;
-
-        if (!fitVertical) fitVertical = (this.autoFitData == "vertical");
-        if (!fitHorizontal) fitHorizontal = (this.autoFitData == "horizontal");
-        if (fitHorizontal || fitVertical) return true;
-        return this.Super("getSizeMayChangeOnRedraw", arguments);
-    },
-
     getAutoFitMaxHeight : function () {
         return this.grid ? this.grid.getAutoFitMaxBodyHeight() : null;
     },
@@ -12675,6 +19009,38 @@ isc.defineClass("GridBody", isc.GridRenderer).addProperties({
         return 0;
     },
 
+    // When determining auto-fit-field-widths, avoid adding a pixel to account for
+    // rounding errors due to sub-pixel sized rendering coupled with pixel-resolution
+    // reported sizes for cells whose content is actually sized to fill the available
+    // space
+
+    adjustForSubPixelSizing : function (colNum) {
+        var grid = this.grid;
+        if (grid._editorShowing || grid.alwaysShowEditors) {
+            var fieldNum = grid.getFieldNumFromLocal(colNum, this),
+                field = grid.getField(fieldNum),
+                nonEditableField = (!field || field.disabled || field.canEdit == false ||
+                                    field.type == "summary" ||
+                                    (field.canEdit == null &&
+                                        (field.userFormula || field.userSummary)));
+            if (!nonEditableField && (!grid.editByCell || grid.getEditCol() == fieldNum)) {
+                return false;
+            }
+        }
+        return true;
+    },
+
+    // Override 'getSizeMayChangeOnRedraw' to return true when autoFitData is set.
+    getSizeMayChangeOnRedraw : function () {
+
+        var fitVertical = (this.autoFitData == "both"),
+            fitHorizontal = fitVertical;
+
+        if (!fitVertical) fitVertical = (this.autoFitData == "vertical");
+        if (!fitHorizontal) fitHorizontal = (this.autoFitData == "horizontal");
+        if (fitHorizontal || fitVertical) return true;
+        return this.Super("getSizeMayChangeOnRedraw", arguments);
+    },
 
     resizeBy : function (deltaX, deltaY, animating, suppressHandleUpdate, autoFitSize) {
 
@@ -13176,6 +19542,32 @@ isc.defineClass("GridBody", isc.GridRenderer).addProperties({
         this.invokeSuper(isc.GridBody, "removeEmbeddedComponent", record, component, suppressRedraw);
     },
 
+    // Override bypassCellValueCache - avoid caching edit item cell values
+    // This is appropriate for the case where we are writing out inactive
+    // element HTML - for example to measure the width of an auto-fit column.
+
+    bypassCellValueCache:function (record,rowNum,colNum) {
+        if (this.grid && this.grid._editorShowing) {
+            var grid = this.grid,
+                editRowNum = grid._editRowNum,
+                editStartRow = editRowNum;
+            if (editStartRow != null && grid.allowRowSpanning) {
+                editStartRow = grid.getCellStartRow(editStartRow, fieldNum);
+            }
+
+            var isEditRow = editStartRow == rowNum;
+            if (isEditRow) {
+                var fieldNum = grid.getFieldNumFromLocal(colNum, this);
+                var isEditCell = (!grid.editByCell || grid._editColNum == fieldNum) &&
+
+                              grid.canEditCell(editRowNum, fieldNum);
+
+                if (isEditCell) return true;
+            }
+        }
+        // Default from GridRenderer simply avoids caching the print version
+        return this.isPrinting;
+    },
 
     // Override getMaxEmbeddedComponentHeight() / upateHeightForEmbeddedComponents to
     // respect listGrid.recordComponentHeight if specified, even if there are no
@@ -13273,6 +19665,13 @@ isc.defineClass("GridBody", isc.GridRenderer).addProperties({
 
         // flag to note we're redrawing - this is used by getDrawnFields()
         this._redrawing = true;
+
+        // Ensure we pick up and size to a fresh value
+        // and set the flag so clearCellValueCacheOnRedraw() doesn't
+        // clear the cache again.
+        // This flag cleared below after Super() call.
+        this._clearCellValueCacheForRedraw();
+        this._clearedCellValueCacheInRedrawThread = true;
 
         // If alwaysShowEditors is marked as true, but editorShowing is false it implies our
         // attempt to start editing on draw() failed - presumably there were no
@@ -13387,6 +19786,9 @@ isc.defineClass("GridBody", isc.GridRenderer).addProperties({
 
         // clear the "redrawing" flag since the HTML is now up to date
         delete this._redrawing;
+        // clear the flag indicating we already dropped our body cell-value-cache
+        // so we drop cache again (as we should) on future redraws
+        delete this._clearedCellValueCacheInRedrawThread;
 
         // Always update all recordComponents on redraw().
         // don't rely on the draw area changing since we may be showing the same set of
@@ -13456,8 +19858,25 @@ isc.defineClass("GridBody", isc.GridRenderer).addProperties({
             }
         }
 
+
+        if (lg._scrollCell != null) lg._delayedScrollToCell();
     },
 
+
+    _clearCellValueCacheForRedraw : function () {
+        // If we already cleared the cellValueCache in this thread due to our override
+        // return
+
+        if (this._clearedCellValueCacheInRedrawThread) return;
+
+        // Also bail if we're doing a redraw thanks to explicit auto-fit rather than
+        // data changed
+        var grid = this.grid;
+        if (grid && (grid._autoFittingField || grid._autoFittingFields)) {
+            return;
+        }
+        return this.Super("_clearCellValueCacheForRedraw", arguments);
+    },
     redrawOnScroll : function (immediate) {
         if (this.frozen) this._suppressRecordComponentsUpdate = true;
         return this.Super("redrawOnScroll", arguments);
@@ -13676,6 +20095,18 @@ isc.defineClass("GridBody", isc.GridRenderer).addProperties({
                 // scroll
                 delete this._editorSelection;
             }
+        }
+    },
+    // If programmatic 'focus' from "syntheticTabIndex" (IE - tab keypress when the clickMask is up)
+    // is called on the ListGrid body and the editor is showing, it
+    // makes sense to focus in the edit form.
+    focusAtEnd : function (start) {
+        var grid = this.grid,
+            editForm = grid ? grid.getEditForm() : null;
+        if (editForm) {
+            editForm.focusAtEnd(start);
+        } else {
+            return this.Super("focusAtEnd", arguments);
         }
     },
 
@@ -14251,6 +20682,8 @@ isc.defineClass("GridBody", isc.GridRenderer).addProperties({
         var grid = this.grid;
         if (this == grid._lastSelectedBody)       grid._lastSelectedBody       = null;
         if (this == grid._lastKeyboardHiliteBody) grid._lastKeyboardHiliteBody = null;
+        // Remove the hiddenResultSet used to notify on changes when data is provided as Array
+        if (grid.hiddenResultSet) grid.hiddenResultSet.destroy();
         this.Super("destroy", arguments);
     },
 
@@ -14330,15 +20763,7 @@ isc.defineClass("GridBody", isc.GridRenderer).addProperties({
         // element values are set)
         lg.updateEditRow(lg.getEditRow());
 
-        if (lg._scrollCell != null) {
-            var scrollRowNum = isc.isAn.Array(lg._scrollCell) ? lg._scrollCell[0] : lg._scrollCell,
-                scrollColNum = isc.isAn.Array(lg._scrollCell) ? lg._scrollCell[1] || 0 : 0,
-                xPosition = isc.isAn.Array(lg._scrollCell) ? lg._scrollCell[2] : null,
-                yPosition = isc.isAn.Array(lg._scrollCell) ? lg._scrollCell[3] : null
-            ;
-            lg.scrollToCell(scrollRowNum, scrollColNum, xPosition, yPosition);
-            delete lg._scrollCell;
-        }
+        if (lg._scrollCell != null) lg._delayedScrollToCell();
 
         // Call 'updateRecordComponents()' on initial draw to set up recordComponents
         // If this is a ResultSet rather than an array, the updateRecordComponents method
@@ -14855,11 +21280,6 @@ isc.ListGrid.addClassProperties({
     //> @method listGrid.getCellStyle()
     // @include gridRenderer.getCellStyle()
     // @see listGrid.getBaseStyle()
-    //<
-
-    //> @method listGrid.getCellCSSText()
-    // @include gridRenderer.getCellCSSText()
-    // @example addStyle
     //<
 
     // refresh
@@ -15622,6 +22042,9 @@ isc.ListGrid.addProperties( {
     // <P>
     // See also +link{listGrid.filterLocalData} to allow filtering, such as filtering performed
     // by the +link{filterEditor}, to also work only with the local data set.
+    // <P>
+    // If saveLocally is unset, and +link{listGrid.filterLocalData} is true, the saveLocally behavior is
+    // enabled by default
     //
     // @see useRemoteValidators
     // @visibility external
@@ -16842,11 +23265,11 @@ isc.ListGrid.addProperties( {
     // may be suppressed by setting +link{listGridField.suppressValueIcon} for the field. See
     // +link{ListGrid.booleanTrueImage} for customization.
     //
-    // @value "integer" Same as <code>text</code>.  Consider setting
+    // @value "integer" A whole number, e.g. <code>123</code>. Consider setting
     // +link{listGridField.editorType,editorType} to use a +link{SpinnerItem}.
     //
-    // @value "float" Same as <code>text</code>.  Consider setting
-    // +link{listGridField.editorType,editorType} to use a +link{SpinnerItem}.
+    // @value "float" A floating point (decimal) number, e.g. <code>1.23</code>.
+    // Consider setting +link{listGridField.editorType,editorType} to use a +link{SpinnerItem}.
     //
     // @value "date" Field value should be a <code>Date</code> instance representing a logical
     // date, with no time of day information.  See +link{group:dateFormatAndStorage} for
@@ -16856,7 +23279,7 @@ isc.ListGrid.addProperties( {
     // if specified, otherwise
     // +link{ListGrid.dateFormatter,ListGrid.dateFormatter}.
     // If both these attributes are unset, dates are formatted
-    // using the standard +link{DateUtil.setShortDisplayFormat(),short display format} for dates.
+    // using the standard +link{Date.setShortDisplayFormat(),short display format} for dates.
     // <P>
     // For editing, by default a +link{DateItem} is used with +link{DateItem.useTextField} set
     // to true, providing textual date entry plus a pop-up date picker. The
@@ -16887,7 +23310,7 @@ isc.ListGrid.addProperties( {
     // if specified, otherwise
     // +link{ListGrid.datetimeFormatter,ListGrid.datetimeFormatter}.
     // If both these attributes are unset, dates are formatted
-    // using the standard +link{DateUtil.setShortDatetimeDisplayFormat(),short display format} for
+    // using the standard +link{Date.setShortDatetimeDisplayFormat(),short display format} for
     // datetime values.
     // <P>
     // For editing, by default a +link{DateTimeItem} is used, providing textual date entry plus
@@ -16959,6 +23382,63 @@ isc.ListGrid.addProperties( {
     // @value "summary" Show a calculated summary based on other field values within the
     //  current record. See +link{listGridField.recordSummaryFunction} for more information
     //
+    // @value "any"       Fields of this type can contain any data value and have no default
+    // formatting or validation behavior. This is useful as the
+    // +link{SimpleType.inheritsFrom,parent type} for SimpleTypes
+    // where you do not want any of the standard validation or formatting logic
+    // to be inherited from the standard built-in types.
+    //
+    // @value "localeInt" An integer number with locale-based formatting, e.g. <code>12,345,678</code>.
+    // See +link{group:localizedNumberFormatting,Localized Number Formatting}
+    // for more info.
+    //
+    // @value "localeFloat" A float number with locale-based formatting, e.g. <code>12,345.67</code>.
+    // See +link{group:localizedNumberFormatting,Localized Number Formatting}
+    // for more info.
+    //
+    // @value "localeCurrency" A float number with locale-based formatting and using currency
+    // symbol, e.g. <code>$12,345.67</code>.
+    // See +link{group:localizedNumberFormatting,Localized Number Formatting}
+    // for more info.
+    //
+    // @value "phoneNumber" A telephone number.  Uses +link{formItem.browserInputType} "tel" to
+    // hint to the device to restrict input.  On most mobile devices that have
+    // software keyboards, this cause a specialized keyboard to appear which
+    // only allows entry of normal phone numbers.  When displayed read-only,
+    // a "phoneNumber" renders as an HTML link with the "tel:" URL scheme,
+    // which will invoke the native phone dialing interface on most mobile
+    // devices.  In addition, the CSS style "sc_phoneNumber" is applied.
+    // <p>
+    // By default, "phoneNumber" fields do not include validators, however the
+    // following validator definition would limit to digits, dashes and the
+    // "+" character:
+    // xml:
+    // <p>
+    //     &lt;validator type="regexp" expression="^(\(?\+?[0-9]*\)?)?[0-9_\- \(\)]*$"
+    //         errorMessage="Phone number should be in the correct format e.g. +#(###)###-##-##" /&gt;
+    //     <smartclient>
+    // <p>
+    // or directly in JavaScript:
+    // <p>
+    // <pre>
+    // {type:"regexp", expression:"^(\\(?\\+?[0-9]*\\)?)?[0-9_\\- \\(\\)]*$",
+    //     errorMessage:"Phone number should be in the correct format e.g. +#(###)###-##-##"}
+    // </pre>
+    // </smartclient>
+    // <smartgwt>
+    // <p>
+    // or directly in Java:
+    // <p>
+    // <pre>
+    // RegExpValidator v = new RegExpValidator();
+    // v.setType(ValidatorType.REGEXP);
+    // v.setErrorMessage("Phone number should be in the correct format e.g. +#(###)###-##-##");
+    // v.setExpression("^(\\(?\\+?[0-9]*\\)?)?[0-9_\\- \\(\\)]*$");
+    // </pre>
+    // </smartgwt>
+    // and adding "#" and "*" to the regular expressions above would allow for
+    // users to enter special keys sometimes used for extension numbers or
+    // pauses
     //
     // @see attr:listGridField.type
     // @see type:FieldType
@@ -16979,7 +23459,7 @@ isc.ListGrid.addProperties( {
     //> @attr listGridField.name (identifier : null : [IR])
     // Name of this field.  Must be unique within this ListGrid as well as a valid JavaScript identifier,
     // as specified by ECMA-262 Section 7.6 (the <smartclient>+link{String.isValidID()}</smartclient>
-    // <smartgwt>+link{StringUtil.isValidID()}</smartgwt> function can be used to test whether
+    // <smartgwt>StringUtil.isValidID()</smartgwt> function can be used to test whether
     // a name is a valid JavaScript identifier).
     // <P>
     // The name of field is also the property in each record which holds the value for that
@@ -17715,7 +24195,7 @@ isc.ListGrid.addProperties( {
     // @visibility external
     //<
 
-    //> @attr listGridField.minWidth (Number : null : [IRW])
+    //> @attr listGridField.minWidth (Number : null : [IR])
     // When a field is subject to autofitting (see +link{listGrid.autoFitFieldWidths}), sets the
     // minimum width of the field.  The actual allowed minimum will be the maximum of:<ul>
     // <li> this property,
@@ -17728,7 +24208,7 @@ isc.ListGrid.addProperties( {
     // @visibility external
     //<
 
-    //> @attr listGridField.maxWidth (Number : null : [IRW])
+    //> @attr listGridField.maxWidth (Number : null : [IR])
     // When +link{listGrid.showHeader} is false and a field is subject to autofitting (see
     // +link{listGrid.autoFitFieldWidths}), sets the maximum width of the field.  The actual
     // allowed minimum will be the larger of this property and +link{minWidth}.  (That is,
@@ -18430,7 +24910,7 @@ isc.ListGrid.addProperties( {
     // +link{ListGrid.dateFormatter,ListGrid.dateFormatter}, or for fields of type <code>"datetime"</code>
     // +link{ListGrid.datetimeFormatter,ListGrid.datetimeFormatter}. Otherwise the
     // default is to use the system-wide default short date format, configured via
-    // +link{DateUtil.setShortDisplayFormat()}.  Specify any valid +link{type:DateDisplayFormat} to
+    // +link{Date.setShortDisplayFormat()}.  Specify any valid +link{type:DateDisplayFormat} to
     // change the format used by this item.
     // <P>
     // If this field is editable the dateFormatter will also be passed to the editor created
@@ -19179,7 +25659,7 @@ isc.ListGrid.addProperties( {
     // ----------------------------------------------------------------------------------------
     // Don't show scrollbars -- scrolling occurs in the body
 
-    //> @attr listGrid.overflow (Overflow : Canvas.HIDDEN : IRW)
+    //> @attr listGrid.overflow (Overflow : Canvas.HIDDEN : IR)
     // Since +link{body} is configured with overflow: auto by default, no overflow
     // is expected for the +link{listGrid} itself so by default it has overflow: hidden.
     // @see layout.overflow
@@ -19535,12 +26015,10 @@ isc.ListGrid.addProperties( {
     autoFitMaxRecords:50,
 
     //> @attr ListGrid.autoFitExtraRecords (number : null : IRW)
-    // If +link{listGrid.autoFitData} is set to <code>"vertical"</code> or <code>"both"</code>,
-    // setting this property will cause the ListGrid body to size large enough to accomodate
-    // the actual data and also leave this many extra rows' worth of blank space below the last
-    // record. If a maximum size is specified via +link{listGrid.autoFitMaxHeight} or
-    // +link{listGrid.autoFitMaxRecords}, it will still be respected. Once the data set
-    // is large enough to fill or exceed that space, this property no longer has an effect.
+    // If +link{listGrid.autoFitData} is set to <code>"vertical"</code> or <code>"both"</code>
+    // this property specifies the number of additional records for which the grid
+    // will expand. If more
+    // records are present, scrolling will be introduced to reach them as normal.
     // @group autoFitData
     // @visibility external
     //<
@@ -19933,9 +26411,9 @@ isc.ListGrid.addProperties( {
     // specified those properties will take precedence over the component level settings.
     // <P>
     // If unset, date values will be formatted according to the system wide
-    // +link{DateUtil.setShortDisplayFormat(),short display format} or
-    // +link{DateUtil.setShortDatetimeDisplayFormat(),short datetime display format} for
-    // datetime type fields.
+    // +link{Date.setShortDisplayFormat(),short display format} or
+    // +link{Date.setShortDatetimeDisplayFormat(),short datetime display format} for datetime type
+    // fields.
     // <P>
     // If this field is editable the dateFormatter will also be passed to the editor created
     // to edit this field as +link{DateItem.dateFormatter, dateFormatter}.
@@ -19948,7 +26426,7 @@ isc.ListGrid.addProperties( {
     //> @attr listGrid.datetimeFormatter (DateDisplayFormat : null : [IRW])
     // Display format to use for fields specified as type 'datetime'.  Default is to use the
     // system-wide default date time format, configured via
-    // +link{DateUtil.setShortDatetimeDisplayFormat()}.  Specify any
+    // +link{Date.setShortDatetimeDisplayFormat()}.  Specify any
     // valid +link{type:DateDisplayFormat} to change the display format for datetimes used by this grid.
     // <smartclient>
     // May be specified as a function. If specified as  a function, this function will be executed in the scope of the Date
@@ -21181,6 +27659,17 @@ isc.ListGrid.addProperties( {
     // @example valueHoverTips
     //<
 
+    //> @attr listGridField.showHoverComponents (Boolean : null : IRWA)
+    // When set to true and showHover is also true for the field, shows a widget hovering at
+    // the mouse point.
+    // <P>
+    // A number of builtin modes are provided - see +link{type:HoverMode}.
+    // <P>
+    // Also supported at the +link{listGrid.showHoverComponents, ListGrid-level}.
+    // @group hoverComponents
+    // @visibility external
+    //<
+
     // can be set to false to cause hover to be per-row instead of per-cell
     //hoverByCell:true,
 
@@ -21236,6 +27725,9 @@ isc.ListGrid.addProperties( {
     // +link{listGrid.selectionType}:"simple" and "single" are supported.
     // You can also toggle the display of a disabled checkbox on a treeGrid, displayed
     // when the node can't be selected, via +link{TreeGrid.showDisabledSelectionCheckbox}.
+    // <p>
+    // Note that the default behavior when you enable checkbox selection is to continue to show
+    // the selected style.  This can be changed by setting +link{showSelectedStyle} to false.
     // @group selection
     // @visibility external
     //<
@@ -21878,8 +28370,17 @@ isc.ListGrid.addProperties( {
     // if +link{listGrid.showFilterEditor} is true.
     // @visibility external
     //<
-    filterEditorDefaults : { shouldPrint:false },
+    filterEditorDefaults : {
+        shouldPrint:false,
 
+
+        sourceWidgetResized : function (source) {
+            var horizontal = source.autoFitData != null && source.autoFitData != "vertical";
+
+            this.setWidth(horizontal ? source.body.getVisibleWidth() :
+                                       source.getInnerContentWidth(true));
+        }
+    },
 
     //> @attr listGrid.filterButtonProperties (Button properties : null : IR)
     // If +link{listGrid.showFilterEditor} is true, this attribute may be used to customize the
@@ -21961,7 +28462,7 @@ isc.ListGrid.addProperties( {
 // runtime, calculate an appropriate value for it, first checking the field, then the grid,
 // and finally allowing filterOperators if the DS supports advancedCriteria
 shouldAllowFilterOperators : function (field) {
-    if (this.showFilterEditor == false || this.allowFilterOperators == false) return false;
+    if (!this.showFilterEditor || this.allowFilterOperators == false) return false;
 
     if (!this.dataSource) return false;
     if (field) {
@@ -23025,9 +29526,17 @@ defaultFilterOperatorSuffix: "(default)",
             // If this is a container item, with sub items, or has a number of focusable
             // icons, we may be moving focus within the item, rather than going to another
             // edit cell.  This is handled by _moveFocusWithinItem().
-
-            if (!this._moveFocusWithinItem(item, shift)) {
-                return false;
+            if (this.ns.isA.ContainerItem(item) ||
+                (item.icons != null && item.icons.length > 0
+                    // If the event occurred on a PopUpTextAreaItem, native focus is either
+                    // on the icon, or within the TextArea in another form.
+                    // In this case we always navigate to the next cell
+                    && !this.ns.isA.PopUpTextAreaItem(item))
+               )
+            {
+                if (!this._moveFocusWithinItem(item, shift)) {
+                    return false;
+                }
             }
 
             editEvent = shift ? isc.ListGrid.SHIFT_TAB_KEYPRESS
@@ -23292,56 +29801,6 @@ defaultFilterOperatorSuffix: "(default)",
     // @visibility external
     //<
     headerBackgroundColor:"#CCCCCC",
-
-    // We want to support a drop shadow under the header.
-    // Only supported for css-based headers as we don't want peers floating around
-    // in the LG children.
-    // We can't use headerDefaults directly for this as if we have frozen cols the
-    // shadow should apply to the headerLayout, not the header itself.
-
-
-    //> @attr listGrid.showHeaderShadow (Boolean : false : IRW)
-    // Should the header show a drop-shadow?
-    // Shadow will be applied to the header, or for a grid with frozen columns, the
-    // header layout.
-    // <P>
-    // Header shadow will only be displayed if +link{canvas.useCSSShadow,css shadows} are
-    // being used.
-    // @see listGrid.headerShadowVOffset
-    // @see listGrid.headerShadowHOffset
-    // @see listGrid.headerShadowSoftness
-    // @see listGrid.headerShadowColor
-    // @visibility external
-    //<
-    showHeaderShadow:false,
-
-    //> @attr listGrid.headerShadowVOffset (Number : 1 : IRA)
-    // If +link{listGrid.showHeaderShadow} is true, the +link{canvas.shadowVOffset} for
-    // the header shadow
-    // @visibility external
-    //<
-    headerShadowVOffset:1,
-
-    //> @attr listGrid.headerShadowHOffset (Number : 0 : IRA)
-    // If +link{listGrid.showHeaderShadow} is true, the +link{canvas.shadowHOffset} for
-    // the header shadow
-    // @visibility external
-    //<
-    headerShadowHOffset:0,
-
-    //> @attr listGrid.headerShadowSoftness (Number : 1 : IRA)
-    // If +link{listGrid.showHeaderShadow} is true, the +link{canvas.shadowSoftness} for
-    // the header shadow
-    // @visibility external
-    //<
-    headerShadowSofness:1,
-
-    //> @attr listGrid.headerShadowColor (CSSColor : null : IRA)
-    // If +link{listGrid.showHeaderShadow} is true, the +link{canvas.shadowColor} for
-    // the header shadow.
-    // @visibility external
-    //<
-    // Unset by default - rely on standard skin shadow color
 
     headerDefaults : {
 
@@ -24468,8 +30927,6 @@ defaultFilterOperatorSuffix: "(default)",
         showGroupSummary:false,
         showGridSummary:false,
         summaryValue: "&nbsp;",
-        // specifically disable filterOperators for this builtin field
-        allowFilterOperators: false,
         formatCellValue : function (value, record, rowNum, colNum, grid) {
             if (grid.isGrouped) {
                 if (record == null || record._isGroup) return "&nbsp;";
@@ -24785,7 +31242,7 @@ defaultFilterOperatorSuffix: "(default)",
     expansionFieldDefaults: {
         name: "_expansionField",
         canEdit: false,
-        canFilter: false,
+        canFilter:false,
         canGroupBy: false,
         canSort: false,
         canExport: false,
@@ -24799,8 +31256,6 @@ defaultFilterOperatorSuffix: "(default)",
         keyboardFiresRecordClick: false,
         cellAlign: "center",
         summaryValue: "&nbsp;",
-        // specifically disable filterOperators for this builtin field
-        allowFilterOperators: false,
         recordClick: function (viewer, record, recordNum, field, fieldNum, value, rawValue) {
             if (!viewer.canExpandRecords || !field._isExpansionField) return;
             if (!viewer._canExpandRecord(record, recordNum)) return;
@@ -26754,8 +33209,9 @@ getAutoFitMaxBodyHeight : function () {
 
 // When auto-fitting vertically, specified height for the grid acts as a minimum
 getAutoFitMinBodyHeight : function () {
-    var minHeight = this.getHeight(),
-        offset = this.getVBorderPad();
+
+    var minHeight = this.getTotalMemberSpace(),
+        offset = 0;
 
 
     var members = this.getGridMembers(),
@@ -26763,6 +33219,10 @@ getAutoFitMinBodyHeight : function () {
 
     for (var i = 0; i < members.length; i++) {
         if (members[i] == body) continue;
+        // skip explicitly hidden grid-components
+        // (Checking visibility property rather than isVisible() to avoid confusion when
+        // the grid as a whole is hidden, but drawn)
+        if (members[i].visibility == isc.Canvas.HIDDEN) continue;
         offset += members[i].getVisibleHeight();
     }
 
@@ -26828,6 +33288,8 @@ autoFitField : function (fieldName, scrollIntoView) {
     // avoid attempting to autofit hidden fields, or fields where
     // autoFitWidth is already set (should just happen dynamically!)
     if (field == null || fieldNum == -1) return;
+
+
 
     var widths = this.getFieldAutoFitWidths([field]);
 
@@ -26922,6 +33384,9 @@ autoFitFields : function (fields) {
     }
     // we've removed any hidden fields here.
     fields = finalFields;
+
+
+
 
     var widths = this.getFieldAutoFitWidths(fields, this.autoFitFieldsFillViewport);
 
@@ -27396,7 +33861,6 @@ redraw : function (a, b, c, d) {
     }
 
     this.invokeSuper(isc.ListGrid, "redraw", a, b, c, d);
-
 },
 
 //> @method listGrid._observeData() (A)
@@ -27440,6 +33904,17 @@ _observeData : function (data) {
             this._folderToggleObservation(node, newState);
         });
     }
+
+
+    if (this.hiddenResultSet) this.hiddenResultSet.destroy();
+    if (isc.isAn.Array(data) && this.filterLocalData &&
+        this.dataSource && isc.isAn.DataSource(this.dataSource)) {
+        this.hiddenResultSet = isc.ResultSet.create({
+            dataSource : this.dataSource,
+            allRows : data
+        });
+    }
+
 },
 //> @method listGrid.groupTreeChanged()
 // Callback fired from group tree +link{listGrid.groupTree} dataChanged().
@@ -27805,6 +34280,7 @@ _getDataChangedRecord : function (originalRecord, rowNum, type) {
 
 dataChanged : function (type, originalRecord, rowNum, updateData, filterChanged, dataFromCache) {
     if (isc._traceMarkers) arguments.__this = this;
+
     // set a flag so we know we're handling dataChanged
     // This prevents us from causing unnecessary additional redraws from dataChanged on the
     // groupTree if we're currently grouped by any field(s)
@@ -28174,7 +34650,6 @@ dataChanged : function (type, originalRecord, rowNum, updateData, filterChanged,
 
     this.updateBodyCanFocusForData();
 
-    if (filterChanged) this._provideCriteriaToRuleContext();
 },
 
 
@@ -28324,19 +34799,6 @@ _dataArrived : function (startRow, endRow) {
 
     this.updateBodyCanFocusForData();
 
-    if (this.data) {
-        if (isc.isA.ResultSet(this.data)) {
-            if (this.data._initialDataLoading) {
-                if (this._provideDataLoadingToRuleContext) {
-                    this._provideDataLoadingToRuleContext();
-                }
-                delete this.data._initialDataLoading;
-            }
-        } else if (isc.isA.ResultTree(this.data)) {
-            this._provideDataLoadingToRuleContext();
-        }
-    }
-
 },
 
 updateBodyCanFocusForData : function () {
@@ -28404,7 +34866,7 @@ applyFieldDefaults : function (fields) {
         if (field == null) continue;
 
 
-        if (field._componentID == null) field._componentID = thisID;
+        if (field.componentID == null) field.componentID = thisID;
 
         // In general we can support un-named fields in dataBoundComponents if there is a dataPath
         if (!this.allowNamelessFields && field[this.fieldIdProperty] == null) {
@@ -28669,36 +35131,6 @@ setFieldProperties : function (fieldNum, properties) {
             headerButton = header.getMember(this.getLocalFieldNum(fieldNum));
         if (headerButton) headerButton.setProperties(properties);
     }
-},
-
-//> @method listGrid.setFieldMinWidth()
-// Updates +link{listGridField.minWidth} for the specified field and redraws the associated
-// column if required.
-//
-// @param fieldNum (int | String) name of the field, or index.
-// @param width (Number)
-// @see listGridField.minWidth
-// @visibility external
-//<
-setFieldMinWidth : function (fieldNum, width) {
-    this.setFieldProperties(fieldNum, {minWidth: width});
-    var body = this.fieldIsFrozen(fieldNum) ? this.frozenBody : this.body;
-    if (body) body._fieldWidthsDirty = true;
-},
-
-//> @method listGrid.setFieldMaxWidth()
-// Updates +link{listGridField.maxWidth} for the specified field and redraws the associated
-// column if required.
-//
-// @param fieldNum (int | String) name of the field, or index.
-// @param width (Number)
-// @see listGridField.maxWidth
-// @visibility external
-//<
-setFieldMaxWidth : function (fieldNum, width) {
-    this.setFieldProperties(fieldNum, {maxWidth: width});
-    var body = this.fieldIsFrozen(fieldNum) ? this.frozenBody : this.body;
-    if (body) body._fieldWidthsDirty = true;
 },
 
 //> @method listGrid.setMinFieldWidth()
@@ -29515,7 +35947,6 @@ showActionInPanel : function (action) {
 _$setFields:"set fields",
 setFields : function (newFields) {
     if (isc._traceMarkers) arguments.__this = this;
-
     var recalculateSummaries = false;
     // If called with new fields (more than just an update of existing field state), reset
     // the flag indicating that we've used specified width as a minimum for autoFitWidth fields
@@ -29608,7 +36039,15 @@ setFields : function (newFields) {
 
 
     // on the first setFields() ever, create a new array for the visible fields
-    if (this.completeFields == null) this.fields = [];
+    if (this.completeFields == null) {
+        this.fields = [];
+
+    // Also if passed this.fields, duplicate the array before potentially storing it
+    // as this.completeFields so we don't end up with both references pointing to the
+    // same object.
+    } else if (newFields === this.fields) {
+        newFields = newFields.duplicate();
+    }
     // bind the passed-in fields to the DataSource and store
     // canPickOmittedFields - if true we'll pick up all dataSource fields but have them
     // marked as showIf:false if useAllDataSourceFields is false
@@ -29994,6 +36433,8 @@ setFields : function (newFields) {
 
     if (!this._suppressStoreFieldState) this.defaultFieldState = this.getFieldState();
 
+    if (this._scrollCell) this._delayedScrollToCell();
+
     // Set view state if necessary
     if (this.viewState) {
         var viewState = this.viewState;
@@ -30035,6 +36476,20 @@ setFields : function (newFields) {
         this.setViewState(viewState);
     }
 },
+
+_delayedScrollToCell : function () {
+    if (this._scrollCell != null) {
+        var isAnArray = isc.isAn.Array(this._scrollCell),
+            scrollRowNum =  isAnArray ? this._scrollCell[0] : this._scrollCell,
+            scrollColNum = isAnArray ? this._scrollCell[1] || 0 : 0,
+            xPosition = isAnArray ? this._scrollCell[2] : null,
+            yPosition = isAnArray ? this._scrollCell[3] : null
+        ;
+        delete this._scrollCell;
+        this.scrollToCell(scrollRowNum, scrollColNum, xPosition, yPosition);
+    }
+},
+
 
 // override add/removeField to account for us having 'this.completeFields' which
 // dataBoundComponent doesn't expect
@@ -30092,6 +36547,7 @@ bindToDataSource : function (fields, componentIsDetail, a,b,c,d) {
 
     var completeFields = this.invokeSuper(isc.ListGrid, "bindToDataSource",
                                           fields, componentIsDetail, a,b,c,d);
+
     if (completeFields != null) {
         for (var i = 0; i < completeFields.length; i++) {
             var field = completeFields[i];
@@ -30300,8 +36756,6 @@ checkboxFieldDefaults: {
     showGridSummary: false,
     showGroupSummary: false,
     summaryValue: "&nbsp;",
-    // specifically disable filterOperators for this builtin field
-    allowFilterOperators: false,
     // disable this from ever being assigned as the treeField
     treeField:false,
     title: isc.nbsp
@@ -31204,16 +37658,16 @@ _getCalculatedFieldWidths : function () {
         // the button or label with overflow:"visible", and setWidth() is called on it
         // the redraw isn't immediate - we need to force a redraw now if it hasn't occurred
         // so getVisibleWidth() returns the new size.
+        // derive field widths from header sizes
         var buttons = header.members;
+        var sizes = [];
         for (var i = 0; i < buttons.length; i++) {
             if (buttons[i].isDirty()) buttons[i].redraw();
             if (buttons[i].label != null && buttons[i].label.isDirty()) buttons[i].label.redraw();
-
-
+            sizes[i] = buttons[i].getVisibleWidth();
         }
 
-        // derive field widths from header sizes
-        var sizes = header.getMemberSizes();
+
         if (sizes.length > 0) {
             if (this.allowMismatchedHeaderBodyBorder) {
 
@@ -31417,7 +37871,6 @@ _adjustLastFieldForBodyStyling : function (size, totalFieldsWidth, vertical) {
 setBodyFieldWidths : function (sizes) {
     // set the _fieldWidths array to the list passed in
     this._fieldWidths = sizes;
-
     // adjust the first / last column width for any left/right border or margin on the body.
 
     var origSizes = sizes;
@@ -31537,8 +37990,7 @@ gridComponents:[
 getGridMembers : function () {
     var gridComponents = this.gridComponents,
         members = [],
-        bodyShown,
-        headerShown;
+        bodyShown;
 
     for (var i = 0; i < gridComponents.length; i++) {
         var component = gridComponents[i],
@@ -31562,7 +38014,6 @@ getGridMembers : function () {
                     break;
 
                 case "header" :
-                    headerShown = true;
                     if (this.header == null) {
                         this.makeHeader();
                     }
@@ -31591,15 +38042,6 @@ getGridMembers : function () {
         }
         members.add(liveComponent);
     }
-
-    // If we're showing a header and a body, ensure the header is higher in the
-    // page's z-index. this allows it to show a visible drop-shadow.
-    if (headerShown && bodyShown) {
-        var header = this.headerLayout || this.header,
-            body = this.bodyLayout || this.body;
-        header.moveAbove(body);
-    }
-
     if (!bodyShown) {
         this.logWarn("ListGrid specified with gridComponents:" + gridComponents +
             ".  This does not include a \"body\" entry. ListGrids with no body are unsupported," +
@@ -31669,13 +38111,7 @@ updateGridComponents : function () {
 // widths correctly, and, if we have frozen fields, assign sizes to the frozen header and body
 // correctly.
 
-layoutChildren : function (reason, deltaX, deltaY) {
-    var mustUpdateUI = this.isDrawn() || (reason == this._$initial_draw);
-    if (!mustUpdateUI) {
-
-        return isc.VLayout._instancePrototype.layoutChildren.call(this,reason,deltaX,deltaY);
-    }
-
+layoutChildren : function (reason,b,c) {
     // If we've created our children, go ahead and call updateFieldWidths() to figure out
     // column sizes, and perform various member-management tasks.
 
@@ -31685,14 +38121,11 @@ layoutChildren : function (reason, deltaX, deltaY) {
         // us to resize the header bar.
         // We already run the _updateHeaderHeight logic within updateFieldWidths so no
         // need to explicitly do that again here.
-
-        if (reason != this._$resized || deltaX != 0) {
-            this._updateFieldWidths(reason, deltaX, deltaY);
-        }
+        this._updateFieldWidths(reason, b,c);
     }
 
 
-    isc.VLayout._instancePrototype.layoutChildren.call(this,reason,deltaX,deltaY);
+    isc.VLayout._instancePrototype.layoutChildren.call(this,reason,b,c);
 
     if (this.body != null) {
         // Every time we layout children (may be due to body resize or body scroll change), if
@@ -31709,46 +38142,26 @@ layoutChildren : function (reason, deltaX, deltaY) {
     }
 },
 
-// ---------------------------------------------------------
-// ListGrid Tab Order Management:
-//
-// Layouts override getChildTabPosition to order children in member order first, then
-// non member children.
-// They also have an updateMemberTabPosition method called from various appropriate
-// points (addMember / reorderMembers etc) which essentially takes the calculated
-// childTabPosition and applies it in the TabIndexManager.
-//
-// For ListGrids, the only change we need to make here is to shove the sorter
-// (a non-member child) after the header in the page's tab order.
-//
-// Note that special handling is also required for grid editing.
-// We add the edit-form under the ListGrid body, so it is in the logically correct place,
-// but we also intercept Tab keypress events in order to handle
-// - moving within items
-// - moving between items/editing new fields
-// - completing the edit and moving on.
 
-getChildTabPosition : function (child) {
-    var position = this.Super("getChildTabPosition", arguments);
+// override updateMemberTabIndex. If an explicit T.I. is set on the grid just apply it to all
+// members
 
-    var header = this.headerLayout || this.header,
-        sorter = this.sorter;
-    if (header == null || sorter == null) {
-        return position;
-    }
-    var headerIndex = this.members.indexOf(header);
-    // slot the sorter after the header in the tab-order
-    if (child == sorter) {
-        return headerIndex+1;
-    }
-    // Shift any subsequent members, or any non-member children forward by one to
-    // account for the sorter being shifted up in the tab order.
+updateMemberTabIndex : function (newMember) {
+    // If a developer specifies an explicit tab-index for a Layout as a whole, how to handle this?
+    // For now just assign all members the same tab index
+    if (this.tabIndex != null && !this._autoTabIndex && this.tabIndex != -1 &&
+        // Skip this if we have a CanvasItem
 
-    var memberIndex = this.members.indexOf(child);
-    if (memberIndex == null || memberIndex == -1 || memberIndex > headerIndex) {
-        position += 1;
+
+
+
+        (this.canvasItem == null) &&
+        (this.tabIndex < isc.Canvas.TAB_INDEX_FLOOR))
+    {
+        newMember.setTabIndex(this.tabIndex);
+        return;
     }
-    return position;
+    return this.Super("updateMemberTabIndex", arguments);
 },
 
 // Override shouldAlterBreadth
@@ -31808,10 +38221,7 @@ _updateHeaderWidth : function (fieldWidths, headerWidth, headerLayout) {
 _updateFieldWidths : function (reason, mustRefresh,c) {
 
     // don't do anything until we've created our children (eg resized before draw())
-    // Safe to bail here - we'll always get a notification on initial-draw
     if (this.body == null) return;
-    var isInitialDraw = (reason == this._$initial_draw);
-    if (!isInitialDraw && !this.isDrawn()) return;
 
     // don't allow this method to fire recursively
 
@@ -31861,6 +38271,7 @@ _updateFieldWidths : function (reason, mustRefresh,c) {
         // reflow to accommodate it.
         if (!this.fields._appliedInitialAutoFitWidth) {
             var autoFitFieldWidths = this.getAutoFitValueWidths(null, true);
+
             if (autoFitFieldWidths == null) {
                 this.fields.setProperty("_calculatedAutoFitWidth", null);
             } else {
@@ -31886,7 +38297,6 @@ _updateFieldWidths : function (reason, mustRefresh,c) {
                     var maxWidth = field.maxWidth || Infinity,
                         minWidth = this.getMinFieldWidth(field),
                         autoFitWidth = Math.min(autoFitFieldWidths[i], maxWidth);
-
                     var headerButton = this.getFieldHeaderButton(i);
                     if (headerButton != null) {
                         var isBoth = this.getAutoFitWidthApproach(field) == "both",
@@ -32051,6 +38461,7 @@ _updateFieldWidths : function (reason, mustRefresh,c) {
         // get fieldWidths from it to give to the body before it draws.  Also draw the header
         // if we're completely drawn and it's undrawn because it was just recreated.
 
+        var isInitialDraw = (reason == "initial draw");
         if (!header.isDrawn() && (isInitialDraw || this.isDrawn())) {
             if (!this.frozenFields) {
                 if (isInitialDraw) this._moveOffscreen(header);
@@ -32622,6 +39033,7 @@ _getBodyColumnAutoSize : function (frozen, localFieldNums) {
     var body = frozen ? this.frozenBody : this.body;
     if (body == null) return null;
     var bodyWidths = body.getColumnAutoSize(localFieldNums);
+
     if (this.includeGridSummaryInAutoFitWidth &&
         this.showGridSummary && this.summaryRow != null)
     {
@@ -33055,14 +39467,13 @@ redrawHeader : function(rightNow) {
 // <smartgwt><p>
 // <b>Note: This is an override point.</b></smartgwt>
 //
-// @see getCellStyle()
-//
 // @param [record] (ListGridRecord) Record associated with this cell. May be <code>null</code>
 //                                  for a new edit row at the end of this grid's data set.
 // @param   rowNum  (number)    row number for the cell
 // @param   colNum  (number)    column number of the cell
 // @return  (CSSStyleName)  CSS class for this cell
 // @visibility external
+// @see getCellStyle()
 // @example replaceStyle
 //<
 getBaseStyle : function (record, rowNum, colNum) {
@@ -33113,6 +39524,10 @@ getBaseStyle : function (record, rowNum, colNum) {
     return baseStyle;
 },
 
+//> @method listGrid.getCellCSSText()
+// @include gridRenderer.getCellCSSText()
+// @example addStyle
+//<
 getCellCSSText : function (record, rowNum, colNum) {
     var field = this.getField(colNum),
         cssText;
@@ -33401,13 +39816,12 @@ __applyFieldFormulaAfterSummary : function (applyFormulaAfterSummary, field) {
     return applyAfterSummary;
 },
 
-_$blank: "blank",
 _getCheckboxValueIconHTML : function (isSel, isPartial, canSelect, disabled, field) {
     var icon,
         iconStyle;
     if (!canSelect) {
         // record cannot be selected but we want the space allocated for the checkbox anyway.
-        icon = this._$blank;
+        icon = isc.Canvas._$blank;
     } else {
         var isPrinting = this.isPrinting;
 
@@ -33436,14 +39850,13 @@ _getCheckboxValueIconHTML : function (isSel, isPartial, canSelect, disabled, fie
                     : this.checkboxFieldFalseImage || this.booleanFalseImage);
             iconStyle = booleanBaseStyle == null ? null : booleanBaseStyle + "False";
         }
-        if (icon == null) icon = this._$blank;
+        if (icon == null) icon = isc.Canvas._$blank;
     }
     // if the record is disabled, make the checkbox image disabled as well
     if (disabled) {
-        if (icon != this._$blank) icon = isc.Img.urlForState(icon, false, false, isc.StatefulCanvas.STATE_DISABLED);
+        if (icon != isc.Canvas._$blank) icon = isc.Img.urlForState(icon, false, false, isc.StatefulCanvas.STATE_DISABLED);
         if (iconStyle != null) iconStyle += isc.StatefulCanvas.STATE_DISABLED;
     }
-    if (icon == this._$blank) icon = isc.Canvas._nullSrcPlaceholder;
 
     var extraExtraStuff;
     if (iconStyle != null) {
@@ -33614,7 +40027,7 @@ getCellValue : function (record, recordNum, fieldNum, gridBody) {
             // GR auto-sizer canvas.
 
             if (gridBody._gettingAutoSizeHTML) {
-                value =this.getInactiveEditorCellValue(editRecord, editRowNum, fieldNum);
+                value =this.getInactiveEditorCellValue(editRecord, editRowNum, fieldNum, true);
             } else {
                 value = this.getEditItemCellValue(editRecord, editRowNum, fieldNum);
             }
@@ -33913,7 +40326,7 @@ getValueIconHTML : function (icon, field, extraExtraStuff) {
         leftPad = this.getValueIconLeftPadding(field),
         rightPad = this.getValueIconRightPadding(field);
 
-    if (suffix != null) icon += suffix;
+    if (icon != isc.Canvas._$blank && suffix != null) icon += suffix;
 
     var extraCSSText;
     if (this.showValueIconHandCursor(field)) {
@@ -34259,16 +40672,14 @@ getValueIcon : function (field, value, record, rowNum) {
             // disabled checkbox icon
             rowNum = (rowNum != null) ? rowNum : this.findRowNum(record);
             var colNum = field.masterIndex;
-            if (!this.canEditCell(rowNum, colNum) && field.canToggle && img != this._$blank) {
+            if (!this.canEditCell(rowNum, colNum) && field.canToggle && img != isc.Canvas._$blank) {
                 img = isc.Img.urlForState(img, false, false, isc.StatefulCanvas.STATE_DISABLED);
             }
-            if (img == this._$blank) {
-                img = isc.Canvas._nullSrcPlaceholder;
-
-            // If no image was specified, still write out a blank gif into the slot - this
-            // allows us to recognize events over the (invisible) icon for canToggle behavior
-            } else if (img == null) {
-                img = isc.Canvas.getImgURL(isc.Canvas._blankImgURL);
+            if (img == isc.Canvas._$blank || img == null) {
+                // If no image was specified, still write out a blank gif into the slot, by
+                // using the special value "blank" - this allows us to recognize events over
+                // the (invisible) icon for canToggle behavior
+                img == isc.Canvas._$blank;
             }
             return img;
         }
@@ -34844,7 +41255,7 @@ _showInactiveEditor : function (fieldNum) {
 // getInactiveEditorCellValue()
 // If this.alwaysShowEditors is true, we write inactive versions of our edit form items in every
 // row (with appropriate value displayed for the record in question)
-getInactiveEditorCellValue : function (record, rowNum, colNum) {
+getInactiveEditorCellValue : function (record, rowNum, colNum, suppressContext) {
     var itemName = this.getEditorName(rowNum, colNum);
 
     // get the HTML for the form item
@@ -34882,13 +41293,15 @@ getInactiveEditorCellValue : function (record, rowNum, colNum) {
         // We want to be able to map from row+colNum to contextID so we don't have
         // to iterate through all the inactiveContexts on all the form items
 
-        if (!this._inactiveEditorContextMap) this._inactiveEditorContextMap = {};
-        var row_col = "_" + rowNum + "_" + colNum;
-        if (this._inactiveEditorContextMap[row_col]) {
-            this.logWarn("creating new inactiveEditor context for a cell without having cleared " +
-                "the previous one." + this.getStackTrace(), "inactiveEditorHTML");
+        if (!suppressContext) {
+            if (!this._inactiveEditorContextMap) this._inactiveEditorContextMap = {};
+            var row_col = "_" + rowNum + "_" + colNum;
+            if (this._inactiveEditorContextMap[row_col]) {
+                this.logWarn("creating new inactiveEditor context for a cell without having cleared " +
+                    "the previous one." + this.getStackTrace(), "inactiveEditorHTML");
+            }
+            this._inactiveEditorContextMap[row_col] = context;
         }
-        this._inactiveEditorContextMap[row_col] = context;
     }
 
 
@@ -37814,10 +44227,11 @@ cellValueHoverHTML : function (record, rowNum, colNum, defaultHTML) {
 // When set to true and canHover is also true, shows a widget hovering at the mouse point.
 // <P>
 // A number of builtin modes are provided - see +link{type:HoverMode}.
+// <P>
+// Also supported at the +link{listGridField.showHoverComponents, field-level}.
 // @group hoverComponents
 // @visibility external
 //<
-
 
 //> @type HoverMode
 // When +link{ListGrid.canHover, canHover} and
@@ -37853,8 +44267,19 @@ cellValueHoverHTML : function (record, rowNum, colNum, defaultHTML) {
 // @visibility external
 //<
 
+_shouldShowCellHoverComponent : function (record, rowNum, colNum) {
+    if (!this.showHoverComponents) {
+        var field = colNum != null ? this.getField(colNum) : null;
+        if (field && field.showHoverComponents == true) return true;
+        return false;
+    }
+    return true;
+},
+
 _getCellHoverComponent : function (record, rowNum, colNum) {
-    if (!this.showHoverComponents) return null;
+    // if not showing a cellHoverComponent for this cell, return null - a regular or
+    // clipped-value hover may be shown instead
+    if (!this._shouldShowCellHoverComponent(record, rowNum, colNum)) return null;
     // If we're showing an editor in the cell suppress the standard cell hover.
     if (this._editorShowing && this.getEditRow() == rowNum &&
         (!this.editByCell || this.getEditCol() == colNum)) return null;
@@ -39283,12 +45708,21 @@ scrollCellIntoView : function (rowNum, colNum, xPosition, yPosition, alwaysScrol
 
     // if the body isn't drawn, we can't scroll the cell into view - set a flag to scroll the
     // body when it gets drawn
-    if (!this.body || !this.body.isDrawn()) {
-        this.logInfo("scrollCellIntoView() called before the body has been drawn.  Cell " +
-                     rowNum + "," + colNum + " will scrolled into view on draw().");
+    var bodyDrawn = this.body && this.body.isDrawn(),
+        autoFitting = this.autoFitFieldWidths == true ||
+            (this.getFields() || []).getProperty("autoFitWidth").contains(true),
+        autoFitPending = autoFitting &&
+            (this.body && ![false, null].contains(this.body._fieldWidthsDirty))
+    ;
+    if (!bodyDrawn || autoFitPending) {
+        this.logInfo("scrollCellIntoView() called " +
+            (!bodyDrawn ? "before the body has been drawn." :
+                "while a redraw() was pending.") +
+            "  Cell " + rowNum + "," + colNum + " will be scrolled into view on " +
+            (!bodyDrawn ? "draw()." : "redraw().")
+        );
         this._scrollCell = [rowNum, colNum, xPosition, yPosition];
         return;
-
     }
 
     // Force an immediate adjustOverflow before we calculate row / viewport size etc
@@ -39682,6 +46116,21 @@ setFocus : function (newfocus) {
     if (this.body != null) {
         this.body.setFocus(newfocus);
     }
+},
+
+// If "focusAtEnd" is called, always just pass focus to the "next tab element".
+// The grid is marked as canFocus:true, but doesn't actually ever takes focus: Always
+// delegates to its children.
+// The grid's tab-index will precede that of its children.
+// When synthetically tabbing through widgets, this method can be called:
+// When the user is tabbing forward and encounters the grid
+// - just put focus into the next tab widget (should be the appropriate header toolbar or
+//   body)
+// When the user is tabbing backwards and has already gone through the grid members
+// - just put focus into the prev-tab-widget (will be whatever precedes the LG as a whole
+//   in the page's tab order)
+focusAtEnd : function (start) {
+    this._focusInNextTabElement(start);
 },
 
 // Override _canFocus() - we are focusable if the body is focusable
@@ -40287,7 +46736,8 @@ getGridSummaryData : function (recalculate, fields) {
 //
 // @param records (Array of Record) the records in the group, for which the summary values
 //                                  are being calculated
-// @param groupNode (Record) object with specified groupValue and groupName for this group
+// @param groupNode (Record) object with specified groupValue and groupName for
+//                                       this group
 // @param [recalculate] (Boolean) if set to false and the node has existing summary data,
 //                                returns the stored summary data, rather than recalculating
 //
@@ -40911,6 +47361,8 @@ getSummaryRow : function () {
         });
 
     } else {
+
+        if (!this.getSummaryRowDataSource()) this.summaryRow.skipNullDataSourceCheck = true;
         this.summaryRow.setDataSource(this.getSummaryRowDataSource(), this.completeFields.duplicate());
         // recalculateSummaries handles moving and resizing the summary row
         // (It has to, since the number of summary rows displayed may change, changing the
@@ -42743,16 +49195,14 @@ showInlineEditor : function (rowNum, colNum, newCell, newRow, suppressFocus) {
             }
 
             if (delayFocus) {
-                var item = this._editRowForm.getItem(focusItemName);
-                this._delayedFocusEvent = item.delayCall("focusAtEnd", [focusAtEnd]);
+                this._delayedFocusEvent = this._editRowForm.delayCall("focusInItem", [focusItemName, focusAtEnd]);
 
             } else {
 
                 if (isc.Browser.isMoz && this.body.overflow == isc.Canvas.VISIBLE) {
                     this.adjustOverflow();
                 }
-                var item = this._editRowForm.getItem(focusItemName);
-                item.focusAtEnd(focusAtEnd);
+                this._editRowForm.focusInItem(focusItemName, focusAtEnd);
             }
         }
     }
@@ -42765,8 +49215,6 @@ _showEditForm : function (rowNum, colNum, forceRedraw) {
     var editorWasShowing = this._editorShowing;
     this._editorShowing = true;
     if (!this.isDrawn() || !this.body) return;
-
-    if (!editorWasShowing) this.updateEditFormTabPosition();
 
     // The edit form has been created, and we need to show its items in the DOM.
     // 3 cases to catch:
@@ -42872,15 +49320,6 @@ _showEditForm : function (rowNum, colNum, forceRedraw) {
 
     if (!wasQueuing && isc.RPCManager) isc.RPCManager.sendQueue();
 
-},
-
-// We have form items' tab index driven by their parent form, but
-// we are rendering the items inside a different containerWidget here.
-// Explicitly shift the form in the Tab-Tree under our body so the
-// order behaves as you'd expect.
-
-updateEditFormTabPosition : function () {
-    isc.TabIndexManager.moveTarget(this._editRowForm.ID, this.body.ID, 0);
 },
 
 // show the clickmask to catch clicks outside the editors, which means we're done editing
@@ -43125,11 +49564,9 @@ hideInlineEditor : function (focusInBody, suppressCMHide, shiftFocus) {
     if (focusInBody) {
 
         if (shiftFocus != null) {
-            // shiftFocus: This would come from a Tab/Shift+Tab keypress -- in this case
-            // move focus forward to the next focusable widget.
-
-            isc.TabIndexManager.shiftFocusAfterGroup(this.body.getID(),
-                (shiftFocus > 0 ? true : false));
+            // shiftFocus: This would come from a Tab/Shift+Tab keypress -- in this case move focus forward
+            // to the next focusable widget.
+            shiftFocus == 1 ? this.body.focusInNextTabElement() : this.body.focusInPreviousTabElement();
         } else {
             // return focus to the body
             // -- ensure we don't editOnFocus via the 'suppressEditOnFocus' flag
@@ -43334,6 +49771,12 @@ makeEditForm : function (rowNum, colNum) {
             locatorParent:this,
 
             showErrorIcons:this.showErrorIcons,
+
+            // Give the form the same tabIndex - this is not relevant in most ListGrids,
+            // since the clickMask / keypress handling will prevent tabbing in and out of the
+            // edit form, but we rely on this behavior in the RecordEditor class where the user
+            // must be able to tab in and out of the edit row.
+            tabIndex:this.getTabIndex(),
 
             // pass it this widget's datasource too
             dataSource:this.dataSource,
@@ -43685,6 +50128,17 @@ setEditorValueMap : function (fieldID, map) {
 //  @visibility external
 //<
 getEditorType : function (field, values) {
+    var isNewRecord = values == null || isc.isAn.emptyObject(values);
+    if (!isNewRecord && this.getDataSource() != null) {
+        var keyFieldNames = this.getDataSource().getPrimaryKeyFieldNames();
+        for (var i = 0; i < keyFieldNames.length; i++) {
+            if (values[keyFieldNames[i]] == null) {
+                isNewRecord = true;
+                break;
+            }
+        }
+    }
+    var idx = isNewRecord ? -1 : this.getRecordIndex(values);
 
     // determining type: editorProperties, being most specific, wins.  Otherwise
     // field.editorType, otherwise, you get the default editor picked
@@ -43692,7 +50146,7 @@ getEditorType : function (field, values) {
     // NOTE: editorProps.type will always refer to the form item type, not the data type.
     // NOTE: "formItemType" is a legacy synonym of "editorType"
 
-    var idx = (values != null && !isc.isA.emptyObject(values)) ? this.getRecordIndex(values) : -1;
+
     var props = this.getEditorProperties(field, values, idx);
     var editorProperties = isc.addProperties({}, field, field.editorProperties, props);
 
@@ -44005,6 +50459,11 @@ getEditItem : function (editField, record, editedRecord, rowNum, colNum, width, 
 
     item.colNum = colNum;
 
+    item.getGlobalTabIndex = function () {
+        if (!this.containerWidget) return this.Super("getGlobalTabIndex", arguments);
+        return this.containerWidget.getTabIndex();
+    };
+
     // the error icons will be written directly into the form item (so no need to
     // adjust the size of the edit item to account for them).
 
@@ -44150,6 +50609,9 @@ getEditItem : function (editField, record, editedRecord, rowNum, colNum, width, 
 
     // A re-used FormItem should not retain the internal last formula calculation value
     item._lastFormulaValue = null;
+
+    // Propagate the date format
+    item.format = editField.format;
 
     // if we're updating an existing item in place we don't need to reapply standard handlers,
     // or any properties which can't be updated on the fly (like editorType)
@@ -44420,6 +50882,8 @@ refreshCell : function (rowNum, colNum, refreshingRow, allowEditCellRefresh) {
         // redraw (used to make 'refreshRow' more efficient.
         return false;
     }
+
+    body._clearCachedCellValueForRefreshCell(rowNum,colNum);
 
     if (this._alwaysShowEditors(this.getField(colNum),true)) {
         this._clearingInactiveEditorHTML(rowNum,colNum);
@@ -45077,7 +51541,8 @@ getEditedRecord : function (rowNum, colNum, suppressUpdate) {
     // may well return null for some uses of this method, but it's OK because
     // DBC._duplicateValues() now copes with being passed a null component (it just performs a
     // straight schemaless dup)
-    isc.Canvas._duplicateValues(this.getEditForm(), record, baseRecordCopy);
+    isc.Canvas._duplicateValues(this.getEditForm(), record, baseRecordCopy, null,
+                                this.keepNativeJavaObjs !== false);
     this.combineRecords(rtn, baseRecordCopy);
     this.combineRecords(rtn, editValues);
     if (rtn.__ref) rtn.__ref = null;
@@ -45633,7 +52098,8 @@ setEditValue : function (rowNum, colNum, newValue, suppressDisplay, suppressChan
     // If we're not supposed to update the display we're done.
 
     if (suppressDisplay) {
-        if (!suppressSummaryRecalc) {
+
+        if (!suppressSummaryRecalc && this.data.getLength() > rowNum) {
             // unless explicitly prohibited, if suppressDisplay is passed we do still want to
             // recalculate the summaries if present since the calling code never handles that
             this.calculateRecordSummaries(this.data.get(rowNum), null, true, true, true);
@@ -47298,8 +53764,13 @@ _handleEditorExit : function (editCompletionEvent, rowNum, colNum, newValue) {
         returnVal = true;
 
     var item = this._editRowForm.getItem(editFieldName);
+
     //>PopUpTextAreaItem         If this is a pop-up text area, ensure the T.A. is hidden.
-    if (isc.isA.PopUpTextAreaItem(item)) item.hidePopUp();  //<PopUpTextAreaItem
+    if (isc.isA.PopUpTextAreaItem(item)) {
+
+        if (item._popUpForm && item._popUpForm.isDrawn()) item.hidePopUp();
+    }
+    //<PopUpTextAreaItem
 
     // clear any selection if we're in a CubeGrid
     if (isc.CubeGrid && isc.isA.CubeGrid(this) && this.selection &&
@@ -49067,7 +55538,7 @@ saveEditedValues : function (rowNum, colNum, newValues, oldValues,
         // returns.
         var pks = isc.DS.get(this.dataSource).filterPrimaryKeyFields(oldValues),
             updates = isc.addProperties({}, pks, newValues);
-        ds.updateData(updates, callback, request);
+            this.updateData(updates, callback, request);
     }
 },
 
@@ -49076,7 +55547,8 @@ _saveLocally : function (editInfo, saveCallback) {
     var rowNum = editInfo.rowNum,
         colNum = editInfo.colNum,
         oldValues = editInfo.oldValues,
-        newValues = editInfo.values;
+        newValues = editInfo.values
+    ;
 
 
     var record = this.getCellRecord(rowNum, colNum),
@@ -49128,7 +55600,6 @@ _saveLocally : function (editInfo, saveCallback) {
                                                  record, this, true);
                 }
             }
-
 
             var name = fieldLocator;
             if (fieldLocator.indexOf("/") >= 0) {
@@ -49296,10 +55767,14 @@ _unsortOnChange : function (newValues, oldValues) {
                 property = sortSpecifier.property,
                 undef;
 
-            if (oldValues[property] !== undef &&
-                !this.fieldValuesAreEqual(property,
-                                          oldValues[property],
-                                          newValues[property]))
+
+            // newValues is a set of editValues - if it doesn't specify a value for this
+            // sort-field, that means it wasn't edited - continue
+            if (!isc.propertyDefined(newValues, property)) continue;
+
+
+            if (!isc.propertyDefined(oldValues, property) ||
+                !this.fieldValuesAreEqual(property, oldValues[property], newValues[property]))
             {
                 if (this.logIsInfoEnabled("sorting")) {
                     this.logInfo("Value for current sort field '" + property +
@@ -49392,6 +55867,7 @@ _updateRecordReply : function (dsResponse, dsRequest) {
     }
     // if we got here, the edit was successful
     this._editCompleteCallback(editInfo, context.saveCallback, dsResponse, dsRequest)
+
 },
 
 // parseServerErrors(): convert the formats allowed for dsResponse.errors to our internal
@@ -49942,7 +56418,7 @@ validateRowValues : function (newValues, oldValues, rowNum, fields) {
                                              "validate");
 
         if (!shouldValidateCell) {
-            shouldValidateCell = (newValue !== undef || oldValue === undef || oldValue == null);
+            shouldValidateCell = (newValue !== undef && (oldValue === undef || oldValue == null));
         }
         if (!shouldValidateCell) continue;
 
@@ -51827,7 +58303,7 @@ getSpecifiedField : function (fieldID) {
 },
 
 _setFieldGridID : function (field) {
-    if (field && !field._componentID) field._componentID = this.ID;
+    if (field && !field.componentID) field.componentID = this.ID;
 },
 
 //> @method listGrid.getFieldName() (A)
@@ -52945,12 +59421,6 @@ createBodies : function () {
 
     // create the primary body and add it as a child
     this.body = this.createBody(this.ID + "_body", this.normalFields || this.fields);
-
-    if (this._editorShowing) {
-        this.updateEditFormTabPosition();
-    }
-
-
     // unless gridComponents is customized, the header and sorter button are created before the
     // body. Because the sorter button width may depend on the body's scrollbar size, if the
     // sorter button exists, recompute its width.
@@ -53190,7 +59660,6 @@ createBody : function (ID, fields, frozen) {
     if (frozen) body.showEmptyMessage = false;
 
     body.completeCreation();
-
     body = isc.SGWTFactory.extractFromConfigBlock(body);
 
     // add passthroughs from the body to the ListGrid for pluggable body APIs defined on the grid
@@ -53900,23 +60369,7 @@ makeHeader : function () {
 
     var outerHeader = this.headerLayout || this.header;
 
-    if (this.showHeaderShadow && outerHeader.shouldUseCSSShadow()) {
-        outerHeader.showShadow = true;
 
-        if (this.headerShadowHOffset != null) {
-            outerHeader.shadowHOffset = this.headerShadowHOffset;
-        }
-        if (this.headerShadowVOffset != null) {
-            outerHeader.shadowVOffset = this.headerShadowVOffset;
-        }
-        if (this.headerShadowSoftness != null) {
-            outerHeader.shadowSoftness = this.headerShadowSoftness;
-        }
-        if (this.headerShadowColor != null) {
-            outerHeader.shadowColor = this.headerShadowColor;
-        }
-
-    }
     // We explicitly size the header to fit the specified width less scrollbar-width
     // so we don't want standard layout member-breadth-mgmt code to override this.
     outerHeader.inherentWidth = true;
@@ -54641,7 +61094,6 @@ createHeader : function (properties) {
 
         }, properties);
     // if cantabToHeader is false, suppress tabbing to the header!
-
     if (!canTabToHeader) {
         headerProps.tabIndex = -1;
     }
@@ -56608,27 +63060,9 @@ makeCornerSortButton : function () {
                 imgDir:this.widgetImgDir,
                 visibility:(this._showSortButton() ? isc.Canvas.INHERIT : isc.Canvas.HIDDEN),
                 ariaState: { label: this.sorterButtonTitle }
-
             }
         )
     );
-
-    if (this.showHeaderShadow && this.sorter.shouldUseCSSShadow()) {
-        this.sorter.showShadow = true;
-
-        if (this.headerShadowHOffset != null) {
-            this.sorter.shadowHOffset = this.headerShadowHOffset;
-        }
-        if (this.headerShadowVOffset != null) {
-            this.sorter.shadowVOffset = this.headerShadowVOffset;
-        }
-        if (this.headerShadowSoftness != null) {
-            this.sorter.shadowSoftness = this.headerShadowSoftness;
-        }
-        if (this.headerShadowColor != null) {
-            this.sorter.shadowColor = this.headerShadowColor;
-        }
-    }
     this.addChild(this.sorter, "sorter", false);
 },
 
@@ -56725,8 +63159,8 @@ displayHeaderContextMenu : function (headerButton, position) {
         if (cornerMenu !== this._cornerMenu) {
             if (!cornerMenu.isDrawn()) {
 
-                cornerMenu._showOffscreen();
-                // _showOffscreen() calls draw(), of course, so this next line seems
+                cornerMenu._showOffscreen()
+                // _drawOffscreen() calls draw(), of course, so this next line seems
                 // unnecessary - stick it in a condition for now, to avoid console warnings
                 if (!cornerMenu.isDrawn()) cornerMenu.draw();
             }
@@ -56734,7 +63168,7 @@ displayHeaderContextMenu : function (headerButton, position) {
             cornerMenu.moveTo(0, 0);
             if (!cornerMenu.isDrawn()) {
                 cornerMenu._showOffscreen();
-                // _drawOffscreen() calls draw(), of course, so this next line seems
+                // _showOffscreen() calls draw(), of course, so this next line seems
                 // unnecessary - stick it in a condition for now, to avoid console warnings
                 if (!cornerMenu.isDrawn()) cornerMenu.draw();
             } else {
@@ -57240,10 +63674,9 @@ getFilterOperatorMenuItems : function (field, includeTitleItem) {
 
     if (!formItem) return;
 
-    var addFilterMenuItem = function (operator, field) {
-        var title = isc.DS._getFieldOperatorTitle(field, operator);
+    var addFilterMenuItem = function (operator) {
         menuItems.add({
-            title: title,
+            title: operator.titleProperty ? isc.Operators[operator.titleProperty] : operator.title,
             grid: grid,
             targetField: field,
             fieldName: field.name,
@@ -57267,7 +63700,7 @@ getFilterOperatorMenuItems : function (field, includeTitleItem) {
     // show the default operator at the top, with an i18n suffix "(default)", and a separator
     var defaultOpId = formItem._defaultOperator || formItem.getDefaultOperator(),
         defaultOp = isc.shallowClone(isc.DS._operators[defaultOpId]),
-        title = isc.DS._getFieldOperatorTitle(field, defaultOp)
+        title = defaultOp.titleProperty ? isc.Operators[defaultOp.titleProperty] : defaultOp.title
     ;
     title += " " + this.defaultFilterOperatorSuffix;
     defaultOp.title = title;
@@ -57275,22 +63708,20 @@ getFilterOperatorMenuItems : function (field, includeTitleItem) {
     // add a flag that can automatically hide the operatorIcon when the default is selected
     defaultOp.isFieldDefault = true;
 
-    addFilterMenuItem(defaultOp, field);
+    addFilterMenuItem(defaultOp);
     menuItems.add({ isSeparator: true });
 
     var ops = ds && ds.getFieldOperatorMap(field, null, "fieldType"),
         op
     ;
-    // specifically add iContainsPattern, isBlank, notBlank, isNull and notNull if they're not already included
+    // specifically add iContainsPattern, isNull and notNull if they're not already included
     if (!ops["iContainsPattern"]) ops["iContainsPattern"] = {};
-    if (!ops["isBlank"]) ops["isBlank"] = {};
-    if (!ops["notBlank"]) ops["notBlank"] = {};
     if (!ops["isNull"]) ops["isNull"] = {};
     if (!ops["notNull"]) ops["notNull"] = {};
     for (var opID in ops) {
         op = ds.getSearchOperator(opID) || ops[opID];
         if (op.ID != defaultOpId || formItem.getOperator() != defaultOpId) {
-            addFilterMenuItem(op, field);
+            addFilterMenuItem(op);
         }
     }
     return menuItems;
@@ -57315,9 +63746,12 @@ setFieldSearchOperator : function (field, operator) {
     }
 
     var editor = this.getFilterEditor(),
-        form = editor.getEditForm(),
-        item = form.getItem(field.name)
+        form = editor && editor.getEditForm(),
+        item = form && form.getItem(field.name)
     ;
+
+    // bail if there's no item (there may be no form at this point)
+    if (!item) return;
 
     if (isc.isA.String(operator)) operator = ds.getSearchOperator(operator);
     if (!isc.isAn.Object(operator)) {
@@ -57395,9 +63829,6 @@ updateOperatorIcon : function (field, item, operator) {
         shouldClear = false
     ;
 
-    // no icon - field disallows operatorIcons - just bail
-    if (!icon) return;
-
     if (!operator) {
         operator = isc.DS._operators[item._defaultOperator];
         // hide the operatorIcon unless field or grid make it always visible
@@ -57413,9 +63844,12 @@ updateOperatorIcon : function (field, item, operator) {
             item.setCanEdit(true);
         }
     } else {
+        // set up the icon
         icon.prompt = isc.Operators[operator.titleProperty];
         icon.text = operator.symbol;
+        // set up the item
         item.operator = operator.ID;
+        // set the operator on the field
         this.getField(field.name).operator = operator.ID;
         item.showIcon("operatorIcon", false);
     }
@@ -58311,7 +64745,7 @@ getSortField : function () {
 //<
 canMultiSort: true,
 
-//> @attr listGrid.askForSort()
+//> @method listGrid.askForSort()
 // @include dataBoundComponent.askForSort()
 // @visibility external
 //<
@@ -58636,14 +65070,14 @@ _addImplicitSort : function(sortSpecifiers, groupByFields) {
     return result;
 },
 
-//> @method listGrid.getSortByGroupFirst() (A)
+//> @method listGrid.getSortByGroupFirst()    (A)
 // @visibility external
 //<
 getSortByGroupFirst : function() {
     return this.sortByGroupFirst;
 },
 
-//> @method listGrid.setSortByGroupFirst() (A)
+//> @method listGrid.setSortByGroupFirst()    (A)
 // @param sortByGroupFirst (Boolean)
 // @visibility external
 //<
@@ -58771,12 +65205,12 @@ setSort : function (sortSpecifiers) {
     // if we get passed something that isn't an array, wrap it in one
     if (sortSpecifiers && !isc.isAn.Array(sortSpecifiers)) sortSpecifiers = [sortSpecifiers];
 
-
     var ds = this.getDataSource();
     if (!ds && this.formItem && this.formItem.optionDataSource) {
         this.initialSort = sortSpecifiers;
         if (this.logIsInfoEnabled("sorting")) {
-            this.logInfo("setSort() not performing sort - this is a pickList who's DS is not yet present", "sorting");
+            this.logInfo("setSort() not performing sort - this is a pickList who's DS is " +
+                "not yet present", "sorting");
         }
         return false;
     }
@@ -58950,13 +65384,13 @@ setSort : function (sortSpecifiers) {
 
     // If there is a user-registered setSortHandler(), call it and allow it to cancel default
     // behavior by returning explicit false
-    if (this.setSortHandler && this.setSortHandler(sortSpecifiers) === false) {
+    if (this.setSortHandler && this.setSortHandler(newSpecifiers) === false) {
         this.logInfo("User-written setSortHandler() method returned false", "sorting");
         return false;
     }
 
-    this.displaySort(sortSpecifiers);
-    this.applySortToData(sortSpecifiers);
+    this.displaySort(newSpecifiers);
+    this.applySortToData(this._allSpecifiers);
 
     // delete this flag once the sort operation finishes - otherwise, a call to resort() will
     // cause all future calls to setSort() to resort the data instead of applying a new spec
@@ -58990,15 +65424,20 @@ setSort : function (sortSpecifiers) {
 displaySort : function(sortSpecifiers) {
     if (this.logIsInfoEnabled("sorting")) this.logInfo("Entering displaySort", "sorting");
 
-    var firstSpecifier = this._sortSpecifiers[0],
+    sortSpecifiers = sortSpecifiers || this._sortSpecifiers;
+
+    var hasSort = sortSpecifiers && sortSpecifiers.length > 0,
+        firstSpecifier = hasSort ? sortSpecifiers[0] : null,
         sortFieldName = firstSpecifier ? firstSpecifier.property : null,
         visibleSortFieldNum = sortFieldName ? this.getFieldNum(sortFieldName) : null,
         sortField = sortFieldName ? this.getUnderlyingField(sortFieldName) : null,
         sortDirection = firstSpecifier ? Array.shouldSortAscending(firstSpecifier.direction) : null
     ;
 
-    if (!sortField) {
-        if (firstSpecifier) this.logWarn("sort: field does not exist: " + firstSpecifier.property);
+    if (hasSort && !sortField) {
+        if (firstSpecifier) {
+            this.logWarn("sort: field does not exist: " + firstSpecifier.property);
+        }
     }
 
     if (visibleSortFieldNum >= 0) {
@@ -59009,7 +65448,7 @@ displaySort : function(sortSpecifiers) {
 
     if (this.logIsInfoEnabled("sorting")) {
         this.logInfo("In displaySort - ready to change visible sort state for specifiers:\n"+
-            isc.echoAll(this._sortSpecifiers), "sorting");
+            isc.echoAll(sortSpecifiers), "sorting");
     }
 
     var allSpecifiers = this._allSpecifiers,
@@ -59091,14 +65530,14 @@ displaySort : function(sortSpecifiers) {
     }
 
     // set sort indicators on the current set of sort fields.
-    if (this._sortSpecifiers && this._sortSpecifiers.length > 0) {
+    if (hasSort) {
         this.logInfo("In displaySort - Setting sort-media for sorted fields:\n"+
-                isc.echoAll(this._sortSpecifiers), "sorting");
+                isc.echoAll(sortSpecifiers), "sorting");
 
         var headerSelected = false;
         // set the sort indicators on any fields that are sorted and are visible
-        for (var i=0; i<this._sortSpecifiers.length; i++) {
-            var specifier = this._sortSpecifiers[i],
+        for (var i=0; i<sortSpecifiers.length; i++) {
+            var specifier = sortSpecifiers[i],
                 field = this.getSpecifiedField(specifier.property),
                 fieldsToSelect = []
             ;
@@ -59204,12 +65643,13 @@ displaySort : function(sortSpecifiers) {
 applySortToData : function (sortSpecifiers) {
     if (this.logIsInfoEnabled("sorting")) this.logInfo("Entering applySortToData", "sorting");
 
-    var firstSpecifier = this._sortSpecifiers[0],
-        allSpecifiers = this._allSpecifiers,
+    var allSpecifiers = sortSpecifiers || this._allSpecifiers,
+        hasSort = allSpecifiers && allSpecifiers.length > 0,
+        firstSpecifier = hasSort ? allSpecifiers[0] : null,
         data = this.data
     ;
 
-    if (allSpecifiers && allSpecifiers.length > 0) {
+    if (hasSort) {
         //var originalData = this.getOriginalData();
         //var needsRegroup = (data != originalData);
         if (this._calledFromResort && data && data.resort && data._sortSpecifiers) {
@@ -60422,7 +66862,10 @@ _regroupCreateGroupTree : function (async, baton, currData, restoreOpenFolders) 
         // most current criteria applied to it.
         getCriteria: function () {
             var originalData = this.creator.originalData;
-            if (originalData && originalData.getCriteria) return originalData.getCriteria();
+            if (originalData) {
+                if (originalData.getCombinedCriteria) return originalData.getCombinedCriteria();
+                if (originalData.getCriteria) return originalData.getCriteria();
+            }
             return null;
         },
 
@@ -62954,48 +69397,6 @@ _provideIsGroupedToRuleContext : function () {
     if (value != currentValue) this.provideRuleContext(path, value, this);
 },
 
-_provideCriteriaToRuleContext : function () {
-    if (!this.hasStableLocalID() && this.editNode == null) return;
-    var path = this.getLocalId() + ".criteria",
-        value = this.getCriteria(),
-        implicitCriteria = this.getImplicitCriteria(),
-        ds = (this.dataSource ? isc.DS.get(this.dataSource) : null),
-        currentValue = this._getFromRuleContext(path)
-    ;
-    if (implicitCriteria) value = isc.DS.combineCriteria(value || {}, implicitCriteria);
-    if (ds && ds.implicitCriteria) value = isc.DS.combineCriteria(value || {}, ds.implicitCriteria);
-
-    if (value && isc.isAn.emptyObject(value)) value = null;
-    if (currentValue != null && this.data.compareCriteria) {
-        if (this.data.compareCriteria(value, currentValue)) {
-            this.provideRuleContext(path, value, this);
-        }
-    } else if (value != currentValue) {
-        this.provideRuleContext(path, value, this);
-    }
-},
-
-_provideDataLoadingToRuleContext : function () {
-    if (!this.hasStableLocalID() && this.editNode == null) return;
-    var path = this.getLocalId() + ".dataLoading",
-        currentValue = this._getFromRuleContext(path)
-    ;
-    var value = null;
-    if (isc.isA.ResultSet(this.data)) {
-        value = !this.data.lengthIsKnown();
-    } else if (isc.isA.ResultTree(this.data)) {
-        var children = this.data.getChildren(this.data.getRoot());
-        if (isc.isA.ResultSet(children)) {
-            value = !children.lengthIsKnown();
-        } else {
-            value = this.data.isLoading(this.data.getRoot());
-        }
-    }
-
-    if (!value) value = null;
-    if (value != currentValue) this.provideRuleContext(path, value, this);
-},
-
 _observeRuleContextChanged : function () {
     var grid = this,
         ruleScopeComponent = this.getRuleScopeComponent();
@@ -64024,6 +70425,27 @@ isc.defineClass("TreeGridBody", isc.GridBody).addProperties({
         return this.invokeSuper(isc.TreeGridBody, "cellValueIsClipped", rowNum, colNum, c, d, e);
     },
 
+    // Implement 'bypassCellValueCache' method - if we're measuring the tree cell value
+    // we have to avoid fixing title width in the measurement HTML.
+    bypassCellValueCache:function (record,rowNum,colNum) {
+
+        var bypassCache = isc.GridBody._instancePrototype.bypassCellValueCache.call(this,record,rowNum,colNum);
+        if (bypassCache) return true;
+
+        // If fixedFieldWidths is false (unlikely) we never write out title clipping
+        // HTML, so no need to bypass cache
+        if (this.fixedColumnWidths) {
+            var grid = this.grid,
+                treeFieldNum = grid._treeFieldNum,
+                treeFieldBody = grid.getFieldBody(treeFieldNum);
+
+            if (this === treeFieldBody && colNum == grid.getLocalFieldNum(treeFieldNum)) {
+                return true;
+            }
+        }
+        return false;
+    },
+
     defaultCellValueHoverHTML : function (record, rowNum, colNum, d, e, f) {
         var grid = this.grid,
             treeFieldNum = grid._treeFieldNum,
@@ -64464,7 +70886,8 @@ isc.TreeGrid.addProperties({
     //> @attr treeGrid.autoFetchTextMatchStyle (TextMatchStyle : "exact" : IR)
     // With +link{loadDataOnDemand}:true, TreeGrids fetch data by selecting the child nodes of
     // each parent, which should be exact match, so we default to
-    // <code>autoFetchTextMatchStyle:"exact"</code>.
+    // <code>autoFetchTextMatchStyle:"exact"</code> when autoFetchData is true.
+    // <P>
     // See +link{listGrid.autoFetchTextMatchStyle} for details.
     //
     // @group dataBinding
@@ -65533,8 +71956,8 @@ isEmpty : function () {
 //> @attr treeGrid.animateFolders (Boolean : true : IRW)
 // If true, when folders are opened / closed children will be animated into view.
 // <p>
-//  Folder animations are automatically disabled if +link{autoFitData} is set to "vertical" or "both", or
-//  if +link{showRecordComponents,records components} are used.
+//  Folder animations are automatically disabled if +link{listGrid.autoFitData} is set to "vertical" or "both", or
+//  if +link{listGrid.showRecordComponents,records components} are used.
 // @group animation
 // @visibility animation
 // @example animateTree
@@ -66153,7 +72576,6 @@ dataChanged : function () {
         this._startFolderAnimation(folder);
         this._pendingFolderAnim = null;
     }
-    this._provideCriteriaToRuleContext();
 },
 
 
@@ -67038,8 +73460,6 @@ transferNodes : function (nodes, folder, index, sourceWidget, callback) {
             }
 
         } else {
-            // deselect the nodes moving to this (target widget) from source widget
-            if (sourceWidget != this) sourceWidget._deselectDropRecordsToMove(nodes);
 
             // move the nodes within the tree
             var currentChildren = dragTree.getChildren(folder);
@@ -67108,8 +73528,6 @@ transferNodes : function (nodes, folder, index, sourceWidget, callback) {
                 this.updateDataViaDataSource(node, sourceDS, null, sourceWidget);
             }
         } else {
-            // deselect the nodes moving to this (target widget) from source widget
-            if (sourceWidget != this) sourceWidget._deselectDropRecordsToMove(nodes);
 
 
             if (isc.isA.Tree(dragTree) && sourceWidget.dragDataAction == isc.TreeGrid.MOVE) {
@@ -67132,9 +73550,6 @@ transferNodes : function (nodes, folder, index, sourceWidget, callback) {
             }
         }
     } else {
-        // deselect the nodes moving to this (target widget) from source widget
-        if (sourceWidget != this) sourceWidget._deselectDropRecordsToMove(nodes);
-
         // add the dropped nodes to the tree at the specified point - they could be rows from a
         // ListGrid, or anything - it's up to the developer to have it make sense
         //this.logWarn("adding dragData at parent: " + newParent + ", position: " + position);
@@ -68376,19 +74791,12 @@ unregisterObserved : function (observed) {
     for (var method in this.observations) {
         this.ignore(observed, method);
     }
-},
-
-initInterface : function () {
-    if (this[this.observedName]) this.registerObserved(this[this.observedName]);
-},
-
-destroyInterface : function () {
-    if (this[this.observedName]) this.unregisterObserved(this[this.observedName]);
 }
+
 });
 
 isc.defineInterface("GridAutoObserver", "AutoObserver").addInterfaceProperties({
-    observedName: "grid"
+observedName: "grid"
 });
 
 
@@ -68409,7 +74817,7 @@ contents: "Total Rows: ${this.rowCount}",
 rowCount: "N/A",
 
 gridDataChanged : function () {
-    var data = this.grid.getOriginalData();
+    var data = this.grid.data;
     if (!data) this.rowCount = "N/A";
 
     if (isc.isA.ResultSet(data)) {
@@ -68433,7 +74841,22 @@ gridDataChanged : function () {
 });
 
 
-isc.defineClass("GridToolStrip", "ToolStrip").addProperties({
+isc.defineClass("ObserverToolStrip", "ToolStrip").addProperties({
+
+initWidget : function () {
+    this.Super("initWidget", arguments);
+
+    for (var i = 0; i < this.members.length; i++) {
+        var m = this.members[i];
+        if (isc.isAn.Observer(m)) {
+            m.registerObserved(this.grid);
+        }
+    }
+}
+
+});
+
+isc.defineClass("GridToolStrip", "ObserverToolStrip").addProperties({
 
 membersMargin: 5,
 
@@ -68442,7 +74865,7 @@ addButtonDefaults: {
     size: 16,
     layoutAlign: "center",
     src: "[SKIN]/actions/add.png",
-    click: "this.grid.startEditingNew()"
+    click: "this.creator.grid.startEditingNew()"
 },
 
 removeButtonDefaults: {
@@ -68450,7 +74873,7 @@ removeButtonDefaults: {
     size: 16,
     layoutAlign: "center",
     src: "[SKIN]/actions/remove.png",
-    click: "this.grid.removeSelectedData()"
+    click: "this.creator.grid.removeSelectedData()"
 },
 
 refreshButtonDefaults: {
@@ -68458,14 +74881,14 @@ refreshButtonDefaults: {
     size: 16,
     layoutAlign: "center",
     src: "[SKIN]/actions/refresh.png",
-    click: "this.grid.invalidateCache()"
+    click: "this.creator.grid.invalidateCache()"
 },
 
 exportButtonDefaults: {
     _constructor: "IButton",
     title: "Export to CSV",
     layoutAlign: "center",
-    click: "this.grid.exportData()"
+    click: "this.creator.grid.exportData()"
 },
 
 totalRowsIndicatorDefaults: {
@@ -68477,14 +74900,11 @@ members: ["autoChild:removeButton", "autoChild:addButton", "autoChild:exportButt
          "starSpacer",
          "autoChild:refreshButton", "autoChild:totalRowsIndicator"],
 
-getDynamicDefaults : function () {
-    return {
-        grid: this.grid
-    }
+initWidget : function () {
+    this.Super("initWidget", arguments);
 }
 
 });
-
 
 
 
@@ -69036,14 +75456,13 @@ getBoundedTransferIndex : function (index) {
         return specialIndex ? index : nRows;
     }
 
-
-
     // exclude drops from the top non-reorderable fields
     if (first > 0 && !specialIndex && index < first) {
         return first;
     }
     // exclude drops from the bottom non-reorderable fields
     if (last < nRows - 1 && (specialIndex || index > last + 1)) {
+
         return last + 1;
     }
     // no change
@@ -70630,8 +77049,7 @@ if (isc.Window != null) {
         this.addItem(this.fieldPicker);
 
         this.observe(this.fieldPicker, "closeClick", "observer.closeClick()");
-        this.observe(this.fieldPicker.dataBoundComponent, "visibilityChanged",
-                     "if (!observed.isVisible()) observer.hide();");
+        this.observe(this.fieldPicker.dataBoundComponent, "visibilityChanged", "if (!observed.isVisible()) observer.hide();");
     },
 
     show : function () {
@@ -71058,6 +77476,7 @@ isc.RecordEditor.addMethods({
             // This allows the fields to align with the sourceWidget's body columns
             var source = this.sourceWidget;
 
+
             this.setWidth(source.getInnerContentWidth(true));
 
             this.observe(source, "resized", "observer.sourceWidgetResized(observed)");
@@ -71325,7 +77744,7 @@ isc.RecordEditor.addMethods({
         if (showFocused != null) dynamicProperties.showFocusedIcon = showFocused;
 
 
-        if (this.tabIndex != null && !this._shouldManageTabPosition) {
+        if (this.tabIndex != null && !this._autoTabIndex) {
             dynamicProperties.tabIndex = this.tabIndex;
         }
 
@@ -71380,7 +77799,7 @@ isc.RecordEditor.addMethods({
                 }
             }
         }
-        form.setValuesAsCriteria(criteria, null, dropExtraCriteria, dropCriteriaFields);
+        form.setValuesAsCriteria(criteria, isc.DS.isAdvancedCriteria(criteria), dropExtraCriteria, dropCriteriaFields);
         if (refresh) this.refreshRow(0);
     },
 
@@ -71460,12 +77879,12 @@ isc.RecordEditor.addMethods({
     // values in the existing criteria for fields we don't know about.
     performFilter : function (suppressPrompt, callback) {
 
-        var criteria = this._getFilterCriteria(this.sourceWidget.autoFetchTextMatchStyle);
+
+        var criteria = this._getFilterCriteria();
         var context = {};
         if (suppressPrompt) context.showPrompt = false;
 
-        // If criteria is cleared be sure to reset match style back to
-        // initial LG.autoFetchTextMatchStyle.
+        // If criteria is cleared, reset match style back to initial LG.autoFetchTextMatchStyle.
         criteria = isc.DS.checkEmptyCriteria(criteria);
         if (criteria == null || isc.getKeys(criteria).length == 0) {
             // pick up textMatchStyle from LG.autoFetchTextMatchStyle
@@ -71685,6 +78104,25 @@ isc.RecordEditor.addMethods({
             delete item.showPickerIcon;
         }
 
+        if (this.isAFilterEditor()) {
+            if (item.editorType == "MiniDateRangeItem" || isc.isA.MiniDateRangeItem(item)) {
+                // for MiniDateRangeItem, we want to show the picker on Enter, but not filter until
+                // the picker closes, and only if the user changed the value
+                item._iconKeyPress = function (id) {
+                    // run Super to show the picker
+                    var result = this.Super("_iconKeyPress", arguments);
+                    // return false if it's the Enter key, to prevent the grid from filtering
+                    if (id == "picker" && isc.EH.getKey() == "Enter") return false;
+                    return result;
+                }
+                item.changed = function (form, item, value) {
+                    // filter the grid after the value changes, whether the picker was opened via
+                    // the keyboard (Enter or Space) or mouse
+                    item.grid.performFilter();
+                }
+            }
+        }
+
         return item;
     },
 
@@ -71710,7 +78148,6 @@ isc.RecordEditor.addMethods({
     // We override the default implementation to avoid cancelling the edit, or saving the
     // edit values into this.values, and to allow us to fire our default action in response
     // to an enter keypress (or a field change).
-
     cellEditEnd : function (editCompletionEvent, newValue) {
 
         // Possible editCompletionEvents are:
@@ -71729,8 +78166,6 @@ isc.RecordEditor.addMethods({
         //              For all field changes, save out the edit values, and move to the
         //              appropriate fields.
         //              If this.actOnCellChange is true, also fire this.performAction().
-        //              For tab/shift+tab on the last cell, allow focus to move, but leave
-        //              the editor up.
         if (editCompletionEvent != isc.ListGrid.ENTER_KEYPRESS &&
             editCompletionEvent != isc.ListGrid.TAB_KEYPRESS &&
             editCompletionEvent != isc.ListGrid.SHIFT_TAB_KEYPRESS &&
@@ -71759,22 +78194,25 @@ isc.RecordEditor.addMethods({
             // We have to do this explicitly, because we've overridden the key press
             // method on the editor form items to suppress the native tab-behavior.
 
-             if (!this._shouldManageTabPosition && this.tabIndex != null) {
+            if (this.tabIndex != null && !this._autoTabIndex) {
                 this._letTabKeypressThrough = true;
                 return;
             } else {
-                // assertion: We should have tab or shift-tab as the ECE at this point
-                var forward = (editCompletionEvent == isc.ListGrid.TAB_KEYPRESS);
-
-                isc.TabIndexManager.shiftFocusAfterGroup(this.body.getID(), forward);
+                if (editCompletionEvent == isc.ListGrid.TAB_KEYPRESS) {
+                    this.body._focusInNextTabElement(true);
+                } else {
+                    // On shift tab, move focus to the previous widget in the tab order.
+                    this._focusInNextTabElement(false);
+                }
                 return;
             }
         }
 
-        // At this point we've actually got a new target cell to move to.
         // In this case we want to fall through to the superclass implementation - this
         // will validate the cell value (if necessary), save the editValue locally, and
         // move focus to the appropriate cell.
+        // xxx - Could just re-implement the relevant code here rather than calling Super
+        //       to avoid (EG) calling 'getNextEditCell()' more than once.
         return this.Super("cellEditEnd", arguments);
     },
     editorKeyPress : function (item, keyName, characterValue) {
@@ -71815,6 +78253,14 @@ isc.RecordEditor.addMethods({
                 body.setLeft(sorterWidth);
             }
         }
+
+
+        // layoutChildren sets up a layout's member tab-indices
+        // Action button isn't a member, but slot it after the body.
+        // Note that we explicitly force focus into it in response to cell-edit-end but this
+        // allows tabbing backward through a page to work properly (even in the case where
+        // we have a modal mask up and are doing synthetic tab-index mgmt)
+        if (this.actionButton && this.body) this.actionButton._setTabAfter(this.body);
     },
 
 
@@ -72610,7 +79056,10 @@ isc.Menu.addProperties({
     // <p>
     // When <code>embeddedComponent</code> is used in a MenuItem certain default behaviors apply:
     // <ul>
-    // <li> +link{menuItem.autoDismiss} defaults to false
+    // <li> +link{menuItem.autoDismiss} defaults to false and clicks on embeddedComponents are
+    //      not bubbled to the menuItem - if an interaction with an embeddedComponent is
+    //      expected to dismiss the menu, custom code should call menu.+link{Menu.hide, hide} or
+    //      +link{Menu.hideAllMenus, hideAllMenus} as appropriate, before proceeding
     // <li> the default behavior for +link{embeddedComponentPosition} is "expand".
     // <li> the component is placed over the title and key fields by default
     // - use +link{embeddedComponentFields} to override
@@ -74320,7 +80769,7 @@ hide : function () {
         // no-op if no change in visibility
         if (this.visibility == isc.Canvas.HIDDEN) return;
 
-        // We occasionally get menus that are as taller than the page (introducing v-scrollbars).
+        // We occasionally get menus that are taller than the page (introducing v-scrollbars).
         // In this case we don't want the height of the hidden menu to continue to effect the
         // page scroll height, so shift offscreen when hiding.
         this._moveMenuOffscreen();
@@ -74391,7 +80840,9 @@ showContextMenu : function (event) {
 
 getMaxHeight : function () {
     if (this.maxHeight != null) return this.maxHeight;
-    return isc.Page.getHeight() - this.getScrollbarSize();
+
+    var navigationBarHeight = this._navigationBar == null ? 0 : this._navigationBar.getHeight();
+    return isc.Page.getHeight() - this.getScrollbarSize() - navigationBarHeight;
 },
 
 _showOffscreen : function () {
@@ -74423,8 +80874,6 @@ _showOffscreen : function () {
 
 _$nearOrigin: "nearOrigin",
 doEnforceMaxHeight : function () {
-    if (this.placement != null && this.placement !== this._$nearOrigin) return;
-
     // If we're currently showing scrollbars, reset to overflow visible and default sizing
     // to ensure that they're necessary
 
@@ -75279,7 +81728,7 @@ getIcon : function (item) {
     // NOTE: separators are caught before this is called
     // to change the separator, change ListGrid.getCellValue()
 
-    var shouldFixIconWidth = this.fixedIconWidth && this.getRecordIndex(item) == 0,
+    var shouldFixIconWidth = this.fixedIconWidth,
         iconSpacerWidth = shouldFixIconWidth ? this.iconWidth : null;
 
     var imgHTML;
@@ -76622,7 +83071,6 @@ isc.ITreeMenuButton.registerStringMethods({
 //>    @class    TileLayout
 // Lays out a series of components, calls "tiles", in a grid with multiple tiles per row.
 //
-// @inheritsFrom Canvas
 // @treeLocation Client Reference/Grids
 // @visibility external
 //<
@@ -77995,7 +84443,6 @@ isc.FlowLayout.addProperties({
 // multiple tiles per row.  Each tile displays one or more properties of the object it
 // represents.
 //
-// @inheritsFrom TileLayout
 // @implements DataBoundComponent
 // @treeLocation Client Reference/Grids
 // @visibility external
@@ -83170,7 +89617,6 @@ isc.defineClass("DOMGrid", "TreeGrid").addMethods({
 
 //>    @class    MenuBar
 //      A MenuBar is a bar of buttons used to show a set of menus.
-//  @inheritsFrom Toolbar
 //  @treeLocation Client Reference/Control
 //  @visibility external
 //<
@@ -85157,7 +91603,6 @@ isc.FieldEditor.addProperties({
 // By default, available math functions are shown in a hover from the
 // +link{formulaBuilder.helpIcon,helpIcon} that appears after the formula field.
 //
-// @inheritsFrom VLayout
 // @treeLocation Client Reference/Data Binding
 // @group formulaFields
 // @visibility external
@@ -85249,15 +91694,19 @@ showFormulaField: true,
 formulaFieldDefaults: {
     type: "text",
     formItemType: "AutoFitTextAreaItem",
-    height: 20,
     width: "*",
     hoverWidth: 300,
-    keyPress : function () {
-        if (this.form.creator.autoTest) {
+    keyPress : function (item, form, keyName) {
+        var creator = form.creator;
+        // cancel any "Enter" for a SummaryBuilder as it's invalid
+        if (keyName == "Enter" && isc.isA.SummaryBuilder(creator)) {
+            return false;
+        }
+        if (creator.autoTest) {
             this.fireOnPause("autoTest", {
-                target: this.form.creator,
+                target: creator,
                 methodName: "testFunction"
-            }, this.form.creator.autoTestDelay);
+            }, creator.autoTestDelay);
         }
     }
 },
@@ -85327,14 +91776,14 @@ autoHideCheckBoxDefaults: { type: "boolean", align: "right"
 //<
 builderTypeText: "Formula",
 
-//> @attr formulaBuilder.helpTextIntro (String : "For basic arithmetic, type in symbols (+-/%) directly.<P>The following functions are also available:" : IR)
+//> @attr formulaBuilder.helpTextIntro (String : "Building Formula Columns<P>For basic arithmetic, type in symbols (+-/%) directly.<P>The following functions are also available:" : IR)
 // Text that appears in the hover from the +link{helpIcon}, as a pre-amble to the list of
 // available functions.
 //
 // @group i18nMessages
 // @visibility external
 //<
-helpTextIntro: "For basic arithmetic, type in symbols (+-/%) directly.<P>The following functions are also available:",
+helpTextIntro: "Building Formula Columns<P>For basic arithmetic, type in symbols (+-/%) directly.<P>The following functions are also available:",
 
 //> @attr formulaBuilder.mathFunctions (Array of String : null : IR)
 // The list of math functions available in this FormulaBuilder, as an array of
@@ -85457,7 +91906,7 @@ getInsertValueForRecord : function (record) {
 },
 
 
-//> @attr formulaBuilder.instructionsTextStart (HTMLString : "The following fields are available for use in this ${builderType}": IRWA)
+//> @attr formulaBuilder.instructionsTextStart (HTMLString : "The following fields are available for use in this ${builderType}.  Click any field to have it added to the ${builderType}.": IRWA)
 // The text to display as a preamble to the instruction text that appears in the
 // +link{formulaBuilder.instructions, instructions label}.
 // <P>
@@ -85474,7 +91923,8 @@ getInsertValueForRecord : function (record) {
 // @group i18nMessages
 // @visibility external
 //<
-instructionsTextStart: "The following fields are available for use in this ${builderType}",
+instructionsTextStart: "The following fields are available for use in this ${builderType}.  " +
+                       "Click any field to have it added to the ${builderType}.",
 
 //> @attr formulaBuilder.instructions (AutoChild Label : null : IR)
 // Label displaying the instruction text above the fieldKey grid.
@@ -85482,8 +91932,9 @@ instructionsTextStart: "The following fields are available for use in this ${bui
 // @visibility external
 //<
 instructionsDefaults: {
-    _constructor: "Label",
+    _constructor: "DynamicForm",
     height: 1,
+    colWidths: ["*", 1],
     extraSpace: 10,
     overflow: "visible"
 },
@@ -85933,8 +92384,15 @@ initWidget : function () {
 
     // add the fieldKey that displays the list of available fields
     this.instructions = this.createAutoChild("instructions", {
-        contents: this.instructionsTextStart.evalDynamicString(this, { builderType: this.builderTypeText })
+        fields: [{editorType: "StaticTextItem", showTitle: false,
+            value: this.instructionsTextStart.evalDynamicString(this, {
+                builderType: this.builderTypeText
+            })}, {editorType: "SpacerItem", showIcons: true, name: "help", icons: this.showHelpIcon ?
+            [isc.addProperties({ prompt: this.getHelpText() }, this.helpIconDefaults,
+                this.helpIconProperties, { click: "form.creator.showHelpWindow();" } )] : null
+                }]
     });
+    if (this.showHelpIcon) this.helpIcon = this.instructions.getField("help").icons[0];
     this.addMember(this.instructions);
 
     this.fieldKeyDS = isc.DataSource.create({
@@ -85954,7 +92412,7 @@ initWidget : function () {
         ]
     });
 
-    this.fieldKey = this.createAutoChild("fieldKey", {
+    this.minBreadthMember = this.fieldKey = this.createAutoChild("fieldKey", {
         dataSource: this.fieldKeyDS
     });
     if (this.fieldKey.showFilterEditor !== false && this.fieldKey.autoFitMaxRecords &&
@@ -85984,19 +92442,12 @@ initWidget : function () {
     // is useless without a formula!
     if (this.showFormulaField) {
         this.addAutoChild("formulaForm", {
-            fields: [isc.addProperties({ title: this.builderTypeText },
-                this.formulaFieldDefaults, this.formulaFieldProperties,
-                this.showHelpIcon ? {
-                icons: [isc.addProperties({ prompt: this.getHelpText() },
-                    this.helpIconDefaults, this.helpIconProperties,
-                    { click: "form.creator.showHelpWindow();" }
-                )]
-                } : {},
-                { name: "formulaField"}
-            )]
+            fields: [isc.addProperties({
+                title: this.builderTypeText,
+                height: isc.TextItem.getPrototype().height * 2
+            }, this.formulaFieldDefaults, this.formulaFieldProperties, { name: "formulaField"})]
         });
         this.formulaField = this.formulaForm.getField("formulaField");
-        if (this.showHelpIcon) this.helpIcon = this.formulaField.icons[0];
     }
 
     // display the test status or error here following a call to testFunction()
@@ -86119,30 +92570,39 @@ showHelpWindow : function () {
             title: this.helpWindowTitle.evalDynamicString(this, { builderType: this.builderTypeText }),
             showMinimizeButton: false,
             showMaximizeButton: false,
+            canDragResize: true,
             isModal: false,
+            minWidth: 300,
+
             closeClick : function () {
                 _this.hideHelpWindow();
             },
             headerIconProperties: {
                 src: "[SKIN]actions/help.png"
             },
-
             items: [isc.Label.create({
                 contents: this.getHelpText(),
                 canSelectText: true, // for copy/paste of function names
                 padding: 10
             })]
-        });
+        }, this.helpWindowDefaults, this.helpWindowProperties);
+
         // stay on top of the modal mask created by the calling window so that e.g. moving or
         // clicking on the calling window doesn't push the help window behind the click mask
         // (making it unreachable)
         this.helpWindow.observe(window, "bringToFront", "observer.bringToFront()");
 
         if (window) {
+
+            var pageWidth = isc.Page.getWidth(),
+                minWidth = this.helpWindow.minWidth;
+            width = Math.max(minWidth, Math.min(width, pageWidth - width));
+
             var neededSpace = window.getRight()+width;
             var overflow = neededSpace-isc.Page.getWidth();
             if (overflow > 0) {
-                window.setLeft(window.getLeft()-overflow);
+                // shift builder window to make room, but not off screen
+                window.setLeft(Math.max(0, window.getLeft() - overflow));
                 left = window.getRight();
             }
         }
@@ -87282,7 +93742,7 @@ fieldType:"text",
 //<
 autoHideCheckBoxLabel: "Auto hide fields used in Summary",
 
-//> @attr summaryBuilder.helpTextIntro (String : "The following functions are available:" : IR)
+//> @attr summaryBuilder.helpTextIntro (String : "Building Summary Columns" : IR)
 // Text that appears in the hover from the +link{helpIcon}, as a pre-amble to the list of
 // available format-tokens.
 //
@@ -88344,7 +94804,6 @@ isc.HiliteRule.addMethods({
 // <i><b>Important Note:</b> this class should not be used directly - it is exposed purely for
 // +link{group:i18nMessages, i18n reasons.}</i>
 //
-// @inheritsFrom VLayout
 // @treeLocation Client Reference/Grids/ListGrid
 // @visibility external
 //<
@@ -90391,7 +96850,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v11.1d_2016-08-31/LGPL Deployment (2016-08-31)
+  Version v11.0p_2017-01-14/LGPL Deployment (2017-01-14)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

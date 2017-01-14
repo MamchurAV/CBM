@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v11.1d_2016-08-31/LGPL Deployment (2016-08-31)
+  Version v11.0p_2017-01-14/LGPL Deployment (2017-01-14)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -39,9 +39,9 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
 
-if (window.isc && isc.version != "SNAPSHOT_v11.1d_2016-08-31/LGPL Deployment" && !isc.DevUtil) {
+if (window.isc && isc.version != "v11.0p_2017-01-14/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v11.1d_2016-08-31/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'v11.0p_2017-01-14/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -2317,7 +2317,6 @@ isc.Canvas.addMethods({
 // A component that has a set of possible states, and which presents itself differently according to
 // which state it is in.  An example is a button, which can be "up", "down", "over" or "disabled".
 //
-// @inheritsFrom Canvas
 // @treeLocation Client Reference/Foundation
 // @visibility external
 //<
@@ -2645,6 +2644,12 @@ isc.StatefulCanvas.addProperties({
     // Optional icon to be shown with the button title text.
     // <P>
     // Specify as the partial URL to an image, relative to the imgDir of this component.
+    // <P>
+    // Note that the string "blank" is a valid setting for this attribute and will always
+    // result in the system blank image, without applying state suffixes.  Typically, this
+    // might be used when an iconStyle is also specified and the iconStyle renders the icon via
+    // a stateful background-image or other CSS approach.
+    //
     // @group buttonIcon
     // @visibility external
     //<
@@ -4550,18 +4555,16 @@ _getShadowCSSHTML : function (className) {
     // for performance, use cached border CSS HTML results if present
     var classNameKey = className;
 
-    var undef;
-    if (this._shadowStyleCSSHTMLCache[classNameKey] !== undef) {
+    if (this._shadowStyleCSSHTMLCache[classNameKey]) {
         return this._shadowStyleCSSHTMLCache[classNameKey];
     }
 
     // if no cached results are present, we must recompute
     var shadowStyle = this._buildShadowStyle(className);
 
-    var cssText;
-    if (shadowStyle.boxShadow == null) cssText = isc.emptyString;
-    else cssText = "box-shadow:" + shadowStyle.boxShadow + ";";
+    if (shadowStyle.boxShadow == null) return isc.emptyString;
 
+    var cssText = "box-shadow:" + shadowStyle.boxShadow + ";";
     this._shadowStyleCSSHTMLCache[classNameKey] = cssText;
 
     return cssText;
@@ -4610,7 +4613,6 @@ clearShadowCSSCache : function () {
 // values. To create a dynamically-resizing layout that occupies the entire page (or entire
 // parent component), set width and height to "100%".
 //
-// @inheritsFrom Canvas
 // @see type:LayoutPolicy for available policies
 // @see class:VLayout
 // @see class:HLayout
@@ -5618,9 +5620,7 @@ initWidget : function () {
     // set up per-side margin properties based on settings
     this.setLayoutMargin();
      // fire membersChanged() if we have members
-    if (this.members && this.members.length > 0) {
-        this._membersChanged();
-    }
+    if (this.members && this.members.length > 0) this._membersChanged();
 },
 
 // createMemberCanvii - resolves specified members / children to actual canvas instances, and
@@ -5764,8 +5764,6 @@ drawChildren : function () {
         // members are all children: handle drawing them specially
         this._setupMembers();
 
-        this.updateChildTabPositions();
-
         // draw all the members.
         // NOTE: odd behavior of Layouts: because layoutChildren() skips hidden members, members
         // which are initially hidden DO NOT DRAW.  This is unlike any other Canvas
@@ -5790,6 +5788,11 @@ drawChildren : function () {
     return;
 },
 
+// We manage our members' tab index.
+
+_memberCanFocus : function (member) {
+    return true;
+},
 
 //>    @method    layout._setupMembers()
 // Do one time setup of members.
@@ -5808,9 +5811,24 @@ _setupMembers : function () {
             continue;
         }
 
+        // If the member can be focused upon, and doesn't have a user-defined tab-index, make sure
+        // it appears at the end of the current set of members in the tab order.
+        if (this._memberCanFocus(member) &&
+            (member._autoTabIndex || member.tabIndex == null))
+        {
+            this.updateMemberTabIndex(member);
+        }
+
         // set each member's breadth
         this.autoSetBreadth(member);
     }
+},
+
+// when one of our members 'canFocus' property changes, update it's tab index to put it in
+// the right place in the tab order.
+childCanFocusChanged : function (member) {
+    if (!this.members.contains(member)) return;
+    this.updateMemberTabIndex(member);
 },
 
 // _drawNonMemberChildren
@@ -6884,12 +6902,23 @@ layoutChildren : function (reason, deltaX, deltaY) {
 
 
     for (var i = 0; i < this.members.length; i++) {
-        var member = this.members[i];
-
+        var member = this.members[i],
+            prevMemberCanFocus = this._memberCanFocus(member);
         if (member._needsDraw) {
             this._moveOffscreen(member);
             member.draw();
             member._needsDraw = null;
+
+            // In some cases this draw() call will have changed the can-scroll / children
+            // of the member - if so we need to slot the member into the layout's tab-order
+            // now, since
+            // - we've already run setupMembers
+            // - the 'addChild' / 'canFocusChanged()' methods will not recognize that this
+            //   member is a child of this layout (as it isn't yet)
+
+            if (!prevMemberCanFocus && this._memberCanFocus(member)) {
+                this.updateMemberTabIndex(member);
+            }
         }
     }
     if (this.manageChildOverflow) this._completeChildOverflow(this.members);
@@ -7757,15 +7786,10 @@ addMembers : function (newMembers, position, dontAnimate) {
                     --newPos;
                 }
                 this.members.slide(currentPos, newPos);
-
-                // Shift the member in the page's tab order
-                if (this.isDrawn()) this.updateMemberTabPosition(newMember);
-
             }
             continue; // but don't do anything else
         }
         // if the new member has snapTo set or is a peer, add it and continue
-
         if (newMember.addAsPeer || newMember.snapEdge) {
             this.addPeer(newMember, null, false);
             ++numSkipped;
@@ -7794,9 +7818,6 @@ addMembers : function (newMembers, position, dontAnimate) {
         } else {
             this.members.add(newMember);
         }
-
-        // note: no call to 'updateMemberTabPosition' here - we'll rely on addChild to
-        // pick up the desired position from our overridden getChildTabPosition method.
 
         // pick up explicit size specifications, if any
         this._getUserSizes(newMember);
@@ -7827,6 +7848,12 @@ addMembers : function (newMembers, position, dontAnimate) {
         // picking up this newMember at a large left/top coordinate.  In particular this can
         // happen if centering wrt visible breadth.
         newMember.moveTo(0,0);
+
+        // if the user has not specified a tabIndex for the member, slot it into the tab order
+        // after the previous canFocus:true member without an explicitly specified tab index.
+        //
+        // (If the layout is undrawn this will happen in drawMembers() instead)
+        if (this.isDrawn()) this.updateMemberTabIndex(newMember);
 
         // if the member has inherent length, make sure it gets drawn before the policy runs
         if (this.isDrawn() && this.memberHasInherentLength(newMember)) {
@@ -8226,10 +8253,6 @@ reorderMember : function (memberNum, newPosition) {
 //<
 reorderMembers : function (start, end, newPosition) {
     this.members.slideRange(start, end, newPosition);
-    // update tab index
-    for (var i = newPosition; i < newPosition + (end-start); i++) {
-        this.updateMemberTabPosition(this.members[i]);
-    }
     this._membersReordered("membersReordered");
 },
 
@@ -8307,59 +8330,48 @@ _computeShowResizeBarsForMembers : function () {
 // Tabbing
 // --------------------------------------------------------------------------------------------
 
-//> @method layout.getChildTabPosition()
-// Layout overrides +link{canvas.getChildTabPosition()} to ensure children are ordered
-// in the tab-sequence with members being reachable first (in member order), then any
-// non-member children.
-// @param child (Canvas) The child for which the tab position should be returned
-// @return (integer) tab position of the child within this layout.
-// @visibility external
-//<
-// Override 'getChildTabPosition' to order children in member order first, then
-// have non-member children (in child order) after that.
 
-getChildTabPosition : function (child) {
+updateMemberTabIndex : function (newMember) {
 
-    if (!child.updateTabPositionOnReparent) return -1;
-    if (this.members) {
-        var membersLength = 0;
-        for (var i = 0; i < this.members.length; i++) {
+    // Note: if the member is not focusable, but has children we still want to
+    // call setTabBefore/after to update the childrens' tab indices
+    if (!this._memberCanFocus(newMember)
+        || (newMember.tabIndex != -1 && newMember.tabIndex != null &&
+            !newMember._autoTabIndex)) return;
 
-            if (this.members[i] == child) {
-                this.logDebug("getChildTabPosition(): " + child +
-                     " Member, so returning:" + membersLength,
-                        "TabIndexManager");
+    var previousMember,
+        position = this.members.indexOf(newMember);
 
-                return membersLength;
-            }
+    // find the previous member without a user-specified tab index by iterating up the members
+    // array
 
-            membersLength++;
-            if (!this.members[i].updateTabPositionOnReparent) continue;
+    while (position > 0 && previousMember == null) {
+        position -= 1
+        previousMember = this.members[position]._getLastAutoIndexDescendant(true);
+    }
+
+    // if we didn't find a previous focusable member, slot the new member into the tab
+    // order after the layout itself.
+    if (previousMember == null && (this.tabIndex == null || this._autoTabIndex))
+        previousMember = this;
+
+    // Note: if we didn't find a 'previousMember', it implies this Layout is not included in
+    // the page's tab order. Allow normal tabIndex management to position our first
+    // auto-tab member at the end of the page's tab order, then we'll slot subsequent members
+    // after it.
+    if (previousMember) {
+        // Put this child into the tab-order for the page after the previous member with an
+        // auto-allocated tab index.
+        // Note: this will no-op if this widget already follows the previousMember in the tab-order
+        //this.logWarn("slotting member:"+ newMember + " after:"+ previousMember);
+        // If the tabIndex is actually -1, slot *children* after the previous member, but don't
+        // clobber the -1 specified on the container
+        if (newMember.tabIndex == -1) {
+            newMember._slotChildrenIntoTabOrder(previousMember);
+        } else {
+            newMember._setTabAfter(previousMember);
         }
     }
-
-    var childOffset = 0;
-    for (var i = 0; i < this.children.length; i++) {
-        if (this.children[i] == child) break;
-        if (!child.updateTabPositionOnReparent ||
-            (this.members && this.members.contains(this.children[i]))) continue;
-        childOffset++;
-    }
-    this.logDebug("getChildTabPosition(): " + child + " Non member so returning " +
-                 membersLength + " + " + childOffset,
-                 "TabIndexManager");
-    return membersLength + childOffset;
-},
-
-// Method to update the tab position of some member
-// Called from reorderMembers() [or addMember if passed and existing member and we're already drawn, so
-// essentially a reorder]
-updateMemberTabPosition : function (member) {
-    this.logDebug("Update member tab position:" + member +
-                  ", index in this.members?:" + this.members.indexOf(member), "TabIndexManager");
-    // the override to getChildTabPosition() ensures that standard 'updateChildTabPosition()'
-    // will put the member in the right slot.
-    return this.updateChildTabPosition(member);
 },
 
 // Dragging members out
@@ -9328,7 +9340,6 @@ isc.Layout.registerDupProperties("members");
 //
 // The Button widget class implements interactive, style-based button widgets.
 //
-// @inheritsFrom StatefulCanvas
 // @treeLocation Client Reference/Control
 // @visibility external
 //<
@@ -10090,15 +10101,19 @@ getInnerHTML : function () {
                 extraStuff: this._$defaultImgExtraStuff
             });
         }
-        sb.append((!opposite ? iconHTML : null),
-                  "<div id='", titleClipperID, "' style='display:inline-block;",
-                  (this.icon ? (b ? "margin-right:" : "margin-left:") + (-extraWidth) + "px;" : null),
-                  isc.Element._boxSizingCSSName, ":border-box;max-width:100%;",
-                  (beforePadding ? ((b ? "padding-right:" : "padding-left:") + beforePadding + "px;") : null),
-                  (afterPadding ? ((b ? "padding-left:" : "padding-right:") + afterPadding + "px;") : null),
-                  "vertical-align:middle;overflow:hidden;",
-                  isc.Browser._textOverflowPropertyName, ":ellipsis'>", this.getTitleHTML(), "</div>",
-                  (opposite ? iconHTML : null));
+            sb.append((!opposite ? iconHTML : null),
+                  "<div id='",
+                  titleClipperID,
+
+                  this.canSelectText ? null : "' unselectable='on",
+                  "' style='display:inline-block;",
+                      (this.icon ? (b ? "margin-right:" : "margin-left:") + (-extraWidth) + "px;" : null),
+                      isc.Element._boxSizingCSSName, ":border-box;max-width:100%;",
+                      (beforePadding ? ((b ? "padding-right:" : "padding-left:") + beforePadding + "px;") : null),
+                      (afterPadding ? ((b ? "padding-left:" : "padding-right:") + afterPadding + "px;") : null),
+                      "vertical-align:middle;overflow:hidden;",
+                      isc.Browser._textOverflowPropertyName, ":ellipsis'>", this.getTitleHTML(), "</div>",
+                      (opposite ? iconHTML : null));
 
         sb.append("</td></tr></tbody></table>");
         return sb.release(false);
@@ -10114,44 +10129,64 @@ _sizeTestHTMLTemplate:[
     null,                                                       // [1] 'nowrap="true" ' [or null]
     'class="',                                                  // [2] class start
     null,                                                       // [3] class name
-    '">',                                                       // [4] close cell tag
-    null,                                                       // [5] icon [if present], or title
-    null,                                                       // [6] if icon, close cell / open [or null]
-    null,                                                       // [7] if icon, 'nowrap="true" ' [or null]
-    null,                                                       // [8] if icon, class start [or null]
-    null,                                                       // [9] if icon, class name [or null]
-    null,                                                       // [10] if icon, close cell tag [or null]
-    null,                                                       // [11] if icon, title [or null]
-    "</td></tr></tbody></table>"                                // [12] end tag
+    '" style="',                                                // [4] style start (for padding)
+    null,                                                       // [5] possibly padding left/right
+    '">',                                                       // [6] close cell tag
+    null,                                                       // [7] icon [if present], or title
+    null,                                                       // [8] if icon, close cell / open [or null]
+    null,                                                       // [9] if icon, 'nowrap="true" ' [or null]
+    null,                                                       // [10] if icon, class start [or null]
+    null,                                                       // [11] if icon, class name [or null]
+    null,                                                       // [12] if icon, close cell tag [or null]
+    null,                                                       // [13] if icon, title [or null]
+    "</td></tr></tbody></table>"                                // [14] end tag
 ],
-_getSizeTestHTML : function (title, wrap) {
-    var template = this._sizeTestHTMLTemplate;
 
-    if (wrap == null) wrap = this.wrap;
+_getSizeTestHTML : function (title) {
+    var template = this._sizeTestHTMLTemplate;
+    var isRTL = this.isRTL();
+    // padding on the left / as a whole...
+    var beforePadding = this._buttonPadding;
+    var afterPadding = this._getAfterPadding ? this._getAfterPadding() : beforePadding;
+    if (beforePadding != null || afterPadding != null) {
+        if (beforePadding) {
+            template[5] = (isRTL ? "padding-right:" : "padding-left:") + beforePadding + "px;"
+        }
+        if (afterPadding != null) {
+            var afterPaddingString = (isRTL ? "padding-left:" : "padding-right:")
+                                         + afterPadding + "px;";
+            if (template[5] == null) {
+                template[5] = afterPaddingString;
+            } else {
+                template[5] += afterPaddingString;
+            }
+        }
+
+    } else {
+        template[5] = null;
+    }
 
     var icon = this.icon;
     if (icon != null) {
         // Ensure standard slots for second cell are present
-        template[6] = '</td><td ';
-        template[8] =  'class="';
-        template[10] =  '">';
+        template[8] = '</td><td ';
+        template[10] =  'class="';
+        template[12] =  '">';
 
-        template[1] = template[7] = wrap ? null : 'nowrap="true" ';
-        template[3] = template[9] = (this.titleStyle ? this.getTitleStateName()
+
+        template[1] = template[9] = this.wrap ? null : 'nowrap="true" ';
+        template[3] = template[11] = (this.titleStyle ? this.getTitleStateName()
                                                         : this.getStateName());
 
         // Stolen from getInnerHTML - determine icon orientation / spacing:
-        var isRTL = this.isRTL(),
-            opposite = ((!isRTL && this.iconOrientation == isc.Canvas.RIGHT) ||
-                         (isRTL && ((this.ignoreRTL && this.iconOrientation == isc.Canvas.LEFT) ||
-                                   (!this.ignoreRTL && this.iconOrientation == isc.Canvas.RIGHT)))),
+
+        var opposite = ((!isRTL && this.iconOrientation == isc.Canvas.RIGHT) ||
+                    (isRTL && ((this.ignoreRTL && this.iconOrientation == isc.Canvas.LEFT) ||
+                               (!this.ignoreRTL && this.iconOrientation == isc.Canvas.RIGHT)))),
 
             iconSpacing = this.getIconSpacing(),
             iconWidth = (this.iconWidth || this.iconSize),
             extraWidth = iconSpacing + iconWidth,
-            opposite = ((!isRTL && this.iconOrientation == isc.Canvas.RIGHT) ||
-                        (isRTL && ((this.ignoreRTL && this.iconOrientation == isc.Canvas.LEFT) ||
-                                   (!this.ignoreRTL && this.iconOrientation == isc.Canvas.RIGHT)))),
             b = (isRTL || opposite) && !(isRTL && opposite);
 
         var iconHTML = this._generateIconImgHTML({
@@ -10161,22 +10196,22 @@ _getSizeTestHTML : function (title, wrap) {
                 extraStuff: this._$defaultImgExtraStuff
             });
         if (opposite) {
-            template[5] = title;
-            template[11] = iconHTML;
+            template[7] = title;
+            template[13] = iconHTML;
         } else {
-            template[5] = iconHTML;
-            template[11] = title;
+            template[7] = iconHTML;
+            template[13] = title;
         }
 
     } else {
-        template[1] = wrap ? null : 'nowrap="true" ';
+        template[1] = this.wrap ? null : 'nowrap="true" ';
         template[3] = (this.titleStyle
                           ? this.getTitleStateName()
                           : this.getStateName()
                         );
-        template[5] = title;
+        template[7] = title;
         // clear all slots to do with a second cell
-        template[6] = template[7] = template[8] = template[9] = template[10] = template[11] = null;
+        template[8] = template[9] = template[10] = template[11] = template[12] = template[13] = null;
     }
     return template.join("");
 },
@@ -10644,7 +10679,7 @@ _getIconURL : function () {
 _getStatefulIconURL : function (icon) {
 
     // Special exception: If the icon is isc.Canvas._blankImgURL, then simply return the _blankImgURL.
-    if (icon === isc.Canvas._blankImgURL) return icon;
+    if (icon === isc.Canvas._blankImgURL || icon == isc.Canvas._$blank) return icon;
 
 
     var state = this.state,
@@ -11035,20 +11070,6 @@ _updateCanFocus : function () {
     if (this._useNativeTabIndex) this.markForRedraw();
 },
 
-_getShadowCSSHTML : function (stateName) {
-    // explicit 'showShadow' overrides settings on the css class
-    var cssText;
-    if (this.showShadow && this.shouldUseCSSShadow()) {
-        cssText = this._getShadowCSSText(true);
-        if (cssText == null) cssText = "";
-    } else {
-        var cssText = isc.StatefulCanvas._getShadowCSSHTML(stateName);
-        if (cssText != isc.emptyString) cssText = ";" + cssText;
-    }
-    return cssText;
-},
-
-
 // return the border HTML used by getTagStart
 _getBorderHTML : function () {
 
@@ -11061,7 +11082,7 @@ _getBorderHTML : function () {
         // this also needs to be shifted from the Table element to the
         // widget handle
         if (isc.StatefulCanvas.pushTableShadowStyleToDiv && this._getHandleOverflow() === isc.Canvas.HIDDEN) {
-            borderHTML += this._getShadowCSSHTML(stateName);
+            borderHTML += ";" + isc.StatefulCanvas._getShadowCSSHTML(stateName);
         }
         return borderHTML;
     }
@@ -11069,8 +11090,9 @@ _getBorderHTML : function () {
     var borderHTML = this.Super("_getBorderHTML", arguments);
     if (isc.StatefulCanvas.pushTableShadowStyleToDiv && this._getHandleOverflow() === isc.Canvas.HIDDEN) {
         var stateName = this.isPrinting ? this.getPrintStyleName() : this.getStateName(),
-            shadowCSS = this._getShadowCSSHTML(stateName);
+            shadowCSS = isc.StatefulCanvas._getShadowCSSHTML(stateName);
         if (shadowCSS != isc.emptyString) {
+            shadowCSS = ";" + shadowCSS;
             borderHTML = borderHTML == null ? shadowCSS : borderHTML + shadowCSS;
         }
     }
@@ -11089,14 +11111,8 @@ _applyBorderStyle : function (className) {
 },
 
 _applyShadowStyle : function (className) {
-
-    var styleHandle = this.getHandle().style;
-    if (this.showShadow && this.shouldUseCSSShadow()) {
-        styleHandle.boxShadow = this._getShadowCSSText();
-        return;
-    }
-
-    var properties = isc.StatefulCanvas._buildShadowStyle(className);
+    var styleHandle = this.getHandle().style,
+        properties = isc.StatefulCanvas._buildShadowStyle(className);
 
     // Reset all shadow styling
     styleHandle.boxShadow = isc.emptyString;
@@ -11213,7 +11229,6 @@ isc.addGlobal("IButton", isc.Button);
 //
 //    The Img widget class implements a simple widget that displays a single image.
 //
-//  @inheritsFrom StatefulCanvas
 //  @treeLocation Client Reference/Foundation
 //  @visibility external
 //  @example img
@@ -11678,7 +11693,6 @@ getHoverHTML : function () {
 //  The StretchImg widget class implements a widget type that displays a list of multiple images
 //  that make up a single image.
 //
-//  @inheritsFrom StatefulCanvas
 //  @treeLocation Client Reference/Foundation
 //  @visibility external
 //<
@@ -12617,7 +12631,6 @@ inWhichPart : function () {
 // For a general-purpose container for HTML content, use +link{HTMLFlow} or +link{HTMLPane}
 // instead.
 //
-//  @inheritsFrom Button
 //  @treeLocation Client Reference/Foundation
 //  @visibility external
 //  @example label
@@ -12797,13 +12810,15 @@ isc.Progressbar.addProperties( {
     //<
     percentDone:0,
 
-    //> @attr progressbar.length (number : 100 : IRW)
+    //> @attr progressbar.length (Number or String : 100 : IRW)
     // Length of the progressbar in pixels. This is effectively height for a vertical
     // progressbar, or width for a horizontal progressbar.
     // <P>
     // This property must be set instead of setting <code>width</code> or <code>height</code>.
     // @group appearance
     // @visibility external
+    // @setter setLength
+    // @getter getLength
     //<
     length: 100,
 
@@ -12874,17 +12889,17 @@ isc.Progressbar.addProperties( {
 
 isc.Progressbar.addMethods({
 
-initWidget : function () {
+init : function () {
     if (this.vertical) {
-        this.setWidth(this.breadth);
-        this.setHeight(this.length);
+        this.width = this.breadth;
+        this.height = this.length;
         this.items = this.verticalItems;
     } else {
-        this.setWidth(this.length);
-        this.setHeight(this.breadth);
+        this.width = this.length
+        this.height = this.breadth
         this.items = this.horizontalItems;
     }
-    this.Super(this._$initWidget);
+    this.Super("init", arguments);
 },
 
 //>    @method    progressbar.resizeImages()    (A)
@@ -13259,7 +13274,6 @@ valueChanged : function () {
 // Toolbar is better suited for managing a set of highly similar, interchangeable components,
 // such as ListGrid headers.
 //
-// @inheritsFrom Layout
 // @treeLocation Client Reference/Layout
 // @visibility external
 //<
@@ -13417,7 +13431,7 @@ isc.Toolbar.addProperties( {
         // it's tabIndex managed by the toolbar
         setTabIndex : function (index) {
             this.Super("setTabIndex", arguments);
-            this._toolbarManagedTabIndex = false;
+            this._toolbarManagedTabIndex = null;
         },
 
         // Override setAccessKey to take a second parameter, indicating that the accessKey is
@@ -13434,8 +13448,18 @@ isc.Toolbar.addProperties( {
         // This means when tabbing out of the button, the focus will go to the appropriate next
         // element - use the _updateFocusButton() method on the toolbar to achieve this.
         focusChanged : function (hasFocus) {
+
+            if (this.parentElement == null) {
+                return;
+            }
             if (this.hasFocus && this.parentElement._updateFocusButton) {
                 this.parentElement._updateFocusButton(this)
+            }
+        },
+
+        _focusInNextTabElement : function (forward, mask) {
+            if (this.parentElement._focusInNextTabElement) {
+                this.parentElement._focusInNextTabElement(forward, mask, this);
             }
         }
     }
@@ -13545,6 +13569,39 @@ getFocusButtonIndex : function () {
     return focusItemNum;
 },
 
+// _focusInNextTabElement() - used when we're managing synthetic focus due to showing a
+// clickMask.
+// Since we do custom management of our buttons' tabIndices, we need to also explicitly
+// manage synthetic tabbing to them
+
+_focusInNextTabElement : function (forward, mask, button) {
+    if (!isc.EH.targetIsMasked(this, mask)) {
+        var focusButton = button ? this.members.indexOf(button) : null;
+
+        if (!this.tabWithinToolbar) {
+            if (forward && focusButton == null) {
+                var fb = this._currentFocusButton;
+                if (fb != null) return this.fb.focus();
+            }
+
+        } else if (this._focusInNextButton(forward, focusButton)) return;
+    }
+    return this.Super("_focusInNextTabElement", arguments);
+},
+
+// Widget level _canFocus
+// Override this to return true. This will ensure that if a hard mask is showing, and we're
+// doing synthetic tab index management, the toolbar doesn't get skipped.
+_canFocus : function (a,b,c,d) {
+    var members = this.members;
+    if (members && members.length > 0) {
+        for (var i = 0; i < members.length; i++) {
+            if (members[i]._canFocus()) return true;
+        }
+    }
+    return this.invokeSuper(isc.Toolbar, "_canFocus", a,b ,c,d);
+},
+
 // Override focus() to put focus into the button(s) in the toolbar
 
 // Override 'setFocus()' to update button focus only.
@@ -13563,9 +13620,46 @@ setFocus : function (hasFocus) {
     }
 },
 
-setButtonTabIndex : function (button, tabIndex) {
-    button.setTabIndex(tabIndex);
+// Override focusAtEnd() so we can put focus into the first / last button if appropriate
+focusAtEnd : function (start) {
+    if (!this.tabWithinToolbar) {
+        return this.Super("focusAtEnd", arguments);
+    }
+
+    // typecast start to a boolean before passing it to 'focusInNextButton' as the 'forward'
+    // param.
+    start = !!start;
+    var focusIndex = (start ?  -1 : this.buttons.length);
+    this._focusInNextButton(start, focusIndex);
+},
+
+// An internal method to set the tab index of a button, and flag the button as having it's tab index
+// managed by the toolbar.
+_setButtonTabIndex : function (button, newTabIndex) {
+
+
+    if (!button._toolbarManagedTabIndex &&
+        (button._getNextTabWidget() != null || button._getPreviousTabWidget() != null))
+    {
+         button._removeFromAutoTabOrder();
+    }
+
+    // Note that the toolbar is managing the tab index of the button
     button._toolbarManagedTabIndex = true;
+
+    // update the tab index of the button.
+
+    if (button.tabIndex != newTabIndex) button._setTabIndex(newTabIndex, false);
+},
+
+// Override updateMemberTabIndex (inherited from Layout)
+// to be a No-Op, since we manage our members' (buttons') tabindices
+
+updateMemberTabIndex : function () {
+},
+
+
+_slotChildrenIntoTabOrder : function () {
 },
 
 // _setButtonAccessKey()
@@ -13576,7 +13670,6 @@ _setButtonAccessKey : function (button, key) {
     // see comment in the override for setAccessKey for why we're passing in this 2nd parameter
     button.setAccessKey(key, true);
 },
-
 
 
 
@@ -13610,21 +13703,25 @@ setupButtonFocusProperties : function () {
         focusButton = this._currentFocusButton;
     }
 
+
+    var defaultTabIndex;
+    if (this.tabWithinToolbar) {
+        defaultTabIndex = this.getTabIndex();
+    } else {
+        defaultTabIndex = -1;
+    }
+
     // update the tabIndex of any buttons who have no user-specified tab index, and
     // for which we haven't yet managed the tabIndex
     var buttons = this.getButtons();
     for (var i = 0; i < buttons.length; i++) {
         var button = buttons[i];
-        if (button == focusButton) continue;
-        if (!button._toolbarManagedTabIndex) continue;
+        if (button != focusButton &&
+            (button.tabIndex == null || button._autoTabIndex))
+        {
 
-        if (!this.tabWithinToolbar) {
-            if (button._shouldManageTabPosition) {
-                this.setButtonTabIndex(button, -1);
-            }
-        } else {
-            if (button.tabIndex == -1) button.clearExplicitTabIndex();
-
+            //this.logWarn("updating tab index of: " + button + " to " + defaultTabIndex);
+            this._setButtonTabIndex(button, defaultTabIndex)
         }
     }
 },
@@ -13646,22 +13743,23 @@ _updateFocusButton : function (newFocusButton) {
         this._setButtonAccessKey(newFocusButton, this.accessKey)
     }
 
+    // Update focus button tab index (if allocated by us)
+    if (newFocusButton.tabIndex == null || newFocusButton._autoTabIndex ||
+        newFocusButton._toolbarManagedTabIndex)
+    {
 
-    // If tabWithinToolbar is false, set the tabIndex of the old focus button to -1, and
-    // allow the TabIndexManager to manage the tabIndex of the new focus button.
-    if (newFocusButton._toolbarManagedTabIndex && newFocusButton.tabIndex == -1) {
-        newFocusButton.clearExplicitTabIndex();
+        // set the newly focused button to the tabIndex of the Toolbar
+        this._setButtonTabIndex(newFocusButton, this.getTabIndex());
     }
-
 
     var oldFocusButton = this._currentFocusButton;
     // If appropriate, remove the previous focus button from the tab order
-    if (oldFocusButton != null && oldFocusButton._toolbarManagedTabIndex) {
-        // shouldManageTabPosition is basically a synonym for "picking up tabIndex from TabIndexManager"
-        // IE: not currently -1.
-        if (!this.tabWithinToolbar && oldFocusButton._shouldManageTabPosition) {
-            this.setButtonTabIndex(oldFocusButton,-1);
-        }
+    if (oldFocusButton != null &&
+        (oldFocusButton.tabIndex == null || oldFocusButton._autoTabIndex ||
+         oldFocusButton._toolbarManagedTabIndex))
+    {
+        // Remove from tab order if we are not tabbing between buttons
+        if (!this.tabWithinToolbar) this._setButtonTabIndex(oldFocusButton, -1);
 
         // Clear the accessKey property if it was added by the toolbar
         if (oldFocusButton.accessKey != null &&
@@ -13671,6 +13769,30 @@ _updateFocusButton : function (newFocusButton) {
         }
     }
     this._currentFocusButton = newFocusButton;
+},
+
+// Override _setTabIndex() to set also update the tab index of the buttons
+_setTabIndex : function (a,b,c,d) {
+    this.invokeSuper(isc.Toolbar, "_setTabIndex", a,b,c,d);
+
+    // if this.tabWithinToolbar is true, update each of the buttons' tab index to match the
+    // toolbars new tab index
+    if (this.tabWithinToolbar) {
+        var buttons = this.getButtons();
+        for (var i = 0; i < buttons.length; i++) {
+            if (buttons[i].tabIndex == null || buttons[i]._autoTabIndex ||
+                buttons[i]._toolbarManagedTabIndex)
+                this._setButtonTabIndex(buttons[i], this.getTabIndex())
+        }
+    // otherwise use _updateFocusButton to update the tab index of the focus button only (other
+    // buttons' tab index will already be -1 -- no need to change)
+    } else {
+        var button = this._currentFocusButton;
+        if (button != null) {
+            this._currentFocusButton = null;
+            this._updateFocusButton(button);
+        }
+    }
 },
 
 // Override setAccessKey() to alo set the accessKey for the toolbar
@@ -13800,16 +13922,6 @@ makeButton : function (button) {
     button.canDrop = this.canRemoveItems;
 
     button.shouldHiliteAccessKey = this.buttonShouldHiliteAccessKey;
-
-    // Allow a dev to suppress all tabIndex on the toolbar buttons by setting
-    // tabIndex to -1 on the toolbar itself
-
-    if (this.tabIndex == -1) button.tabIndex = -1;
-
-    // If there's an explicit tabIndex - *never* attempt to manage the
-    // tab index directly
-
-    button._toolbarManagedTabIndex = (button.tabIndex == null);
 
     // create a new button widget
     //this.logWarn("creating new button " + i);
@@ -14533,8 +14645,6 @@ itemDragResized : "itemNum,newSize",
 // rearrange itself.
 itemDragReordered : "itemNum,newPosition"
 });
-
-
 
 
 
@@ -15853,6 +15963,7 @@ isc.defineClass("ToolStripButton", "StretchImgButton").addProperties({
 
 
 
+
 //>    @class    ToolStripGroup
 //
 // A widget that groups other controls for use in +link{class:ToolStrip, tool-strips}.
@@ -16838,9 +16949,8 @@ _shouldRedrawOnStateChange : function () {
     if (this.Super("_shouldRedrawOnStateChange", arguments)) return true;
     var icon = this.showIcon ?
                 (this.orientation == "vertical" ?  this.largeIcon || this._originalIcon
-                                                : this._originalIcon)
-                            : null;
-                              if (icon === isc.Canvas._blankImgURL) return icon;
+                                                : this._originalIcon) : null;
+    if (icon === isc.Canvas._blankImgURL) return icon;
 
     // If we have an icon and it changes with states, we need to reset the title
     // (IE redraw) on state change.
@@ -18849,11 +18959,8 @@ isc.SectionStack.addMethods({
             // NOTE: if we pass a section header, don't resize if the preceding member is
             // another section header, detected via the isSectionHeader flag rather than
             // isc.isA.SectionHeader since section header implementation is pluggable
-            if ((member.isSectionHeader && this.sectionIsVisible(member)) ||
-                (!member.resizeable && member.isVisible()))
-            {
+            if ((member.isSectionHeader && this.sectionIsVisible(member)) || (!member.resizeable && member.isVisible()))
                 this._resizeIgnore += member.getVisibleHeight();
-            }
         }
 
         // if there are no preceeding resizeable members, never allow resize (eg, no
@@ -22608,7 +22715,7 @@ isc.builtinTypes =
         },
 
         parseInput : function (value) {
-            var res = isc.NumberUtil.parseInt(value);
+            var res = isc.NumberUtil.parseInt(value, true);
             if (isNaN(res)) {
                 return value;
             } else {
@@ -22635,7 +22742,7 @@ isc.builtinTypes =
         },
 
         parseInput : function (value) {
-            var res = isc.NumberUtil.parseFloat(value);
+            var res = isc.NumberUtil.parseFloat(value, true);
             if (isNaN(res)) {
                 return value;
             } else {
@@ -22711,16 +22818,19 @@ isc.builtinTypes =
                         returnValue = value.getFullYear() + "_" + (Math.floor(value.getMonth() / 3) + 1);
                         break;
                     case "monthAndYear":
-                        returnValue = value.getFullYear() + "_" +
-                            isc.DateUtil.format(value, "MM");
+                        var month = value.getMonth();
+                        month = "" + (month < 10 ? "0" : "") + month;
+                        returnValue = value.getFullYear() + "_" + month;
                         break;
                     case "weekAndYear":
                         returnValue = value.getFullYear() + "_" +
                             isc.DateUtil.format(value, "ww");
                         break;
                     case "date":
+                        var month = value.getMonth();
+                        month = "" + (month < 10 ? "0" : "") + month;
                         returnValue = value.getFullYear() + "_" +
-                            isc.DateUtil.format(value, "MM") + "_" +
+                            month + "_" +
                             isc.DateUtil.format(value, "dd");
                         break;
                     case "dayOfWeekAndYear":
@@ -22732,8 +22842,10 @@ isc.builtinTypes =
                             day;
                         break;
                     case "dayOfMonthAndYear":
+                        var month = value.getMonth();
+                        month = "" + (month < 10 ? "0" : "") + month;
                         returnValue = value.getFullYear() + "_" +
-                            isc.DateUtil.format(value, "MM") + "_" +
+                            month + "_" +
                             isc.DateUtil.format(value, "dd") + "_" +
                             value.getDay();
                         break;
@@ -22780,14 +22892,14 @@ isc.builtinTypes =
                         returnValue = "Q" + record.groupValue;
                         break;
                     case "month":
-                        returnValue = isc.DateUtil.getShortMonthNames()[value];
+                        returnValue = Date.getShortMonthNames()[value];
                         break;
                     case "week":
                         returnValue = isc.GroupingMessages.weekNumberTitle + record.groupValue;
                         break;
                     case "day":
                     case "dayOfWeek":
-                        returnValue = isc.DateUtil.getShortDayNames()[value];
+                        returnValue = Date.getShortDayNames()[value];
                         break;
                     case "dayOfMonth":
                         returnValue = value;
@@ -22802,7 +22914,8 @@ isc.builtinTypes =
                     case "monthAndYear":
                         // eg, "December 2014"
                         var values = record.groupValue.split("_");
-                        returnValue = isc.DateUtil.getMonthNames()[values[1]] + " " + values[0];
+                        var month = new Number(values[1]);
+                        returnValue = Date.getMonthNames()[month] + " " + values[0];
                         break;
                     case "weekAndYear":
                         // eg, "Week #48 2014"
@@ -22812,20 +22925,22 @@ isc.builtinTypes =
                     case "date":
                         // eg, toShortDate()
                         var values = record.groupValue.split("_");
-                        var date = isc.DateUtil.createLogicalDate(values[0], values[1], values[2]);
+                        var month = new Number(values[1]);
+                        var date = isc.Date.createLogicalDate(values[0], month, values[2]);
                         returnValue = date.toShortDate();
                         break;
                     case "dayOfWeekAndYear":
                         // eg, "Week #48 2014, Tuesday"
                         var values = record.groupValue.split("_");
                         returnValue = isc.GroupingMessages.weekNumberTitle + values[1] + " " +
-                            values[0] + ", " + isc.DateUtil.getDayNames()[values[2]];
+                            values[0] + ", " + isc.Date.getDayNames()[values[2]];
                         break;
                     case "dayOfMonthAndYear":
                         // eg, "December 2014, Tuesday 30"
                         var values = record.groupValue.split("_");
-                        returnValue = isc.DateUtil.getShortMonthNames()[values[1]] + " " + values[0] +
-                            ", " + isc.DateUtil.getDayNames()[values[3]] + " " + values[2];
+                        var month = new Number(values[1]);
+                        returnValue = isc.Date.getShortMonthNames()[month] + " " + values[0] +
+                            ", " + isc.Date.getDayNames()[values[3]] + " " + values[2];
                         break;
 
                     case "timezoneHours":
@@ -22920,6 +23035,8 @@ isc.builtinTypes =
     // definitions, so that the equivalent of "instanceof" checks will detect them as
     // being of the same base type
     string:{inheritsFrom:"text"}, // XML Schema
+    // needed for sorting - getBaseType("ntext") returns "text"
+    ntext:{inheritsFrom:"text"},
     "int":{inheritsFrom:"integer"}, // XML Schema
     "long":{inheritsFrom:"integer"},
     number:{inheritsFrom:"integer"},
@@ -23087,6 +23204,30 @@ isc.builtinTypes =
                 return value;
             } else {
                 return res;
+            }
+        },
+        compareValues : function(value1, value2, field) {
+            if (value1 == value2) {
+                // special case for equal values: if value1 is number
+                // and value2 is not, value1 "wins" and vice versa
+                var isNumber1 = isc.isA.Number(value1),
+                    isNumber2 = isc.isA.Number(value2);
+
+                // only value1 is number
+                if (isNumber1 && !isNumber2) return -1;
+
+                // only value2 is number
+                if (!isNumber1 && isNumber2) return 1;
+
+                // values are equal
+                return 0;
+            }
+
+            // no special rules for non-equal values
+            if (value1 > value2) {
+                return -1;
+            } else {
+                return 1;
             }
         }
     },
@@ -27658,6 +27799,14 @@ isc.SplitPane.addProperties({
     //<
     //pageOrientation: null,
 
+    //> @attr splitPane.navigationPaneWidth (int : 320 : IR)
+    // LeftLayout’s initial size
+    //
+    // @visibility external
+    //<
+    navigationPaneWidth: 320,
+
+
     portraitClickMaskDefaults: {
         _constructor: "Canvas",
         width: "100%",
@@ -27708,8 +27857,13 @@ isc.SplitPane.addProperties({
     },
 
     leftLayoutDefaults: {
-        _constructor: "VLayout",
-        width: 320
+        _constructor: "VLayout"
+    },
+
+    getDynamicDefaults: function(childName) {
+        if (childName == "leftLayout") {
+            return {width: this.navigationPaneWidth};
+        }
     },
 
     rightLayoutDefaults: {
@@ -30423,7 +30577,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v11.1d_2016-08-31/LGPL Deployment (2016-08-31)
+  Version v11.0p_2017-01-14/LGPL Deployment (2017-01-14)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
