@@ -139,9 +139,12 @@ isc.CBMDataSource.create({
   ],
 
   // Returns (by callback call!) relations for current concept, with merged parents hierarchy's relations.
-  getRelations: function (relId, afterDataGot) {
-    var relations = [];
+  // TODO: Replace with common-scope function
+/*  getRelations: function (relId, afterDataGot) {
     that = this;
+    var relations = [];
+    relations.setSort({property:"Odr", direction:"ascending"} );
+    var inherited = false;
     function innerGetRelations(relId, afterDataGot) {
       if (that.hasAllData()) {
         var record = that.getCacheData().find({ID: relId});
@@ -156,21 +159,24 @@ isc.CBMDataSource.create({
               }
             }
             if (!exists) {
+      	  	  relationsToThis[i]._inherited = inherited;
               relations.add(relationsToThis[i]);
             }
           }
         }
       }
       if (record.BaseConcept && record.BaseConcept !== "null") {
+      	inherited = true;  
         innerGetRelations(record.BaseConcept, afterDataGot);
       } else {
-        return afterDataGot(relations);
+//        return afterDataGot(relations.setSort({property:"Odr", direction:"ascending", context: this.grid} ));
+        return afterDataGot(relations.sortByProperty("Odr", true));
       }
     }
 
     innerGetRelations(relId, afterDataGot);
-  },
-
+  }, 
+*/
   beforeCopy: function (record) {
     record.SysCode = record.SysCode + " (copy! - must modify!)";
     return record;
@@ -774,7 +780,12 @@ isc.CBMDataSource.create({
     inList: true,
     hidden: true
   }, {
-    // Points to very imortant (in most cases ignored!) concept
+    name: "ForConceptSysCode",
+    type: "text",
+    title: "Belongs to Concept",
+    length: 100
+  }, {
+    // Property provide very imortant (in most cases ignored!) concept
     // of Semantic meaning of Relation.
     // In other words, it's relation's self-type, that allows to make assamptions
     // on relations meaning and similarity between different Concepts.
@@ -1380,15 +1391,17 @@ isc.CBMDataSource.create({
     title: "Represents Relation",
     foreignKey: "Relation.ID",
     editorType: "LinkControl",
-    optionDataSource: "Relation",
+//0    optionDataSource: "Relation",
     valueField: "ID",
     displayField: "SysCode",
     pickListWidth: 450,
     inList: true,
     pickListFields: [{
-      name: "ForConcept"
+      name: "ForConceptSysCode",
+      title: "Belongs to concept"
     }, {
-      name: "SysCode"
+      name: "SysCode",
+      title: "System code"
     }, {
       name: "Description"
     }]

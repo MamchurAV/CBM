@@ -13,7 +13,11 @@ function loadScript(script) {
 };
 
 var parseJSON = function (data) {
-  return window.JSON && window.JSON.parse ? window.JSON.parse(data) : (new Function("return " + data))();
+ 	
+  var out =  window.JSON && window.JSON.parse 
+  ? window.JSON.parse(data) 
+  : (new Function("return " + data))();
+  return out;
 };
 
 // ------- JS text beautifier ------------
@@ -260,8 +264,8 @@ function generateDStext(forView, futherActions) {
     isc.warn("No ViewFields found for " + forView);
     return null;
   }
-  // TODO !!! Gather relations with respect of base concepts relations!!! <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-  isc.DataSource.get("Concept").getRelations(conceptRec.ID,
+  // Relations with respect of base concepts relations
+  getRelationsForConcept(conceptRec.ID,
         function (data) {
             relations = data;
 
@@ -526,6 +530,245 @@ function testDS(forView, futherActions) {
 }
 
 
+// ============================================================================================
+// ------------- Object - navigation functions ------------------------------------------------
+// ============================================================================================
+
+function getRelation(concept, relation) {
+  var ds = isc.DataSource.getDataSource(concept);
+  if (ds) {
+    return ds.getRelation(relation);
+  }
+  return null;
+};
+
+// --- Universal helper-like function that return object _and/or_ set as parameter for callback - by ID ---
+function getObject(concept, idParam, callback, context) {
+  var ds = isc.DataSource.getDataSource(concept);
+  var obj;
+  if (ds.getCacheData()) {
+    obj = ds.getCacheData().find({ID: idParam});
+  }
+  if (!obj) {
+    obj = ds.fetchData({ID: idParam}, function (responce, data) {
+      if (data.length > 0) {
+        if (callback) {
+          callback(data[0]);
+        }
+        return data[0];
+      }
+    });
+  }
+  else {
+    if (callback) {
+      callback(obj);
+    }
+    return obj;
+  }
+};
+
+// --- Universal helper-like function that return object _and/or_ set as parameter for callback - by Filter---
+function getObjectByFilter(concept, filter, callback, context) {
+  var ds = isc.DataSource.getDataSource(concept);
+  var obj;
+  if (ds.getCacheData()) {
+    obj = ds.getCacheData().find(filter);
+  }
+  if (!obj) {
+    obj = ds.fetchData(filter, function (responce, data) {
+      if (data.length > 0) {
+        if (callback) {
+          callback(data[0]);
+        }
+        return data[0];
+      }
+    });
+  }
+  else {
+    if (callback) {
+      callback(obj);
+    }
+    return obj;
+  }
+};
+
+
+// Get final object in objects dot-separated chain expression 
+function processObjectsChain(expr, context, callback) {
+//  'use strict'; // <<< Don't remember reason for "strict"
+  if (expr === "null") {
+    return null;
+  }
+//  var exprOut = expr;
+  var i = 0;
+
+    var valArr = expr.split('.');
+    var tmpVal;
+
+    function processValue(innerContext) {
+      i += 1;
+      if (i < valArr.length) {
+        tmpVal = innerContext[valArr[i]];
+        if (likeKey(tmpVal) && i < valArr.length - 1) {
+          // Get object for further processing
+          var thatConcept = conceptRS.find({ID: getRelation(innerContext.Concept, valArr[i]).RelatedConcept});
+          getObject(thatConcept.SysCode, tmpVal, processValue, innerContext);
+        }/* else {
+          if (callback) {
+      	    callback(tmpVal);
+      	  }
+        }*/
+      }
+    };
+    processValue(context);
+
+   return tmpVal;
+};
+
+
+// /[A-Za-z0-9_\.(]+(?!")[ .(),\+\-\*}]/g
+function processExpression(expr, context) {
+  var arrAttr = /[A-Za-z0-9_\.(]+(?!")[ .(),\+\-\*}]/g.exec(expr);
+  var arrVal = [];
+  for (var i = 0; i < arrAttr.length; i++) {
+    // Additional cleaning
+    arrOut[i] = /[A-Za-z0-9_.()]+/g.exec(arrOut[i])[0].trim();
+    arrVal[i] = processValue(arrOut[i], context);
+  }
+  // TODO: Build resulting expression
+  var exprOut = /*tmp*/expr;
+
+  return exprOut;
+};
+
+function processValue(value, context) {
+  var outVal = value;
+  return outVal;
+}
+
+
+// TODO provide inline functions execution and result insertion
+function processJSONExpression(expr, context) {
+//  'use strict'; // <<< Don't remember reason for "strict"
+  if (expr === "null") {
+    return null;
+  }
+  var exprOut = expr;
+  // Temporary remove brackets
+  var exprInn = exprOut;
+  if (expr.charAt(0) == '{') {
+    exprInn = expr.slice(1);
+  }
+  if (expr.charAt(expr.length - 1) == '}') {
+    exprInn = exprInn.slice(0, exprInn.length - 1);
+  }
+  // Split to  properties
+  var exprArr = exprInn.split(',');
+  // Process properties values that needs processing
+  var outArr = [];
+  var i = -1;
+  var j = 0;
+
+  function processElement() {
+    i += 1;
+    if (i < exprArr.length) {
+      var propVal = exprArr[i].split(':')[1].trim();
+      // Processing value
+      if (propVal.charAt(0) === '"' && propVal.charAt(propVal.length - 1) === '"') {
+        // String value - no processing need
+        outArr[i] = exprArr[i];
+        processElement();
+      } else if (propVal.search("this.") === 0) {
+        var valArr = propVal.split('.');
+        var tmpVal;
+
+        function processValue(innerContext) {
+          j += 1;
+          if (j < valArr.length) {
+            tmpVal = innerContext[valArr[j]];
+            if (likeKey(tmpVal) && j < valArr.length - 1) {
+              // Get object for further processing
+              var thatConcept = conceptRS.find({ID: getRelation(innerContext.Concept, valArr[j]).RelatedConcept});
+              getObject(thatConcept.SysCode, tmpVal, processValue, innerContext);
+            }
+            if (j === valArr.length - 1 && i < exprArr.length) { //<<< TODO: ?if expression become longer
+              outArr[i] = exprArr[i].split(':')[0].trim() + ":\"" + tmpVal + "\"";
+              processElement();
+            }
+          }
+        };
+        processValue(context);
+      }
+    }
+  };
+  processElement();
+
+  exprOut = "{";
+  for (var z = 0; z < outArr.length; z++) {
+    exprOut += outArr[z];
+    if (z < outArr.length - 1) {
+      exprOut += ",";
+    }
+  }
+  exprOut += "}";
+
+  return exprOut;
+};
+
+function isString(s) {
+  return typeof(s) === 'string' || s instanceof String;
+}
+
+// Determine if value looks like (or can be) CBM object's identifier
+function likeKey(val) {
+  if (isString(val) && val.length === 36
+    && val.charAt(8) === '-' && val.charAt(13) === '-' && val.charAt(18) === '-' && val.charAt(23) === '-') {
+    return true;
+  }
+  return false;
+}
+
+// Returns (by callback call) relations for current concept, with merged parents hierarchy's relations.
+function getRelationsForConcept(conceptId, callback) {
+	conceptDS = isc.DataSource.get("Concept");
+	var relations = [];
+	var inherited = false;
+	function innerGetRelations(conceptId) {
+	  if (conceptDS.hasAllData()) {
+      var record = conceptDS.getCacheData().find({ID: conceptId});
+      var relationsToThis = isc.DataSource.get("Relation").getCacheData().findAll({ForConcept: conceptId});
+      var i = 0;
+      if (relationsToThis !== null) {
+        for (i; i < relationsToThis.length; i++) {
+          var exists = false;
+          for (j = 0; j < relations.length; j++) {
+            if (relations[j].SysCode === relationsToThis[i].SysCode) {
+              exists = true;
+              relations[j]._modified = true;
+            }
+          }
+          if (!exists) {
+            relationsToThis[i]._inherited = inherited;
+            relationsToThis[i].ForConceptSysCode = record.SysCode;
+            relations.add(relationsToThis[i]);
+          }
+        }
+      }
+	  }
+	  if (record && record.BaseConcept && record.BaseConcept !== "null") {
+      inherited = true;  
+      innerGetRelations(record.BaseConcept);
+	  } else {
+    if (callbackBound) {
+        callbackBound(relations.sortByProperty("Odr", true));
+      }
+	  }
+	}
+  
+  var callbackBound = callback.bind(this); 
+	innerGetRelations(conceptId);
+}
+
 // ============================================================================
 // ====================== Transactional data processing =======================
 // ============================================================================
@@ -625,6 +868,7 @@ TransactionManager.close = function (transact) {
 
 // ==========================================================================================
 // ----- Data in isc DS caches manipulation - without processing in persistent storage. -----
+// ==========================================================================================
 var addDataToCache = function (rec) {
   currentDS = isc.DataSource.get(rec.Concept);
   if (currentDS) {
@@ -2160,11 +2404,27 @@ isc.LinkControl.addProperties({
   getFilter: function (form, item, value) {
     var relMetadata = form.getDataSource().getRelation(item.name);
     if (relMetadata.LinkFilter && relMetadata.LinkFilter !== "null") {
-//			var filterStr = preProcessExpression(relMetadata.LinkFilter, "this.form.valuesManager.values");
-      var filterStr = processJSONExpression(relMetadata.LinkFilter, this.form.valuesManager.values);
-      this.pickListCriteria = parseJSON(filterStr);
+    	if(!relMetadata.LinkFilter.startsWith("function")){
+    		// Expreccion represenrs filter - processed as filter
+    		var filterStr = processJSONExpression(relMetadata.LinkFilter, this.form.valuesManager.values);
+    		this.pickListCriteria = parseJSON(filterStr);
+      } else {
+          // Data are supplied by some function (in more complicated cases)
+        this.getClientPickListData = function() {
+          return this.valueMap;
+        };
+        var func = relMetadata.LinkFilter;
+        eval(func);
+      }
     }
-  }
+  },
+  
+/*  getClientPickListData: function () {
+    var relMetadata = form.getDataSource().getRelation(item.name);
+    if (relMetadata.getData) {
+      return relMetadata.getData();
+    }
+  }*/
 });
 
 
@@ -2172,164 +2432,6 @@ isc.ClassFactory.defineClass("MultiLinkControl", isc.MultiComboBoxItem);
 isc.MultiLinkControl.addProperties({
   //TODO: todo...
 });
-
-function getRelation(concept, relation) {
-  var ds = isc.DataSource.getDataSource(concept);
-  if (ds) {
-    return ds.getRelation(relation);
-  }
-  return null;
-};
-
-// --- Universal helper-like function that return object _and/or_ set as parameter for callback - by ID ---
-function getObject(concept, idParam, callback, context) {
-  var ds = isc.DataSource.getDataSource(concept);
-  var obj;
-  if (ds.getCacheData()) {
-    obj = ds.getCacheData().find({ID: idParam});
-  }
-  if (!obj) {
-    obj = ds.fetchData({ID: idParam}, function (responce, data) {
-      if (data.length > 0) {
-        if (callback) {
-          callback(data[0]);
-        }
-        return data[0];
-      }
-    });
-  }
-  else {
-    if (callback) {
-      callback(obj);
-    }
-    return obj;
-  }
-};
-
-// --- Universal helper-like function that return object _and/or_ set as parameter for callback - by Filter---
-function getObjectByFilter(concept, filter, callback, context) {
-  var ds = isc.DataSource.getDataSource(concept);
-  var obj;
-  if (ds.getCacheData()) {
-    obj = ds.getCacheData().find(filter);
-  }
-  if (!obj) {
-    obj = ds.fetchData(filter, function (responce, data) {
-      if (data.length > 0) {
-        if (callback) {
-          callback(data[0]);
-        }
-        return data[0];
-      }
-    });
-  }
-  else {
-    if (callback) {
-      callback(obj);
-    }
-    return obj;
-  }
-};
-
-// /[A-Za-z0-9_\.(]+(?!")[ .(),\+\-\*}]/g
-function processExpression(expr, context) {
-  var arrAttr = /[A-Za-z0-9_\.(]+(?!")[ .(),\+\-\*}]/g.exec(expr);
-  var arrVal = [];
-  for (var i = 0; i < arrAttr.length; i++) {
-    // Additional cleaning
-    arrOut[i] = /[A-Za-z0-9_.()]+/g.exec(arrOut[i])[0].trim();
-    arrVal[i] = processValue(arrOut[i], context);
-  }
-  // TODO: Build resulting expression
-  var exprOut = /*tmp*/expr;
-
-  return exprOut;
-};
-
-function processValue(value, context) {
-  var outVal = value;
-  return outVal;
-}
-
-function processJSONExpression(expr, context) {
-//  'use strict'; // <<< Don't remember reason for "strict"
-  if (expr === "null") {
-    return null;
-  }
-  var exprOut = expr;
-  // Temporary remove brackets
-  var exprInn = exprOut;
-  if (expr.charAt(0) == '{') {
-    exprInn = expr.slice(1);
-  }
-  if (expr.charAt(expr.length - 1) == '}') {
-    exprInn = exprInn.slice(0, exprInn.length - 1);
-  }
-  // Split to  properties
-  var exprArr = exprInn.split(',');
-  // Process properties values that needs processing
-  var outArr = [];
-  var i = -1;
-  var j = 0;
-
-  function processElement() {
-    i += 1;
-    if (i < exprArr.length) {
-      var propVal = exprArr[i].split(':')[1].trim();
-      // Processing value
-      if (propVal.charAt(0) === '"' && propVal.charAt(propVal.length - 1) === '"') {
-        // String value - no processing need
-        outArr[i] = exprArr[i];
-        processElement();
-      } else if (propVal.search("this.") === 0) {
-        var valArr = propVal.split('.');
-        var tmpVal;
-
-        function processValue(innerContext) {
-          j += 1;
-          if (j < valArr.length) {
-            tmpVal = innerContext[valArr[j]];
-            if (likeKey(tmpVal) && j < valArr.length - 1) {
-              // Get object for further processing
-              var thatConcept = conceptRS.find({ID: getRelation(innerContext.Concept, valArr[j]).RelatedConcept});
-              getObject(thatConcept.SysCode, tmpVal, processValue, innerContext);
-            }
-            if (j === valArr.length - 1 && i < exprArr.length) { //<<< TODO: ?if expression become longer
-              outArr[i] = exprArr[i].split(':')[0].trim() + ":\"" + tmpVal + "\"";
-              processElement();
-            }
-          }
-        };
-        processValue(context);
-      }
-    }
-  };
-  processElement();
-
-  exprOut = "{";
-  for (var z = 0; z < outArr.length; z++) {
-    exprOut += outArr[z];
-    if (z < outArr.length - 1) {
-      exprOut += ",";
-    }
-  }
-  exprOut += "}";
-
-  return exprOut;
-};
-
-function isString(s) {
-  return typeof(s) === 'string' || s instanceof String;
-}
-
-// Determine if value looks like (or can be) CBM object's identifier
-function likeKey(val) {
-  if (isString(val) && val.length === 36
-    && val.charAt(8) === '-' && val.charAt(13) === '-' && val.charAt(18) === '-' && val.charAt(23) === '-') {
-    return true;
-  }
-  return false;
-}
 
 
 // =============================================================================================
@@ -2799,8 +2901,7 @@ isc.InnerGrid.addProperties({
         });
         createFromMenuButton.menu = menuCreate;
         createFromMenuButton.show();
-      }
-      ;
+      };
 
       var methodsMenuButton = isc.IconMenuButton.create({
         top: 250,
@@ -2820,8 +2921,7 @@ isc.InnerGrid.addProperties({
         });
         methodsMenuButton.menu = menuMethods;
         methodsMenuButton.show();
-      }
-      ;
+      };
 
       var toContextReturnButton = null;
       if (typeof(that.context) != "undefined" && that.context != null) {
@@ -2842,8 +2942,7 @@ isc.InnerGrid.addProperties({
             return false;
           }
         });
-      }
-      ;
+      };
 
       var innerGridDefaultMenu = [
         toContextReturnButton,
@@ -3234,7 +3333,26 @@ isc.CollectionAggregateControl.addProperties({
 
 // ------------ Relations for Concept(/Kind) specific CollectionControl ------------------------------------------------
 isc.ClassFactory.defineClass("RelationsAggregateControl", isc.CollectionAggregateControl);
-isc.RelationsAggregateControl.addProperties({
+isc.RelationsAggregateControl.addProperties({ 
+  createCanvas: function (form) {
+  this.Super("createCanvas", arguments);	  
+  // Array of hilite-objects to apply to the grid
+  var hiliteArray =  
+		[
+			{
+				fieldName: ["SysCode", "Description"],
+				cssText: "background-color:#DDDDDD;", 
+				criteria: {
+					fieldName: "_inherited", 
+					operator: "equals", 
+					value: true
+				}
+			}
+		];
+    this.innerGrid.grid.hilites = hiliteArray;
+     return this.innerGrid;
+},
+  
   // showValue() function overriden
   showValue: function (displayValue, dataValue, form, item) {
     // Lightweight variant - data are supplied
@@ -3245,7 +3363,7 @@ isc.RelationsAggregateControl.addProperties({
         this.mainID = form.valuesManager.getValue(this.mainIDProperty);
         var that = this;
         if (typeof(this.mainID) != "undefined") {
-          isc.DataSource.get("Concept").getRelations(this.mainID,
+          getRelationsForConcept(this.mainID,
             function (data) {
               that.innerGrid.grid.setData(data);
             }

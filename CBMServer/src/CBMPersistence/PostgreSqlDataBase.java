@@ -413,8 +413,8 @@ public class PostgreSqlDataBase implements I_DataBase {
 								|| entry.getKey().toLowerCase().equals(ID) 
 								|| entry.getKey().toLowerCase().equals((table.substring(table.indexOf(".") + 1)  +ID).toLowerCase()) )
 							{
-								wherePart += colInfo[0] + "='" + entry.getValue() + "'";
 								idValue = (String)entry.getValue(); // stored for further usage with possible inherited tables 
+								wherePart += colInfo[0] + "='" + idValue + "'";
 							}
 							else
 							{
