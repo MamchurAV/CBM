@@ -613,11 +613,11 @@ function processObjectsChain(expr, context, callback) {
           // Get object for further processing
           var thatConcept = conceptRS.find({ID: getRelation(innerContext.Concept, valArr[i]).RelatedConcept});
           getObject(thatConcept.SysCode, tmpVal, processValue, innerContext);
-        }/* else {
+        } else {
           if (callback) {
       	    callback(tmpVal);
       	  }
-        }*/
+        }
       }
     };
     processValue(context);
@@ -625,7 +625,7 @@ function processObjectsChain(expr, context, callback) {
    return tmpVal;
 };
 
-
+/*
 // /[A-Za-z0-9_\.(]+(?!")[ .(),\+\-\*}]/g
 function processExpression(expr, context) {
   var arrAttr = /[A-Za-z0-9_\.(]+(?!")[ .(),\+\-\*}]/g.exec(expr);
@@ -636,7 +636,7 @@ function processExpression(expr, context) {
     arrVal[i] = processValue(arrOut[i], context);
   }
   // TODO: Build resulting expression
-  var exprOut = /*tmp*/expr;
+  var exprOut = expr;
 
   return exprOut;
 };
@@ -644,7 +644,7 @@ function processExpression(expr, context) {
 function processValue(value, context) {
   var outVal = value;
   return outVal;
-}
+} */
 
 
 // TODO provide inline functions execution and result insertion
@@ -744,7 +744,9 @@ function getRelationsForConcept(conceptId, callback) {
           for (j = 0; j < relations.length; j++) {
             if (relations[j].SysCode === relationsToThis[i].SysCode) {
               exists = true;
-              relations[j]._modified = true;
+              if (!relations[j]._inherited) {
+              	relations[j]._modified = true;
+              }
             }
           }
           if (!exists) {
@@ -766,7 +768,7 @@ function getRelationsForConcept(conceptId, callback) {
 	}
   
   var callbackBound = callback.bind(this); 
-	innerGetRelations(conceptId);
+  innerGetRelations(conceptId);
 }
 
 // ============================================================================
@@ -3340,18 +3342,42 @@ isc.RelationsAggregateControl.addProperties({
   var hiliteArray =  
 		[
 			{
-				fieldName: ["SysCode", "Description"],
-				cssText: "background-color:#DDDDDD;", 
+				fieldName: ["SysCode", "Description", "ForConcept", "RelatedConcept", "PrgNotes", "DBTable", "DBColumn"],
+				cssText: "background-color:#BBCCFF;", 
 				criteria: {
 					fieldName: "_inherited", 
 					operator: "equals", 
 					value: true
 				}
+			}, {
+				fieldName: ["SysCode", "Description", "ForConcept", "RelatedConcept", "PrgNotes", "DBTable", "DBColumn"],
+				cssText: "background-color:#CCEEDD;", 
+				criteria: {
+					fieldName: "_modified", 
+					operator: "equals", 
+					value: true
+				}
+			}, {
+				fieldName: ["RelatedConcept", "RelationKind"],
+				cssText: "color:#0000FF;", 
+				criteria: {
+					fieldName: "RelationKind", 
+					operator: "inSet", 
+					value: ["Link", "Aggregate"]
+				}
+			}, {
+				fieldName: ["RelatedConcept", "RelationKind"],
+				cssText: "color:#990099;", 
+				criteria: {
+					fieldName: "RelationKind", 
+					operator: "inSet", 
+					value: ["BackLink", "BackAggregate", "ManyToMany"]
+				}
 			}
 		];
     this.innerGrid.grid.hilites = hiliteArray;
      return this.innerGrid;
-},
+  },
   
   // showValue() function overriden
   showValue: function (displayValue, dataValue, form, item) {

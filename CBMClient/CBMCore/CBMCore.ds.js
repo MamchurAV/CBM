@@ -936,6 +936,7 @@ isc.CBMDataSource.create({
   }, {
     name: "PrgNotes",
     type: "multiLangText",
+    title: "IS notes",
     inList: true,
     UIPath: "Information System aspects"
   }, {
