@@ -3398,7 +3398,7 @@ isc.RelationsAggregateControl.addProperties({
       }
     }
   }
-}); // <<< End Relations for Concept aggregate control.
+}); // <<< End of special aggregate control for Relations-for-Concept 
 
 
 // -------------------------- CollectionControl control for direct-linked objects -----------------------------

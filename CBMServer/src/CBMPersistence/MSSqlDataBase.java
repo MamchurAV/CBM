@@ -21,31 +21,27 @@ import CBMServer.DSResponce;
 /**
  * DataBase operations on PosgreSQL DBMS
  */
-public class PostgreSqlDataBase implements I_DataBase {
+public class MSSqlDataBase implements I_DataBase {
 
 	static String dbURL;
 	private  String dbUs;
 	private  String dbCred;
 	private static final String ID = "id";
 	
-//	private  Connection dbCon = null;
-//	private  Statement statement = null;
-//	private  ResultSet rsCount = null;
-
 	static {
 		try 
 		{
-			Class.forName("org.postgresql.Driver");
+			Class.forName("com.microsoft.sqlserver.jdbc.SQLServerD‌​river");
 			// Define the data source for the driver
 			// TODO replace with info from DB connection for current CBM Concept
-			dbURL = "jdbc:postgresql://localhost/CBM";
+			dbURL = "jdbc:sqlserver://localhost:1433/CBM";
 			// TODO - get from request for current Concept devoted DB
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
 	
-	public PostgreSqlDataBase(){
+	public MSSqlDataBase(){
 		dbUs = "CBM";
 		dbCred = "cbm";
 	}
@@ -210,7 +206,7 @@ public class PostgreSqlDataBase implements I_DataBase {
 			dsResponce.retCode = -1;
 			dsResponce.retMsg = e.toString() + " while selecting data of <" + dsRequest.dataSource + "> class. SQL:<" + sql + ">";
 			return dsResponce; // Error-reporting responce return
-		}
+		} 
 		dsResponce.retCode = 0;
 		return dsResponce;
 	}

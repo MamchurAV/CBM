@@ -13,6 +13,7 @@ import java.util.Map;
 
 import CBMPersistence.DB2DataBase;
 import CBMPersistence.I_DataBase;
+import CBMPersistence.MSSqlDataBase;
 import CBMPersistence.MySQLDataBase;
 import CBMPersistence.PostgreSqlDataBase;
 import CBMServer.CBMStart;
@@ -33,7 +34,7 @@ public class StorageMetaData implements I_StorageMetaData {
 	public StorageMetaData(){
 		String dbType = CBMStart.getParam("primaryDBType");
 		switch (dbType){
-		case "PosgreSQL":
+		case "PostgreSQL":
 			metaDB = new PostgreSqlDataBase(); 
 			break;
 		case "MySQL":	
@@ -41,6 +42,9 @@ public class StorageMetaData implements I_StorageMetaData {
 			break;
 		case "DB2":	
 			metaDB = new DB2DataBase();
+			break;
+		case "MSSQL":	
+			metaDB = new MSSqlDataBase();
 			break;
 		}
 	}
