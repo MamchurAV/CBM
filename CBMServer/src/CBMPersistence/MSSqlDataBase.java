@@ -31,19 +31,18 @@ public class MSSqlDataBase implements I_DataBase {
 	static {
 		try 
 		{
-			Class.forName("com.microsoft.sqlserver.jdbc.SQLServerD‌​river");
+			Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
 			// Define the data source for the driver
-			// TODO replace with info from DB connection for current CBM Concept
-			dbURL = "jdbc:sqlserver://localhost:1433/CBM";
-			// TODO - get from request for current Concept devoted DB
+			// TODO replace with info from DB connection for current CBM Concept requested
+			dbURL = "jdbc:sqlserver://192.168.31.131;databaseName=Ayda";
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
 	
 	public MSSqlDataBase(){
-		dbUs = "CBM";
-		dbCred = "cbm";
+		dbUs = "rr";
+		dbCred = "p@ssw0rd";
 	}
 
 	// -------------------------------- I_DataBase Interface implementation ---------------------------------------------
@@ -157,7 +156,7 @@ public class MSSqlDataBase implements I_DataBase {
 		{
 			orderPart += selTempl.orderby; // MetaModel defined <inTempl.orderby> MUST ends with ID.
 		}
-		sql += orderPart.equals("") ? "" : " order by " + orderPart;
+		sql += orderPart.equals("") ? " ORDER BY id " : " order by " + orderPart;
 
 		// --- Paging pre-request ---
 		if (dsRequest!= null && dsRequest.endRow != 0) {
@@ -188,15 +187,14 @@ public class MSSqlDataBase implements I_DataBase {
 			    }
 			}
 
-			pagePart += String.valueOf(dsRequest.endRow - dsRequest.startRow) + " offset " + String.valueOf(dsRequest.startRow);
-			sql += " limit " + pagePart;
+			pagePart = " OFFSET " + String.valueOf(dsRequest.startRow) + " ROWS FETCH NEXT " + String.valueOf(dsRequest.endRow - dsRequest.startRow) + " ROWS ONLY ";
+			sql += pagePart;
 		}
 		
 		// ------------ Execute Select
 		try{
 			dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
 			statement = dbCon.createStatement();  
-// MySQL feature			statement.executeUpdate("SET NAMES 'utf8'");
 			ResultSet rs = statement.executeQuery(sql);
 			dsResponce.data = rs;
 			dsResponce.dbStatement = statement;
@@ -224,7 +222,7 @@ public class MSSqlDataBase implements I_DataBase {
 		List<String> tables = new ArrayList<String>();
 		for (Map.Entry<String, String[]> entry : insTempl.entrySet())
 		{
-			String tableForCol = entry.getValue()[1];
+			String tableForCol = entry.getValue()[1].toLowerCase();
 			if (!tables.contains(tableForCol))
 			{	
 				tables.add(tableForCol);
@@ -251,7 +249,7 @@ public class MSSqlDataBase implements I_DataBase {
 					// --- Include columns of this table only
 					if (colInfo != null) 
 					{ 
-						if (colInfo[1].equals(table))
+						if (colInfo[1].toLowerCase().equals(table))
 						{	
 							columnsPart += colInfo[0] + ", ";
 	
@@ -284,7 +282,7 @@ public class MSSqlDataBase implements I_DataBase {
 								}
 								else
 								{
-									valuesPart += "'" + val + "', "; 
+									valuesPart += "N'" + val + "', "; 
 								}
 							}
 						}
@@ -315,7 +313,6 @@ public class MSSqlDataBase implements I_DataBase {
 			try {
 				dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
 				statement = dbCon.createStatement();
-// MySQL feature				statement.executeUpdate("SET NAMES 'utf8'");
 				out.retCode = statement.executeUpdate(sql);
 			}
 			catch (SQLException e) {
@@ -438,7 +435,7 @@ public class MSSqlDataBase implements I_DataBase {
 									}
 									else
 									{
-										updatePart += colInfo[0] + "='" + val + "', ";
+										updatePart += colInfo[0] + "= N'" + val + "', ";
 									}
 								}
 							}
