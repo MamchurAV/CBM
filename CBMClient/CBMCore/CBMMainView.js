@@ -93,7 +93,7 @@ if (typeof(curr_Date) == "undefined" || curr_Date == null || (typeof(curr_Date) 
   curr_Date = moment().utc();
 }
 var extra_Info = "";
-var default_DB = "PostgreSQL.CBM"; // dbName: "MySQL.CBM", //    dbName : "DB2.CBM",
+var default_DB = "MSSQL.Ayda"; //"PostgreSQL.CBM"; // dbName: "MySQL.CBM", //    dbName : "DB2.CBM",
 
 // ----------------- Anonymous initial loadings zone --------------------
 //curr_User =	"anonymous";
