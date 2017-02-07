@@ -228,7 +228,7 @@ public class PostgreSqlDataBase implements I_DataBase {
 		List<String> tables = new ArrayList<String>();
 		for (Map.Entry<String, String[]> entry : insTempl.entrySet())
 		{
-			String tableForCol = entry.getValue()[1];
+			String tableForCol = entry.getValue()[1].toLowerCase();
 			if (!tables.contains(tableForCol))
 			{	
 				tables.add(tableForCol);
@@ -255,7 +255,7 @@ public class PostgreSqlDataBase implements I_DataBase {
 					// --- Include columns of this table only
 					if (colInfo != null) 
 					{ 
-						if (colInfo[1].equals(table))
+						if (colInfo[1].toLowerCase().equals(table))
 						{	
 							columnsPart += colInfo[0] + ", ";
 	

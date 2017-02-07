@@ -52,8 +52,8 @@ public class CredentialsManager implements I_AutentificationManager {
 			Class.forName(CBMStart.getParam("primaryDBDriver"));
 			dbURL = CBMStart.getParam("primaryDBUrl");
 			// TODO - get from  config for Primary DB
-			dbUs = "rr";
-			dbCred = "p@ssw0rd";
+			dbUs = "CBM";
+			dbCred = "cbm";
 		}  catch (Exception ex) {
 			ex.printStackTrace();
 		}

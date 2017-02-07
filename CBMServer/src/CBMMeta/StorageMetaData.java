@@ -60,8 +60,8 @@ public class StorageMetaData implements I_StorageMetaData {
 		// TODO: Implement function !!!(below - mock!!!)
 	//	String out = "DB2";
 	//	String out = "MySQL";
-	//	String out = "PosgreSql";
-		String out = "MSSQL";
+		String out = "PosgreSql";
+	//	String out = "MSSQL";
 
 		return out;
 	}

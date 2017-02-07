@@ -69,7 +69,7 @@ public class CBMRestlet extends Application {
     		}
 			try {
 				// --- Central Metadata-hosting database connection
-				dbCon = DriverManager.getConnection(dbURL, "rr", "p@ssw0rd");
+				dbCon = DriverManager.getConnection(dbURL, "CBM", "cbm");
 				// 	
 				statement = dbCon.createStatement();
 				String dbType = CBMStart.getParam("primaryDBType");
