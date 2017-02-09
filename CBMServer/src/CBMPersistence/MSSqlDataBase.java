@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 import CBMMeta.SelectTemplate;
+import CBMServer.CBMStart;
 import CBMServer.DSRequest;
 import CBMServer.DSResponce;
 
@@ -32,17 +33,21 @@ public class MSSqlDataBase implements I_DataBase {
 		try 
 		{
 			Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
-			// Define the data source for the driver
-			// TODO replace with info from DB connection for current CBM Concept requested
-			dbURL = "jdbc:sqlserver://192.168.31.131;databaseName=Ayda";
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
 	
 	public MSSqlDataBase(){
+		dbURL = CBMStart.getParam("primaryDBUrl");
 		dbUs = "rr";
 		dbCred = "p@ssw0rd";
+	}
+	
+	public MSSqlDataBase(String a_dbUrl, String a_dbUs, String a_dbCred){
+		dbURL = a_dbUrl;
+		dbUs = a_dbUs;
+		dbCred = a_dbCred;
 	}
 
 	// -------------------------------- I_DataBase Interface implementation ---------------------------------------------

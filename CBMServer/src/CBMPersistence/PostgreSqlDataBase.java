@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 import CBMMeta.SelectTemplate;
+import CBMServer.CBMStart;
 import CBMServer.DSRequest;
 import CBMServer.DSResponce;
 
@@ -36,19 +37,24 @@ public class PostgreSqlDataBase implements I_DataBase {
 		try 
 		{
 			Class.forName("org.postgresql.Driver");
-			// Define the data source for the driver
-			// TODO replace with info from DB connection for current CBM Concept
-			dbURL = "jdbc:postgresql://localhost/CBM";
-			// TODO - get from request for current Concept devoted DB
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
 	
 	public PostgreSqlDataBase(){
+		// TODO replace with info from DB connection for current CBM Concept
+		dbURL = CBMStart.getParam("primaryDBUrl");
 		dbUs = "CBM";
 		dbCred = "cbm";
 	}
+	
+	public PostgreSqlDataBase(String a_dbUrl, String a_dbUs, String a_dbCred){
+		dbURL = a_dbUrl;
+		dbUs = a_dbUs;
+		dbCred = a_dbCred;
+	}
+
 
 	// -------------------------------- I_DataBase Interface implementation ---------------------------------------------
 	/**

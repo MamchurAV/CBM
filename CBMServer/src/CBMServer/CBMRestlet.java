@@ -26,12 +26,16 @@ public class CBMRestlet extends Application {
 	private static Timer timer;
 	private static TimerTask timerTask;
 	private String dbURL = null;
+	private String dbUs = null;
+	private String dbCred = null;
 	
 	public CBMRestlet() {
 		super();
 		try {
 		Class.forName(CBMStart.getParam("primaryDBDriver"));
 		dbURL = CBMStart.getParam("primaryDBUrl");
+		dbUs = CBMStart.getParam("primaryDBUs");
+		dbCred = CBMStart.getParam("primaryDBCred");
 		} catch (Exception ex) {
 	        ex.printStackTrace();
 		}
@@ -69,7 +73,7 @@ public class CBMRestlet extends Application {
     		}
 			try {
 				// --- Central Metadata-hosting database connection
-				dbCon = DriverManager.getConnection(dbURL, "CBM", "cbm");
+				dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
 				// 	
 				statement = dbCon.createStatement();
 				String dbType = CBMStart.getParam("primaryDBType");
