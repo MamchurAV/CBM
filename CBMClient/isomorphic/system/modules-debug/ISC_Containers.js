@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version v11.0p_2017-01-14/LGPL Deployment (2017-01-14)
+  Version SNAPSHOT_v11.1d_2017-03-13/LGPL Deployment (2017-03-13)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -39,9 +39,9 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
 
-if (window.isc && isc.version != "v11.0p_2017-01-14/LGPL Deployment" && !isc.DevUtil) {
+if (window.isc && isc.version != "SNAPSHOT_v11.1d_2017-03-13/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'v11.0p_2017-01-14/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v11.1d_2017-03-13/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -723,6 +723,11 @@ draw : function (a,b,c,d) {
     // the setSelected() behavior to bring the selected tab in front of the baseLine
     if (selectedTab) {
 
+
+
+        if (selectedTab.children && selectedTab.children[0] == this.parentElement.addTabButton) return;
+
+
         if (selectedTab.setSelected) selectedTab.setSelected(true);
     }
 },
@@ -1078,6 +1083,7 @@ dragReorderStop : function () {
 // at simple prompts and confirmations, such as buttons with default actions, and single-method
 // +link{classMethod:isc.warn(),shortcuts} for common application dialogs.
 //
+// @inheritsFrom Layout
 // @treeLocation Client Reference/Layout
 // @visibility external
 //<
@@ -3219,7 +3225,7 @@ makeBody : function() {
 
             if (isc.isAn.Object(items[i])) {
                 items[i].locatorParent = this;
-                items[i]._containerID = this.ID;
+                isc.Canvas.setCanvasPanelContainer(items[i], this);
             }
         }
     }
@@ -3405,7 +3411,7 @@ addItems : function (items, position) {
         // AutoTest module
         items[i].locatorParent = this;
 
-        items[i]._containerID = this.ID;
+        items[i].setPanelContainer(this);
 
         // if the body hasn't been created yet, ensure any drawn items are clear()'d, and return
         if (!this._isInitialized) {
@@ -3514,6 +3520,31 @@ replaceItem : function (oldItem, newItem) {
 // @include layout.addMembers()
 // @visibility external
 //<
+
+//> @method window.revealChild()
+// Reveals the child Canvas passed in by showing it if it is currently hidden.  Note, in the
+// case of Window, "child Canvas" means widgets in the Window's "items" collection as well as
+// real children (the children of a Window - ie, the elements of its "children" array - are
+// its component parts like header and body)
+//
+// @param child (ID | Canvas)   the child Canvas to reveal, or its global ID
+// @visibility external
+//<
+revealChild : function (child) {
+    if (isc.isA.String(child)) child = window[child];
+    if (child) {
+        if (this.children && this.children.contains(child) && !child.isVisible()) {
+            child.show();
+        } else {
+            // The children of a Window are its component parts - header, body, etc.  The
+            // "real" children of a window, as far as the user is concerned, is held in "items"
+            if (this.items && this.items.contains(child) && !child.isVisible()) {
+                child.show();
+            }
+        }
+    }
+},
+
 
 
 // Resizing / Layout
@@ -3755,14 +3786,14 @@ show : function (a,b,c,d) {
     }
 
     if (this._shouldAutoFocus()) {
-        // see the doc in shouldAutoFocus()
-        this.focusInNextTabElement();
+        this.focusAtEnd(true);
     }
 
 },
 
-// internal attribute to determine whether Window.show() will call focusInNextTabElement() - it
-// seems like it's always appropriate to do that, but base it on a flag just in case - checked
+// internal attribute to determine whether Window.show() will attempt to focus on the first
+// focusable entry in the Window.
+// It seems like it's always appropriate to do that, but base it on a flag just in case - checked
 // in _shouldAutoFocus()
 //autoFocus: null,
 
@@ -4174,8 +4205,8 @@ _resetContentRestoreStats : function () {
         this.body.resizeTo(this._bodyRestoreWidth, this._bodyRestoreHeight);
         // Resetting _userHeight means that the body doesn't have an explicitly specified height
         // so ensures the layout manages its height as it should.
-        this.body._userHeight = this._bodyRestoreUserHeight;
-        this.body._userWidth = this._bodyRestoreUserWidth;
+        this.body.updateUserSize(this._bodyRestoreUserWidth, this._$width);
+        this.body.updateUserSize(this._bodyRestoreUserHeight, this._$height);
         this.body.setOverflow(this._bodyRestoreOverflow);
     }
     if (this.footer) {
@@ -4363,13 +4394,13 @@ completeMinimize : function (minimizeHeight, animated) {
     // minimized, the Layout will automatically pick up the minimize size as a user-specified
     // size, but this wouldn't happen if the Window is *initialized minimized*, so we set
     // _userHeight explicitly.
-    this._userHeight = minimizeHeight;
+    this.updateUserSize(minimizeHeight, this._$height);
 
     // If this._restoreWidth is set, we were previously maximized - ensure we shrink to the
     // appropriate width
     if (this._restoreWidth != null) {
         if (!animated) this.setWidth(this._restoreWidth);
-        this._userWidth = this._restoreWidth;
+        this.updateUserSize(this._restoreWidth, this._$width);
     }
 
     if (!animated) {
@@ -4466,8 +4497,8 @@ completeRestore : function (animated) {
         if (this._restoreLeft != null) this.setLeft(this._restoreLeft);
         if (this._restoreTop != null) this.setTop(this._restoreTop);
     }
-    if (this._userHeight != null) this._userHeight = this._restoreUserHeight;
-    if (this._userWidth != null) this._userWidth = this._restoreUserWidth;
+    if (this._userWidth != null) this.updateUserSize(this._restoreUserWidth, this._$width);
+    if (this._userHeight != null) this.updateUserSize(this._restoreUserHeight, this._$height);
     if (this._restoreShowShadow != null) this.setShowShadow(this._restoreShowShadow);
 
     // restore resizability
@@ -5330,8 +5361,8 @@ isc.defineClass("Portlet", "Window").addProperties({
         this.setHeight(height);
 
         // But, give it the same _userHeight and _userWidth so they get restored.
-        this._userHeight = userHeight;
-        this._userWidth = userWidth;
+        this.updateUserSize(userWidth, this._$width);
+        this.updateUserSize(userHeight, this._$height);
 
         this.moveTo(pageLeft, pageTop);
         this.bringToFront();
@@ -5493,7 +5524,7 @@ isc.defineClass("PortalColumnHeader", "HLayout").addProperties({
 
         this.addMember(isc.MenuButton.create({
             title: "Column Properties",
-            width: 150,
+            autoFit: true, //width: 150,
             menu: this.menu
         }));
 
@@ -5838,7 +5869,7 @@ isc.defineClass("PortalRow", "Layout").addProperties({
         if (!this.minimized) return;
 
         this.setHeight(this._restoreHeight);
-        this._userHeight = this._restoreUserHeight;
+        this.updateUserSize(this._restoreUserHeight, this._$height);
 
         delete this._restoreHeight;
         delete this._restoreUserHeight;
@@ -5955,7 +5986,7 @@ isc.defineClass("PortalRow", "Layout").addProperties({
                 // The portlet's height should always be 100%, but we specify null here
                 // because otherwise this sets _userHeight to 100% as well, and that
                 // will get picked up the *next* time we move the portlet.
-                portlet._userHeight = null;
+                portlet.updateUserSize(null, self._$height);
                 portlet._percent_height = null;
 
                 // If there is no explicit rowHeight, then use the userHeight
@@ -5970,7 +6001,8 @@ isc.defineClass("PortalRow", "Layout").addProperties({
                     self.setHeight(portlet.rowHeight);
                     // This is needed if the row is still being initialized ... otherwise,
                     // the height gets reset later.
-                    self._userHeight = isc.NumberUtil.parseIfNumeric(portlet.rowHeight);
+                    self.updateUserSize(isc.NumberUtil.parseIfNumeric(portlet.rowHeight),
+                                        self._$height);
                 }
             }
         });
@@ -7961,6 +7993,7 @@ isc.defineClass("PortalLayout", "Layout").addProperties({
 // </pre>
 // </smartgwt>
 //
+//  @inheritsFrom Window
 //  @treeLocation Client Reference/Control
 //  @visibility external
 //<
@@ -8476,7 +8509,7 @@ isc.Dialog.addProperties({
             var target = isc.EH.getTarget(),
                 index = this.getMemberNumber(target);
             if (target !== this && index !== -1 && isc.isA.StatefulCanvas(target)) {
-                this.topElement.buttonClick(target, index);
+                this.creator.buttonClick(target, index);
             }
         }
     })
@@ -10140,7 +10173,6 @@ isc.MultiSortPanel.addProperties({
         _constructor: "IButton",
         icon: "[SKINIMG]actions/add.png",
         autoFit: true,
-        showDisabled: false,
         autoParent: "topLayout",
         click: "this.creator.addLevel()"
     },
@@ -10159,7 +10191,6 @@ isc.MultiSortPanel.addProperties({
         _constructor: "IButton",
         icon: "[SKINIMG]actions/remove.png",
         autoFit: true,
-        showDisabled: false,
         autoParent: "topLayout",
         click: "this.creator.deleteSelectedLevel()"
     },
@@ -10178,7 +10209,6 @@ isc.MultiSortPanel.addProperties({
         _constructor: "IButton",
         icon: "[SKINIMG]RichTextEditor/copy.png",
         autoFit: true,
-        showDisabled: false,
         autoParent: "topLayout",
         click: "this.creator.copySelectedLevel()"
     },
@@ -10203,10 +10233,8 @@ isc.MultiSortPanel.addProperties({
     levelUpButtonDefaults: {
         _constructor: "ImgButton",
         src: "[SKINIMG]common/arrow_up.gif",
-        height: 22,
         width: 20,
         imageType: "center",
-        showDisabled: false,
         showRollOver: false,
         showDown: false,
         showFocused: false,
@@ -10234,10 +10262,8 @@ isc.MultiSortPanel.addProperties({
     levelDownButtonDefaults: {
         _constructor: "ImgButton",
         src: "[SKINIMG]common/arrow_down.gif",
-        height: 22,
         width: 20,
         imageType: "center",
-        showDisabled: false,
         showRollOver: false,
         showDown: false,
         showFocused: false,
@@ -10456,6 +10482,10 @@ isc.MultiSortPanel.addMethods({
 
         this.setButtonStates();
 
+    },
+
+    draw : function () {
+        this.Super("draw", arguments);
         if (this.initialSort) this.setSortSpecifiers(this.initialSort);
         else this.addLevel();
     },
@@ -10602,6 +10632,7 @@ isc.MultiSortPanel.addMethods({
         // select and edit a record
         this.optionsGrid.selectSingleRecord(rowNum);
         this.optionsGrid.startEditing(rowNum, this.propertyFieldNum);
+        //this.optionsGrid.selectSingleRecord(rowNum);
     },
 
     moveSelectedLevelUp : function () {
@@ -11108,6 +11139,7 @@ isc.MultiSortDialog.addMethods({
 // <code>pane</code> property which will be displayed in the main pane when that tab is
 // selected.
 //
+//  @inheritsFrom Canvas
 //  @treeLocation Client Reference/Layout
 //  @visibility external
 //<
@@ -11126,16 +11158,25 @@ isc.TabSet.addProperties({
     // ----------------------------------------------------------------------------------------
     //>    @attr    tabSet.tabs        (Array of Tab : null : IRW)
     //
-    // An array of tab objects, specifying the title and pane contents of each tab in the
-    // TabSet.  When developing in JavaScript, tabs are specified as an array of object
-    // literals, not instances - see +link{Tab}.
+    // An array of +link{Tab} objects, specifying the title and pane contents of each tab in the TabSet.
+    // <smartclient>When developing in JavaScript, tabs are specified as an array of object literals,
+    // not instances - see +link{Tab}.</smartclient>
+    // <smartgwt>Tab instances are not widgets, they just provide configuration such as title and
+    // icon.</smartgwt>
     // <p>
-    // You can add and remove tabs after creating the TabSet by calling +link{TabSet.addTab}
+    // After providing +link{Tab} instances to <code>setTabs()</code>, the TabSet creates actual UI
+    // widgets to serve as interactive tabs. Any further modifications to tabs should be performed
+    // via TabSet APIs such as +link{TabSet.setTabTitle}, +link{TabSet.setTabIcon} and
+    // +link{TabSet.setTabPane}.
+    // <p>
+    // You can add and remove tabs after creating the TabSet by calling +link{TabSet.addTab} and
+    // +link{TabSet.removeTab}
     // @visibility external
     // @example tabsOrientation
     //<
 
     //> @object Tab
+    // <smartclient>
     // Tabs are specified as objects, not class instances.  For example, when
     // developing in JavaScript, a typical initialization block for a TabSet would look like
     // this:
@@ -11156,6 +11197,15 @@ isc.TabSet.addProperties({
     //    &lt;/tabs&gt;
     // &lt;/TabSet&gt;
     // </pre>
+    // </smartclient>
+    // <smartgwt>
+    // Tab instances for use with {@link com.smartgwt.client.widgets.tab.TabSet}. Tab
+    // instances specify the appearance ({@link com.smartgwt.client.widgets.tab.Tab#setTitle setTitle},
+    // {@link com.smartgwt.client.widgets.tab.Tab#setIcon setIcon}) of the tab, and provide
+    // the tab's {@link com.smartgwt.client.widgets.tab.Tab#getPane pane}. See
+    // {@link com.smartgwt.client.widgets.tab.TabSet#setTabs setTabs} for
+    // further details.
+    // </smartgwt>
     //
     // @treeLocation Client Reference/Layout/TabSet
     // @visibility external
@@ -12885,7 +12935,7 @@ createPane : function (pane, tab) {
 
 
     this.paneContainer.addMember(pane);
-    pane._containerID = this.ID;
+    isc.Canvas.setCanvasPanelContainer(pane, this);
     return pane;
 },
 
@@ -13896,7 +13946,20 @@ getControl : function (control) {
                 vertical:vertical,
                 width:vertical ? (this.tabBarThickness - this._tabBar.baseLineThickness) : (2*sbsize),
                 height:vertical ? (2*sbsize) : (this.tabBarThickness - this._tabBar.baseLineThickness),
-                items:[isc.addProperties({name:this.getScrollerBackImgName(),
+                items: this.needEmptyButton ? [{height:vertical ? 5 : null,
+                                                width:vertical ? null : 6,
+                                                src:isc.Canvas._blankImgURL},
+                       isc.addProperties({name:this.getScrollerBackImgName(),
+                              width:vertical ? null : sbsize - this.scrollerForwardHMarginSize,
+                              height:vertical ? sbsize - this.scrollerForwardVMarginSize : null}, this.scrollerBackImg),
+                       {height:vertical ? 8 : null,
+                        width:vertical ? null : 10,
+                        src:isc.Canvas._blankImgURL},
+                       isc.addProperties({name:this.getScrollerForwardImgName(),
+                              width:vertical ? null : sbsize - this.scrollerBackHMarginSize,
+                              height:vertical ? sbsize - this.scrollerBackVMarginSize : null}, this.scrollerForwardImg)]
+                        :
+                        [isc.addProperties({name:this.getScrollerBackImgName(),
                               width:vertical ? null : sbsize - this.scrollerForwardHMarginSize,
                               height:vertical ? sbsize - this.scrollerForwardVMarginSize : null}, this.scrollerBackImg),
                        isc.addProperties({name:this.getScrollerForwardImgName(),
@@ -14852,7 +14915,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version v11.0p_2017-01-14/LGPL Deployment (2017-01-14)
+  Version SNAPSHOT_v11.1d_2017-03-13/LGPL Deployment (2017-03-13)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

@@ -206,7 +206,6 @@ public class PostgreSqlDataBase implements I_DataBase {
 		try{
 			dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
 			statement = dbCon.createStatement();  
-// MySQL feature			statement.executeUpdate("SET NAMES 'utf8'");
 			ResultSet rs = statement.executeQuery(sql);
 			dsResponce.data = rs;
 			dsResponce.dbStatement = statement;

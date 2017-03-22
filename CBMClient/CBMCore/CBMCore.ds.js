@@ -412,25 +412,6 @@ isc.CBMDataSource.create({
       type: "text",
       UIPath: "Information System aspects"
     }, {
-      name: "DBStorage",
-      type: "DBStorage",
-      title: "DataBase Store",
-      foreignKey: "PrgComponent.ID",
-      editorType: "LinkControl", //"comboBox",
-      optionDataSource: "DBStorage",
-      valueField: "ID",
-      displayField: "SysCode",
-      pickListWidth: 450,
-      pickListFields: [{
-        name: "ID",
-        width: 30
-      }, {
-        name: "SysCode"
-      }, {
-        name: "Description"
-      }],
-      UIPath: "Information System aspects"
-    }, {
       name: "ExprFrom",
       type: "text",
       UIPath: "Information System aspects"
@@ -488,7 +469,22 @@ isc.CBMDataSource.create({
       titleOrientation: "top",
       colSpan: 6,
       UIPath: "Information System aspects"
-    }, {
+    }, /*{
+      name: "DataLocations",
+      type: "DataLocation",
+      title: "DataBase Store",
+      canSave: true,
+      copyLinked: true,
+      deleteLinked: true,
+      editorType: "CollectionAggregateControl",
+      relatedConcept: "DataLocation",
+      backLinkRelation: "ForConcept",
+      mainIDProperty: "ID",
+      showTitle: true,
+      titleOrientation: "top",
+      colSpan: 6,
+      UIPath: "Information System aspects"
+    },*/ {
       name: "Functions",
       type: "custom",
       canSave: true,
@@ -1301,13 +1297,19 @@ isc.CBMDataSource.create({
     cellHover: "Create View Fields from Relations",
     icon: isc.Page.getAppImgDir() + "add.png",
     click: function (topElement) {
-      createTable(
-        "Relation",
-        arguments[0].context,
-        this.createRecordsFunc // On called window close callback function.
-      );
+      var tbl = createTable(
+                "Relation",
+                arguments[0].context,
+                this.createRecordsFunc, // On called window close callback function.
+                {
+                }
+              );
+      var concept = arguments[0].context.topElement.valuesManager.getValue("ForConcept");
+      getRelationsForConcept(concept, tbl.innerGrid.grid.setData.bind(tbl.innerGrid.grid));
+     
       return false;
-    },
+    },			
+
     // Function for creation of records. Change	of argument types is enough.
     createRecordsFunc: function (srcRecords, context) {
       if (typeof(srcRecords) == 'undefined' || srcRecords == null) {

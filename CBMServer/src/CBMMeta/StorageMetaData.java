@@ -78,10 +78,11 @@ public class StorageMetaData implements I_StorageMetaData {
 	{
 		String forView = req.dataSource;
 		Date forDate = req.forDate;
-		return getSelect(forView, forDate);
+		String forUser = req.currUser;
+		return getSelect(forView, forDate, forUser);
 	}
 	
-	private SelectTemplate getSelect(String forView, Date forDate) throws SQLException 
+	private SelectTemplate getSelect(String forView, Date forDate, String forUser) throws SQLException 
 	{
 		SelectTemplate out = null;
 		
@@ -126,7 +127,7 @@ public class StorageMetaData implements I_StorageMetaData {
 //				forConceptId = metaResponce.data.getString("IDConcept");
 				forViewId = metaResponce.data.getString("IDView");
 				
-				out.from = metaResponce.data.getString("ExprFrom").replaceAll("/forDate/", forDate.toString());
+				out.from = metaResponce.data.getString("ExprFrom").replaceAll("/forDate/", forDate.toString()).replaceAll("/forUser/", forUser);
 				out.where = metaResponce.data.getString("ExprWhere");
 				out.orderby = metaResponce.data.getString("ExprOrder");
 				out.groupby = metaResponce.data.getString("ExprGroup");
@@ -198,7 +199,17 @@ public class StorageMetaData implements I_StorageMetaData {
 		{
 			return out;
 		}
-
+		// ---- If changes provided to MetaData concepts - drop Metadata for that concept
+		if (forType == "Concept" || forType == "Relation" || forType == "PrgView" || forType =="PrgViewField") 
+		{
+//			selectInfo.remove(forType);
+//			updInsInfo.remove(forType);
+//			delInfo.remove(forType);
+			selectInfo.clear();
+			updInsInfo.clear();
+			delInfo.clear();
+		}
+	
 		DSResponce metaResponce = null;
 		SelectTemplate mdForSelect = new SelectTemplate();
 		
