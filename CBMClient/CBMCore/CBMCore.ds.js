@@ -1302,6 +1302,7 @@ isc.CBMDataSource.create({
                 arguments[0].context,
                 this.createRecordsFunc, // On called window close callback function.
                 {
+                  ForConcept: "empty list"
                 }
               );
       var concept = arguments[0].context.topElement.valuesManager.getValue("ForConcept");
