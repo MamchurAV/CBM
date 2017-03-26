@@ -128,7 +128,8 @@ isc.CBMDataSource.create({
     title: "Objects of this Concept",
     icon: isc.Page.getAppImgDir() + "view.png",
     click: function () {
-      createTable(this.context.getSelectedRecord()["SysCode"]);
+      var ds = this.context.getSelectedRecord()["SysCode"];	
+      createTable(ds);
       return false;
     },
   }, {
@@ -1287,32 +1288,38 @@ isc.CBMDataSource.create({
 isc.CBMDataSource.create({
   ID: "PrgViewField",
   dbName: Window.default_DB,
-//  	cacheAllData: true, 
+ 	cacheAllData: true, 
   titleField: "SysCode",
   infoField: "Description",
   // 	Actions for instance creation from another entity.
   CreateFromMethods: [{
     title: "From Relations",
     showHover: true,
-    cellHover: "Create View Fields from Relations",
+    cellHover: "Create View Fields based on Relations of viewed Concept",
     icon: isc.Page.getAppImgDir() + "add.png",
     click: function (topElement) {
       var tbl = createTable(
                 "Relation",
                 arguments[0].context,
                 this.createRecordsFunc, // On called window close callback function.
-                {
-                  ForConcept: "empty list"
+                {ForConcept: "empty list"},
+                null,
+                function(tbl){
+                  // Set Relations records in just created Table 
+                  var concept = arguments[0].context.topElement.valuesManager.getValue("ForConcept");
+                  getRelationsForConcept(concept, tbl.innerGrid.grid.setData.bind(tbl.innerGrid.grid));
                 }
               );
-      var concept = arguments[0].context.topElement.valuesManager.getValue("ForConcept");
-      getRelationsForConcept(concept, tbl.innerGrid.grid.setData.bind(tbl.innerGrid.grid));
+      // Set Relations records in just created Table 
+      // var concept = arguments[0].context.topElement.valuesManager.getValue("ForConcept");
+      // getRelationsForConcept(concept, tbl.innerGrid.grid.setData.bind(tbl.innerGrid.grid));
      
       return false;
     },			
 
     // Function for creation of records. Change	of argument types is enough.
     createRecordsFunc: function (srcRecords, context) {
+      
       if (typeof(srcRecords) == 'undefined' || srcRecords == null) {
         return;
       }
@@ -1323,6 +1330,7 @@ isc.CBMDataSource.create({
         PrgViewField.CreateFromMethods[0].createPrgViewFieldFromRelation,
         context);
     },
+    
     createPrgViewFieldFromRelation: function (dstRec, srcRec, PrgView) {
       if (typeof(srcRec) == 'undefined' || srcRec == null) {
         return;
@@ -1334,7 +1342,7 @@ isc.CBMDataSource.create({
       // --- Create class - specific fields
       dstRec["Odr"] = srcRec["Odr"];
       dstRec["ForPrgView"] = PrgView;
-      dstRec["ForRelation"] = srcRec["ForRelation"];
+      dstRec["ForRelation"] = srcRec["ID"];
       dstRec["Title"] = srcRec["Description"];
       dstRec["Hint"] = srcRec["Notes"];
       dstRec["Mandatory"] = false;
@@ -1346,6 +1354,32 @@ isc.CBMDataSource.create({
       dstRec["ColSpan"] = 1;
       dstRec["RowSpan"] = 1;
       dstRec["PickListWidth"] = 400;
+/*    if(srcRec.RelationKind.SysCode !== "Value") {
+		switch (record["RelationKind"]) {
+		  case "Link":
+			dstRec["ControlType"] = "LinkControl";
+			break;
+		  case "BackLink":
+			dstRec["ControlType"] = "CollectionControl";
+			break;
+//		  case "Aggregate":
+//			dstRec["ControlType"] = "LinkControl";
+//			break;
+		  case "BackAggregate":
+			dstRec["ControlType"] = "CollectionAggregateControl";
+			break;
+		  case "CrossLink":
+			dstRec["ControlType"] = "CrossLinkControl";
+			break;
+		  case "Command":
+			dstRec["ControlType"] = "Button";
+			break;
+		};
+		  dstRec["DataSourceView"] = srcRec.RelatedConcept;
+		  dstRec["ValueField"] = ;
+		  dstRec["DisplayField"] = ;
+		  dstRec["PickListFields"] = ;
+      }*/
     }
   }],
 

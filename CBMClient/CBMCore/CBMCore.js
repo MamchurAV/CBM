@@ -258,19 +258,25 @@ function generateDStext(forView, futherActions) {
   // --- Some preparations ---
   var viewFields;
   var relations;
-  // TODO: Set criteria dynamically in place (in callbacks), not relay on closure
-  viewFields = viewFieldRS.findAll({ForPrgView: viewRec.ID});
-  if (!viewFields) {
-    isc.warn("No ViewFields found for " + forView);
-    return null;
-  }
+  ///////////////////////////////
+//  var filter = parseJSON("{\"ForPrgView\" : \"" + viewRec.ID + "\" }");
+//		{"ForPrgView": viewRec.ID},
+	isc.DataSource.get("PrgViewField").fetchData(
+    {ForPrgView: viewRec.ID},
+		function (dsResponce, data, dsRequest) {
+		viewFields = data;
+		  if (!viewFields) {
+			isc.warn("No ViewFields found for " + forView);
+			return null;
+		  }
   // Relations with respect of base concepts relations
   getRelationsForConcept(conceptRec.ID,
-        function (data) {
-            relations = data;
+        function (relationsData) {
+            relations = relationsData;
 
         // --- Just fields creation ---
-          for (var i = 0; i < viewFields.getLength(); i++) {
+          var viewFieldsCount = viewFields.getLength();
+          for (var i = 0; i < viewFieldsCount; i++) {
             var currentRelation = relations.find("ID", viewFields[i].ForRelation);
             if (!currentRelation) {
               isc.warn(isc.CBMStrings.MD_NoRelationFound + viewFields[i].SysCode + isc.CBMStrings.MD_ForView + forView);
@@ -496,7 +502,8 @@ function generateDStext(forView, futherActions) {
           }
     }
   );
-
+});
+//////////////////////////////
 }
 
 
@@ -3152,9 +3159,9 @@ isc.InnerGrid.addProperties({
       that.menuContainer.setMembers(innerGridDefaultMenu);
     }
 
-    // --- Function initWidget() work continuation after long continueInitInnerGrid() definition...
+    // --- Function initWidget() work flow continuation after long continueInitInnerGrid() definition...
     if (!ds.getFields) {
-      testDS(ds, this.continueInitInnerGrid);
+      testDS.bind(this, ds, this.continueInitInnerGrid);
       return;
     }
     // --- Run function if not done erlier in callback ---
@@ -3565,29 +3572,41 @@ isc.TableWindow.addProperties({
   showFooter: true,
   context: null,
   innerGrid: null,
+  callback: null,
+  afterCreate: null,
   initWidget: function () {
-    this.Super("initWidget", arguments);
-    testDS(this.dataSource); // Dynamic DS creation if needed
-    this.innerGrid = isc.InnerGrid.create({
-      dataSource: this.dataSource,
-      context: this.context,
-      treeRoot: this.treeRoot,
-      width: "100%",
-      defaultHeight: "500",
-      autoSize: true
-    });
-
-    this.addItems(
-      [
+    
+    this.continueAfterDSTested = function(ds){
+      this.Super("initWidget", arguments);
+    
+	    this.innerGrid = isc.InnerGrid.create({
+        dataSource: this.dataSource,
+        context: this.context,
+        treeRoot: this.treeRoot,
+        width: "100%",
+        defaultHeight: "500",
+        autoSize: true
+      });
+	
+      this.addItems(
+        [
         // TODO Activate Filter by special button
         // isc.FilterBuilder.create({ dataSource: this.dataSource, topOperator: "and" }),
         this.innerGrid
-      ]);
-
-    var titleDS = this.getDataSource().title;
-    this.title = (titleDS ? titleDS : this.dataSource) + isc.CBMStrings.TableWindow_Title;
-
-    this.setPosition();
+        ]);
+    
+      var titleDS = this.getDataSource().title;
+      this.title = (titleDS ? titleDS : this.dataSource) + isc.CBMStrings.TableWindow_Title;
+    
+      this.setPosition();
+      
+      if(this.afterCreate){
+        this.afterCreate(this);
+      }
+    }
+    
+    testDS(this.dataSource, this.continueAfterDSTested.bind(this)); // Dynamic DS creation if needed
+     
   },
 
   onCloseClick: function () {
@@ -3606,46 +3625,60 @@ isc.TableWindow.addProperties({
 });
 
 //---- Stand-along independent function, that creates TableWindow from elsewhere for entity view (DS) type ----
-function createTable(forType, context, callback, filter, rootIdValue) {
-  var table = isc.TableWindow.create({
-    dataSource: forType,
-    context: context,
-    callback: callback,
-    treeRoot: rootIdValue
-  });
+function createTable(forType, context, callback, filter, rootIdValue, afterCreate) {
+  // Dynamic DS creation if needed
+	testDS(forType, 
+    function(){
+      
+      initCreatedTable = function(table){
+        if (!table.innerGrid || !table.innerGrid.grid) {
+          return;
+        }
 
-  if (table.innerGrid.grid == undefined) {
-    return;
-  }
+        if (rootIdValue) {
+          table.innerGrid.treeRoot = rootIdValue;
+        }
 
-  if (rootIdValue) {
-    table.innerGrid.treeRoot = rootIdValue;
-  }
-
-  // TODO here - add previous stored Filters if any
-  //		filter = {Del:false};
-  if (context === undefined) {
-    context = table;
-  }
-  if (filter !== undefined && filter !== null && context != table) {
-    filter = isc.DataSource.combineCriteria(filter, table.innerGrid.grid.getCriteria());
-    table.innerGrid.grid.setCriteria(filter);
-  } else {
-    filter = table.innerGrid.grid.getCriteria();
-  }
-  table.innerGrid.grid.fetchData(filter, function (dsResponse, data, dsRequest) {
-    if (context.getDataSource === undefined) {
-      if (!context.innerGrid.grid.hasAllData()) {
-        context.innerGrid.grid.setCacheData(data);
+        // TODO here - add previous stored Filters if any
+        //		filter = {Del:false};
+        if (context === undefined) {
+          context = table;
+        }
+        if (filter !== undefined && filter !== null && context != table) {
+          filter = isc.DataSource.combineCriteria(filter, table.innerGrid.grid.getCriteria());
+          table.innerGrid.grid.setCriteria(filter);
+        } else {
+          filter = table.innerGrid.grid.getCriteria();
+        }
+        table.innerGrid.grid.fetchData(filter, function (dsResponse, data, dsRequest) {
+          if (context.getDataSource === undefined) {
+            if (!context.innerGrid.grid.hasAllData()) {
+              context.innerGrid.grid.setCacheData(data);
+            }
+          } else {
+            if (!context.getDataSource().hasAllData()) {
+              context.getDataSource().setCacheData(data);
+            }
+          }
+        });
+        table.show();
+        if (afterCreate){
+          afterCreate(table);
+        }
+        return table;
       }
-    } else {
-      if (!context.getDataSource().hasAllData()) {
-        context.getDataSource().setCacheData(data);
-      }
+      
+      var table = isc.TableWindow.create({
+        dataSource: forType,
+        context: context,
+        callback: callback,
+        treeRoot: rootIdValue,
+        afterCreate: initCreatedTable
+      });
+      
     }
-  });
-  table.show();
-  return table;
+  ); 
+  // return table;
 };
 
 
