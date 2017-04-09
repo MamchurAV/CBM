@@ -352,7 +352,7 @@ isc.CBMDataSource.create({
     //]
   }, {
     name: "Relations",
-    type: "custom",
+    type: "Relation",
     title: "Свойства",
 //      canSave: false, // ??????????????????????
     canSave: true,
@@ -456,7 +456,7 @@ isc.CBMDataSource.create({
       UIPath: "Information System aspects"
     }, {
       name: "Views",
-      type: "custom",
+      type: "PrgView",
       title: "Interface presentations",
       canSave: true,
       copyLinked: true,
@@ -470,8 +470,9 @@ isc.CBMDataSource.create({
       titleOrientation: "top",
       colSpan: 6,
       UIPath: "Information System aspects"
-    }, /*{
+    }, {
       name: "DataLocations",
+      kind: "BackAggregate",
       type: "DataLocation",
       title: "DataBase Store",
       canSave: true,
@@ -485,9 +486,9 @@ isc.CBMDataSource.create({
       titleOrientation: "top",
       colSpan: 6,
       UIPath: "Information System aspects"
-    },*/ {
+    }, {
       name: "Functions",
-      type: "custom",
+      type: "PrgFunction",
       canSave: true,
       editorType: "CollectionAggregateControl",
       copyLinked: true,
@@ -1273,7 +1274,7 @@ isc.CBMDataSource.create({
     editorType: "select"
   }, {
     name: "Fields",
-    type: "custom",
+    type: "PrgViewField",
     copyLinked: true,
     deleteLinked: true,
     canSave: true,
@@ -1288,7 +1289,7 @@ isc.CBMDataSource.create({
 isc.CBMDataSource.create({
   ID: "PrgViewField",
   dbName: Window.default_DB,
- 	cacheAllData: true, 
+ 	//cacheAllData: true, 
   titleField: "SysCode",
   infoField: "Description",
   // 	Actions for instance creation from another entity.
@@ -1566,7 +1567,7 @@ isc.CBMDataSource.create({
     inList: true
   }, {
     name: "Items",
-    type: "custom",
+    type: "PrgMenuItem",
     copyLinked: true,
     deleteLinked: true,
     canSave: true,

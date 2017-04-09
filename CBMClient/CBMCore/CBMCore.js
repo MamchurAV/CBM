@@ -1,5 +1,5 @@
 ﻿// ============================================================================
-// ========== Temporary candidates zone =======================================
+// ========== Temporary candidates section =======================================
 // ============================================================================
 // EMPTY NOW
 //alert(new Date().getTime().toString(16));
@@ -64,8 +64,7 @@ if (!Array.prototype.includes) {
     }
     return false;
   };
-}
-;
+};
 
 
 // --- Useful to clone: Object, Array, Date, String, Number, or Boolean.  ----------------
@@ -265,12 +264,12 @@ function generateDStext(forView, futherActions) {
     {ForPrgView: viewRec.ID},
 		function (dsResponce, data, dsRequest) {
 		viewFields = data;
-		  if (!viewFields) {
+		if (!viewFields) {
 			isc.warn("No ViewFields found for " + forView);
 			return null;
-		  }
-  // Relations with respect of base concepts relations
-  getRelationsForConcept(conceptRec.ID,
+		}
+    // Relations with respect of base concepts relations
+    getRelationsForConcept(conceptRec.ID,
         function (relationsData) {
             relations = relationsData;
 
@@ -288,6 +287,7 @@ function generateDStext(forView, futherActions) {
         //		var relationKindRec = relationKindRS.find("SysCode", currentRelation.RelationKind);
         //		var kind = relationKindRec.SysCode;
             var kind = currentRelation.RelationKind;
+            resultDS += "kind: \"" + kind + "\", ";
 
             var fldTitle = getLang(viewFields[i].Title, tmp_Lang, true);
             if (fldTitle === null) {
@@ -366,6 +366,11 @@ function generateDStext(forView, futherActions) {
             }
             var relatedConceptRec = conceptRS.find("ID", currentRelation.RelatedConcept);
             var backLinkRelationRec = relationRS.find("ID", currentRelation.BackLinkRelation);
+            // VVVVVVVVVVVVVVVV
+            if (viewFields[i].ControlType !== "null") {
+              resultDS += "editorType: \"" + viewFields[i].ControlType + "\", ";
+            }
+            
             var type = relatedConceptRec.SysCode;
             switch (type) {
               case "Integer":
@@ -422,7 +427,9 @@ function generateDStext(forView, futherActions) {
 
                 if (kind === "Link") {
                   resultDS += "type: \"" + type + "\", ";
-                  resultDS += "editorType: \"LinkControl\", ";
+                  if (viewFields[i].ControlType === "null"){
+                    resultDS += "editorType: \"LinkControl\", ";
+                  }
                   // Concerning "foreignKey" below: If "foreignKey" is not single - hierarchy won't work!
                   // because first "foreignKey" field are taken as hierarchy link - no matter "rootValue".
                   // So it had to be placed to hierarchy field only.
@@ -460,12 +467,11 @@ function generateDStext(forView, futherActions) {
                     resultDS += "pickListWidth: 450 ";
                   }
                 } else if (kind === "BackLink" || kind === "BackAggregate") {
-                  resultDS += "type: \"custom\", ";
+//                  resultDS += "type: \"custom\", ";
+                  resultDS += "type: \"" + backLinkRelationRec.SysCode + "\", ";
                   resultDS += "canSave: true, ";
-                  var editorType = editorType
-                  if (viewFields[i].ControlType !== "null") {
-                    resultDS += "editorType: \"" + viewFields[i].ControlType + "\", ";
-                  } else {
+//                  var editorType = editorType
+                  if (viewFields[i].ControlType === "null") {
                     resultDS += "editorType: \"" + (kind === "BackAggregate" ? "CollectionAggregateControl" : "CollectionControl") + "\", ";
                   }
                   resultDS += "relatedConcept: \"" + relatedConceptRec.SysCode + "\", ";
@@ -484,10 +490,6 @@ function generateDStext(forView, futherActions) {
                     resultDS += "optionCriteria: " + currentRelation.LinkFilter + ", ";
                   }
                   resultDS += "titleOrientation: \"top\" ";
-                } else {
-                  if (viewFields[i].ControlType !== "null") {
-                    resultDS += "editorType: \"" + viewFields[i].ControlType + "\"";
-                  }
                 }
             }
 
@@ -520,7 +522,7 @@ function createDS(forView, futherActions) {
     }
     // --- Call for program flow after DS creation
     if (futherActions && futherActions != null) {
-      futherActions(resultDS);
+      futherActions(null);
     }
   })
 }
@@ -1441,27 +1443,44 @@ isc.CBMDataSource.addProperties({
       if (typeof(this.getField(atrNames[i]).hidden) == "undefined" || this.getField(atrNames[i]).hidden !== true
       	  || this.getField(atrNames[i]).inList ) {
 //         this.getField(atrNames[i]).hidden = false; <<< prevent fields of hidden columns lost
-      
-        var currRoot = this.getField(atrNames[i]).UIPath;
-        if (typeof(currRoot) == "undefined" || currRoot == null) {
-          currRoot = "Main";
-        }
-
-        var notFound = true;
-        var j = 0;
-        for (; j < UIPaths.length; j++) {
-          if (UIPaths[j] === currRoot) {
-            notFound = false;
-            var nItem = items[[j]].length;
-       		items[j][nItem] = isc.FormItem.create({name:atrNames[i], width:"100%", hidden: null, showIf: null});
-            break;
+        var that = this;
+        
+        // this.createField = function(){
+          var currRoot = that.getField(atrNames[i]).UIPath;
+          if (typeof(currRoot) == "undefined" || currRoot == null) {
+            currRoot = "Main";
           }
-        }
-        if (notFound) {
-          UIPaths[j] = currRoot;
-          items[j] = [];
-          items[j][0] = isc.FormItem.create({name:atrNames[i], width:"100%", hidden: null, showIf: null});
-        }
+
+          var notFound = true;
+          var j = 0;
+          for (; j < UIPaths.length; j++) {
+            if (UIPaths[j] === currRoot) {
+              notFound = false;
+              var nItem = items[[j]].length;
+            items[j][nItem] = isc.FormItem.create({name:atrNames[i], width:"100%", hidden: null, showIf: null});
+              break;
+            }
+          }
+          if (notFound) {
+            UIPaths[j] = currRoot;
+            items[j] = [];
+            items[j][0] = isc.FormItem.create({name:atrNames[i], width:"100%", hidden: null, showIf: null});
+          }
+        // }
+        
+        // if (this.getField(atrNames[i]).kind === "Link" 
+            // || this.getField(atrNames[i]).kind === "BackLink"
+            // || this.getField(atrNames[i]).kind === "BackAggregate")
+        // {
+          // var relatedConcept = this.getField(atrNames[i]).relatedConcept;
+          // if(!relatedConcept){
+            // relatedConcept = this.getField(atrNames[i]).type;
+          // }
+          // testDS(relatedConcept, 
+                  // this.createField.bind(this));
+        // } else {
+          // this.createField();
+        // }
       }
     }
 
@@ -2615,6 +2634,7 @@ isc.InnerGrid.addProperties({
       isc.warn(isc.CBMStrings.NoDataSourceDefined);
       return;
     }
+    
     // Wery long continueInitInnerGrid() definition, for use directly OR in callback (if DS had to be created)
     this.continueInitInnerGrid = function () {
       ds = that.getDataSource();
@@ -3299,19 +3319,33 @@ isc.CollectionAggregateControl.addProperties({
   mainID: -1,
   aggregate: true, // <<<<<<<<<<<<<<<<
   createCanvas: function (form) {
-    this.innerGrid = isc.InnerGrid.create({
-      autoDraw: false,
-      //width: "100%", height: "80%", <- Bad experience: If so, inner grid will not resize
-      width: "*", height: "*",
-      dataSource: (this.optionDataSource ? this.optionDataSource : this.relatedConcept),
-      context: form // TODO: Part off: Provide settings to collection-controls too
-    });
-    this.innerGrid.grid.showFilterEditor = false;
-    this.innerGrid.grid.dependent = true;  // <<<<<<<<<<<<<<<<
-    return this.innerGrid;
+    var that = this;
+    var ds = (this.optionDataSource ? this.optionDataSource : this.relatedConcept);
+//    testDS(ds, function(){
+      that.innerGrid = isc.InnerGrid.create({
+        autoDraw: false,
+        // // //width: "100%", height: "80%", <- Bad experience: If so, inner grid will not resize
+        width: "*", height: "*",
+        dataSource: ds,
+        context: form // TODO: Part off: Provide settings to collection-controls too
+      });
+      // that.innerGrid.grid.showFilterEditor = false;
+      // that.innerGrid.grid.dependent = true;
+//    });
+    
+    // that.innerGrid = isc.InnerGrid.create({
+    // autoDraw: false,
+    // //width: "100%", height: "80%", <- Bad experience: If so, inner grid will not resize
+    // width: "*", height: "*",
+    // dataSource: ds,
+    // context: form // TODO: Part off: Provide settings to collection-controls too
+    // });
+    return that.innerGrid;
   },
 
   showValue: function (displayValue, dataValue, form, item) {
+    this.innerGrid.grid.showFilterEditor = false;
+    this.innerGrid.grid.dependent = true;
     // Lightweight variant - data are supplied
     if (dataValue && dataValue.length > 0) {
       this.innerGrid.grid.setData(dataValue);
