@@ -43,10 +43,9 @@ public class PostgreSqlDataBase implements I_DataBase {
 	}
 	
 	public PostgreSqlDataBase(){
-		// TODO replace with info from DB connection for current CBM Concept
 		dbURL = CBMStart.getParam("primaryDBUrl");
-		dbUs = "CBM";
-		dbCred = "cbm";
+		dbUs = CBMStart.getParam("primaryDBUs");
+		dbCred = CBMStart.getParam("primaryDBCred");
 	}
 	
 	public PostgreSqlDataBase(String a_dbUrl, String a_dbUs, String a_dbCred){

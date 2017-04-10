@@ -40,8 +40,8 @@ public class MSSqlDataBase implements I_DataBase {
 	
 	public MSSqlDataBase(){
 		dbURL = CBMStart.getParam("primaryDBUrl");
-		dbUs = "rr";
-		dbCred = "p@ssw0rd";
+		dbUs = CBMStart.getParam("primaryDBUs");
+		dbCred = CBMStart.getParam("primaryDBCred");
 	}
 	
 	public MSSqlDataBase(String a_dbUrl, String a_dbUs, String a_dbCred){

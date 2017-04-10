@@ -47,7 +47,7 @@ public class StorageMetaData implements I_StorageMetaData {
 			metaDB = new DB2DataBase();
 			break;
 		case "MSSQL":	
-			metaDB = new MSSqlDataBase();
+			metaDB = new MSSqlDataBase(dbUrl, dbUs, dbCred);
 			break;
 		}
 	}

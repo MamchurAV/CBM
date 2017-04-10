@@ -124,19 +124,19 @@ isc.CBMDataSource.create({
 
   MenuAdditions: [{
     isSeparator: true
-  }, {
-    title: "Objects of this Concept",
-    icon: isc.Page.getAppImgDir() + "view.png",
-    click: function () {
-      var ds = this.context.getSelectedRecord()["SysCode"];	
-      createTable(ds);
-      return false;
-    },
-  }, {
-    title: "Generate default Program View",
-    icon: isc.Page.getAppImgDir() + "add.png",
-    click: "sendCommand(\"GenerateDefaultView\", \"POST\", {forType: this.context.getSelectedRecord()[\"SysCode\"]}, null ); return false;"
-  }
+    }, {
+      title: "Objects of this Concept",
+      icon: isc.Page.getAppImgDir() + "view.png",
+      click: function () {
+        var ds = this.context.getSelectedRecord()["SysCode"];	
+        createTable(ds);
+        return false;
+      },
+    }, {
+      title: "Generate default Program View",
+      icon: isc.Page.getAppImgDir() + "add.png",
+      click: "sendCommand(\"GenerateDefaultView\", \"POST\", {forType: this.context.getSelectedRecord()[\"SysCode\"]}, null ); return false;"
+    }
   ],
 
   // Returns (by callback call!) relations for current concept, with merged parents hierarchy's relations.
@@ -231,7 +231,6 @@ isc.CBMDataSource.create({
 // 			callback([record]);
 // 		}
 // 	},
-
 
   fields: [{
     name: "Del",

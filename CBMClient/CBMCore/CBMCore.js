@@ -516,10 +516,14 @@ function createDS(forView, futherActions) {
   generateDStext(forView, function (resultDS) {
     // --- DS creation
     try {
-      eval(resultDS);
+      var ds = eval(resultDS);
     } catch (err) {
       isc.warn("Error in dynamically generearated DS " + forView + "."/*  Full generated text: " + resultDS*/);
     }
+	
+	// Get not-created yet link relations DataSources (without deeper iterations in this case)
+	ds.resolveLinks(futherActions);
+	
     // --- Call for program flow after DS creation
     if (futherActions && futherActions != null) {
       futherActions(null);
@@ -527,11 +531,16 @@ function createDS(forView, futherActions) {
   })
 }
 
-// --- Function that simply tests DS existence, and if absent - creates it/
+// --- Function that tests DS existence and links to first-level actuality, and if absent - creates it.
 function testDS(forView, futherActions) {
-  if (isc.DataSource.getDataSource(forView)) {
-    if (futherActions && futherActions != null) {
-      futherActions(null);
+  var ds = isc.DataSource.getDataSource(forView);	
+  if (ds) {
+    if(ds.resolvedLinks) {
+      if (futherActions && futherActions != null) {
+        futherActions(null);
+      }
+    } else {
+      ds.resolveLinks(futherActions);
     }
   } else {
     createDS(forView, futherActions);
@@ -737,9 +746,10 @@ function likeKey(val) {
   return false;
 }
 
+
 // Returns (by callback call) relations for current concept, with merged parents hierarchy's relations.
 function getRelationsForConcept(conceptId, callback) {
-	conceptDS = isc.DataSource.get("Concept");
+	var conceptDS = isc.DataSource.get("Concept"); // <<<<<<<<<<<<<<<<<<< var 
 	var relations = [];
 	var inherited = false;
 	function innerGetRelations(conceptId) {
@@ -770,7 +780,9 @@ function getRelationsForConcept(conceptId, callback) {
       inherited = true;  
       innerGetRelations(record.BaseConcept);
 	  } else {
-    if (callbackBound) {
+      // Initialize relations for discovered Concept
+      conceptDS.getCacheData().find({ID: conceptId}).relations = relations.sortByProperty("Odr", true); //<<<<<<<<<<<
+      if (callbackBound) {
         callbackBound(relations.sortByProperty("Odr", true));
       }
 	  }
@@ -1094,6 +1106,8 @@ isc.CBMDataSource.addProperties({
   abstr: false,
   isHierarchy: false,
   rec: null,
+  // run-time client-defined flag that linkes-kind relations DataSourses are actual
+  resolvedLinks: false,
 
   // ---- Special functions (methods) definition -------
 
@@ -1150,12 +1164,17 @@ isc.CBMDataSource.addProperties({
     return this.Super("transformRequest", arguments);
   },
 
-  transformResponse: function (dsResponse, dsRequest, data) {
-    var dsResponse = this.Super("transformResponse", arguments);
-    // ... do something to dsResponse ...
-    return dsResponse;
-  },
+  // transformResponse: function (dsResponse, dsRequest, data) {
+    // var dsResponse = this.Super("transformResponse", arguments);
+    // //... do something to dsResponse ...
+    // return dsResponse;
+  // },
 
+  resolveLinks(futherActions){
+    var relations = 
+    this.resolvedLinks = true;
+  },
+  
   // --- NOT ACTUAL COMMENT!(?) >>> Function for callback usage only!!! No explicit call intended!!!
   setID: function (record) {
     record["ID"] = isc.IDProvider.getNextID();
