@@ -521,7 +521,7 @@ function createDS(forView, futherActions) {
       isc.warn("Error in dynamically generearated DS " + forView + "."/*  Full generated text: " + resultDS*/);
     }
 	
-	// Get not-created yet link relations DataSources (without deeper iterations in this case)
+	// Guaratie existence of first-level DataSources
 	ds.resolveLinks(futherActions);
 	
     // --- Call for program flow after DS creation
@@ -530,6 +530,7 @@ function createDS(forView, futherActions) {
     }
   })
 }
+
 
 // --- Function that tests DS existence and links to first-level actuality, and if absent - creates it.
 function testDS(forView, futherActions) {
@@ -540,6 +541,7 @@ function testDS(forView, futherActions) {
         futherActions(null);
       }
     } else {
+      // Guaratie existence of first-level DataSources
       ds.resolveLinks(futherActions);
     }
   } else {
@@ -791,6 +793,17 @@ function getRelationsForConcept(conceptId, callback) {
   var callbackBound = callback.bind(this); 
   innerGetRelations(conceptId);
 }
+
+
+// Returns (by callback call) relations for current concept, with merged parents hierarchy's relations.
+function getRelationsForConceptName(conceptName, callback) {
+  	var conceptDS = isc.DataSource.get("Concept");
+  	var filter = {SysCode: conceptName };
+    var conceptRecord = conceptDS.getCacheData().find(filter);
+    var conceptID = conceptRecord.ID;
+    getRelationsForConcept(conceptID, callback);
+}
+
 
 // ============================================================================
 // ====================== Transactional data processing =======================
@@ -1170,10 +1183,46 @@ isc.CBMDataSource.addProperties({
     // return dsResponse;
   // },
 
+  
   resolveLinks(futherActions){
-    var relations = 
-    this.resolvedLinks = true;
+    var that = this;
+    getRelationsForConceptName(this.ID,
+            function (data) {
+              for (var i = 0; i < data.length; i++) {
+                var relation = data[i];
+                
+                if (relation.RelationKind === "Link" 
+                    || relation.RelationKind === "BackAggregate"
+                    || relation.RelationKind === "BackLink"
+                    || relation.RelationKind === "Aggregate")
+                {
+                  var conceptDS = isc.DataSource.get("Concept");
+                  var filter = {ID: relation.RelatedConcept };
+                  var conceptRecord = conceptDS.getCacheData().find(filter);
+                  var forView = conceptRecord.SysCode;
+    
+                  generateDStext(forView, function (resultDS) {
+                    // --- DS creation
+                    try {
+                      var ds = eval(resultDS);
+                    } catch (err) {
+                      isc.warn("Error in dynamically generearated DS " + forView + "."/*  Full generated text: " + resultDS*/);
+                    }
+                  });
+                }
+              
+              }
+              
+              that.resolvedLinks = true;
+              
+              if (futherActions){
+                futherActions();
+              }
+            }
+    );
+    
   },
+  
   
   // --- NOT ACTUAL COMMENT!(?) >>> Function for callback usage only!!! No explicit call intended!!!
   setID: function (record) {
