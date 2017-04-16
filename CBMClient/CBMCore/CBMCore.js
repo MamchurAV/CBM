@@ -511,41 +511,40 @@ function generateDStext(forView, futherActions) {
 
 // --- Function that provide creation of some Isomorphic DataSource (DS) itself
 //     from universal CBM metadata. ---
-function createDS(forView, futherActions) {
+function createDS(forView, callback) {
   // ---DS text generation ---
-  generateDStext(forView, function (resultDS) {
-    // --- DS creation
-    try {
-      var ds = eval(resultDS);
-    } catch (err) {
-      isc.warn("Error in dynamically generearated DS " + forView + "."/*  Full generated text: " + resultDS*/);
+  generateDStext(forView, 
+    function (resultDS) {
+      // --- DS creation
+      try {
+        var ds = eval(resultDS);
+      } catch (err) {
+        isc.warn("Error in dynamically generearated DS " + forView + "."/*  Full generated text: " + resultDS*/);
+      }
+    
+      if (ds){
+        // Guaratie existence of first-level DataSources
+        ds.resolveLinks(callback);
+      } else if (callback && callback != null) {
+        callback(null);
+      }
     }
-	
-	// Guaratie existence of first-level DataSources
-	ds.resolveLinks(futherActions);
-	
-    // --- Call for program flow after DS creation
-    if (futherActions && futherActions != null) {
-      futherActions(null);
-    }
-  })
+  );
 }
 
 
 // --- Function that tests DS existence and links to first-level actuality, and if absent - creates it.
-function testDS(forView, futherActions) {
+function testCreateDS(forView, callback) {
   var ds = isc.DataSource.getDataSource(forView);	
   if (ds) {
-    if(ds.resolvedLinks) {
-      if (futherActions && futherActions != null) {
-        futherActions(null);
-      }
-    } else {
-      // Guaratie existence of first-level DataSources
-      ds.resolveLinks(futherActions);
+    // Guarantie existence of linked DataSources (for one level in-depth)
+    if(!ds.hasResolvedLinks) {
+      ds.resolveLinks(callback);
+    } else if (callback && callback != null) {
+      callback(null);
     }
   } else {
-    createDS(forView, futherActions);
+    createDS(forView, callback);
   }
 }
 
@@ -1120,7 +1119,7 @@ isc.CBMDataSource.addProperties({
   isHierarchy: false,
   rec: null,
   // run-time client-defined flag that linkes-kind relations DataSourses are actual
-  resolvedLinks: false,
+  hasResolvedLinks: false,
 
   // ---- Special functions (methods) definition -------
 
@@ -1184,43 +1183,75 @@ isc.CBMDataSource.addProperties({
   // },
 
   
-  resolveLinks(futherActions){
-    var that = this;
+  // --- Ensure existing DataSources for link attributes to one level in depth.
+  // (DataSources if needed are generated in cycle asyncroniously, result callback maybe called earlier)
+  resolveLinks(callback){
+    that = this;
     getRelationsForConceptName(this.ID,
-            function (data) {
-              for (var i = 0; i < data.length; i++) {
-                var relation = data[i];
+        function (data) {
+          if (!data || data == null) return;
+          var dataCount = data.length;
+          var i = -1;
+          
+          var recursiveResolveLinks = function (callback) {
+            var goDeep = false;
+            i += 1;
+            if (i < dataCount) {
+              
+              var relation = data[i];
+              
+              if (relation.RelationKind === "Link" 
+                  || relation.RelationKind === "BackAggregate"
+                  || relation.RelationKind === "BackLink"
+                  || relation.RelationKind === "Aggregate")
+              {
+                var conceptDS = isc.DataSource.get("Concept");
+                var filter = {ID: relation.RelatedConcept };
+                var conceptRecord = conceptDS.getCacheData().find(filter);
+                var forView = conceptRecord.SysCode;
                 
-                if (relation.RelationKind === "Link" 
-                    || relation.RelationKind === "BackAggregate"
-                    || relation.RelationKind === "BackLink"
-                    || relation.RelationKind === "Aggregate")
-                {
-                  var conceptDS = isc.DataSource.get("Concept");
-                  var filter = {ID: relation.RelatedConcept };
-                  var conceptRecord = conceptDS.getCacheData().find(filter);
-                  var forView = conceptRecord.SysCode;
-    
-                  generateDStext(forView, function (resultDS) {
-                    // --- DS creation
-                    try {
-                      var ds = eval(resultDS);
-                    } catch (err) {
-                      isc.warn("Error in dynamically generearated DS " + forView + "."/*  Full generated text: " + resultDS*/);
-                    }
-                  });
+                if (forView !== that.ID) {
+                  var ds = isc.DataSource.getDataSource(forView);	
+                  if (!ds) {
+                    goDeep = true;
+                    generateDStext(forView, 
+                        function (resultDS) {
+                        try {
+                          eval(resultDS);
+
+                          if (i == dataCount - 1)
+                          {
+                            that.hasResolvedLinks = true;
+                            if (callback){
+                              callback();
+                            }
+                          } else {
+                            recursiveResolveLinks(callback);
+                          }
+                        } catch (err) {
+                          isc.warn("Error in dynamically generearated DS <" + forView + "> while links resolving. Error: " + err + " Full generated text: " + resultDS.substring(0, 100));
+                        }
+                    });
+                  }
                 }
+              } 
               
-              }
-              
-              that.resolvedLinks = true;
-              
-              if (futherActions){
-                futherActions();
+              if(!goDeep) {
+                if (i == dataCount - 1) {
+                  that.hasResolvedLinks = true;
+                  if (callback){
+                    callback();
+                  }
+                } else {
+                  recursiveResolveLinks(callback);
+                }
               }
             }
+          }
+          
+          recursiveResolveLinks(callback);
+        }
     );
-    
   },
   
   
@@ -1544,7 +1575,7 @@ isc.CBMDataSource.addProperties({
           // if(!relatedConcept){
             // relatedConcept = this.getField(atrNames[i]).type;
           // }
-          // testDS(relatedConcept, 
+          // testCreateDS(relatedConcept, 
                   // this.createField.bind(this));
         // } else {
           // this.createField();
@@ -2065,7 +2096,7 @@ function editRecords(records, context, conceptRecord, trans) {
     records[0].ds = ds;
     // --- Load concrete class instance data, if record's class not equal (is subclass) of context class (DataSource)
     if (context.dataSource != cls["SysCode"] && records[0]["infoState"] == "loaded") {
-      //			testDS(cls["SysCode"]);
+      //			testCreateDS(cls["SysCode"]);
       var currentRecordRS = isc.ResultSet.create({
         dataSource: cls["SysCode"],
         criteria: {
@@ -3249,7 +3280,7 @@ isc.InnerGrid.addProperties({
 
     // --- Function initWidget() work flow continuation after long continueInitInnerGrid() definition...
     if (!ds.getFields) {
-      testDS.bind(this, ds, this.continueInitInnerGrid);
+      testCreateDS.bind(this, ds, this.continueInitInnerGrid);
       return;
     }
     // --- Run function if not done erlier in callback ---
@@ -3294,7 +3325,7 @@ isc.InnerGrid.addProperties({
     }
   }
 
-}); // --- END InnerGrid ---
+}); // ----- END InnerGrid ------
 
 
 //----------------------------------------------------------------------------------------------------
@@ -3389,7 +3420,7 @@ isc.CollectionAggregateControl.addProperties({
   createCanvas: function (form) {
     var that = this;
     var ds = (this.optionDataSource ? this.optionDataSource : this.relatedConcept);
-//    testDS(ds, function(){
+//    testCreateDS(ds, function(){
       that.innerGrid = isc.InnerGrid.create({
         autoDraw: false,
         // // //width: "100%", height: "80%", <- Bad experience: If so, inner grid will not resize
@@ -3678,7 +3709,7 @@ isc.TableWindow.addProperties({
   afterCreate: null,
   initWidget: function () {
     
-    this.continueAfterDSTested = function(ds){
+//    this.continueAfterDSTested = function(ds){
       this.Super("initWidget", arguments);
     
 	    this.innerGrid = isc.InnerGrid.create({
@@ -3705,9 +3736,9 @@ isc.TableWindow.addProperties({
       if(this.afterCreate){
         this.afterCreate(this);
       }
-    }
+//    }
     
-    testDS(this.dataSource, this.continueAfterDSTested.bind(this)); // Dynamic DS creation if needed
+//    testCreateDS(this.dataSource, this.continueAfterDSTested.bind(this)); // Dynamic DS creation if needed
      
   },
 
@@ -3726,10 +3757,11 @@ isc.TableWindow.addProperties({
   }
 });
 
+
 //---- Stand-along independent function, that creates TableWindow from elsewhere for entity view (DS) type ----
 function createTable(forType, context, callback, filter, rootIdValue, afterCreate) {
   // Dynamic DS creation if needed
-	testDS(forType, 
+	testCreateDS(forType, 
     function(){
       
       initCreatedTable = function(table){
@@ -3825,7 +3857,7 @@ isc.FormWindow.addProperties({
         this.content
       ]);
     if (this.valuesManager != null) {
-      //			testDS(this.valuesManager.dataSource.ID);
+      //			testCreateDS(this.valuesManager.dataSource.ID);
       this.dataSource = this.valuesManager.dataSource.ID;
       // TODO: Add object description in window head
       var titleDS = this.getDataSource().title;

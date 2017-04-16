@@ -33,15 +33,16 @@ var loadStaticDataSources = function () {
 
 // --- Create dynamically from Metadata apply (non-system) Data Sources ---
 //     May be done with appropriate localization
+// Called to run asyncroniously
+
 var createDataSources = function () {
-  // TODO: some User-specific criteria  	viewRS.setCriteria({"ForPrgView": });
   var views = viewRS.getAllVisibleRows();
   if (!views || views == null) return;
   var i = -1;
   var recursiveDS = function () {
     i += 1;
     if (i + 1 < views.length) {
-      testDS(views[i].SysCode, recursiveDS);
+      testCreateDS(views[i].SysCode, recursiveDS);
     }
   }
   recursiveDS();
