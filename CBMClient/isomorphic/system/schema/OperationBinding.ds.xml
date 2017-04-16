@@ -106,7 +106,7 @@
         <skipRowCount type="boolean"/>
         <language type="string" />
         <values type="DSRequestModifier" multiple="true" />
-        <criteria type="DSRequestModifier" multiple="true" />
+        <criteria type="DSRequestModifier" />
         <cacheSyncOperation type="string" />
         <relaxSecurityForCacheSync type="boolean" />
         <customCriteriaFields type="string" />

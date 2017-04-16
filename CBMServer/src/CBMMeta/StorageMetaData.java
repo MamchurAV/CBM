@@ -13,6 +13,7 @@ import java.util.Map;
 
 import CBMPersistence.DB2DataBase;
 import CBMPersistence.I_DataBase;
+import CBMPersistence.MSSqlDataBase;
 import CBMPersistence.MySQLDataBase;
 import CBMPersistence.PostgreSqlDataBase;
 import CBMServer.CBMStart;
@@ -32,15 +33,21 @@ public class StorageMetaData implements I_StorageMetaData {
 	
 	public StorageMetaData(){
 		String dbType = CBMStart.getParam("primaryDBType");
+		String dbUrl = CBMStart.getParam("primaryDBUrl");
+		String dbUs = CBMStart.getParam("primaryDBUs");
+		String dbCred = CBMStart.getParam("primaryDBCred");
 		switch (dbType){
-		case "PosgreSQL":
-			metaDB = new PostgreSqlDataBase(); 
+		case "PostgreSQL":
+			metaDB = new PostgreSqlDataBase(dbUrl, dbUs, dbCred); 
 			break;
 		case "MySQL":	
 			metaDB = new MySQLDataBase();
 			break;
 		case "DB2":	
 			metaDB = new DB2DataBase();
+			break;
+		case "MSSQL":	
+			metaDB = new MSSqlDataBase(dbUrl, dbUs, dbCred);
 			break;
 		}
 	}
@@ -54,10 +61,11 @@ public class StorageMetaData implements I_StorageMetaData {
 	public String getDataBase(DSRequest req) 
 	{
 		// TODO: Implement function !!!(below - mock!!!)
-	//	String out = "MySQL";
 	//	String out = "DB2";
+	//	String out = "MySQL";
 		String out = "PosgreSql";
-		// TODO Auto-generated method stub
+	//	String out = "MSSQL";
+
 		return out;
 	}
 
@@ -70,14 +78,15 @@ public class StorageMetaData implements I_StorageMetaData {
 	{
 		String forView = req.dataSource;
 		Date forDate = req.forDate;
-		return getSelect(forView, forDate);
+		String forUser = req.currUser;
+		return getSelect(forView, forDate, forUser);
 	}
 	
-	private SelectTemplate getSelect(String forView, Date forDate) throws SQLException 
+	private SelectTemplate getSelect(String forView, Date forDate, String forUser) throws SQLException 
 	{
 		SelectTemplate out = null;
 		
-		// ---- First search in cache
+		// ---- Try get from cache
 		out = (SelectTemplate)selectInfo.get(forView);
 		if (out != null)
 		{
@@ -87,26 +96,22 @@ public class StorageMetaData implements I_StorageMetaData {
 		DSResponce metaResponce = null;
 		
 		SelectTemplate mdForSelect = new SelectTemplate();
-		String forPrgClassId="";
+		String forConceptId="";
 		String forViewId="";
-		/**
-		 * ---- 1 - common (class-defined) Select parts -----------
-		 */
+		
+		// ------ Get common part of query for requested View from MetaData -----------
 		mdForSelect.from = "CBM.PrgView pv "
-//		+ "inner join CBM.Concept c on c.ID=pv.ForConcept "
-//		+ "inner join CBM.PrgClass pc on pc.ForConcept=c.ID and pc.del='0' and pc.actual = '1'";
-////+ "inner join CBM.PrgClass pc on pc.ForConcept=pv.ForConcept and pc.del='0' and pc.actual = '1'"; //<<< Switched to direct View -> Class link
-		+ "inner join CBM.PrgClass pc on pc.id=pv.ForPrgClass and pc.del='0' and pc.actual = '1'";
+		+ "inner join CBM.Concept c on c.id=pv.ForConcept and c.del='0'";
 		mdForSelect.where = "pv.SysCode = '" + forView + "' and pv.del='0' and pv.actual = '1'";
 		mdForSelect.orderby = "pv.ID"; // Must exist or - be an ID at least
 		mdForSelect.columns = new HashMap<String,String>(7);
-		mdForSelect.columns.put("IDPrgClass", "pc.ID");
+//		mdForSelect.columns.put("IDConcept", "c.ID");
 		mdForSelect.columns.put("IDView", "pv.ID");  
-		mdForSelect.columns.put("ExprFrom", "pc.ExprFrom");
-		mdForSelect.columns.put("ExprWhere", "pc.ExprWhere");
-		mdForSelect.columns.put("ExprOrder", "pc.ExprOrder");
-		mdForSelect.columns.put("ExprGroup", "pc.ExprGroup");
-		mdForSelect.columns.put("ExprHaving", "pc.ExprHaving");
+		mdForSelect.columns.put("ExprFrom", "c.ExprFrom");
+		mdForSelect.columns.put("ExprWhere", "c.ExprWhere");
+		mdForSelect.columns.put("ExprOrder", "c.ExprOrder");
+		mdForSelect.columns.put("ExprGroup", "c.ExprGroup");
+		mdForSelect.columns.put("ExprHaving", "c.ExprHaving");
 		
 		try
 		{
@@ -119,9 +124,10 @@ public class StorageMetaData implements I_StorageMetaData {
 			out = new SelectTemplate();
 			if (metaResponce.data.next()) 
 			{
-				forPrgClassId = metaResponce.data.getString("IDPrgClass");
+//				forConceptId = metaResponce.data.getString("IDConcept");
 				forViewId = metaResponce.data.getString("IDView");
-				out.from = metaResponce.data.getString("ExprFrom").replaceAll("/forDate/", forDate.toString());
+				
+				out.from = metaResponce.data.getString("ExprFrom").replaceAll("/forDate/", forDate.toString()).replaceAll("/forUser/", forUser);
 				out.where = metaResponce.data.getString("ExprWhere");
 				out.orderby = metaResponce.data.getString("ExprOrder");
 				out.groupby = metaResponce.data.getString("ExprGroup");
@@ -135,17 +141,14 @@ public class StorageMetaData implements I_StorageMetaData {
 		}
 		metaResponce.releaseDB();
         
-		// ---- 2 - Select columns from Attributes -------------
+		// ---- Get columns part of query from MetaData -------------
 		mdForSelect.from = "CBM.PrgViewField pvf "
-//				+ "inner join CBM.Relation r on r.ID=pvf.ForRelation and r.del='0'"
-// Switched to direct Field -> Attribute link: + "inner join CBM.PrgAttribute pa on pa.ForRelation=r.ID  and pa.ForPrgClass='" + forPrgClassId + "' and pa.dbcolumn is not null "
-				+ "inner join CBM.PrgAttribute pa on pa.id=pvf.ForPrgAttribute  and pa.ForPrgClass='" + forPrgClassId + "' and pa.dbcolumn is not null "
-				+ "inner join  CBM.Concept c on c.ID=pa.RelatedConcept ";
-		//		+ "inner join  CBM.Kind k on k.ID=pa.RelatedConcept ";
+				+ "inner join CBM.Relation r on r.id=pvf.ForRelation and r.dbcolumn is not null "
+				+ "inner join  CBM.Concept c on c.ID=r.RelatedConcept ";
 		mdForSelect.where = "pvf.ForPrgView='" + forViewId + "' and pvf.del='0'";
-		mdForSelect.orderby = "pvf.Odr, pa.ID"; // Must exist and be an ID at least
+		mdForSelect.orderby = "pvf.Odr, r.ID"; // Must exist and be an ID at least
 		mdForSelect.columns = new HashMap<String,String>(3); 
-		mdForSelect.columns.put("DBColumn", "pa.dbcolumn");
+		mdForSelect.columns.put("DBColumn", "r.dbcolumn");
 		mdForSelect.columns.put("SysCode", "pvf.syscode");
 		mdForSelect.columns.put("RelatedConcept", "c.SysCode");
 		try
@@ -196,28 +199,32 @@ public class StorageMetaData implements I_StorageMetaData {
 		{
 			return out;
 		}
-		//---------------------------------------
-
+		// ---- If changes provided to MetaData concepts - drop Metadata for that concept
+		if (forType == "Concept" || forType == "Relation" || forType == "PrgView" || forType =="PrgViewField") 
+		{
+//			selectInfo.remove(forType);
+//			updInsInfo.remove(forType);
+//			delInfo.remove(forType);
+			selectInfo.clear();
+			updInsInfo.clear();
+			delInfo.clear();
+		}
+	
 		DSResponce metaResponce = null;
-		
 		SelectTemplate mdForSelect = new SelectTemplate();
 		
-		/**
-		 * ---- Select from Attributes -------------
-		 */
+		// ---- Get Tables and Columns updated info from Relations storage info in MetaData -------------
 		mdForSelect.from = "CBM.PrgView pv "
 				+ "inner join  CBM.PrgViewField pvf on pvf.ForPrgView=pv.ID and pvf.Del='0' "
-				+ "inner join  CBM.Relation r on r.ID=pvf.ForRelation and r.Del='0' "
-				+ "inner join CBM.PrgClass pc on pc.ForConcept=pv.ForConcept and pc.del='0' and pc.actual = '1' " 
-				+ "inner join  CBM.Concept c on c.ID=r.RelatedConcept "
-				+ "inner join  CBM.PrgAttribute pa on pa.ID=pvf.ForPrgAttribute and pa.dbtable is not null "; 
+				+ "inner join  CBM.Relation r on r.ID=pvf.ForRelation and r.Del='0' and r.dbtable is not null and r.dbcolumn is not null "
+				+ "inner join  CBM.Concept c on c.ID=r.RelatedConcept "; 
 		mdForSelect.where = "pv.syscode='" + forType + "' and pv.del='0' and pv.actual = '1'";
-		mdForSelect.orderby = "r.Odr, pa.dbtable, pvf.Odr"; 
+		mdForSelect.orderby = "r.Odr, r.dbtable, pvf.Odr"; 
 
 		mdForSelect.columns = new HashMap<String,String>(5); 
 		mdForSelect.columns.put("syscode", "pvf.syscode");
-		mdForSelect.columns.put("dbcolumn", "pa.dbcolumn");
-		mdForSelect.columns.put("dbtable", "pa.dbtable");
+		mdForSelect.columns.put("dbcolumn", "r.dbcolumn");
+		mdForSelect.columns.put("dbtable", "r.dbtable");
 		mdForSelect.columns.put("pointedclass", "c.SysCode");
 		mdForSelect.columns.put("versioned", "r.Versioned");
 		
@@ -274,19 +281,16 @@ public class StorageMetaData implements I_StorageMetaData {
 		
 		SelectTemplate mdForSelect = new SelectTemplate();
 		
-		/**
-		 * ---- Select from Attributes -------------
-		 */
+		// ---- Select Tables participated in deletion info from Relations storage info in MetaData -------------
 		mdForSelect.from = "CBM.PrgView pv "
 				+ "inner join  CBM.PrgViewField pvf on pvf.ForPrgView=pv.ID and pvf.Del='0' "
-				+ "inner join  CBM.Relation r on r.ID=pvf.ForRelation and r.Del='0' "
-				+ "inner join CBM.PrgClass pc on pc.ForConcept=pv.ForConcept and pc.del='0' and pc.actual = '1'" 
-				+ "inner join  CBM.PrgAttribute pa on pa.ForRelation=r.ID and pa.ForPrgClass=pc.ID and pa.dbtable is not null "; 
-		mdForSelect.where = "pv.syscode='" + forType + "' and pv.del='0' and pv.actual = '1'";
-		mdForSelect.orderby = "pa.dbtable"; // Must exist and be an ID at least
+				+ "inner join  CBM.Relation r on r.ID=pvf.ForRelation and r.Del='0' and r.dbtable is not null and r.dbcolumn is not null ";
+		mdForSelect.where = "pv.syscode='" + forType + "' and pv.del='0' and pv.actual = '1' ";
+		mdForSelect.groupby = "r.dbtable"; 
+		mdForSelect.orderby = "r.dbtable"; 
 
 		mdForSelect.columns = new HashMap<String,String>(1); 
-		mdForSelect.columns.put("dbtable", "pa.dbtable");
+		mdForSelect.columns.put("dbtable", "r.dbtable");
 		
 		try
 		{
@@ -299,7 +303,9 @@ public class StorageMetaData implements I_StorageMetaData {
 			out = new ArrayList<String>();
 			while (metaResponce.data.next()) 
 			{
-				out.add(metaResponce.data.getString("dbtable"));
+				if (!out.contains(metaResponce.data.getString("dbtable").toLowerCase())){
+					out.add(metaResponce.data.getString("dbtable").toLowerCase());
+				}
 			}
 		}
 		metaResponce.releaseDB();
@@ -307,40 +313,6 @@ public class StorageMetaData implements I_StorageMetaData {
 		// Store loaded metadata to cache
 		delInfo.put(forType, out);
 		//---------------------------------------
-		
-		return out;
-	}
-	
-	private boolean columnSync(String forTable, String forColumn, String colType){
-		boolean out = true;
-		// --- Try for column existence
-		try{
-		metaDB.exequteDirectSimple("ALTER TABLE " + forTable + " ADD " + forColumn + " " + colType);
-		} 
-		catch (Exception ex) {
-			// --- In this case - stop exception proceeding - it's normal if column exists.
-		}
-	
-		return out;
-	}
-
-	public boolean DBSync(String forType){
-		boolean out = true;
-		Map<String,String[]> colInfo = null;
-		try{
-		colInfo = getColumnsInfo(forType);
-		}
-		catch (Exception ex){
-		}
-		
-		for (Map.Entry<String, String[]> entry : colInfo.entrySet())
-		{
-			String table = entry.getValue()[1];
-			String col = entry.getValue()[0];
-			String type = getSqlType(entry.getValue()[2]);
-			
-			columnSync(table, col, type);
-		}
 		
 		return out;
 	}
@@ -409,5 +381,44 @@ public class StorageMetaData implements I_StorageMetaData {
 //		// TODO Auto-generated method stub
 //		return null;
 //	}
+	
+	
+	/**
+	 * Synchronize DB to MetaData storage info 
+	 */
+	private boolean columnSync(String forTable, String forColumn, String colType){
+		boolean out = true;
+		// --- Try for column existence
+		try{
+		metaDB.exequteDirectSimple("ALTER TABLE " + forTable + " ADD " + forColumn + " " + colType);
+		} 
+		catch (Exception ex) {
+			// --- In this case - stop exception proceeding - it's normal if column exists.
+		}
+	
+		return out;
+	}
+
+	public boolean DBSync(String forType){
+		boolean out = true;
+		Map<String,String[]> colInfo = null;
+		try{
+		colInfo = getColumnsInfo(forType);
+		}
+		catch (Exception ex){
+		}
+		
+		for (Map.Entry<String, String[]> entry : colInfo.entrySet())
+		{
+			String table = entry.getValue()[1];
+			String col = entry.getValue()[0];
+			String type = getSqlType(entry.getValue()[2]);
+			
+			columnSync(table, col, type);
+		}
+		
+		return out;
+	}
+
 
 }

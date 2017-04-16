@@ -2,7 +2,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version v11.0p_2016-03-30/LGPL Deployment (2016-03-30)
+  Version SNAPSHOT_v11.1d_2017-03-13/LGPL Deployment (2017-03-13)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -113,13 +113,6 @@ isc.DataSource.create({
             ]
         },
         {
-            name:"volatility",
-            type:"boolean",
-            defaultValue:"false",
-            validators:[
-            ]
-        },
-        {
             name:"durability",
             type:"boolean",
             defaultValue:"true",
@@ -193,13 +186,13 @@ isc.DataSource.create({
         },
         {
             name:"startTime",
-            type:"date",
+            type:"datetime",
             validators:[
             ]
         },
         {
             name:"endTime",
-            type:"date",
+            type:"datetime",
             validators:[
             ]
         },
@@ -211,22 +204,22 @@ isc.DataSource.create({
             ]
         },
         {
+            addUnknownValues:"false",
+            textMatchStyle:"substring",
+            validators:[
+            ],
             name:"timeZone",
+            displayField:"ID",
+            optionDataSource:"QuartzTimeZone",
+            editorType:"ComboBoxItem",
             type:"text",
-            validators:[
-            ]
-        },
-        {
-            name:"volatility",
-            type:"boolean",
-            defaultValue:"false",
-            validators:[
-            ]
+            valueField:"ID"
         },
         {
             name:"misfireInstruction",
             valueMap:{
                 "0":"MISFIRE_INSTRUCTION_SMART_POLICY",
+                "-1":"MISFIRE_INSTRUCTION_IGNORE_MISFIRE_POLICY",
                 "1":"MISFIRE_INSTRUCTION_FIRE_ONCE_NOW",
                 "2":"MISFIRE_INSTRUCTION_DO_NOTHING"
             },
@@ -249,6 +242,24 @@ isc.DataSource.create({
             validators:[
             ],
             canEdit:false
+        }
+    ]
+})
+isc.DataSource.create({
+    operationBindings:[
+        {
+            operationType:"fetch"
+        }
+    ],
+    allowAdvancedCriteria:true,
+    ID:"QuartzTimeZone",
+    fields:[
+        {
+            name:"ID",
+            type:"string",
+            validators:[
+            ],
+            primaryKey:true
         }
     ]
 })
@@ -443,7 +454,7 @@ isc.A.triggersRemoveBtnDefaults={
     click:function(){
         var _this=this;
         isc.ask("Are you sure you wish to remove the selected trigger?",function(yes){
-             if(yes)_this.creator.jobsGrid.removeSelectedData(function(dsResponse){
+             if(yes)_this.creator.triggersGrid.removeSelectedData(function(dsResponse){
                  _this.creator.triggersGrid.invalidateCache();
              });
         });
@@ -495,7 +506,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version v11.0p_2016-03-30/LGPL Deployment (2016-03-30)
+  Version SNAPSHOT_v11.1d_2017-03-13/LGPL Deployment (2017-03-13)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

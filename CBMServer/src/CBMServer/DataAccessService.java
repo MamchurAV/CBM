@@ -17,6 +17,7 @@ import org.restlet.resource.ServerResource;
 import CBMMeta.I_StorageMetaData;
 import CBMMeta.StorageMetaData;
 import CBMPersistence.I_DataBase;
+import CBMPersistence.MSSqlDataBase;
 import CBMPersistence.DB2DataBase;
 import CBMPersistence.MySQLDataBase;
 import CBMPersistence.PostgreSqlDataBase;
@@ -73,16 +74,19 @@ public class DataAccessService extends ServerResource {
 			return "//'\"]]>>isc_JSONResponseStart>>" + CBMServerMessages.noRequestInterior() + Request.getCurrent().toString() + "//isc_JSONResponseEnd";
 		}
 
-
 		switch (metaProvider.getDataBase(dsTransaction.operations.get(0))) {
-		case "MySQL":
-			currentDB = new MySQLDataBase();
-			break;
+		// TODO (info - dsTransaction.operations.get(0) are not used till now in  metaProvider.getDataBase() - is mocked there!)
 		case "PosgreSql":
 			currentDB = new PostgreSqlDataBase();
 			break;
 		case "DB2":
 			currentDB = new DB2DataBase();
+			break;
+		case "MySQL":
+			currentDB = new MySQLDataBase();
+			break;
+		case "MSSQL":
+			currentDB = new MSSqlDataBase();
 			break;
 		}
 		if (currentDB == null) {

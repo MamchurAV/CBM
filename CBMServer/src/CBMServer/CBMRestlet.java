@@ -26,12 +26,16 @@ public class CBMRestlet extends Application {
 	private static Timer timer;
 	private static TimerTask timerTask;
 	private String dbURL = null;
+	private String dbUs = null;
+	private String dbCred = null;
 	
 	public CBMRestlet() {
 		super();
 		try {
 		Class.forName(CBMStart.getParam("primaryDBDriver"));
 		dbURL = CBMStart.getParam("primaryDBUrl");
+		dbUs = CBMStart.getParam("primaryDBUs");
+		dbCred = CBMStart.getParam("primaryDBCred");
 		} catch (Exception ex) {
 	        ex.printStackTrace();
 		}
@@ -69,7 +73,7 @@ public class CBMRestlet extends Application {
     		}
 			try {
 				// --- Central Metadata-hosting database connection
-				dbCon = DriverManager.getConnection(dbURL, "CBM", "cbm");
+				dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
 				// 	
 				statement = dbCon.createStatement();
 				String dbType = CBMStart.getParam("primaryDBType");
@@ -77,11 +81,14 @@ public class CBMRestlet extends Application {
 				case "PosgreSQL":
 					statement.executeUpdate("DELETE FROM cbm.startsession WHERE Moment <= localtimestamp - interval '" + inact + "'");
 					break;
+				case "DB2":	
+					statement.executeUpdate("DELETE FROM cbm.startsession WHERE Moment <= sysdate() - 0.0283");
+					break;
 				case "MySQL":	
 					statement.executeUpdate("DELETE FROM cbm.startsession WHERE Moment <= date_sub(sysdate(), INTERVAL 30 minute)");
 					break;
-				case "DB2":	
-					statement.executeUpdate("DELETE FROM cbm.startsession WHERE Moment <= sysdate() - 0.0283");
+				case "MSSQL":	
+					statement.executeUpdate("DELETE FROM cbm.startsession WHERE Moment <= GETDATE() - 0.0283");
 					break;
 				}
 				statement.close();
