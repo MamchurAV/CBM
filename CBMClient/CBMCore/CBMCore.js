@@ -523,7 +523,7 @@ function createDS(forView, callback) {
       }
     
       if (ds){
-        // Guaratie existence of first-level DataSources
+        // Guarantie existence of linked DataSources (for one level in-depth)
         ds.resolveLinks(callback);
       } else if (callback && callback != null) {
         callback(null);
