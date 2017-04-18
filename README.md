@@ -2,7 +2,7 @@ Canonical Business Model
 ===
 Shortest CBM manifesto: 
 
-"Put fundamental upper ontology as the core of your domain model, and you'll be unable to make mistake in selecting base entities for your information system"
+"Put fundamental upper ontology in the base of your domain model, and you'll never fail in selecting core entities of your information system"
 ---
 Upper-Ontology based, universal Information System project.
 
@@ -11,7 +11,7 @@ Short history:
 Some background - information about earlier implementations...
 
 Main sense:
-Ontology, semantics � the main words for Canonical Business Model system architecture. Even for very simple (as it may looks) Information system � put in the foundation level the very upper ontology. Concepts inheritance tree won�t be too deep. But your system will answer easily for many unpredictable questions. Or will be easily expanded (not changed!) for that.
+Ontology, semantics are the main accent in "Canonical Business Model" system architecture. Even for very simple information system, and obviously for big one, it is good reason to use the very upper ontology in the foundation level. Concepts inheritance tree won't be too deep. But your system will easily answer many  questions, not predicted before. Or will be easily expanded (not reconstructed!) for that.
 * * *
 
 Some Project details:
