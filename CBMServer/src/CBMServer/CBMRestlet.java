@@ -78,7 +78,7 @@ public class CBMRestlet extends Application {
 				statement = dbCon.createStatement();
 				String dbType = CBMStart.getParam("primaryDBType");
 				switch (dbType){
-				case "PosgreSQL":
+				case "PostgreSql":
 					statement.executeUpdate("DELETE FROM cbm.startsession WHERE Moment <= localtimestamp - interval '" + inact + "'");
 					break;
 				case "DB2":	

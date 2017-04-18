@@ -37,7 +37,7 @@ public class StorageMetaData implements I_StorageMetaData {
 		String dbUs = CBMStart.getParam("primaryDBUs");
 		String dbCred = CBMStart.getParam("primaryDBCred");
 		switch (dbType){
-		case "PostgreSQL":
+		case "PostgreSql":
 			metaDB = new PostgreSqlDataBase(dbUrl, dbUs, dbCred); 
 			break;
 		case "MySQL":	
@@ -64,7 +64,7 @@ public class StorageMetaData implements I_StorageMetaData {
 		String out = CBMStart.getParam("primaryDBType");
 	//	String out = "DB2";
 	//	String out = "MySQL";
-	//	String out = "PosgreSql";
+	//	String out = "PostgreSql";
 	//	String out = "MSSQL";
 
 		return out;

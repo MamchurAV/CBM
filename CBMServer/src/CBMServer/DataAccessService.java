@@ -80,7 +80,7 @@ public class DataAccessService extends ServerResource {
 		}
 		switch (dbName) {
 		// TODO (info - dsTransaction.operations.get(0) are not used till now in  metaProvider.getDataBase() - is mocked there!)
-		case "PosgreSql":
+		case "PostgreSql":
 			currentDB = new PostgreSqlDataBase();
 			break;
 		case "DB2":
