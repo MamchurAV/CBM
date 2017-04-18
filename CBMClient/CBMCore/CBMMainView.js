@@ -94,7 +94,8 @@ if (typeof(curr_Date) == "undefined" || curr_Date == null || (typeof(curr_Date) 
   curr_Date = moment().utc();
 }
 var extra_Info = "";
-var default_DB = "PostgreSQL.CBM"; //"MSSQL.CBM"; // dbName: "MySQL.CBM", //    dbName : "DB2.CBM",
+// TODO !!!!!!! Switch to Server-based definition of default DB !!!!!!
+//var default_DB = "PostgreSQL.CBM"; //"MSSQL.CBM"; // dbName: "MySQL.CBM", // dbName : "DB2.CBM",
 
 // ----------------- Anonymous initial loadings zone --------------------
 //curr_User =	"anonymous";
@@ -394,10 +395,10 @@ var setUser = function () {
 
     // userRights result set plays special role - first authorized data request that do test credentials
     if (userRightsRS.allRows === null) {
-      userRightsRS.getRange(0, 1000);
+      userRightsRS.getRange(0, 10000);
     } else {
       userRightsRS.invalidateCache();
-      userRightsRS.getRange(0, 1000);
+      userRightsRS.getRange(0, 10000);
     }
     return true;
   }

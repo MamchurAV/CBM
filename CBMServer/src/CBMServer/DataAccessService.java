@@ -73,8 +73,12 @@ public class DataAccessService extends ServerResource {
 		if (dsTransaction.transactionNum == -2) {
 			return "//'\"]]>>isc_JSONResponseStart>>" + CBMServerMessages.noRequestInterior() + Request.getCurrent().toString() + "//isc_JSONResponseEnd";
 		}
-
-		switch (metaProvider.getDataBase(dsTransaction.operations.get(0))) {
+		
+		String dbName = metaProvider.getDataBase(dsTransaction.operations.get(0));
+		if (dbName == null){
+			dbName = CBMStart.getParam("primaryDBType");
+		}
+		switch (dbName) {
 		// TODO (info - dsTransaction.operations.get(0) are not used till now in  metaProvider.getDataBase() - is mocked there!)
 		case "PosgreSql":
 			currentDB = new PostgreSqlDataBase();

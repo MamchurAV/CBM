@@ -205,9 +205,10 @@ function generateDStext(forView, futherActions) {
 
   if (conceptRec.DataBaseStore && conceptRec.DataBaseStore !== "null") {
     resultDS += "dbName: \"" + conceptRec.DataBaseStore.ConnectionParams + "\", ";
-  } else {
-    resultDS += "dbName: Window.default_DB, ";
-  }
+  } 
+  //else {
+  //  resultDS += "dbName: Window.default_DB, ";
+  //}
 
 //---------
   var dsTitle = getLang(viewRec["Description"], tmp_Lang, true);
@@ -3878,5 +3879,16 @@ isc.FormWindow.addProperties({
     // isc.Timer.setTimeout(destroyInner, delay);
   }
 });
+
+
+// =======================================================================
+// ====--------=== Infrastructure-technology functions ===================
+// =======================================================================
+
+// ------- Export Concept (with it's scope) to file fore migration purposes -------
+function exportConcept(concept){
+	
+}
+
 
 // ================================ The End =================================

@@ -61,9 +61,10 @@ public class StorageMetaData implements I_StorageMetaData {
 	public String getDataBase(DSRequest req) 
 	{
 		// TODO: Implement function !!!(below - mock!!!)
+		String out = CBMStart.getParam("primaryDBType");
 	//	String out = "DB2";
 	//	String out = "MySQL";
-		String out = "PosgreSql";
+	//	String out = "PosgreSql";
 	//	String out = "MSSQL";
 
 		return out;

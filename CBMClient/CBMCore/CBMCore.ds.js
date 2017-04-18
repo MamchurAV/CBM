@@ -133,6 +133,14 @@ isc.CBMDataSource.create({
         return false;
       },
     }, {
+      title: "Migrate to other known CBM instance",
+      icon: isc.Page.getAppImgDir() + "copyOne.png",
+      click: "exportConcept(this.context.getSelectedRecord())"
+    }, {
+      title: "Export to file for migration",
+      icon: isc.Page.getAppImgDir() + "download.png",
+      click: "exportConcept(this.context.getSelectedRecord())"
+    }, {
       title: "Generate default Program View",
       icon: isc.Page.getAppImgDir() + "add.png",
       click: "sendCommand(\"GenerateDefaultView\", \"POST\", {forType: this.context.getSelectedRecord()[\"SysCode\"]}, null ); return false;"
