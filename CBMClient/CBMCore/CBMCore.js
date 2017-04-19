@@ -783,7 +783,9 @@ function getRelationsForConcept(conceptId, callback) {
       innerGetRelations(record.BaseConcept);
 	  } else {
       // Initialize relations for discovered Concept
-      conceptDS.getCacheData().find({ID: conceptId}).relations = relations.sortByProperty("Odr", true); //<<<<<<<<<<<
+      if (record && relations){
+        record.relations = relations.sortByProperty("Odr", true); //<<<<<<<<<<<
+      }
       if (callbackBound) {
         callbackBound(relations.sortByProperty("Odr", true));
       }
@@ -801,7 +803,12 @@ function getRelationsForConceptName(conceptName, callback) {
   	var filter = {SysCode: conceptName };
     var conceptRecord = conceptDS.getCacheData().find(filter);
     var conceptID = conceptRecord.ID;
-    getRelationsForConcept(conceptID, callback);
+    getRelationsForConcept(conceptID, 
+        function (rel) {
+          isc.DataSource.get(conceptName).relations = rel;
+          callback(rel); 
+       }
+    );
 }
 
 
@@ -1147,9 +1154,20 @@ isc.CBMDataSource.addProperties({
   getRelation: function (fldName) {
     // If this.relations is null - initialise it (once!)
     if (this.relations === null) {
-      this.relations = relationRS.findAll({ForConcept: this.getConcept().ID});
-    }
+//      this.relations = relationRS.findAll({ForConcept: this.getConcept().ID});
+     getRelationsForConceptName(this.ID, null);
+   }
     var rel = this.relations.find({SysCode: fldName});
+    return (rel ? rel : {} );
+  },
+
+  // --- Return CBM-metadata Relation record for this isc DataSource field ---
+  findRelation: function (criteria) {
+    // If this.relations is null - initialise it (once!)
+    if (this.relations === null) {
+      getRelationsForConceptName(this.ID, null);
+    }
+    var rel = this.relations.find(criteria);
     return (rel ? rel : {} );
   },
 
@@ -2966,8 +2984,11 @@ isc.InnerGrid.addProperties({
             // Not superclass - create instance directly
             records[0] = ds.createInstance(this);
             records[0]["infoState"] = "new";
+            // If hierarchy - set parent value as in selected record
+            var hierarchyLink = ds.findRelation({HierarchyLink: true}).SysCode; 
+            records[0][hierarchyLink] = this.getSelection()[0][hierarchyLink];
+            // --- Set fields partisipating in criteria to criteria value
             var criter = this.getCriteria();
-            // --- Set criteria fields to criteria value
             for (var fld in criter) {
               if (criter.hasOwnProperty(fld)) {
                 records[0][fld] = criter[fld];
