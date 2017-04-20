@@ -10,6 +10,9 @@ package CBMServer;
 import org.restlet.Application;
 import org.restlet.Restlet;
 import org.restlet.routing.Router;
+
+import CBMPersistence.ConnectionPool;
+
 import org.restlet.resource.Directory;
 
 import java.sql.Connection;
@@ -19,26 +22,29 @@ import java.sql.Statement;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import javax.sql.DataSource;
+
 public class CBMRestlet extends Application {
 
 	// URI of the root directory.
 	public static final String ROOT_URI = "file:///" + CBMStart.CBM_ROOT + "/CBMClient/";
 	private static Timer timer;
 	private static TimerTask timerTask;
-	private String dbURL = null;
-	private String dbUs = null;
-	private String dbCred = null;
+//	private String dbURL = null;
+//	private String dbUs = null;
+//	private String dbCred = null;
+	private static DataSource dataSource = ConnectionPool.getDataSource();
 	
 	public CBMRestlet() {
 		super();
-		try {
-		Class.forName(CBMStart.getParam("primaryDBDriver"));
-		dbURL = CBMStart.getParam("primaryDBUrl");
-		dbUs = CBMStart.getParam("primaryDBUs");
-		dbCred = CBMStart.getParam("primaryDBCred");
-		} catch (Exception ex) {
-	        ex.printStackTrace();
-		}
+//		try {
+//		Class.forName(CBMStart.getParam("primaryDBDriver"));
+//		dbURL = CBMStart.getParam("primaryDBUrl");
+//		dbUs = CBMStart.getParam("primaryDBUs");
+//		dbCred = CBMStart.getParam("primaryDBCred");
+//		} catch (Exception ex) {
+//	        ex.printStackTrace();
+//		}
 		timer = new Timer(true);
 		timerTask = new RemindTask();
         timer.scheduleAtFixedRate(timerTask, 20*1000, 300*1000);
@@ -73,8 +79,10 @@ public class CBMRestlet extends Application {
     		}
 			try {
 				// --- Central Metadata-hosting database connection
-				dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+//				dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
 				// 	
+                dbCon = dataSource.getConnection();
+				
 				statement = dbCon.createStatement();
 				String dbType = CBMStart.getParam("primaryDBType");
 				switch (dbType){

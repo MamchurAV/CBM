@@ -19,6 +19,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 
 import javax.crypto.Cipher;
+import javax.sql.DataSource;
 
 import org.restlet.Request;
 import org.restlet.Response;
@@ -26,6 +27,7 @@ import org.restlet.data.Cookie;
 import org.restlet.data.CookieSetting;
 import org.restlet.engine.util.Base64;
 
+import CBMPersistence.ConnectionPool;
 import CBMServer.CBMStart;
 import CBMServer.DSRequest;
 import CBMServer.DSResponce;
@@ -40,28 +42,29 @@ import CBMServer.IscIOFormatter;
  *
  */
 public class CredentialsManager implements I_AutentificationManager {
-	private  String dbURL;
-	private  String dbUs;
-	private  String dbCred;
+//	private  String dbURL;
+//	private  String dbUs;
+//	private  String dbCred;
 	private String login = null;
 
 	private Connection dbCon = null;
+	private DataSource dataSource = ConnectionPool.getDataSource();
 
-	public CredentialsManager(){
-		try {
-			Class.forName(CBMStart.getParam("primaryDBDriver"));
-			dbURL = CBMStart.getParam("primaryDBUrl");
-			dbUs = CBMStart.getParam("primaryDBUs");
-			dbCred = CBMStart.getParam("primaryDBCred");
-		}  catch (Exception ex) {
-			ex.printStackTrace();
-		}
-	}
-
-	public CredentialsManager(Connection dbConExt){
-		this();
-		this.dbCon = dbConExt;
-	}
+//	public CredentialsManager(){
+//		try {
+//			Class.forName(CBMStart.getParam("primaryDBDriver"));
+//			dbURL = CBMStart.getParam("primaryDBUrl");
+//			dbUs = CBMStart.getParam("primaryDBUs");
+//			dbCred = CBMStart.getParam("primaryDBCred");
+//		}  catch (Exception ex) {
+//			ex.printStackTrace();
+//		}
+//	}
+//
+//	public CredentialsManager(Connection dbConExt){
+//		this();
+//		this.dbCon = dbConExt;
+//	}
 
 	
 	//--------------------- First request processing in client work session ----------------------------- 
@@ -127,8 +130,10 @@ public class CredentialsManager implements I_AutentificationManager {
 		
 		try
 		{
-			dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
-			statement = dbCon.createStatement();
+//			dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+            dbCon = dataSource.getConnection();
+
+            statement = dbCon.createStatement();
 			dbCon.setAutoCommit(false);
 			dbCon.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
 			statement.executeUpdate("INSERT INTO cbm.startsession (idSession, Moment, FirstKey) VALUES ('" + sessionID + "', CURRENT_TIMESTAMP, '" + strKeys + "')");
@@ -250,7 +255,8 @@ public class CredentialsManager implements I_AutentificationManager {
 		Statement statement = null;
 		ResultSet rs = null;
 		try {
-			dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+//			dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+            dbCon = dataSource.getConnection();
 		} catch (SQLException ex){
 			System.out.println("SQLException: " + ex.getMessage());
 			System.out.println("SQLState: " + ex.getSQLState());
@@ -400,8 +406,9 @@ public class CredentialsManager implements I_AutentificationManager {
 		// ---- Get stored password hash ---
 		try {
 			if (dbCon == null) { 
-				dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
-			}
+//				dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+                dbCon = dataSource.getConnection();
+		}
 			statement = dbCon.createStatement();
 			rs = statement.executeQuery("SELECT o.Img FROM cbm.outformat o INNER JOIN cbm.imgname i ON i.ImgCode=o.Code WHERE o.Ds='" + login + "'");
 			if (rs.next()){
@@ -468,7 +475,9 @@ public class CredentialsManager implements I_AutentificationManager {
 		
 		// ---- Get stored SessionID ---
 		try {
-			dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+//			dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+            dbCon = dataSource.getConnection();
+
 			statement = dbCon.createStatement();
 			dbCon.setAutoCommit(false);
 			dbCon.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
@@ -532,7 +541,9 @@ public boolean registerNewUserProfile(String login, String pass){
 	I_IDProvider idProvider = new IDProvider();
 
 	try {
-		dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+//		dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+        dbCon = dataSource.getConnection();
+
 		statement = dbCon.createStatement();
 		dbCon.setAutoCommit(false);
 		dbCon.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);

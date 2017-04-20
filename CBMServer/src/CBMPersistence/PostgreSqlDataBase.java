@@ -12,6 +12,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import javax.sql.DataSource;
+
 import CBMMeta.SelectTemplate;
 import CBMServer.CBMStart;
 import CBMServer.DSRequest;
@@ -24,35 +26,35 @@ import CBMServer.DSResponce;
  */
 public class PostgreSqlDataBase implements I_DataBase {
 
-	static String dbURL;
-	private  String dbUs;
-	private  String dbCred;
+//	static String dbURL;
+//	private  String dbUs;
+//	private  String dbCred;
 	private static final String ID = "id";
 	
 //	private  Connection dbCon = null;
 //	private  Statement statement = null;
 //	private  ResultSet rsCount = null;
 
-	static {
-		try 
-		{
-			Class.forName("org.postgresql.Driver");
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
+//	static {
+//		try 
+//		{
+//			Class.forName("org.postgresql.Driver");
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//	}
 	
-	public PostgreSqlDataBase(){
-		dbURL = CBMStart.getParam("primaryDBUrl");
-		dbUs = CBMStart.getParam("primaryDBUs");
-		dbCred = CBMStart.getParam("primaryDBCred");
-	}
-	
-	public PostgreSqlDataBase(String a_dbUrl, String a_dbUs, String a_dbCred){
-		dbURL = a_dbUrl;
-		dbUs = a_dbUs;
-		dbCred = a_dbCred;
-	}
+//	public PostgreSqlDataBase(){
+//		dbURL = CBMStart.getParam("primaryDBUrl");
+//		dbUs = CBMStart.getParam("primaryDBUs");
+//		dbCred = CBMStart.getParam("primaryDBCred");
+//	}
+//	
+//	public PostgreSqlDataBase(String a_dbUrl, String a_dbUs, String a_dbCred){
+//		dbURL = a_dbUrl;
+//		dbUs = a_dbUs;
+//		dbCred = a_dbCred;
+//	}
 
 
 	// -------------------------------- I_DataBase Interface implementation ---------------------------------------------
@@ -173,7 +175,10 @@ public class PostgreSqlDataBase implements I_DataBase {
 			// TODO To think on optimization of count(*) calls 
 			sqlCount += " from " + fromPart + (wherePart.equals("") ? "" : " where " + wherePart);
 			try{
-				dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+//				dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+				DataSource dataSource = ConnectionPool.getDataSource();
+	            dbCon = dataSource.getConnection();
+
 				statement = dbCon.createStatement();
 				rsCount = statement.executeQuery(sqlCount);
 				rsCount.next();
@@ -203,7 +208,10 @@ public class PostgreSqlDataBase implements I_DataBase {
 		
 		// ------------ Execute Select
 		try{
-			dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+//			dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+			DataSource dataSource = ConnectionPool.getDataSource();
+            dbCon = dataSource.getConnection();
+
 			statement = dbCon.createStatement();  
 			ResultSet rs = statement.executeQuery(sql);
 			dsResponce.data = rs;
@@ -321,7 +329,9 @@ public class PostgreSqlDataBase implements I_DataBase {
 			sql += columnsPart.substring(0, columnsPart.length()-2) + ") VALUES (" + valuesPart.substring(0, valuesPart.length()-2) + ")";
 
 			try {
-				dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+//				dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+				DataSource dataSource = ConnectionPool.getDataSource();
+	            dbCon = dataSource.getConnection();
 				statement = dbCon.createStatement();
 // MySQL feature				statement.executeUpdate("SET NAMES 'utf8'");
 				out.retCode = statement.executeUpdate(sql);
@@ -475,7 +485,9 @@ public class PostgreSqlDataBase implements I_DataBase {
 			sql += updatePart.substring(0, updatePart.length()-2) + " where " + wherePart;
 
 			try {
-				dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+//				dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+				DataSource dataSource = ConnectionPool.getDataSource();
+	            dbCon = dataSource.getConnection();
 				statement = dbCon.createStatement();
 // MySQL feature				statement.executeUpdate("SET NAMES 'utf8'");
 				out.retCode = statement.executeUpdate(sql);
@@ -540,7 +552,9 @@ public class PostgreSqlDataBase implements I_DataBase {
 			String sql = "DELETE FROM " + table + " WHERE id='" + id + "'";
 
 			try {
-				dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+//				dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+				DataSource dataSource = ConnectionPool.getDataSource();
+	            dbCon = dataSource.getConnection();
 				statement = dbCon.createStatement();
 // 	MySQL feature			statement.executeUpdate("SET NAMES 'utf8'");
 				out.retCode = statement.executeUpdate(sql);
@@ -587,7 +601,9 @@ public class PostgreSqlDataBase implements I_DataBase {
 		Statement statement = null;
 		DSResponce out = new DSResponce();
 		try {
-			dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+//			dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+			DataSource dataSource = ConnectionPool.getDataSource();
+            dbCon = dataSource.getConnection();
 			statement = dbCon.createStatement();
 			out.retCode = statement.executeUpdate(sql);
 		}
@@ -618,7 +634,9 @@ public class PostgreSqlDataBase implements I_DataBase {
 		Statement statement = null;
 	    try {	
 			int out = -1;
-			dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+//			dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+			DataSource dataSource = ConnectionPool.getDataSource();
+            dbCon = dataSource.getConnection();
 			statement = dbCon.createStatement();
 			out = statement.executeUpdate(sql);
 			return out;

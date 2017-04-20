@@ -38,7 +38,7 @@ public class StorageMetaData implements I_StorageMetaData {
 		String dbCred = CBMStart.getParam("primaryDBCred");
 		switch (dbType){
 		case "PostgreSql":
-			metaDB = new PostgreSqlDataBase(dbUrl, dbUs, dbCred); 
+			metaDB = new PostgreSqlDataBase(); 
 			break;
 		case "MySQL":	
 			metaDB = new MySQLDataBase();
