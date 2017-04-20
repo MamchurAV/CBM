@@ -792,7 +792,7 @@ function getRelationsForConcept(conceptId, callback) {
 	  }
 	}
   
-  var callbackBound = callback.bind(this); 
+  var callbackBound = callback.bind(this); // <<< TODO: in main cases "this" here is just "window", so bind() looks abused
   innerGetRelations(conceptId);
 }
 
@@ -806,7 +806,9 @@ function getRelationsForConceptName(conceptName, callback) {
     getRelationsForConcept(conceptID, 
         function (rel) {
           isc.DataSource.get(conceptName).relations = rel;
-          callback(rel); 
+		  if (callback) {
+			callback(rel); 
+		  }
        }
     );
 }
@@ -1664,13 +1666,14 @@ isc.CBMDataSource.addProperties({
         title: isc.CBMStrings.EditForm_Cancel, //"Cancel",
         click: function () {
           this.topElement.savePosition();
-          if (this.topElement.contextObject.currentTransaction !== null
+          if (this.topElement.contextObject !== null // <<< Can be null if window opend for multi-records editing
+		    && this.topElement.contextObject.currentTransaction !== null
             && this.topElement.contextObject.currentTransaction.Changes.length > 0) {
             var that = this;
             isc.confirm(isc.CBMStrings.CancelButton_SaveOrNot,
               function (ok) {
                 if (ok) {
-                  // If top-level Cancel pressed? but inner savings exists - save them
+                  // If top-level Cancel pressed, but inner savings exists - save them
                   if (!context.dependent) {
                     that.topElement.save(true); // true means top-level flag
                   } else {
@@ -2984,9 +2987,11 @@ isc.InnerGrid.addProperties({
             // Not superclass - create instance directly
             records[0] = ds.createInstance(this);
             records[0]["infoState"] = "new";
-            // If hierarchy - set parent value as in selected record
+            // If hierarchy - set parent value as in selected record (if any selected)
             var hierarchyLink = ds.findRelation({HierarchyLink: true}).SysCode; 
-            records[0][hierarchyLink] = this.getSelection()[0][hierarchyLink];
+			if (this.getSelection().length > 0) {
+				records[0][hierarchyLink] = this.getSelection()[0][hierarchyLink];
+			}
             // --- Set fields partisipating in criteria to criteria value
             var criter = this.getCriteria();
             for (var fld in criter) {
