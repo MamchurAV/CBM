@@ -265,7 +265,7 @@ function generateDStext(forView, futherActions) {
     {ForPrgView: viewRec.ID},
 		function (dsResponce, data, dsRequest) {
 		viewFields = data;
-		if (!viewFields) {
+		if (!viewFields || viewFields.length === 0) {
 			isc.warn("No ViewFields found for " + forView);
 			return null;
 		}
@@ -472,9 +472,11 @@ function generateDStext(forView, futherActions) {
                   resultDS += "type: \"" + backLinkRelationRec.SysCode + "\", ";
                   resultDS += "canSave: true, ";
 //                  var editorType = editorType
-                  if (viewFields[i].ControlType === "null") {
+                  if (viewFields[i].ControlType === "null" || viewFields[i].ControlType === "") {
                     resultDS += "editorType: \"" + (kind === "BackAggregate" ? "CollectionAggregateControl" : "CollectionControl") + "\", ";
-                  }
+                  } else {
+					  resultDS += "editorType: \"" + viewFields[i].ControlType + "\", ";
+				  }
                   resultDS += "relatedConcept: \"" + relatedConceptRec.SysCode + "\", ";
                   resultDS += "backLinkRelation: \"" + backLinkRelationRec.SysCode + "\", ";
                   if (viewFields[i].ValueField !== "null") {
