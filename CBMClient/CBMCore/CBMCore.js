@@ -2973,7 +2973,7 @@ isc.InnerGrid.addProperties({
               var conceptRecord = conceptRS.find("SysCode", dsNew.ID);
               //            records[0]["PrgClass"] = conceptRecord["ID"]; // TODO <<< ??? TEST (concept != class)
               var criter = that.getCriteria();
-              // --- Set criteria fields to criteria value
+              // --- Set fields partisipating in criteria to criteria value
               for (var fld in criter) {
                 if (criter.hasOwnProperty(fld)) {
                   records[0][fld] = criter[fld];
@@ -2991,10 +2991,10 @@ isc.InnerGrid.addProperties({
             records[0]["infoState"] = "new";
             // If hierarchy - set parent value as in selected record (if any selected)
             var hierarchyLink = ds.findRelation({HierarchyLink: true}).SysCode; 
-			if (this.getSelection().length > 0) {
-				records[0][hierarchyLink] = this.getSelection()[0][hierarchyLink];
-			}
-            // --- Set fields partisipating in criteria to criteria value
+            if (this.getSelection().length > 0) {
+              records[0][hierarchyLink] = this.getSelection()[0][hierarchyLink];
+            }
+            // --- Set fields partisipating in criteria to criteria value ---
             var criter = this.getCriteria();
             for (var fld in criter) {
               if (criter.hasOwnProperty(fld)) {

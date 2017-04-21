@@ -32,6 +32,8 @@ public class ConnectionPool {
 	    
 	    config.setMaximumPoolSize(10);
 	    config.setAutoCommit(true); // <<< TODO: switch to managed transactions (broken when Conn.Pool become been used)
+	    
+	    config.setConnectionTestQuery("SELECT 1");
 
 //	    config.addDataSourceProperty("cachePrepStmts", "true");
 //	    config.addDataSourceProperty("prepStmtCacheSize", "250");
