@@ -595,6 +595,22 @@ public class PostgreSqlDataBase implements I_DataBase {
 		return 0;
 	}
 	
+	/* TODO Implementation from MySQL - reviseand apply!!!
+	 	@Override
+	public int doStartTrans() throws Exception {
+		Statement statement = dbCon.createStatement();
+		return statement.executeUpdate("START TRANSACTION");
+	}
+
+
+	@Override
+	public int doCommit() throws Exception {
+		Statement statement = dbCon.createStatement();
+		return statement.executeUpdate("COMMIT");
+	}
+*/
+	
+	
 	@Override
 	public DSResponce exequteDirect(String sql){
 		Connection dbCon = null;

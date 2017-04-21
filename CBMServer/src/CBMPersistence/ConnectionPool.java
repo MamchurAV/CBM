@@ -13,7 +13,7 @@ public class ConnectionPool {
 	private  static String dbURL;
 	private  static String dbUs;
 	private  static String dbCred;
-
+	
     private static DataSource datasource;
     
     static {
@@ -21,9 +21,27 @@ public class ConnectionPool {
     	dbURL = CBMStart.getParam("primaryDBUrl");
     	dbUs = CBMStart.getParam("primaryDBUs");
     	dbCred = CBMStart.getParam("primaryDBCred");
+
+    	// Initialize single instance of DataSource, that represents Connection Pol to clients
+	    HikariConfig config = new HikariConfig();
+
+	    config.setDriverClassName(dbDriver);
+	    config.setJdbcUrl(dbURL);
+	    config.setUsername(dbUs);
+	    config.setPassword(dbCred);
+	    
+	    config.setMaximumPoolSize(10);
+	    config.setAutoCommit(true); // <<< TODO: switch to managed transactions (broken when Conn.Pool become been used)
+
+//	    config.addDataSourceProperty("cachePrepStmts", "true");
+//	    config.addDataSourceProperty("prepStmtCacheSize", "250");
+//	    config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
+	    
+	    datasource = new HikariDataSource(config);
     }
     
-	public ConnectionPool(String a_dbDriver, String a_dbUrl, String a_dbUs, String a_dbCred){
+	
+    public ConnectionPool(String a_dbDriver, String a_dbUrl, String a_dbUs, String a_dbCred){
         dbDriver = a_dbDriver;
 		dbURL = a_dbUrl;
 		dbUs = a_dbUs;
@@ -32,24 +50,6 @@ public class ConnectionPool {
 
    
     public static DataSource getDataSource()  {
-		if(datasource == null)
-		{
-		    HikariConfig config = new HikariConfig();
-
-		    config.setDriverClassName(dbDriver);
-		    config.setJdbcUrl(dbURL);
-		    config.setUsername(dbUs);
-		    config.setPassword(dbCred);
-		    
-		    config.setMaximumPoolSize(10);
-		    config.setAutoCommit(false);
-		    config.addDataSourceProperty("cachePrepStmts", "true");
-		    config.addDataSourceProperty("prepStmtCacheSize", "250");
-		    config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
-		    
-		    datasource = new HikariDataSource(config);
-		}
 		return datasource;
     }
-
 }
