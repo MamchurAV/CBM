@@ -475,8 +475,35 @@ function generateDStext(forView, futherActions) {
                   if (viewFields[i].ControlType === "null" || viewFields[i].ControlType === "") {
                     resultDS += "editorType: \"" + (kind === "BackAggregate" ? "CollectionAggregateControl" : "CollectionControl") + "\", ";
                   } else {
-					  resultDS += "editorType: \"" + viewFields[i].ControlType + "\", ";
-				  }
+                    resultDS += "editorType: \"" + viewFields[i].ControlType + "\", ";
+                  }
+                  resultDS += "relatedConcept: \"" + relatedConceptRec.SysCode + "\", ";
+                  resultDS += "backLinkRelation: \"" + backLinkRelationRec.SysCode + "\", ";
+                  if (viewFields[i].ValueField !== "null") {
+                    resultDS += "mainIDProperty: \"" + viewFields[i].ValueField + "\", ";
+                  } else {
+                    resultDS += "mainIDProperty: \"ID\", ";
+                  }
+                  if (viewFields[i].DataSourceView !== "null") {
+                    resultDS += "optionDataSource: \"" + viewFields[i].DataSourceView + "\", ";
+                  } else {
+                    resultDS += "optionDataSource: \"" + type + "\", ";
+                  }
+                  if (currentRelation.LinkFilter !== "null") {
+                    resultDS += "optionCriteria: " + currentRelation.LinkFilter + ", ";
+                  }
+                  resultDS += "titleOrientation: \"top\" ";
+                } else if (kind === "CrossLink") {
+                  var crossRelationRec = relationRS.find("ID", currentRelation.CrossRelation);
+//                  resultDS += "type: \"custom\", ";
+                  resultDS += "type: \"" + backLinkRelationRec.SysCode + "\", ";
+                  resultDS += "canSave: true, ";
+//                  var editorType = editorType
+                  if (viewFields[i].ControlType === "null" || viewFields[i].ControlType === "") {
+                    resultDS += "editorType: \"" + "CollectionCrossControl" + "\", ";
+                  } else {
+                    resultDS += "editorType: \"" + viewFields[i].ControlType + "\", ";
+                  }
                   resultDS += "relatedConcept: \"" + relatedConceptRec.SysCode + "\", ";
                   resultDS += "backLinkRelation: \"" + backLinkRelationRec.SysCode + "\", ";
                   if (viewFields[i].ValueField !== "null") {
@@ -3446,6 +3473,7 @@ isc.CollectionAggregateControl.addProperties({
   mainIDProperty: null,
   mainID: -1,
   aggregate: true, // <<<<<<<<<<<<<<<<
+
   createCanvas: function (form) {
     var that = this;
     var ds = (this.optionDataSource ? this.optionDataSource : this.relatedConcept);
@@ -3568,6 +3596,80 @@ isc.RelationsAggregateControl.addProperties({
     }
   }
 }); // <<< End of special aggregate control for Relations-for-Concept 
+
+
+// ----------------------------------------------------------------------------------------------------
+// ------------------------- CollectionControl (Back-link) control ------------------------------------
+isc.ClassFactory.defineClass("CollectionCrossControl", isc.CanvasItem);
+isc.CollectionCrossControl.addProperties({
+  //    height: "*",  width: "*", <- seems the same
+  //    height: "88%",  width: "88%", //<- very narrow, but normal hight! (???)
+  rowSpan: "*",
+  colSpan: "*",
+  endRow: true,
+  startRow: true,
+  shouldSaveValue: true, // Don't switch, or showValue() won't be called
+
+  innerGrid: null,
+  backLinkRelation: null,
+  mainIDProperty: null,
+  mainID: -1,
+  aggregate: false,
+
+  createCanvas: function (form) {
+    this.innerGrid = isc.InnerGrid.create({
+      autoDraw: false,
+      //width: "100%", height: "80%", <- Bad experience: If so, inner grid will not resize
+      width: "*", height: "*",
+      dataSource: (this.optionDataSource ? this.optionDataSource : this.relatedConcept),
+      context: form // TODO: Part off: Provide settings to collection-controls too
+    });
+   return this.innerGrid;
+  },
+
+  showValue: function (displayValue, dataValue, form, item) {
+    this.innerGrid.grid.showFilterEditor = false;
+     // Lightweight variant - data are supplied
+    if (dataValue && dataValue.length > 0) {
+      this.innerGrid.grid.setData(dataValue);
+    } else { // Data not supplied - get it from Storage
+      if (typeof(form.valuesManager) != "undefined" && form.valuesManager != null) {
+        this.mainID = form.valuesManager.getValue(this.mainIDProperty);
+        if (typeof(this.mainID) != "undefined") {
+          var filterString = "{\"" + this.backLinkRelation + "\" : \"" + this.mainID + "\"}";
+          this.innerGrid.addFilter("BackLink", parseJSON(filterString), true);
+          if (this.optionCriteria) {
+            this.innerGrid.addFilter("LinkFilter", this.optionCriteria, true);
+          }
+          // TODO: Switch to AdvancedCriteria
+          /*					var cretin = null;
+           if (this.optionCriteria) {
+           cretin = {
+           _constructor:"AdvancedCriteria",
+           operator: "and",
+           criteria:[parseJSON(filterString), this.optionCriteria ]};
+           } else {
+           cretin = parseJSON(filterString);
+           }
+           this.innerGrid.addFilter("BackLink", cretin, true);*/
+
+        }
+      }
+      this.innerGrid.fetchData(function (dsResponse, data, dsRequest) {
+          if (typeof(this.getDataSource) == "undefined") {
+            if (!this.hasAllData()) {
+              this.setCacheData(data);
+            }
+          } else {
+            if (!this.getDataSource().hasAllData()) {
+              this.getDataSource().setCacheData(data);
+            }
+          }
+        }
+      );
+    }
+  }
+}); // <<< End CollectionControl (Cross-link) control
 
 
 // -------------------------- CollectionControl control for direct-linked objects -----------------------------
