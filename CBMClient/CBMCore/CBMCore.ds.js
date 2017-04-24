@@ -644,7 +644,7 @@ isc.CBMDataSource.create({
     length: 4000
   }]
 });
-
+// VVV TODO VVV Drop or make static DataSource, DataLocation and DataField DS-es.
 isc.CBMDataSource.create({
   ID: "DBStorage",
   dbName: Window.default_DB,
@@ -775,10 +775,8 @@ isc.CBMDataSource.create({
     displayField: "SysCode",
     pickListWidth: 450,
     pickListFields: [{
-      name: "ID",
-      width: 30
-    }, {
-      name: "SysCode"
+      name: "SysCode",
+      width: 100
     }, {
       name: "Description"
     }],
@@ -805,10 +803,8 @@ isc.CBMDataSource.create({
     displayField: "SysCode",
     pickListWidth: 450,
     pickListFields: [{
-      name: "ID",
-      width: 30
-    }, {
-      name: "SysCode"
+      name: "SysCode",
+      width: 100
     }, {
       name: "Description"
     }]
@@ -824,10 +820,8 @@ isc.CBMDataSource.create({
     displayField: "SysCode",
     pickListWidth: 450,
     pickListFields: [{
-      name: "ID",
-      width: 30
-    }, {
-      name: "SysCode"
+      name: "SysCode",
+      width: 100
     }, {
       name: "Description"
     }],
@@ -874,9 +868,6 @@ isc.CBMDataSource.create({
     displayField: "SysCode",
     pickListWidth: 550,
     pickListFields: [{
-      name: "ID",
-      width: 30
-    }, {
       name: "ForConcept"
     }, {
       name: "SysCode"
@@ -899,10 +890,8 @@ isc.CBMDataSource.create({
     displayField: "SysCode",
     pickListWidth: 450,
     pickListFields: [{
-      name: "ID",
-      width: 30
-    }, {
-      name: "SysCode"
+      name: "SysCode",
+      width: 100
     }, {
       name: "Description"
     }]
@@ -917,9 +906,6 @@ isc.CBMDataSource.create({
     displayField: "SysCode",
     pickListWidth: 550,
     pickListFields: [{
-      name: "ID",
-      width: 30
-    }, {
       name: "ForConcept"
     }, {
       name: "SysCode"
@@ -1089,6 +1075,9 @@ isc.CBMDataSource.create({
   edit: function (record, context) {
     // TODO : change to metadata - provided Filter
     this.fields["BackLinkRelation"].optionCriteria = {
+      ForConcept: record["RelatedConcept"]
+    };
+    this.fields["CrossRelation"].optionCriteria = {
       ForConcept: record["RelatedConcept"]
     };
     this.Super("edit", arguments);
@@ -1491,12 +1480,14 @@ isc.CBMDataSource.create({
     name: "ColSpan",
     type: "integer",
     title: "Spread to columns",
-    defaultValue: 1
+    defaultValue: 1,
+    inList: true
   }, {
     name: "RowSpan",
     type: "integer",
     title: "Spread to rows",
-    defaultValue: 1
+    defaultValue: 1,
+    inList: true
   }, {
     name: "ControlType",
     type: "text",

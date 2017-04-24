@@ -258,7 +258,6 @@ function generateDStext(forView, futherActions) {
   // --- Some preparations ---
   var viewFields;
   var relations;
-  ///////////////////////////////
 //  var filter = parseJSON("{\"ForPrgView\" : \"" + viewRec.ID + "\" }");
 //		{"ForPrgView": viewRec.ID},
 	isc.DataSource.get("PrgViewField").fetchData(
@@ -367,7 +366,7 @@ function generateDStext(forView, futherActions) {
             }
             var relatedConceptRec = conceptRS.find("ID", currentRelation.RelatedConcept);
             var backLinkRelationRec = relationRS.find("ID", currentRelation.BackLinkRelation);
-            // VVVVVVVVVVVVVVVV
+            // For all types of property - special EditorType may be defined
             if (viewFields[i].ControlType !== "null") {
               resultDS += "editorType: \"" + viewFields[i].ControlType + "\", ";
             }
@@ -468,14 +467,12 @@ function generateDStext(forView, futherActions) {
                     resultDS += "pickListWidth: 450 ";
                   }
                 } else if (kind === "BackLink" || kind === "BackAggregate") {
-//                  resultDS += "type: \"custom\", ";
-                  resultDS += "type: \"" + backLinkRelationRec.SysCode + "\", ";
+                  resultDS += "type: \"custom\", "; //<<< ???
+//                  resultDS += "type: \"" + backLinkRelationRec.SysCode + "\", ";
                   resultDS += "canSave: true, ";
 //                  var editorType = editorType
                   if (viewFields[i].ControlType === "null" || viewFields[i].ControlType === "") {
                     resultDS += "editorType: \"" + (kind === "BackAggregate" ? "CollectionAggregateControl" : "CollectionControl") + "\", ";
-                  } else {
-                    resultDS += "editorType: \"" + viewFields[i].ControlType + "\", ";
                   }
                   resultDS += "relatedConcept: \"" + relatedConceptRec.SysCode + "\", ";
                   resultDS += "backLinkRelation: \"" + backLinkRelationRec.SysCode + "\", ";
@@ -495,14 +492,11 @@ function generateDStext(forView, futherActions) {
                   resultDS += "titleOrientation: \"top\" ";
                 } else if (kind === "CrossLink") {
                   var crossRelationRec = relationRS.find("ID", currentRelation.CrossRelation);
-//                  resultDS += "type: \"custom\", ";
-                  resultDS += "type: \"" + backLinkRelationRec.SysCode + "\", ";
+                  resultDS += "type: \"custom\", "; //<<< ???
+//                  resultDS += "type: \"" + backLinkRelationRec.SysCode + "\", ";
                   resultDS += "canSave: true, ";
-//                  var editorType = editorType
                   if (viewFields[i].ControlType === "null" || viewFields[i].ControlType === "") {
                     resultDS += "editorType: \"" + "CollectionCrossControl" + "\", ";
-                  } else {
-                    resultDS += "editorType: \"" + viewFields[i].ControlType + "\", ";
                   }
                   resultDS += "relatedConcept: \"" + relatedConceptRec.SysCode + "\", ";
                   resultDS += "backLinkRelation: \"" + backLinkRelationRec.SysCode + "\", ";
@@ -535,7 +529,6 @@ function generateDStext(forView, futherActions) {
     }
   );
 });
-//////////////////////////////
 }
 
 
@@ -1253,6 +1246,7 @@ isc.CBMDataSource.addProperties({
               if (relation.RelationKind === "Link" 
                   || relation.RelationKind === "BackAggregate"
                   || relation.RelationKind === "BackLink"
+                  || relation.RelationKind === "CrossLink"
                   || relation.RelationKind === "Aggregate")
               {
                 var conceptDS = isc.DataSource.get("Concept");
@@ -3568,7 +3562,7 @@ isc.RelationsAggregateControl.addProperties({
 				criteria: {
 					fieldName: "RelationKind", 
 					operator: "inSet", 
-					value: ["BackLink", "BackAggregate", "ManyToMany"]
+					value: ["BackLink", "BackAggregate", "CrossLink"]
 				}
 			}
 		];
