@@ -500,6 +500,9 @@ function generateDStext(forView, futherActions) {
                   }
                   resultDS += "relatedConcept: \"" + relatedConceptRec.SysCode + "\", ";
                   resultDS += "backLinkRelation: \"" + backLinkRelationRec.SysCode + "\", ";
+                  resultDS += "CrossConcept: \"" + CrossConceptRec.SysCode + "\", ";
+                  resultDS += "CrossRelation: \"" + CrossRelationRec.SysCode + "\", ";
+                  
                   if (viewFields[i].ValueField !== "null") {
                     resultDS += "mainIDProperty: \"" + viewFields[i].ValueField + "\", ";
                   } else {
