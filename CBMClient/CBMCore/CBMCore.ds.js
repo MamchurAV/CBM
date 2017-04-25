@@ -414,19 +414,23 @@ isc.CBMDataSource.create({
     }, {
       name: "ExprToString",
       type: "text",
-      UIPath: "Information System aspects"
+      UIPath: "Information System aspects",
+	  colSpan: 2
     }, {
       name: "ExprToStringDetailed",
       type: "text",
-      UIPath: "Information System aspects"
+      UIPath: "Information System aspects",
+	  colSpan: 2
     }, {
       name: "ExprFrom",
       type: "text",
-      UIPath: "Information System aspects"
+      UIPath: "Information System aspects",
+	  colSpan: 5
     }, {
       name: "ExprWhere",
       type: "text",
-      UIPath: "Information System aspects"
+      UIPath: "Information System aspects",
+	  colSpan: 5
     }, {
       name: "ExprOrder",
       type: "text",

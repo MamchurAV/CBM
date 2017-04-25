@@ -491,7 +491,6 @@ function generateDStext(forView, futherActions) {
                   }
                   resultDS += "titleOrientation: \"top\" ";
                 } else if (kind === "CrossLink") {
-                  var crossRelationRec = relationRS.find("ID", currentRelation.CrossRelation);
                   resultDS += "type: \"custom\", "; //<<< ???
 //                  resultDS += "type: \"" + backLinkRelationRec.SysCode + "\", ";
                   resultDS += "canSave: true, ";
@@ -500,9 +499,14 @@ function generateDStext(forView, futherActions) {
                   }
                   resultDS += "relatedConcept: \"" + relatedConceptRec.SysCode + "\", ";
                   resultDS += "backLinkRelation: \"" + backLinkRelationRec.SysCode + "\", ";
-                  resultDS += "CrossConcept: \"" + CrossConceptRec.SysCode + "\", ";
-                  resultDS += "CrossRelation: \"" + CrossRelationRec.SysCode + "\", ";
-                  
+                  var crossConceptRec = conceptRS.find("ID", currentRelation.CrossConcept);
+				  if (crossConceptRec) {
+					resultDS += "crossConcept: \"" + crossConceptRec.SysCode + "\", ";
+				  }
+                  var crossRelationRec = relationRS.find("ID", currentRelation.CrossRelation);
+				  if (crossRelationRec) {
+					resultDS += "crossRelation: \"" + crossRelationRec.SysCode + "\", ";
+                  }
                   if (viewFields[i].ValueField !== "null") {
                     resultDS += "mainIDProperty: \"" + viewFields[i].ValueField + "\", ";
                   } else {
@@ -1231,7 +1235,7 @@ isc.CBMDataSource.addProperties({
   
   // --- Ensure existing DataSources for link attributes to one level in depth.
   // (DataSources if needed are generated in cycle asyncroniously, result callback maybe called earlier)
-  resolveLinks(callback){
+  resolveLinks: function (callback){
     that = this;
     getRelationsForConceptName(this.ID,
         function (data) {
