@@ -2835,6 +2835,11 @@ isc.InnerGrid.addProperties({
           saveLocally: false,
           canMultiSort: true,
           canReorderRecords: true,
+          
+          autoFitWidthApproach:"both",
+          wrapHeaderTitles:true,
+          headerHeight:25,
+          
           innerGrid: that,
           formatCellValue: function (value, record, rowNum, colNum, grid) {
             return getLang(value, tmp_Lang, false);
@@ -2881,6 +2886,11 @@ isc.InnerGrid.addProperties({
           canEdit: true,
           modalEditing: true,
           autoSaveEdits: false,
+          
+          autoFitWidthApproach:"both",
+          wrapHeaderTitles:true,
+          headerHeight:25,
+          
           formatCellValue: function (value, record, rowNum, colNum, grid) {
             return getLang(value, tmp_Lang, false);
           },
@@ -3109,7 +3119,8 @@ isc.InnerGrid.addProperties({
       };
 
       var toContextReturnButton = null;
-      if (typeof(that.context) != "undefined" && that.context != null) {
+      if (typeof(that.context) != "undefined" && that.context != null
+        && that.context.Class !== "InnerForm" ) {
         toContextReturnButton = isc.IconButton.create({
           top: 250,
           width: 25,
