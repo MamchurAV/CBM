@@ -26,23 +26,21 @@ public class CBMStart {
 	    Component component = new Component();  
 	    
 		try {
-//			props.load(new FileInputStream(CBM_ROOT + "/CBMClient/CBMServer.properties"));
 			props.load(new FileInputStream(sysRoot + "/CBMServer.properties"));
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-
 	  
-	    // Add a new HTTP server listening on configured port
 		int port = Integer.parseInt(getParam("port"));
-	    Server server = component.getServers().add(Protocol.HTTP, port); 
+	    // Add a new HTTP server listening on configured port
+		Server server = component.getServers().add(Protocol.HTTPS, 5588); 
+	    // Add a new HTTPS server listening on configured port
+		component.getServers().add(Protocol.HTTP, port);
+		// Add file protocol
 	    component.getClients().add(Protocol.FILE);
 
-	    // Add a new HTTPS server listening on port 8183
-//	    Server server = component.getServers().add(Protocol.HTTPS, 8183);
-	    
 	    Series<Parameter> parameters = server.getContext().getParameters();
 	    parameters.add("maxThreads", "40");
 

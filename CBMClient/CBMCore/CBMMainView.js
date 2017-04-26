@@ -325,7 +325,7 @@ var loginClose = function () {
   // TODO: - Test for locale-file existence
   var scriptCBM = document.createElement("script");
   scriptCBM.type = "text/javascript";
-  scriptCBM.src = "locales/strings_" + curr_Lang.substr(0, 2) + ".properties";
+  scriptCBM.src = "CBMClient/locales/strings_" + curr_Lang.substr(0, 2) + ".properties";
   document.head.appendChild(scriptCBM);
 
   // --- Load CBM DataSources, using choosen localization
@@ -335,7 +335,7 @@ var loginClose = function () {
   if (curr_Lang !== "en-GB") {
     var script = document.createElement("script");
     script.type = "text/javascript";
-    script.src = "isomorphic/locales/frameworkMessages_" + curr_Lang.substr(0, 2) + ".properties";
+    script.src = "CBMClient/isomorphic/locales/frameworkMessages_" + curr_Lang.substr(0, 2) + ".properties";
     document.head.appendChild(script);
   }
 
