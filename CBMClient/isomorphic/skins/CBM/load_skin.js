@@ -13,7 +13,7 @@ isc.loadSkin = function (theWindow) {
         // Specify skin directory
         //----------------------------------------
         // must be relative to your application file or isomorphicDir
-        isc.Page.setSkinDir("[ISOMORPHIC]/skins/CBM/");
+        isc.Page.setSkinDir("CBMClient/isomorphic/skins/CBM/");
 
         //----------------------------------------
         // Load skin style sheet(s)

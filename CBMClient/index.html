@@ -9,23 +9,23 @@
     <script>window.isc_useSimpleNames = false;</script> 
 		<script>var isomorphicDir="isomorphic/";</script>
 	
-    <script SRC=isomorphic/system/modules-debug/ISC_Core.js></script>
-    <script SRC=isomorphic/system/modules-debug/ISC_Foundation.js></script>
-    <script SRC=isomorphic/system/modules-debug/ISC_Containers.js></script>
-    <script SRC=isomorphic/system/modules-debug/ISC_Grids.js></script>
-    <script SRC=isomorphic/system/modules-debug/ISC_Forms.js></script>
-    <script SRC=isomorphic/system/modules-debug/ISC_DataBinding.js></script>
-    <script SRC=isomorphic/system/modules-debug/ISC_RichTextEditor.js></script>
-    <script SRC=isomorphic/system/modules-debug/ISC_Calendar.js></script>
-	<!--script SRC=isomorphic/system/modules-debug/ISC_Workflow.js></script-->
-    <!--script SRC=isomorphic/system/modules-debug/ISC_Drawing.js></script-->
-	<script SRC=isomorphic/skins/CBM/load_skin.js></script>
+    <script SRC=CBMClient/isomorphic/system/modules-debug/ISC_Core.js></script>
+    <script SRC=CBMClient/isomorphic/system/modules-debug/ISC_Foundation.js></script>
+    <script SRC=CBMClient/isomorphic/system/modules-debug/ISC_Containers.js></script>
+    <script SRC=CBMClient/isomorphic/system/modules-debug/ISC_Grids.js></script>
+    <script SRC=CBMClient/isomorphic/system/modules-debug/ISC_Forms.js></script>
+    <script SRC=CBMClient/isomorphic/system/modules-debug/ISC_DataBinding.js></script>
+    <script SRC=CBMClient/isomorphic/system/modules-debug/ISC_RichTextEditor.js></script>
+    <script SRC=CBMClient/isomorphic/system/modules-debug/ISC_Calendar.js></script>
+	<!--script SRC=CBMClient/isomorphic/system/modules-debug/ISC_Workflow.js></script-->
+    <!--script SRC=CBMClient/isomorphic/system/modules-debug/ISC_Drawing.js></script-->
+	<script SRC=CBMClient/isomorphic/skins/CBM/load_skin.js></script>
 </HEAD>
 <BODY CLASS="pageBackground" STYLE="overflow:hidden">
-v2017-04-25
+v2017-04-26 - 2
 <script>
 isc.setAutoDraw(false);
-isc.Page.setAppImgDir("images/");
+isc.Page.setAppImgDir("CBMClient/images/");
 </script> 
 
 <!-- Cripto libs tested (not used!) variants -->
@@ -38,15 +38,15 @@ isc.Page.setAppImgDir("images/");
 <script src="Stanf/rsa.js"></script> -->
 <!-- <script src="Stanf/base64.js"></script> -->
 
-<script src="Secure/base64v1_0.js"></script>
-<script src="Secure/rsa_compiled.js"></script>
-<script src="Utils/moment.min.js"></script>
+<script src="CBMClient/Secure/base64v1_0.js"></script>
+<script src="CBMClient/Secure/rsa_compiled.js"></script>
+<script src="CBMClient/Utils/moment.min.js"></script>
 
 <!-- CBM itself -->
-<script src="CBMCore/CBM.config.js"></script>
-<script src="CBMCore/CBMCore.js"></script>
-<script src="CBMCore/CBMCore.ds.js"></script>
-<script src="CBMCore/CBMMainView.js"></script>
+<script src="CBMClient/CBMCore/CBM.config.js"></script>
+<script src="CBMClient/CBMCore/CBMCore.js"></script>
+<script src="CBMClient/CBMCore/CBMCore.ds.js"></script>
+<script src="CBMClient/CBMCore/CBMMainView.js"></script>
 <!-- <script src="login/login.js"></script> -->
 
 </BODY>
