@@ -1,6 +1,7 @@
 package CBMServer;
 
 
+import org.restlet.data.CacheDirective;
 import org.restlet.data.CookieSetting;
 import org.restlet.data.MediaType;
 import org.restlet.representation.FileRepresentation;
@@ -35,11 +36,10 @@ public class CBMClientStart extends ServerResource
 		
 		initialMsg = credMan.initFirstKeys();
 		
-//		response.redirectPermanent("/CBMClient/");
-        CookieSetting cS = new CookieSetting(1, "ImgFirst", initialMsg /*, "/", ".127.0.0.1"*/);
-//        cS.setAccessRestricted(false);
-//        cS.setSecure(false);
+        CookieSetting cS = new CookieSetting(1, "ImgFirst", initialMsg );
         response.getCookieSettings().add(cS);
+        
+        response.getCacheDirectives().add(new CacheDirective("no-store"));
 
 		return fr; 
 	}

@@ -18,13 +18,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 
 /**
- * Class that prepare SmartClient requests in unified fo CBM I_Request form.
+ * Class that prepare SmartClient requests in unified for CBM I_Request form.
  *
  */
 public class IscIOFormatter implements I_ClientIOFormatter {
 
+	// ------------ Interface implementation -----------------------
+	
 	/**
-	 * ------------ Interface implementation -----------------------
+	 * Format ongoing requests
 	 */
 	@Override
 	public DSTransaction formatRequest(Request request) throws Exception 

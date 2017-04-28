@@ -35,9 +35,9 @@ public class CBMStart {
 	  
 		int port = Integer.parseInt(getParam("port"));
 	    // Add a new HTTP server listening on configured port
-		Server server = component.getServers().add(Protocol.HTTPS, 5588); 
+		Server server = component.getServers().add(Protocol.HTTP, port); 
 	    // Add a new HTTPS server listening on configured port
-		component.getServers().add(Protocol.HTTP, port);
+//		component.getServers().add(Protocol.HTTP, port);
 		// Add file protocol
 	    component.getClients().add(Protocol.FILE);
 

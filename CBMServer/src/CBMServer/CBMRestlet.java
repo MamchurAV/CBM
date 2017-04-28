@@ -64,6 +64,8 @@ public class CBMRestlet extends Application {
         router.attach("/CBMClient", new Directory(getContext(), ROOT_URI));
         // Route for main Data proceeding requests 
         router.attach("/DataService", CBMServer.DataAccessService.class); 
+        // Route for files Upload functionality 
+        router.attach("/Upload", CBMServer.FilesUploadService.class); 
         return router;
     }
     
