@@ -3733,7 +3733,23 @@ isc.FileUploadCanvas.addProperties({
             
             var el = document.getElementById("uploader1");
             var azureUploader = new qq.azure.FineUploader({
-                element: el
+//                debug: true,
+                element: el,
+                request: {
+                    endpoint: AZURE_BLOB_URL
+                },
+                signature: {
+                    endpoint: '/Upload'
+                },
+                uploadSuccess: {
+                    endpoint: '/Upload'
+                },
+                retry: {
+                   enableAuto: true
+                },
+                deleteFile: {
+                    enabled: true
+                }
             });
              
             return this;

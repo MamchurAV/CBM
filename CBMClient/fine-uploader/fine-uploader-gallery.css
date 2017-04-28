@@ -43,8 +43,8 @@
 ------------------------------------------ */
 .qq-gallery.qq-uploader {
     position: relative;
-    min-height: 200px;
-    max-height: 490px;
+    min-height: 80px;
+    max-height: 290px;
     overflow-y: hidden;
     width: inherit;
     border-radius: 6px;
@@ -99,7 +99,7 @@
     margin: 0;
     padding: 10px 0 0;
     list-style: none;
-    max-height: 450px;
+    max-height: 250px;
     overflow-y: auto;
     clear: both;
     box-shadow: none;
@@ -409,7 +409,7 @@
     position: relative;
 
     /* to ensure consistent size of tiles - should match qq-max-size attribute value on qq-thumbnail-selector IMG element */
-    height: 120px;
+    height: 60px;
     width: 120px;
 }
 .qq-gallery .qq-thumbnail-selector {
