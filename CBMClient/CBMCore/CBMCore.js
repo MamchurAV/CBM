@@ -2927,7 +2927,7 @@ isc.InnerGrid.addProperties({
         })
       }
 
-      that["filters"] = isc.FilterSet.create(); //, // TODO: (?) - switch "FilterSet" to simple JS object???
+      that["filters"] = isc.FilterSet.create(); // TODO: (?) - switch "FilterSet" to simple JS object???
       // By default
       that.addFilter("Del", {"Del": false}, true);
       that.applyFilters();
@@ -3718,10 +3718,45 @@ isc.CollectionCrossControl.addProperties({
  }
  });
  */
+ 
+
+// ------------------------ File upload control  ----------------------------
+isc.defineClass("FileUploadCanvas", "Canvas");
+isc.FileUploadCanvas.addProperties({
+    getInnerHTML : function () {
+                      return "<div id='uploader1'>Upload file!!!</div>";
+                    },
+
+    draw : function () {
+            if (!this.readyToDraw()) return this;
+            this.Super("draw", arguments);
+            
+            var el = document.getElementById("uploader1");
+            var azureUploader = new qq.azure.FineUploader({
+                element: el
+            });
+             
+            return this;
+       },
+       
+    redrawOnResize: false 
+}); 
+
+isc.ClassFactory.defineClass("FileUploadControl", isc.CanvasItem);
+isc.FileUploadControl.addProperties({
+  createCanvas: function (formParent) {
+                  var canv = isc.FileUploadCanvas.create();  
+                  return canv;
+                }
+});
+
+ 
+// ==========================================================================
+// ================= CBM Windows / Dialogs components =======================
+// ==========================================================================
 
 
 // ============== CBM common Window class ===================================
-
 isc.ClassFactory.defineClass("BaseWindow", isc.Window);
 isc.BaseWindow.addProperties({
   width: 700,
@@ -3961,6 +3996,7 @@ function createTable(forType, context, callback, filter, rootIdValue, afterCreat
 
 // ==================== CBM Form View Infrastructure ========================
 
+// InnerForm - intended to preset some DynamicForm proerties to CBM reasonable values
 isc.ClassFactory.defineClass("InnerForm", isc.DynamicForm);
 isc.InnerForm.addProperties({
   //    width: "89%", height: "89%", <- Some narrow width, NO affected height!
@@ -3971,7 +4007,7 @@ isc.InnerForm.addProperties({
   numCols: 6,
   minColWidth: 100,
 //  colWidths: ["120", "30%", "120", "30%"],
-  colWidths: ["10%", "20%", "10%", "20%", "10%", "20%"],
+  colWidths: ["10%", "23%", "10%", "23%", "10%", "23%"],
   layoutMargin: 2,
   cellPadding: 2,
   //	cellBorder : 1, // <<< For layout testing only! In production - set to 0
