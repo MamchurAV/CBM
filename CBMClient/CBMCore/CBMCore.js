@@ -3422,7 +3422,7 @@ isc.CollectionControl.addProperties({
       dataSource: (this.optionDataSource ? this.optionDataSource : this.relatedConcept),
       context: form // TODO: Part off: Provide settings to collection-controls too
     });
-    this.innerGrid.grid.showFilterEditor = false;
+ //   this.innerGrid.grid.showFilterEditor = false;
     return this.innerGrid;
   },
 
