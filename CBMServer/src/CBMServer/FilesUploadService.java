@@ -31,11 +31,12 @@ public class FilesUploadService extends ServerResource {
 
 	@Get("json")
 	public String doGet() {
-		// TODO parse request here to extract separate parameters
-        String blobUri = (String) request.getAttributes().get("bloburi");
-        String verb = request.getMethod().toString();
-
-		return AzureHelper.GetSAS(blobUri, verb);
+		// TODO put some logic to distinguish <Common case> vs <Azure storage>...
+        String blobUri = getQueryValue("bloburi");
+        String mehod = request.getMethod().toString();
+		
+		// Azure storage used:
+		return AzureHelper.GetSAS(blobUri, mehod);
 	}
 	
 	@Post("json")

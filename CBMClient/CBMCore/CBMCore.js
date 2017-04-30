@@ -3746,10 +3746,10 @@ isc.FileUploadCanvas.addProperties({
                 },
                 retry: {
                    enableAuto: true
-                },
+                }/*,
                 deleteFile: {
                     enabled: true
-                }
+                }*/
             });
              
             return this;
