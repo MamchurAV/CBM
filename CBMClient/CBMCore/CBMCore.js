@@ -3741,9 +3741,9 @@ isc.FileUploadCanvas.addProperties({
                 signature: {
                     endpoint: '/Upload'
                 },
-                uploadSuccess: {
-                    endpoint: '/Upload'
-                },
+                // uploadSuccess: {
+                    // endpoint: '/Upload'
+                // },
                 retry: {
                    enableAuto: true
                 }/*,

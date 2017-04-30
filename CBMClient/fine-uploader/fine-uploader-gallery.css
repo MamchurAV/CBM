@@ -43,7 +43,7 @@
 ------------------------------------------ */
 .qq-gallery.qq-uploader {
     position: relative;
-    min-height: 80px;
+    min-height: 120px;
     max-height: 290px;
     overflow-y: hidden;
     width: inherit;
