@@ -828,18 +828,41 @@ function getRelationsForConcept(conceptId, callback) {
 
 // Returns (by callback call) relations for current concept, with merged parents hierarchy's relations.
 function getRelationsForConceptName(conceptName, callback) {
-  	var conceptDS = isc.DataSource.get("Concept");
-  	var filter = {SysCode: conceptName };
-    var conceptRecord = conceptDS.getCacheData().find(filter);
-    var conceptID = conceptRecord.ID;
-    getRelationsForConcept(conceptID, 
+  var conceptDS = isc.DataSource.get("Concept");
+  var filter = {SysCode: conceptName };
+  var conceptRecord = conceptDS.getCacheData().find(filter);
+  var conceptID = conceptRecord.ID;
+  getRelationsForConcept(conceptID, 
+      function (rel) {
+        isc.DataSource.get(conceptName).relations = rel;
+        if (callback) {
+          callback(rel); 
+        }
+      }
+  );
+}
+
+
+// Returns (by callback call) relations for concept of requested PrgView name, with merged parents hierarchy's relations.
+function getRelationsForViewConcept(forView, callback) {
+
+  var viewRec = viewRS.find("SysCode", forView);
+  
+  var conceptDS = isc.DataSource.get("Concept");
+  var filter = {ID: viewRec.ForConcept};
+  var conceptRec = conceptDS.getCacheData().find(filter);
+  var conceptName = conceptRec.SysCode;
+
+  if (viewRec) {
+    getRelationsForConcept(viewRec.ForConcept, 
         function (rel) {
           isc.DataSource.get(conceptName).relations = rel;
-		  if (callback) {
-			callback(rel); 
-		  }
-       }
+          if (callback) {
+            callback(rel); 
+          }
+        }
     );
+  }
 }
 
 
@@ -1186,7 +1209,7 @@ isc.CBMDataSource.addProperties({
     // If this.relations is null - initialise it (once!)
     if (this.relations === null) {
 //      this.relations = relationRS.findAll({ForConcept: this.getConcept().ID});
-     getRelationsForConceptName(this.ID, null);
+     getRelationsForViewConcept(this.ID, null);
    }
     var rel = this.relations.find({SysCode: fldName});
     return (rel ? rel : {} );
@@ -1196,7 +1219,7 @@ isc.CBMDataSource.addProperties({
   findRelation: function (criteria) {
     // If this.relations is null - initialise it (once!)
     if (this.relations === null) {
-      getRelationsForConceptName(this.ID, null);
+      getRelationsForViewConcept(this.ID, null);
     }
     var rel = this.relations.find(criteria);
     return (rel ? rel : {} );
@@ -1237,7 +1260,7 @@ isc.CBMDataSource.addProperties({
   // (DataSources if needed are generated in cycle asyncroniously, result callback maybe called earlier)
   resolveLinks: function (callback){
     that = this;
-    getRelationsForConceptName(this.ID,
+    getRelationsForViewConcept(this.ID,
         function (data) {
           if (!data || data == null) return;
           var dataCount = data.length;
@@ -1607,7 +1630,19 @@ isc.CBMDataSource.addProperties({
             if (UIPaths[j] === currRoot) {
               notFound = false;
               var nItem = items[[j]].length;
-            items[j][nItem] = isc.FormItem.create({name:atrNames[i], width:"100%", hidden: null, showIf: null});
+              items[j][nItem] = isc.FormItem.create({name:atrNames[i], width:"100%", hidden: null, showIf: null});
+              // Defaults setting
+              if (this.getField(atrNames[i]).defaultValue) {
+              try{
+                items[j][nItem].defaultValue = eval(this.getField(atrNames[i]).defaultValue);
+              } catch (e) {
+                if (e instanceof SyntaxError || e instanceof ReferenceError) {
+                  // Simply ignore
+                } else {
+                  throw(e);
+                }
+              }
+              }
               break;
             }
           }
@@ -1615,6 +1650,18 @@ isc.CBMDataSource.addProperties({
             UIPaths[j] = currRoot;
             items[j] = [];
             items[j][0] = isc.FormItem.create({name:atrNames[i], width:"100%", hidden: null, showIf: null});
+            // Defaults setting
+            if (this.getField(atrNames[i]).defaultValue) {
+              try{
+                items[j][0].defaultValue = eval(this.getField(atrNames[i]).defaultValue);
+              } catch (e) {
+                if (e instanceof SyntaxError || e instanceof ReferenceError) {
+                  // Simply ignore
+                } else {
+                  throw(e);
+                }
+              }
+            }
           }
         // }
         
@@ -3720,37 +3767,49 @@ isc.CollectionCrossControl.addProperties({
  */
  
 
-// ------------------------ File upload control  ----------------------------
-isc.defineClass("FileUploadCanvas", "Canvas");
-isc.FileUploadCanvas.addProperties({
+// ------------------------ Azure direct upload control  ----------------------------
+isc.defineClass("AzureUploadCanvas", "Canvas");
+isc.AzureUploadCanvas.addProperties({
+  
     getInnerHTML : function () {
-                      return "<div id='uploader1'>Upload file!!!</div>";
+                      var divHtml = "<div id=uploader_" + this.ID + ">Upload file!!!</div>";
+                      return divHtml;
                     },
 
     draw : function () {
             if (!this.readyToDraw()) return this;
             this.Super("draw", arguments);
             
-            var el = document.getElementById("uploader1");
-            var azureUploader = new qq.azure.FineUploader({
-//                debug: true,
-                element: el,
+            this.el = document.getElementById("uploader_" + this.ID);
+            this.azureUploader = new qq.azure.FineUploader({
+                element: this.el,
                 request: {
                     endpoint: AZURE_BLOB_URL
                 },
                 signature: {
                     endpoint: '/Upload'
                 },
-                // uploadSuccess: {
-                    // endpoint: '/Upload'
-                // },
                 retry: {
-                   enableAuto: true
-                }/*,
-                deleteFile: {
-                    enabled: true
-                }*/
+                    enableAuto: true
+                },
+                validation: {
+                    itemLimit: 1,
+                    sizeLimit: 16384000000 // 16Gb
+                },
+                multiple: false,
+                chunking: {
+                    partSize: 50000000, // 50Mb
+                    minFileSize: 204800001 // 200Mb
+                },
+                callbacks: {
+                    onComplete: function(id, name, responseJSON, xhr) {
+                      var newName = xhr.responseURL.substring(0, xhr.responseURL.indexOf("?"));
+                      this.iscContext.canvasItem.storeValue(newName);
+                    }
+                  }
             });
+            // Some artificial context establishing for callbacks (so that it seems buggy in usual resolving techniques) 
+            this.azureUploader.iscContext = this;
              
             return this;
        },
@@ -3758,10 +3817,11 @@ isc.FileUploadCanvas.addProperties({
     redrawOnResize: false 
 }); 
 
-isc.ClassFactory.defineClass("FileUploadControl", isc.CanvasItem);
-isc.FileUploadControl.addProperties({
+isc.ClassFactory.defineClass("AzureUploadControl", isc.CanvasItem);
+isc.AzureUploadControl.addProperties({
+  shouldSaveValue: true, 
   createCanvas: function (formParent) {
-                  var canv = isc.FileUploadCanvas.create();  
+                  var canv = isc.AzureUploadCanvas.create(); 
                   return canv;
                 }
 });
