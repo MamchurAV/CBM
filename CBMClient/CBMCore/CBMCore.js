@@ -4152,12 +4152,28 @@ isc.FormWindow.addProperties({
   },
   
   // Save inner grids editings and settings
-  saveInnerGridsSettings(){
-    var items = this.items[0].members[0].items;
-    
-    for (var i= 0; i < items.length; i++){
+  saveInnerGridsSettings: function(){
+    if (this.items[0].members[0].items) {
+      // In Form window witout tabs
+      var items = this.items[0].members[0].items;
+      this.saveGridsInItems(items);
+    } else if (this.items[0].members[0].tabs) {
+      // Form with tabs - iterate by them (for 1 level till now)
+      var tabs = this.items[0].members[0].tabs;
+      for (var j = 0; j < tabs.length; j++)
+      {
+        var items = tabs[j].pane.items;
+        this.saveGridsInItems(items);
+      }        
+    }
+   },
+  
+  saveGridsInItems: function(items) {
+    for (var i= 0; i < items.length; i++) {
       var item = items[i];
-      if (item.kind === "BackAggregate" || item.kind === "BackLink" || item.kind === "CrossLink") {
+      if (item.kind === "BackAggregate" || item.kind === "BackLink" || item.kind === "CrossLink"
+          || item.editorType === "CollectionAggregateControl" || item.editorType === "CollectionControl"
+          || item.editorType ===  "CollectionCrossControl" || item.editorType === "RelationsAggregateControl") {
         // In case Save or [X] pressed - save in-grid editings 
         item.innerGrid.grid.saveAllEdits();
         //Save ListSettings
@@ -4172,6 +4188,8 @@ isc.FormWindow.addProperties({
       }
     }
   },
+  
+  
   
   onCloseClick: function () {
     this.saveInnerGridsSettings();
