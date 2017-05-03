@@ -16,8 +16,9 @@ isc.CBMDataSource.create({
     name: "ActionType",
     type: "text",
     title: "Action",
+    valueMap: ["Read", "Insert", "Update", "Delete"],
+    editorType: "select",
     length: 200
-
   }, {
     name: "Creteria",
     type: "text",

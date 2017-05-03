@@ -2907,7 +2907,7 @@ isc.InnerGrid.addProperties({
             if (that.ID.startsWith("isc_InnerGrid_")){
               that.listSettingsChanged = true;
             }
-            // Set changed status also in Window (as flag for saving included grids)
+            // TODO VVV NOT USED >>> Set changed status also in Window (as flag for saving included grids)
             if (that.parentElement && that.parentElement.parentElement) {
               that.parentElement.parentElement.listSettingsChanged = true;
             }
@@ -2968,6 +2968,10 @@ isc.InnerGrid.addProperties({
           canReorderRecords: true,
           innerGrid: that,
           viewStateChanged: function () {
+            // Set changed status in Inner Grid
+            if (that.ID.startsWith("isc_InnerGrid_")){
+              that.listSettingsChanged = true;
+            }
             this.parentElement.parentElement.listSettingsChanged = true;
             return false;
           },
@@ -4174,10 +4178,17 @@ isc.FormWindow.addProperties({
       if (item.kind === "BackAggregate" || item.kind === "BackLink" || item.kind === "CrossLink"
           || item.editorType === "CollectionAggregateControl" || item.editorType === "CollectionControl"
           || item.editorType ===  "CollectionCrossControl" || item.editorType === "RelationsAggregateControl") {
+        
         // In case Save or [X] pressed - save in-grid editings 
         item.innerGrid.grid.saveAllEdits();
+        
         //Save ListSettings
         if (item.innerGrid.listSettingsChanged) {
+          // If innerGrid.listSettings not initialized
+          if (!item.innerGrid.listSettings) {
+            item.innerGrid.setListSettings();
+          }
+          
           item.innerGrid.listSettings.Settings = item.innerGrid.grid.getViewState();
           if (item.innerGrid.listSettingsExists) {
             listSettingsRS.dataSource.updateData(item.innerGrid.listSettings);
