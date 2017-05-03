@@ -843,7 +843,7 @@ function getRelationsForConceptName(conceptName, callback) {
 }
 
 
-// Returns (by callback call) relations for concept of requested PrgView name, with merged parents hierarchy's relations.
+// Returns (by callback call) relations for concept of requested "forView" param, with merged parents hierarchy's relations.
 function getRelationsForViewConcept(forView, callback) {
 
   var viewRec = viewRS.find("SysCode", forView);
@@ -1731,6 +1731,7 @@ isc.CBMDataSource.addProperties({
         // TODO: VVV save all updates in nested grids (back links) VVV
         click: function () {
           this.topElement.savePosition();
+          this.topElement.saveInnerGridsSettings();
           this.topElement.save();
           return false;
         },
@@ -1743,6 +1744,7 @@ isc.CBMDataSource.addProperties({
         title: isc.CBMStrings.EditForm_Cancel, //"Cancel",
         click: function () {
           this.topElement.savePosition();
+          
           if (this.topElement.contextObject !== null // <<< Can be null if window opend for multi-records editing
 		    && this.topElement.contextObject.currentTransaction !== null
             && this.topElement.contextObject.currentTransaction.Changes.length > 0) {
@@ -2662,6 +2664,7 @@ isc.MultiLinkControl.addProperties({
 
 // =============================================================================================
 // ========================== Grid-related controls infrastructure =============================
+// =============================================================================================
 // --- Delete selected in grid records in conjunction with delete mode
 //  parameter: mode - real deletion, or using "Del" property deletion throw trash bin.
 function deleteSelectedRecords(innerGrid, mode) {
@@ -2891,21 +2894,32 @@ isc.InnerGrid.addProperties({
           formatCellValue: function (value, record, rowNum, colNum, grid) {
             return getLang(value, tmp_Lang, false);
           },
+          // viewStateChanged: function () {
+            // if (that.parentElement && that.parentElement.parentElement) {
+              // that.parentElement.parentElement.listSettingsChanged = true;
+            // } else {
+              // that.listSettingsChanged = true;
+            // }
+            // return false;
+          // },
           viewStateChanged: function () {
+            // Set changed status in Inner Grid
+            if (that.ID.startsWith("isc_InnerGrid_")){
+              that.listSettingsChanged = true;
+            }
+            // Set changed status also in Window (as flag for saving included grids)
             if (that.parentElement && that.parentElement.parentElement) {
               that.parentElement.parentElement.listSettingsChanged = true;
-            } else {
-              that.listSettingsChanged = true;
             }
             return false;
           },
           dataArrived: function () {
-            if (that.parentElement && that.parentElement.parentElement && that.parentElement.parentElement.setListSettings) {
-              that.parentElement.parentElement.setListSettings();
+            if (that.setListSettings && that.ID.startsWith("isc_InnerGrid_")) {
+              that.setListSettings();
             } else {
-              if (that.setListSettings) {
-                that.setListSettings();
-              }
+              if (that.parentElement && that.parentElement.parentElement && that.parentElement.parentElement.setListSettings) {
+                that.parentElement.parentElement.setListSettings();
+              }             
             }
             return true;
           }
@@ -2936,7 +2950,7 @@ isc.InnerGrid.addProperties({
           
           autoFitWidthApproach:"both",
           wrapHeaderTitles:true,
-          headerHeight:25,
+          headerHeight:27,
           
           formatCellValue: function (value, record, rowNum, colNum, grid) {
             return getLang(value, tmp_Lang, false);
@@ -3046,7 +3060,7 @@ isc.InnerGrid.addProperties({
               ]
             }
 
-            var that = this; //<<<<<<<<<<<<<<justdefined!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!<<<<<<<<<<<<<<<
+            var that = this; //<<<<<<<<<<<<<<just defined!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!<<<<<<<<<<<<<<<
             var newChild = function (record) {
               var dsNew = isc.DataSource.getDataSource(record[0].SysCode);
               if (dsNew == null) {
@@ -3997,8 +4011,12 @@ isc.TableWindow.addProperties({
   },
 
   onCloseClick: function () {
+    // In all cases - save in-grid editings 
+    this.innerGrid.grid.saveAllEdits();
+    
     var tmp = this.Super("onCloseClick", arguments);
-    // TODO: Save in-form collection controls settings
+    
+    // Save ListSettings
     if (this.innerGrid.listSettingsChanged) {
       this.innerGrid.listSettings.Settings = this.innerGrid.grid.getViewState();
       if (this.innerGrid.listSettingsExists) {
@@ -4131,7 +4149,35 @@ isc.FormWindow.addProperties({
     // win.destroy();
     // };
     // isc.Timer.setTimeout(destroyInner, delay);
+  },
+  
+  // Save inner grids editings and settings
+  saveInnerGridsSettings(){
+    var items = this.items[0].members[0].items;
+    
+    for (var i= 0; i < items.length; i++){
+      var item = items[i];
+      if (item.kind === "BackAggregate" || item.kind === "BackLink" || item.kind === "CrossLink") {
+        // In case Save or [X] pressed - save in-grid editings 
+        item.innerGrid.grid.saveAllEdits();
+        //Save ListSettings
+        if (item.innerGrid.listSettingsChanged) {
+          item.innerGrid.listSettings.Settings = item.innerGrid.grid.getViewState();
+          if (item.innerGrid.listSettingsExists) {
+            listSettingsRS.dataSource.updateData(item.innerGrid.listSettings);
+          } else {
+            listSettingsRS.dataSource.addData(item.innerGrid.listSettings);
+          }
+        }
+      }
+    }
+  },
+  
+  onCloseClick: function () {
+    this.saveInnerGridsSettings();
+    this.Super("onCloseClick", arguments);
   }
+
 });
 
 
