@@ -349,7 +349,7 @@ function generateDStext(forView, futherActions) {
             if (viewFields[i].RowSpan !== "null") {
               resultDS += "rowSpan: " + viewFields[i].RowSpan + ", ";
             }
-            // TODO ? Maybe move items below to kind-specific places?
+            //TODO ? Maybe move items below to kind-specific places?
             resultDS += "align: \"left\", ";
             resultDS += "vAlign: \"top\", ";
             resultDS += "titleVAlign: \"top\", ";
@@ -379,11 +379,13 @@ function generateDStext(forView, futherActions) {
             }
              
             if (kind === "Command") {
-              resultDS += "type: \"button\", ";
-              resultDS += "editorType: \"button\", ";
-              resultDS += "readOnly: false, ";
-              resultDS += "startRow: false, ";
-              resultDS += "endRow: false";
+ //             resultDS += "type: \"button\", ";
+ //             resultDS += "editorType: \"ButtonItem\", ";
+ //             resultDS += "autoFit: true, ";
+ //             resultDS += "readOnly: false, ";
+ //             resultDS += "disabled: false, ";
+ //             resultDS += "startRow: false, ";
+ //             resultDS += "endRow: false";
               if (currentRelation.ExprFunctions && currentRelation.ExprFunctions !== "null" && currentRelation.ExprFunctions !== null) {
                 resultDS += ", click: " + currentRelation.ExprFunctions;
               }
@@ -892,6 +894,7 @@ function getRelationsForViewConcept(forView, callback) {
   var filter = {ID: viewRec.ForConcept};
   var conceptRec = conceptDS.getCacheData().find(filter);
   var conceptName = conceptRec.SysCode;
+  
 
   if (viewRec) {
     getRelationsForConcept(viewRec.ForConcept, 
@@ -1670,7 +1673,13 @@ isc.CBMDataSource.addProperties({
             if (UIPaths[j] === currRoot) {
               notFound = false;
               var nItem = items[[j]].length;
-              items[j][nItem] = isc.FormItem.create({name:atrNames[i], width:"100%", hidden: null, showIf: null});
+              if (this.getField(atrNames[i]).kind != "Command") {
+                items[j][nItem] = isc.FormItem.create({name:atrNames[i], width:"100%", hidden: null, showIf: null});
+              } else {
+                // Button linked to DS field seems to be disabled, we create it more "by hand"
+                var fld = this.getField(atrNames[i]);
+                items[j][nItem] = isc.FormItem.create({type:'button', title: fld.title, click: fld.click, startRow:false, endRow:false, autoFit:true});
+              }
               // Defaults setting
               if (this.getField(atrNames[i]).defaultValue) {
               try{
@@ -1689,7 +1698,13 @@ isc.CBMDataSource.addProperties({
           if (notFound) {
             UIPaths[j] = currRoot;
             items[j] = [];
-            items[j][0] = isc.FormItem.create({name:atrNames[i], width:"100%", hidden: null, showIf: null});
+            if (this.getField(atrNames[i]).kind != "Command") {
+              items[j][0] = isc.FormItem.create({name:atrNames[i], width:"100%", hidden: null, showIf: null});
+            } else {
+              // Button linked to DS field seems to be disabled, we create it more "by hand"
+              var fld = this.getField(atrNames[i]);
+              items[j][0] = isc.FormItem.create({type:'button', title: fld.title, click: fld.click, startRow:false, endRow:false, autoFit:true});
+            }
             // Defaults setting
             if (this.getField(atrNames[i]).defaultValue) {
               try{
