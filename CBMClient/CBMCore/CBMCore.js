@@ -1,5 +1,5 @@
 ﻿// ============================================================================
-// ========== Temporary candidates section =======================================
+// ========== Temporary candidates section ====================================
 // ============================================================================
 // EMPTY NOW
 //alert(new Date().getTime().toString(16));
@@ -149,6 +149,7 @@ function collect() {
  * @author Jeff Ward (jcward.com).
  * @license MIT license
  * @link http://stackoverflow.com/questions/105034/how-to-create-a-guid-uuid-in-javascript/21963136#21963136
+ *
  * (Chosen after speed tests!)
  *
  * @coauthor  Alexander Mamchur change first part of UUID
@@ -4260,13 +4261,61 @@ isc.FormWindow.addProperties({
 
 
 // =======================================================================
-// ====--------=== Infrastructure-technology functions ===================
+// =============== Infrastructure-technology functions ===================
 // =======================================================================
 
 // ------- Export Concept (with it's scope) to file fore migration purposes -------
 function exportConcept(concept){
-	
 }
 
+
+
+
+
+
+
+// =======================================================================
+// =======================================================================
+// =======================================================================
+// ================= Third-party systems comunications ===================
+// =======================================================================
+// =======================================================================
+// =======================================================================
+
+
+// ===================== Geocoding block =================================
+function directGeocodingYandex(address, callback) {
+  isc.RPCManager.sendRequest({
+        data: null,
+        useSimpleHttp: true,
+        contentType: "text/xml",
+        transport: "xmlHttpRequest",
+        httpMethod: "GET",
+        actionURL: "https://geocode-maps.yandex.ru/1.x/?format=json&geocode=" + address,
+        callback: callback
+  });
+}
+
+function fillGeocodingResults(form, item) {
+  
+    directGeocodingYandex(form.items.find({name:'Address'}).getValue(), 
+          function(RPCResponse) {
+            var resp = parseJSON(RPCResponse.data);
+            
+            // TODO: refactor to let user make choice if several points discovered
+            if (resp.response.GeoObjectCollection.featureMember.length > 0) {
+              var pos = resp.response.GeoObjectCollection.featureMember[0].GeoObject.Point.pos;
+            } else {
+                // TODO: here...
+                //isc.confirm("Service returnes: " + pos, null);
+            }
+            var coords = pos.split(' ');
+            form.items.find({name:'Latitude'}).setValue(coords[0]);
+            form.items.find({name:'Longitude'}).setValue(coords[1]);
+        }
+    );
+    
+    return false;
+}
 
 // ================================ The End =================================

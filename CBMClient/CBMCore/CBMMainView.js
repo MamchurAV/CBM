@@ -27,7 +27,7 @@ var loadStaticDataSources = function () {
   // Commented while not used
   var scriptDS = document.createElement("script");
   scriptDS.type = "text/javascript";
-  scriptDS.src = "CBMCore/CBMApply.ds.js";
+  scriptDS.src = "CBMClient/CBMCore/CBMApply.ds.js";
   document.head.appendChild(scriptDS);
 };
 
@@ -329,7 +329,7 @@ var loginClose = function () {
   document.head.appendChild(scriptCBM);
 
   // --- Load CBM DataSources, using choosen localization
-  loadStaticDataSources();
+  //// TEMPORALLY OFF>>> loadStaticDataSources();
 
   // --- Reset session Isomorphic messages locale according to user choice
   if (curr_Lang !== "en-GB") {
