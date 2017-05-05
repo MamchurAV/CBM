@@ -387,7 +387,7 @@ function generateDStext(forView, futherActions) {
  //             resultDS += "startRow: false, ";
  //             resultDS += "endRow: false";
               if (currentRelation.ExprFunctions && currentRelation.ExprFunctions !== "null" && currentRelation.ExprFunctions !== null) {
-                resultDS += ", click: " + currentRelation.ExprFunctions;
+                resultDS += "click: " + currentRelation.ExprFunctions;
               }
             }
             else {

@@ -227,11 +227,11 @@ isc.Window.create({
         {
           type: "button", width: "100", endRow: false,
           click: function () {
-            if (this.form.items[4].isVisible()) {
-              this.form.items[4].hide();
-            }
-            else {
+            if (!this.form.items[4].isVisible()) {
               this.form.items[4].show();
+              this.button.setIcon(isc.Page.getAppImgDir() + "arrow_right_long.png");
+              this.setTitle("");
+              this.disable();
             }
           },
           hoverWidth: "250"
