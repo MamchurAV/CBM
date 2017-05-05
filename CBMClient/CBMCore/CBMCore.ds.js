@@ -372,7 +372,9 @@ isc.CBMDataSource.create({
     deleteLinked: true,
     showTitle: true, //,
     titleOrientation: "top",
-    colSpan: 6
+    colSpan: 6,
+    endRow: true,
+    startRow: true
 //        UIPath: "Properties"
   }, {
     name: "Actuality",
@@ -1283,7 +1285,8 @@ isc.CBMDataSource.create({
     relatedConcept: "PrgViewField",
     backLinkRelation: "ForPrgView",
     mainIDProperty: "ID",
-    showTitle: false
+    showTitle: false,
+    colSpan: 6
   }]
 });
 
@@ -1348,40 +1351,47 @@ isc.CBMDataSource.create({
       dstRec["Title"] = srcRec["Description"];
       dstRec["Hint"] = srcRec["Notes"];
       dstRec["Mandatory"] = false;
-      dstRec["Hidden"] = false;
-      dstRec["InList"] = true;
       dstRec["ViewOnly"] = false;
-      dstRec["ShowTitle"] = true;
-      dstRec["Editable"] = true;
       dstRec["ColSpan"] = 1;
       dstRec["RowSpan"] = 1;
       dstRec["PickListWidth"] = 400;
-/*    if(srcRec.RelationKind.SysCode !== "Value") {
-		switch (record["RelationKind"]) {
-		  case "Link":
-			dstRec["ControlType"] = "LinkControl";
-			break;
-		  case "BackLink":
-			dstRec["ControlType"] = "CollectionControl";
-			break;
-//		  case "Aggregate":
-//			dstRec["ControlType"] = "LinkControl";
-//			break;
-		  case "BackAggregate":
-			dstRec["ControlType"] = "CollectionAggregateControl";
-			break;
-		  case "CrossLink":
-			dstRec["ControlType"] = "CrossLinkControl";
-			break;
-		  case "Command":
-			dstRec["ControlType"] = "Button";
-			break;
-		};
-		  dstRec["DataSourceView"] = srcRec.RelatedConcept;
-		  dstRec["ValueField"] = ;
-		  dstRec["DisplayField"] = ;
-		  dstRec["PickListFields"] = ;
-      }*/
+      
+      if(srcRec.SysCode === "ID") {
+        dstRec["Hidden"] = true;
+        dstRec["InList"] = false;
+        dstRec["ShowTitle"] = false;
+        dstRec["Editable"] = false;
+      } else {
+        dstRec["Hidden"] = false;
+        if(srcRec.RelationKind !== "Value" && srcRec.RelationKind !== "Link") {
+          dstRec["InList"] = false;
+        } else {
+          dstRec["InList"] = true;
+        }
+        dstRec["ShowTitle"] = true;
+        dstRec["Editable"] = true;
+      }
+      // Below section not nessesary due to all that made by default in dynamic CBM DS generation functon
+      // if(srcRec.RelationKind.SysCode !== "Value") {
+        // switch (record["RelationKind"]) {
+          // case "Link":
+          // dstRec["ControlType"] = "LinkControl";
+          // break;
+          // case "BackLink":
+          // dstRec["ControlType"] = "CollectionControl";
+          // break;
+          // case "BackAggregate":
+          // dstRec["ControlType"] = "CollectionAggregateControl";
+          // break;
+          // case "CrossLink":
+          // dstRec["ControlType"] = "CrossLinkControl";
+          // break;
+          // case "Command":
+          // dstRec["ControlType"] = "Button";
+          // break;
+        // }
+        // dstRec["DataSourceView"] = srcRec.RelatedConcept;
+      // }
     }
   }],
 
@@ -1506,7 +1516,7 @@ isc.CBMDataSource.create({
     colSpan: 2,
     length: 1000
   },
-    // Below fields that describe properties of complicated relation controls
+    // Below are the fields that describe properties of complicated relation controls
     {
       name: "DataSourceView",
       type: "text",
