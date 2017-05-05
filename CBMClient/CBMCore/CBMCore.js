@@ -3834,66 +3834,6 @@ isc.CollectionCrossControl.addProperties({
  });
  */
  
-
-// ------------------------ Azure direct upload control  ----------------------------
-isc.defineClass("AzureUploadCanvas", "Canvas");
-isc.AzureUploadCanvas.addProperties({
-  
-    getInnerHTML : function () {
-                      var divHtml = "<div id=uploader_" + this.ID + ">Upload file!!!</div>";
-                      return divHtml;
-                    },
-
-    draw : function () {
-            if (!this.readyToDraw()) return this;
-            this.Super("draw", arguments);
-            
-            this.el = document.getElementById("uploader_" + this.ID);
-            this.azureUploader = new qq.azure.FineUploader({
-                element: this.el,
-                request: {
-                    endpoint: AZURE_BLOB_URL
-                },
-                signature: {
-                    endpoint: '/Upload'
-                },
-                retry: {
-                    enableAuto: true
-                },
-                validation: {
-                    itemLimit: 1,
-                    sizeLimit: 16384000000 // 16Gb
-                },
-                multiple: false,
-                chunking: {
-                    partSize: 50000000, // 50Mb
-                    minFileSize: 204800001 // 200Mb
-                },
-                callbacks: {
-                    onComplete: function(id, name, responseJSON, xhr) {
-                      var newName = xhr.responseURL.substring(0, xhr.responseURL.indexOf("?"));
-                      this.iscContext.canvasItem.storeValue(newName);
-                    }
-                  }
-            });
-            // Some artificial context establishing for callbacks (so that it seems buggy in usual resolving techniques) 
-            this.azureUploader.iscContext = this;
-             
-            return this;
-       },
-       
-    redrawOnResize: false 
-}); 
-
-isc.ClassFactory.defineClass("AzureUploadControl", isc.CanvasItem);
-isc.AzureUploadControl.addProperties({
-  shouldSaveValue: true, 
-  createCanvas: function (formParent) {
-                  var canv = isc.AzureUploadCanvas.create(); 
-                  return canv;
-                }
-});
-
  
 // ==========================================================================
 // ================= CBM Windows / Dialogs components =======================
@@ -4282,8 +4222,72 @@ function exportConcept(concept){
 // =======================================================================
 // =======================================================================
 
+// ===================== Files Uploading block ===========================
+
+// ------------------------ Azure direct upload control  ----------------------------
+isc.defineClass("AzureUploadCanvas", "Canvas");
+isc.AzureUploadCanvas.addProperties({
+  
+    getInnerHTML : function () {
+                      var divHtml = "<div id=uploader_" + this.ID + ">Upload file!!!</div>";
+                      return divHtml;
+                    },
+
+    draw : function () {
+            if (!this.readyToDraw()) return this;
+            this.Super("draw", arguments);
+            
+            this.el = document.getElementById("uploader_" + this.ID);
+            this.azureUploader = new qq.azure.FineUploader({
+                element: this.el,
+                request: {
+                    endpoint: AZURE_BLOB_URL
+                },
+                signature: {
+                    endpoint: '/Upload'
+                },
+                retry: {
+                    enableAuto: true
+                },
+                validation: {
+                    itemLimit: 1,
+                    sizeLimit: 16384000000 // 16Gb
+                },
+                multiple: false,
+                chunking: {
+                    partSize: 50000000, // 50Mb
+                    minFileSize: 204800001 // 200Mb
+                },
+                callbacks: {
+                    onComplete: function(id, name, responseJSON, xhr) {
+                      var newName = xhr.responseURL.substring(0, xhr.responseURL.indexOf("?"));
+                      this.iscContext.canvasItem.storeValue(newName);
+                    }
+                  }
+            });
+            // Some artificial context establishing for callbacks (so that it seems buggy in usual resolving techniques) 
+            this.azureUploader.iscContext = this;
+             
+            return this;
+       },
+       
+    redrawOnResize: false 
+}); 
+
+isc.ClassFactory.defineClass("AzureUploadControl", isc.CanvasItem);
+isc.AzureUploadControl.addProperties({
+  shouldSaveValue: true, 
+  createCanvas: function (formParent) {
+                  var canv = isc.AzureUploadCanvas.create(); 
+                  return canv;
+                }
+});
+
+
 
 // ===================== Geocoding block =================================
+// Yandex geocoding service request
+// Returns results in expected format {lat:*, lon:*, adr:*}
 function directGeocodingYandex(address, callback) {
   isc.RPCManager.sendRequest({
         data: null,
@@ -4292,27 +4296,48 @@ function directGeocodingYandex(address, callback) {
         transport: "xmlHttpRequest",
         httpMethod: "GET",
         actionURL: "https://geocode-maps.yandex.ru/1.x/?format=json&geocode=" + address,
-        callback: callback
+        callback: function(RPCResponse) {
+            var resp = parseJSON(RPCResponse.data);
+            var results = [];
+            for (var i = 0; i < resp.response.GeoObjectCollection.featureMember.length; i++) {
+              var coordsAdr = resp.response.GeoObjectCollection.featureMember[i].GeoObject.metaDataProperty.GeocoderMetaData.text;
+              var pos = resp.response.GeoObjectCollection.featureMember[i].GeoObject.Point.pos;
+              var coords = pos.split(' ');
+              results.add({lat: coords[1], lon: coords[0], adr: coordsAdr});
+            } 
+            callback(results);
+        }
   });
 }
 
+// Provide geocoding search by possible services, and user's choice from several results
+// Expects providers to return results in array with structure: {lat:*, lon:*, adr:*}
+function getGeocodingResults(form, address, callback) {
+    // TODO: Gather results from searching by several geocoding service providers
+    directGeocodingYandex(form.items.find({name:'Address'}).getValue(), 
+              function(results) {
+                // TODO: Let user make choice if several points discovered
+                // Show results in form's Map control
+                // if(form) {***}
+                // ***
+                // Till now - returnes first result
+                callback(results[0]); 
+              }
+    );
+    
+    return false;
+}
+
+// Fills form fields with result of geocoding search
+// For correct work - assumed existance of fields "Address", "Latitude" and "Longitude" on form
 function fillGeocodingResults(form, item) {
   
-    directGeocodingYandex(form.items.find({name:'Address'}).getValue(), 
-          function(RPCResponse) {
-            var resp = parseJSON(RPCResponse.data);
-            
-            // TODO: refactor to let user make choice if several points discovered
-            if (resp.response.GeoObjectCollection.featureMember.length > 0) {
-              var pos = resp.response.GeoObjectCollection.featureMember[0].GeoObject.Point.pos;
-            } else {
-                // TODO: here...
-                //isc.confirm("Service returnes: " + pos, null);
-            }
-            var coords = pos.split(' ');
-            form.items.find({name:'Latitude'}).setValue(coords[0]);
-            form.items.find({name:'Longitude'}).setValue(coords[1]);
-        }
+    getGeocodingResults(form, form.items.find({name:'Address'}).getValue(), 
+              function(result) {
+                form.items.find({name:'Latitude'}).setValue(result.lat);
+                form.items.find({name:'Longitude'}).setValue(result.lon);
+                form.items.find({name:'Address'}).setValue(result.adr);
+              }
     );
     
     return false;
