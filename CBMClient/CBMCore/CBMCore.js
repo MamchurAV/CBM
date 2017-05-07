@@ -254,6 +254,8 @@ function generateDStext(forView, futherActions) {
     resultDS += "childExpansionMode: \"" + viewRec.ChildExpansionMode + "\", ";
   }
 
+//  resultDS += "nullStringValue: \"\", nullIntegerValue: \"\", nullFloatValue: \"\", nullDateValue: new Date(), ";
+
   // --- DS Fields creation ---
   resultDS += "fields: [";
   // --- Some preparations ---
@@ -326,7 +328,7 @@ function generateDStext(forView, futherActions) {
             if (currentRelation.ExprDefault && currentRelation.ExprDefault !== "null" && currentRelation.ExprDefault !== null) {
               resultDS += "defaultValue: \"" + currentRelation.ExprDefault + "\", ";
             }
-            if ((currentRelation.DBColumn === "null" || currentRelation.DBColumn === null || currentRelation.DBColumn === "undefined") && kind !== "CollectionControl") {
+            if ((!currentRelation.DBColumn || currentRelation.DBColumn === "null" || currentRelation.DBColumn === null || currentRelation.DBColumn === "undefined") && kind !== "CollectionControl") {
               resultDS += "canSave: false, ";
             }
             if (viewFields[i].Editable === false) {
@@ -338,22 +340,22 @@ function generateDStext(forView, futherActions) {
             if (currentRelation.Domain && currentRelation.Domain !== "null" && currentRelation.Domain !== null) {
               resultDS += "valueMap: " + currentRelation.Domain + ", ";
             }
-            if (viewFields[i].UIPath !== "null") {
+            if (viewFields[i].UIPath && viewFields[i].UIPath !== "null") {
               resultDS += "UIPath: \"" + viewFields[i].UIPath + "\", ";
             }
             if (viewFields[i].InList === true) {
               resultDS += "inList: true, ";
             }
-            if (viewFields[i].ColSpan !== "null") {
+            if (viewFields[i].ColSpan && viewFields[i].ColSpan !== "null") {
               resultDS += "colSpan: " + viewFields[i].ColSpan + ", ";
             }
-            if (viewFields[i].RowSpan !== "null") {
+            if (viewFields[i].RowSpan && viewFields[i].RowSpan !== "null") {
               resultDS += "rowSpan: " + viewFields[i].RowSpan + ", ";
             }
             //TODO ? Maybe move items below to kind-specific places?
             resultDS += "align: \"left\", ";
-            resultDS += "vAlign: \"top\", ";
-            resultDS += "titleVAlign: \"top\", ";
+            resultDS += "vAlign: \"bottom\", ";
+            resultDS += "titleVAlign: \"bottom\", ";
             
             if (currentRelation.CopyValue === true) {
               resultDS += "copyValue: true, ";
@@ -375,9 +377,10 @@ function generateDStext(forView, futherActions) {
             var relatedConceptRec = conceptRS.find("ID", currentRelation.RelatedConcept);
             var backLinkRelationRec = relationRS.find("ID", currentRelation.BackLinkRelation);
             // For all types of Relation - special EditorType may be defined
-            if (viewFields[i].ControlType !== "null") {
+            if (viewFields[i].ControlType && viewFields[i].ControlType !== "null") {
               resultDS += "editorType: \"" + viewFields[i].ControlType + "\", ";
             }
+            resultDS += "emptyDisplayValue: \"\", ";
              
             if (kind === "Command") {
  //             resultDS += "type: \"button\", ";
@@ -416,7 +419,7 @@ function generateDStext(forView, futherActions) {
                 case "LongMlString":
                 case "ShortMlString":
                   resultDS += "type: \"multiLangText\", ";
-                  if (viewFields[i].ControlType != "null") {
+                  if (viewFields[i].ControlType && viewFields[i].ControlType !== "null") {
                     resultDS += "editorType: \"" + viewFields[i].ControlType + "\"";
                   } else {
                     resultDS += "editorType: \"MultilangTextItem\"";
@@ -468,7 +471,7 @@ function generateDStext(forView, futherActions) {
 
                   if (kind === "Link") {
                     resultDS += "type: \"" + type + "\", ";
-                    if (viewFields[i].ControlType === "null"){
+                    if (!viewFields[i].ControlType || viewFields[i].ControlType === "null"){
                       resultDS += "editorType: \"LinkControl\", ";
                     }
                     // Concerning "foreignKey" below: If "foreignKey" is not single - hierarchy won't work!
@@ -481,20 +484,20 @@ function generateDStext(forView, futherActions) {
                       resultDS += "foreignKey: \"" + type + ".ID\", ";
                       resultDS += "rootValue: null, ";
                     }
-                    if (viewFields[i].DataSourceView !== "null") {
+                    if (viewFields[i].DataSourceView && viewFields[i].DataSourceView !== "null") {
                       resultDS += "optionDataSource: \"" + viewFields[i].DataSourceView + "\", ";
                     } else {
                       resultDS += "optionDataSource: \"" + type + "\", ";
                     }
-                    if (currentRelation.LinkFilter !== "null") {
+                    if (currentRelation.LinkFilter && currentRelation.LinkFilter !== "null") {
                       resultDS += "optionCriteria: \"" + currentRelation.LinkFilter + "\", ";
                     }
-                    if (viewFields[i].ValueField !== "null") {
+                    if (viewFields[i].ValueField && viewFields[i].ValueField !== "null") {
                       resultDS += "valueField: \"" + viewFields[i].ValueField + "\", ";
                     } else {
                       resultDS += "valueField: \"ID\", ";
                     }
-                    if (viewFields[i].DisplayField !== "null") {
+                    if (viewFields[i].DisplayField && viewFields[i].DisplayField !== "null") {
                       resultDS += "displayField: \"" + viewFields[i].DisplayField + "\", ";
                     } else {
                       resultDS += "displayField: \"Description\", ";
@@ -513,22 +516,22 @@ function generateDStext(forView, futherActions) {
   //                  resultDS += "type: \"" + backLinkRelationRec.SysCode + "\", ";
                     resultDS += "canSave: true, ";
   //                  var editorType = editorType
-                    if (viewFields[i].ControlType === "null" || viewFields[i].ControlType === "") {
+                    if (!viewFields[i].ControlType || viewFields[i].ControlType === "null" || viewFields[i].ControlType === "") {
                       resultDS += "editorType: \"" + (kind === "BackAggregate" ? "CollectionAggregateControl" : "CollectionControl") + "\", ";
                     }
                     resultDS += "relatedConcept: \"" + relatedConceptRec.SysCode + "\", ";
                     resultDS += "backLinkRelation: \"" + backLinkRelationRec.SysCode + "\", ";
-                    if (viewFields[i].ValueField !== "null") {
+                    if (viewFields[i].ValueField && viewFields[i].ValueField !== "null") {
                       resultDS += "mainIDProperty: \"" + viewFields[i].ValueField + "\", ";
                     } else {
                       resultDS += "mainIDProperty: \"ID\", ";
                     }
-                    if (viewFields[i].DataSourceView !== "null") {
+                    if (viewFields[i].DataSourceView && viewFields[i].DataSourceView !== "null") {
                       resultDS += "optionDataSource: \"" + viewFields[i].DataSourceView + "\", ";
                     } else {
                       resultDS += "optionDataSource: \"" + type + "\", ";
                     }
-                    if (currentRelation.LinkFilter !== "null") {
+                    if (currentRelation.LinkFilter && currentRelation.LinkFilter !== "null") {
                       resultDS += "optionCriteria: " + currentRelation.LinkFilter + ", ";
                     }
                     resultDS += "titleOrientation: \"top\" ";
@@ -537,7 +540,7 @@ function generateDStext(forView, futherActions) {
                     resultDS += "type: \"custom\", "; //<<< ???
   //                  resultDS += "type: \"" + backLinkRelationRec.SysCode + "\", ";
                     resultDS += "canSave: true, ";
-                    if (viewFields[i].ControlType === "null" || viewFields[i].ControlType === "") {
+                    if ( !viewFields[i].ControlType || viewFields[i].ControlType === "null" || viewFields[i].ControlType === "") {
                       resultDS += "editorType: \"" + "CollectionCrossControl" + "\", ";
                     }
                     resultDS += "relatedConcept: \"" + relatedConceptRec.SysCode + "\", ";
@@ -550,17 +553,17 @@ function generateDStext(forView, futherActions) {
                     if (crossRelationRec) {
                       resultDS += "crossRelation: \"" + crossRelationRec.SysCode + "\", ";
                     }
-                    if (viewFields[i].ValueField !== "null") {
+                    if (viewFields[i].ValueField && viewFields[i].ValueField !== "null") {
                       resultDS += "mainIDProperty: \"" + viewFields[i].ValueField + "\", ";
                     } else {
                       resultDS += "mainIDProperty: \"ID\", ";
                     }
-                    if (viewFields[i].DataSourceView !== "null") {
+                    if (viewFields[i].DataSourceView && viewFields[i].DataSourceView !== "null") {
                       resultDS += "optionDataSource: \"" + viewFields[i].DataSourceView + "\", ";
                     } else {
                       resultDS += "optionDataSource: \"" + type + "\", ";
                     }
-                    if (currentRelation.LinkFilter !== "null") {
+                    if (currentRelation.LinkFilter && currentRelation.LinkFilter !== "null") {
                       resultDS += "optionCriteria: " + currentRelation.LinkFilter + ", ";
                     }
                     resultDS += "titleOrientation: \"top\"";
@@ -688,7 +691,7 @@ function getObjectByFilter(concept, filter, callback, context) {
 // Get final object in objects dot-separated chain expression 
 function processObjectsChain(expr, context, callback) {
 //  'use strict'; // <<< Don't remember reason for "strict"
-  if (expr === "null") {
+  if (!expr || expr === "null") {
     return null;
   }
 //  var exprOut = expr;
@@ -742,7 +745,7 @@ function processValue(value, context) {
 // TODO provide inline functions execution and result insertion
 function processJSONExpression(expr, context) {
 //  'use strict'; // <<< Don't remember reason for "strict"
-  if (expr === "null") {
+  if (!expr || expr === "null") {
     return null;
   }
   var exprOut = expr;
@@ -1216,7 +1219,11 @@ isc.CBMDataSource.addProperties({
   // resultBatchSize:100, // <<< TODO  optimization here
   inheritsFrom: BaseDataSource,
   useParentFieldOrder: true,
-
+  //~ nullStringValue: "",
+  //~ nullIntegerValue: "", 
+  //~ nullFloatValue: "", 
+  //~ nullDateValue: new Date(),
+  
   // ---- CBM - specific fields ----------------------
   concept: null,
   prgClass: null,
@@ -1663,11 +1670,16 @@ isc.CBMDataSource.addProperties({
         var that = this;
         
         // this.createField = function(){
-          var currRoot = that.getField(atrNames[i]).UIPath;
-          if (typeof(currRoot) == "undefined" || currRoot == null) {
+        var currRoot = "Main";
+        if (!that.getField(atrNames[i])) {
+          currRoot = "Main";
+        } else {
+          currRoot = that.getField(atrNames[i]).UIPath;
+          if(!currRoot || typeof(currRoot) === "undefined" || currRoot === null || typeof(currRoot) === "null") {
             currRoot = "Main";
           }
-
+        }
+        
           var notFound = true;
           var j = 0;
           for (; j < UIPaths.length; j++) {
@@ -2549,7 +2561,7 @@ isc.SimpleType.create({
 
   parseInput: function (value, field, form, record) {
     var fullValue = field.getValue();
-    if (fullValue == null || fullValue === "null" || fullValue === "") {
+    if (!fullValue || fullValue == null || fullValue === "null" || fullValue === "") {
       if (value == null) {
         return null;
       } else {
@@ -4224,9 +4236,10 @@ function exportConcept(concept){
 
 // ===================== Files Uploading block ===========================
 
-// ------------------------ Azure direct upload control  ----------------------------
-isc.defineClass("AzureUploadCanvas", "Canvas");
-isc.AzureUploadCanvas.addProperties({
+// ------------------------ File direct upload control  ----------------------------
+// TODO Provide upload to CBM server. Till now it's copy of Azure upload control
+isc.defineClass("UploadCanvas", "Canvas");
+isc.UploadCanvas.addProperties({
   
     getInnerHTML : function () {
                       var divHtml = "<div id=uploader_" + this.ID + ">Upload file!!!</div>";
@@ -4274,6 +4287,65 @@ isc.AzureUploadCanvas.addProperties({
     redrawOnResize: false 
 }); 
 
+isc.ClassFactory.defineClass("UploadControl", isc.CanvasItem);
+isc.UploadControl.addProperties({
+  shouldSaveValue: true, 
+  createCanvas: function (formParent) {
+                  var canv = isc.UploadCanvas.create(); 
+                  return canv;
+                }
+});
+
+// ------------------------ Azure direct upload control  ----------------------------
+isc.defineClass("AzureUploadCanvas", "Canvas");
+isc.AzureUploadCanvas.addProperties({
+  
+    getInnerHTML : function () {
+                      var divHtml = "<div id=uploader_" + this.ID + ">Upload file!!!</div>";
+                      return divHtml;
+                    },
+
+    draw : function () {
+            if (!this.readyToDraw()) return this;
+            this.Super("draw", arguments);
+            
+            this.div = document.getElementById("uploader_" + this.ID);
+            this.azureUploader = new qq.azure.FineUploader({
+                element: this.div,
+                request: {
+                    endpoint: AZURE_BLOB_URL
+                },
+                signature: {
+                    endpoint: '/Upload'
+                },
+                retry: {
+                    enableAuto: true
+                },
+                validation: {
+                    itemLimit: 1,
+                    sizeLimit: 16384000000 // 16Gb
+                },
+                multiple: false,
+                chunking: {
+                    partSize: 50000000, // 50Mb
+                    minFileSize: 204800001 // 200Mb
+                },
+                callbacks: {
+                    onComplete: function(id, name, responseJSON, xhr) {
+                      var newName = xhr.responseURL.substring(0, xhr.responseURL.indexOf("?"));
+                      this.iscContext.canvasItem.storeValue(newName);
+                    }
+                  }
+            });
+            // Some artificial context establishing for callbacks (so that it seems buggy in usual resolving techniques) 
+            this.azureUploader.iscContext = this;
+             
+            return this;
+       },
+       
+    redrawOnResize: false 
+}); 
+
 isc.ClassFactory.defineClass("AzureUploadControl", isc.CanvasItem);
 isc.AzureUploadControl.addProperties({
   shouldSaveValue: true, 
@@ -4284,10 +4356,77 @@ isc.AzureUploadControl.addProperties({
 });
 
 
+// ===================== Geospatial section ==============================
+
+function getLocation() {
+}
+
+// ------------------------ Azure direct upload control  ----------------------------
+isc.defineClass("LeafletCanvas", "Canvas");
+isc.LeafletCanvas.addProperties({
+  
+    getInnerHTML : function () {
+                      var divHtml = '<div id=leaflet_' + this.ID + ' style="height: 400px;">Place for Map</div>';
+                      return divHtml;
+                    },
+
+    draw : function () {
+            if (!this.readyToDraw()) return this;
+            this.Super("draw", arguments);
+            
+            this.div = document.getElementById("leaflet_" + this.ID);
+            this.mymap = L.map(this.div);
+            
+            var latFld = this.myForm.items.find({name:'Latitude'});
+            var lngFld = this.myForm.items.find({name:'Longitude'});
+            if(latFld && lngFld) {
+              var lat = latFld.getValue();
+              var lng = lngFld.getValue();
+              if (lat && lng) {
+                this.mymap.setView([lat, lng], 16);
+                var marker = L.marker([lat, lng]).addTo(this.mymap);
+              }
+            } else {
+              // TODO - set default to geolocation results...
+              mymap.setView([53.747613, 87.123332], 16);
+            }
+            
+            L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token={accessToken}', {
+            attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="http://mapbox.com">Mapbox</a>',
+            maxZoom: 18,
+            id: 'mapbox.streets',
+            accessToken: 'pk.eyJ1IjoiYWxleG1hdiIsImEiOiJjajJkcWNoOGcwMDNpMndudDF0M2xpaHVpIn0.iLB4oEdNFOAZPo_PVrFdfw'
+            }).addTo(this.mymap);
+            
+            this.mymap.iscContext = this;
+             
+            return this;
+       },
+       
+    redrawOnResize: false 
+}); 
+
+isc.ClassFactory.defineClass("LeafletControl", isc.CanvasItem);
+isc.LeafletControl.addProperties({
+  shouldSaveValue: true, 
+  createCanvas: function (myForm) {
+                  var canv = isc.LeafletCanvas.create(); 
+                  canv.myForm = myForm;
+                  return canv;
+                },
+  startRow:true,
+  endRow: true,
+  showTitle: false,
+  colSpan: 6,
+  rowSpan: '*'
+});
+
+
 
 // ===================== Geocoding block =================================
+
 // Yandex geocoding service request
-// Returns results in expected format {lat:*, lon:*, adr:*}
+// Returns results in expected format {lat:*, lng:*, adr:*}
 function directGeocodingYandex(address, callback) {
   isc.RPCManager.sendRequest({
         data: null,
@@ -4303,7 +4442,7 @@ function directGeocodingYandex(address, callback) {
               var coordsAdr = resp.response.GeoObjectCollection.featureMember[i].GeoObject.metaDataProperty.GeocoderMetaData.text;
               var pos = resp.response.GeoObjectCollection.featureMember[i].GeoObject.Point.pos;
               var coords = pos.split(' ');
-              results.add({lat: coords[1], lon: coords[0], adr: coordsAdr});
+              results.add({lat: coords[1], lng: coords[0], adr: coordsAdr});
             } 
             callback(results);
         }
@@ -4311,7 +4450,7 @@ function directGeocodingYandex(address, callback) {
 }
 
 // Provide geocoding search by possible services, and user's choice from several results
-// Expects providers to return results in array with structure: {lat:*, lon:*, adr:*}
+// Expects providers to return results in array with structure: {lat:*, lng:*, adr:*}
 function getGeocodingResults(form, address, callback) {
     // TODO: Gather results from searching by several geocoding service providers
     directGeocodingYandex(form.items.find({name:'Address'}).getValue(), 
@@ -4330,12 +4469,12 @@ function getGeocodingResults(form, address, callback) {
 
 // Fills form fields with result of geocoding search
 // For correct work - assumed existance of fields "Address", "Latitude" and "Longitude" on form
-function fillGeocodingResults(form, item) {
+function fillGeocoding(form, item) {
   
     getGeocodingResults(form, form.items.find({name:'Address'}).getValue(), 
               function(result) {
                 form.items.find({name:'Latitude'}).setValue(result.lat);
-                form.items.find({name:'Longitude'}).setValue(result.lon);
+                form.items.find({name:'Longitude'}).setValue(result.lng);
                 form.items.find({name:'Address'}).setValue(result.adr);
               }
     );

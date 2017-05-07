@@ -121,12 +121,15 @@ public class IscIOFormatter implements I_ClientIOFormatter {
 					for (int i = 1; i <= size; i++) {
 						String column = meta.getColumnLabel(i);
 						Object obj = rs.getObject(i);
-						// --- Language part extracting
+						// --- Language part extracting (!now done on client!)
 						// TODO: Differentiate, switching on only for marked fields (considering too big...)
 //						if (obj != null && obj.getClass() == String.class) {
 //							obj = MultiLangStringProcessor.extractValue((String)obj, dsRequest.currLocale);
 //						}
-						row.put(column, "" + obj);
+						// Do not include null results
+						if (obj != null ) {
+							row.put(column, "" + obj);
+						}
 					}
 					// If entity does not contain "Concept" field, add it.
 					if (!row.containsKey("Concept")) {
