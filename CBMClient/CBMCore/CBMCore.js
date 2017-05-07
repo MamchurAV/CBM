@@ -13,7 +13,7 @@ function loadScript(script) {
 };
 
 var parseJSON = function (data) {
- 	
+  
   var out =  window.JSON && window.JSON.parse 
   ? window.JSON.parse(data) 
   : (new Function("return " + data))();
@@ -101,14 +101,14 @@ function clone(obj) {
 
 // --- Useful to copy values of fields from src to dest objects. ----------------
 function syncronize(src, dest, exclude) {
-//	var destRelationsMeta = dest.getRelatonsMeta(); // TODO: CBMObject.getRelatonsMeta()
+//  var destRelationsMeta = dest.getRelatonsMeta(); // TODO: CBMObject.getRelatonsMeta()
   for (var attr in src) {
     if (src.hasOwnProperty(attr)
       && dest.hasOwnProperty(attr)
       /*&& !dest.overloaded*/
       && exclude.indexOf(attr) === -1) {
       // Aggregated object
-      /*			if (destRelationsMeta[attr].RelationKind === "AggregateLink"){
+      /*      if (destRelationsMeta[attr].RelationKind === "AggregateLink"){
        dest[attr] = syncronize(src[attr]);
        }
        // Collection aggregated
@@ -262,15 +262,15 @@ function generateDStext(forView, futherActions) {
   var viewFields;
   var relations;
 //  var filter = parseJSON("{\"ForPrgView\" : \"" + viewRec.ID + "\" }");
-//		{"ForPrgView": viewRec.ID},
-	isc.DataSource.get("PrgViewField").fetchData(
+//    {"ForPrgView": viewRec.ID},
+  isc.DataSource.get("PrgViewField").fetchData(
     {ForPrgView: viewRec.ID},
-		function (dsResponce, data, dsRequest) {
-		viewFields = data;
-		if (!viewFields || viewFields.length === 0) {
-			isc.warn("No ViewFields found for " + forView);
-			return null;
-		}
+    function (dsResponce, data, dsRequest) {
+    viewFields = data;
+    if (!viewFields || viewFields.length === 0) {
+      isc.warn("No ViewFields found for " + forView);
+      return null;
+    }
     // Relations with respect of base concepts relations
     getRelationsForConcept(conceptRec.ID,
         function (relationsData) {
@@ -287,8 +287,8 @@ function generateDStext(forView, futherActions) {
 
             resultDS += "{ name: \"" + viewFields[i].SysCode + "\", ";
 
-        //		var relationKindRec = relationKindRS.find("SysCode", currentRelation.RelationKind);
-        //		var kind = relationKindRec.SysCode;
+        //    var relationKindRec = relationKindRS.find("SysCode", currentRelation.RelationKind);
+        //    var kind = relationKindRec.SysCode;
             var kind = currentRelation.RelationKind;
             resultDS += "kind: \"" + kind + "\", ";
 
@@ -403,11 +403,11 @@ function generateDStext(forView, futherActions) {
                   break;
                 case "Decimal":
                 case "BigDecimal":
-          //				resultDS += "type: \"localeFloat\"";
+          //        resultDS += "type: \"localeFloat\"";
                   resultDS += "type: \"float\"";
                   break;
                 case "Money":
-          //				resultDS += "type: \"localeCurrency\"";
+          //        resultDS += "type: \"localeCurrency\"";
                   resultDS += "type: \"float\"";
                   break;
                 case "StandardString":
@@ -611,7 +611,7 @@ function createDS(forView, callback) {
 
 // --- Function that tests DS existence and links to first-level actuality, and if absent - creates it.
 function testCreateDS(forView, callback) {
-  var ds = isc.DataSource.getDataSource(forView);	
+  var ds = isc.DataSource.getDataSource(forView); 
   if (ds) {
     // Guarantie existence of linked DataSources (for one level in-depth)
     if(!ds.hasResolvedLinks) {
@@ -710,8 +710,8 @@ function processObjectsChain(expr, context, callback) {
           getObject(thatConcept.SysCode, tmpVal, processValue, innerContext);
         } else {
           if (callback) {
-      	    callback(tmpVal);
-      	  }
+            callback(tmpVal);
+          }
         }
       }
     };
@@ -826,11 +826,11 @@ function likeKey(val) {
 
 // Returns (by callback call) relations for current concept, with merged parents hierarchy's relations.
 function getRelationsForConcept(conceptId, callback) {
-	var conceptDS = isc.DataSource.get("Concept"); // <<<<<<<<<<<<<<<<<<< var 
-	var relations = [];
-	var inherited = false;
-	function innerGetRelations(conceptId) {
-	  if (conceptDS.hasAllData()) {
+  var conceptDS = isc.DataSource.get("Concept"); // <<<<<<<<<<<<<<<<<<< var 
+  var relations = [];
+  var inherited = false;
+  function innerGetRelations(conceptId) {
+    if (conceptDS.hasAllData()) {
       var record = conceptDS.getCacheData().find({ID: conceptId});
       var relationsToThis = isc.DataSource.get("Relation").getCacheData().findAll({ForConcept: conceptId});
       var i = 0;
@@ -841,7 +841,7 @@ function getRelationsForConcept(conceptId, callback) {
             if (relations[j].SysCode === relationsToThis[i].SysCode) {
               exists = true;
               if (!relations[j]._inherited) {
-              	relations[j]._modified = true;
+                relations[j]._modified = true;
               }
             }
           }
@@ -852,11 +852,11 @@ function getRelationsForConcept(conceptId, callback) {
           }
         }
       }
-	  }
-	  if (record && record.BaseConcept && record.BaseConcept !== "null") {
+    }
+    if (record && record.BaseConcept && record.BaseConcept !== "null") {
       inherited = true;  
       innerGetRelations(record.BaseConcept);
-	  } else {
+    } else {
       // Initialize relations for discovered Concept
       if (record && relations){
         record.relations = relations.sortByProperty("Odr", true); //<<<<<<<<<<<
@@ -864,8 +864,8 @@ function getRelationsForConcept(conceptId, callback) {
       if (callbackBound) {
         callbackBound(relations.sortByProperty("Odr", true));
       }
-	  }
-	}
+    }
+  }
   
   var callbackBound = callback.bind(this); // <<< TODO: in main cases "this" here is just "window", so bind() looks abused
   innerGetRelations(conceptId);
@@ -1199,11 +1199,11 @@ isc.DataSource.create({
 // =================== The main CBM ISC-metadata base class ====================
 //  inherited from isc RestDataSource class
 // Special attribute <relationStructRole> values:
-//	relationStructRole:"ID"; - Independent ID field
-//	relationStructRole:"ChildID"; - Dependent 1:1 ID - taken from head part
+//  relationStructRole:"ID"; - Independent ID field
+//  relationStructRole:"ChildID"; - Dependent 1:1 ID - taken from head part
 //  relationStructRole:"MainID"; - Dependent pointer to ID of main part - historical or versioned
 // For structured parts pointing - attribute <part>. Sample:
-//	part:"vers";
+//  part:"vers";
 isc.ClassFactory.defineClass("CBMDataSource", isc.RestDataSource);
 isc.CBMDataSource.addProperties({
   // ---- Standard RestDataSource properties overloading -------
@@ -1336,7 +1336,7 @@ isc.CBMDataSource.addProperties({
                 var forView = conceptRecord.SysCode;
                 
                 if (forView !== that.ID) {
-                  var ds = isc.DataSource.getDataSource(forView);	
+                  var ds = isc.DataSource.getDataSource(forView); 
                   if (!ds) {
                     goDeep = true;
                     generateDStext(forView, 
@@ -1556,7 +1556,7 @@ isc.CBMDataSource.addProperties({
           }
         } else {
           var z = -1;
-//					var dsRelated = this; // Closures-based variant
+//          var dsRelated = this; // Closures-based variant
           function cloneNextRecord() {
             var recNew = null;
             z += 1;
@@ -1651,7 +1651,7 @@ isc.CBMDataSource.addProperties({
       height: "99%",
       //           width: "95%", height: "95%", <- Adequate smaller height, not affected width
       //           width : "*", height : "*", <- Small adjusted to content height, not affected width
-      //			autoSize : true, <- No affect
+      //      autoSize : true, <- No affect
       backgroundColor: "#DBF5E9", //"#DDFFEE",// "#D9F9E9",//
       bodyColor: "#D9F7E9", //"#D9F9E9",
       overflow: "visible",
@@ -1665,7 +1665,7 @@ isc.CBMDataSource.addProperties({
     var n = atrNames.length;
     for (var i = 0; i < n; i++) {
       if (typeof(this.getField(atrNames[i]).hidden) == "undefined" || this.getField(atrNames[i]).hidden !== true
-      	  || this.getField(atrNames[i]).inList ) {
+          || this.getField(atrNames[i]).inList ) {
 //         this.getField(atrNames[i]).hidden = false; <<< prevent fields of hidden columns lost
         var that = this;
         
@@ -1771,7 +1771,7 @@ isc.CBMDataSource.addProperties({
         tabSet.addTab({
           title: UIPaths[i],
           pane: forms[i]
-          //					height: "*", width: "*" <- No affect but titles empty!
+          //          height: "*", width: "*" <- No affect but titles empty!
         });
       }
     }
@@ -1814,7 +1814,7 @@ isc.CBMDataSource.addProperties({
           this.topElement.savePosition();
           
           if (this.topElement.contextObject !== null // <<< Can be null if window opend for multi-records editing
-		    && this.topElement.contextObject.currentTransaction !== null
+        && this.topElement.contextObject.currentTransaction !== null
             && this.topElement.contextObject.currentTransaction.Changes.length > 0) {
             var that = this;
             isc.confirm(isc.CBMStrings.CancelButton_SaveOrNot,
@@ -1850,7 +1850,7 @@ isc.CBMDataSource.addProperties({
 
     var formLayout = isc.HLayout.create({
       autoDraw: false,
-      //    				defaultWidth:"100%", defaultHeight:"100%",
+      //            defaultWidth:"100%", defaultHeight:"100%",
       defaultWidth: hiWidth,
       defaultHeight: hiHeight,
       //            autoSize: true, <- seems to have no affect
@@ -2023,10 +2023,10 @@ isc.CBMDataSource.addProperties({
 // --- Provide domain-independent abilities of objects to "leave" in Information System,
 //     keeping in mind that we work with information about things ---
 var CBMobject = {
-//	currentTransaction: null,
-//	isMainTransaction: true,
-//	ds: null,
-//	hostObject: null,
+//  currentTransaction: null,
+//  isMainTransaction: true,
+//  ds: null,
+//  hostObject: null,
 
   // -------- Retrieve record for link/aggregate field from DS ----------
   // and store  it in additional <fld_name + "_val"> field
@@ -2093,7 +2093,7 @@ var CBMobject = {
   },
 
   // -------- Compete record retrieval from DS (/persistent storage) and construction ----------
-  /*	loadRecord: function(ID, callback){
+  /*  loadRecord: function(ID, callback){
    if (this.ds === null) {
    this.ds = isc.DataSource.get(this.Concept);
    }
@@ -2121,7 +2121,7 @@ var CBMobject = {
     }
     // Get CBM metadata descriptions (we need it to discover really persistent fields)
     var rec = {}; // Object.create();
-//		var atrNames = Object.getOwnPropertyNames(obj); ////////////////////??? What's better?
+//    var atrNames = Object.getOwnPropertyNames(obj); ////////////////////??? What's better?
     var atrNames = this.ds.getFieldNames(false);
     var n = atrNames.length;
     for (var i = 0; i < n; i++) {
@@ -2143,7 +2143,7 @@ var CBMobject = {
     // if (!this.curentTransaction) {
     // this.curentTransaction = TransactionManager.getTransaction()
     // }
-//		TransactionManager.add(this, this.curentTransaction)
+//    TransactionManager.add(this, this.curentTransaction)
 
     this.save(false);
   },
@@ -2265,7 +2265,7 @@ function editRecords(records, context, conceptRecord, trans) {
     records[0].ds = ds;
     // --- Load concrete class instance data, if record's class not equal (is subclass) of context class (DataSource)
     if (context.dataSource != cls["SysCode"] && records[0]["infoState"] == "loaded") {
-      //			testCreateDS(cls["SysCode"]);
+      //      testCreateDS(cls["SysCode"]);
       var currentRecordRS = isc.ResultSet.create({
         dataSource: cls["SysCode"],
         criteria: {
@@ -2278,9 +2278,9 @@ function editRecords(records, context, conceptRecord, trans) {
             recordFull["Del"] = false;
           }
           recordFull.currentTransaction = records[0].currentTransaction;
-//					recordFull.isMainTransaction = records[0].isMainTransaction;
+//          recordFull.isMainTransaction = records[0].isMainTransaction;
           ds.edit(recordFull, context);
-//					currentRecordRS.dataArrived = undefined;
+//          currentRecordRS.dataArrived = undefined;
         }
       });
       currentRecordRS.getRange(0, 1);
@@ -2296,10 +2296,10 @@ function editRecords(records, context, conceptRecord, trans) {
 // Work in queue inside, to provide ID-s (all complex of them!) to be initialised subsequently by callbacks,
 // but in asynchronously for all other program flow.
 // Parameters:
-// resultClass	- function that provide destination object class. In most cases simply returns name of class.
-// 					But can also define it different as function of some parameters for each source record.
-// initFunc		- is a function, that provide target-from-source fields initialisation.
-// context		- intended to be some ListGrid successor, that represent results.
+// resultClass  - function that provide destination object class. In most cases simply returns name of class.
+//          But can also define it different as function of some parameters for each source record.
+// initFunc   - is a function, that provide target-from-source fields initialisation.
+// context    - intended to be some ListGrid successor, that represent results.
 function createFrom(srcRecords, resultClass, initFunc, context) {
   if (srcRecords == null) {
     isc.warn(isc.CBMStrings.ListCreateFrom_NoSelectionDone, this.innerCloseNoChoiceDlg);
@@ -2700,10 +2700,10 @@ isc.LinkControl.addProperties({
   getFilter: function (form, item, value) {
     var relMetadata = form.getDataSource().getRelation(item.name);
     if (relMetadata.LinkFilter && relMetadata.LinkFilter !== "null") {
-    	if(!relMetadata.LinkFilter.startsWith("function")){
-    		// Expreccion represenrs filter - processed as filter
-    		var filterStr = processJSONExpression(relMetadata.LinkFilter, this.form.valuesManager.values);
-    		this.pickListCriteria = parseJSON(filterStr);
+      if(!relMetadata.LinkFilter.startsWith("function")){
+        // Expreccion represenrs filter - processed as filter
+        var filterStr = processJSONExpression(relMetadata.LinkFilter, this.form.valuesManager.values);
+        this.pickListCriteria = parseJSON(filterStr);
       } else {
           // Data are supplied by some function (in more complicated cases)
         this.getClientPickListData = function() {
@@ -2868,7 +2868,7 @@ isc.InnerGrid.addProperties({
   listSettingsChanged: false, // TODO: Determine changes while work
   // listSettingsApplied : false,
   treeRoot: null,
-//	contextObject: null,
+//  contextObject: null,
 
   addFilter: function (keyName, criteriaValue, sys) {
     this.filters.add(keyName, criteriaValue, sys);
@@ -3052,7 +3052,7 @@ isc.InnerGrid.addProperties({
                   that.setListSettings();
                 }
               }
-//						this.parentElement.parentElement.setListSettings();
+//            this.parentElement.parentElement.setListSettings();
               this.listSettingsApplied = true;
             }
             return true;
@@ -3092,7 +3092,7 @@ isc.InnerGrid.addProperties({
 
       //TODO: Menu adjusted to current cell
       //         this.grid.cellContextClick = function (record, row, cell) {
-      //       		return this.showContextMenu();
+      //          return this.showContextMenu();
       //        };
 
       that.grid.callObjectsEdit = function (mode) {
@@ -3112,8 +3112,8 @@ isc.InnerGrid.addProperties({
           if (isSuper && !viewRecord["StrictConcept"]) {
             //          var cretin = parseJSON("{ \"Abstract\" : \"false\", \"Primitive\" : \"false\" }");
             //         var cretin = parseJSON("{ \"Primitive\" : \"false\", \"HierCode\" : \""
-            //         	  + dsRecord.HierCode
-            //         	  + "\" }");
+            //            + dsRecord.HierCode
+            //            + "\" }");
             var cretin = {
               _constructor: "AdvancedCriteria",
               operator: "and",
@@ -3378,7 +3378,7 @@ isc.InnerGrid.addProperties({
           icon: isc.Page.getAppImgDir() + "refresh.png",
           prompt: isc.CBMStrings.InnerGrid_Reload,
           hoverWidth: 150,
-//				click: "this.parentElement.parentElement.parentElement.refresh(); return false;"
+//        click: "this.parentElement.parentElement.parentElement.refresh(); return false;"
           click: function () {
             // TODO: Guarantie reload from DB, not from cache
             this.parentElement.parentElement.parentElement.refresh();
@@ -3571,7 +3571,7 @@ isc.CollectionControl.addProperties({
             this.innerGrid.addFilter("LinkFilter", this.optionCriteria, true);
           }
           // TODO: Switch to AdvancedCriteria
-          /*					var cretin = null;
+          /*          var cretin = null;
            if (this.optionCriteria) {
            cretin = {
            _constructor:"AdvancedCriteria",
@@ -3675,44 +3675,44 @@ isc.CollectionAggregateControl.addProperties({
 isc.ClassFactory.defineClass("RelationsAggregateControl", isc.CollectionAggregateControl);
 isc.RelationsAggregateControl.addProperties({ 
   createCanvas: function (form) {
-  this.Super("createCanvas", arguments);	  
+  this.Super("createCanvas", arguments);    
   // Array of hilite-objects to apply to the grid
   var hiliteArray =  
-		[
-			{
-				fieldName: ["SysCode", "Description", "ForConcept", "RelatedConcept", "PrgNotes", "DBTable", "DBColumn"],
-				cssText: "background-color:#BBCCFF;", 
-				criteria: {
-					fieldName: "_inherited", 
-					operator: "equals", 
-					value: true
-				}
-			}, {
-				fieldName: ["SysCode", "Description", "ForConcept", "RelatedConcept", "PrgNotes", "DBTable", "DBColumn"],
-				cssText: "background-color:#CCEEDD;", 
-				criteria: {
-					fieldName: "_modified", 
-					operator: "equals", 
-					value: true
-				}
-			}, {
-				fieldName: ["RelatedConcept", "RelationKind"],
-				cssText: "color:#0000FF;", 
-				criteria: {
-					fieldName: "RelationKind", 
-					operator: "inSet", 
-					value: ["Link", "Aggregate"]
-				}
-			}, {
-				fieldName: ["RelatedConcept", "RelationKind"],
-				cssText: "color:#990099;", 
-				criteria: {
-					fieldName: "RelationKind", 
-					operator: "inSet", 
-					value: ["BackLink", "BackAggregate", "CrossLink"]
-				}
-			}
-		];
+    [
+      {
+        fieldName: ["SysCode", "Description", "ForConcept", "RelatedConcept", "PrgNotes", "DBTable", "DBColumn"],
+        cssText: "background-color:#BBCCFF;", 
+        criteria: {
+          fieldName: "_inherited", 
+          operator: "equals", 
+          value: true
+        }
+      }, {
+        fieldName: ["SysCode", "Description", "ForConcept", "RelatedConcept", "PrgNotes", "DBTable", "DBColumn"],
+        cssText: "background-color:#CCEEDD;", 
+        criteria: {
+          fieldName: "_modified", 
+          operator: "equals", 
+          value: true
+        }
+      }, {
+        fieldName: ["RelatedConcept", "RelationKind"],
+        cssText: "color:#0000FF;", 
+        criteria: {
+          fieldName: "RelationKind", 
+          operator: "inSet", 
+          value: ["Link", "Aggregate"]
+        }
+      }, {
+        fieldName: ["RelatedConcept", "RelationKind"],
+        cssText: "color:#990099;", 
+        criteria: {
+          fieldName: "RelationKind", 
+          operator: "inSet", 
+          value: ["BackLink", "BackAggregate", "CrossLink"]
+        }
+      }
+    ];
     this.innerGrid.grid.hilites = hiliteArray;
      return this.innerGrid;
   },
@@ -3781,7 +3781,7 @@ isc.CollectionCrossControl.addProperties({
             this.innerGrid.addFilter("LinkFilter", this.optionCriteria, true);
           }
           // TODO: Switch to AdvancedCriteria
-          /*					var cretin = null;
+          /*          var cretin = null;
            if (this.optionCriteria) {
            cretin = {
            _constructor:"AdvancedCriteria",
@@ -3859,7 +3859,7 @@ isc.BaseWindow.addProperties({
   height: 500,
   layoutMargin: 2,
   autoSize: true,
-  //	showFooter:true,
+  //  showFooter:true,
   canDragResize: true,
   showResizer: true,
   resizeBarSize: 6,
@@ -3986,7 +3986,7 @@ isc.TableWindow.addProperties({
 //    this.continueAfterDSTested = function(ds){
       this.Super("initWidget", arguments);
     
-	    this.innerGrid = isc.InnerGrid.create({
+      this.innerGrid = isc.InnerGrid.create({
         dataSource: this.dataSource,
         context: this.context,
         treeRoot: this.treeRoot,
@@ -3994,7 +3994,7 @@ isc.TableWindow.addProperties({
         defaultHeight: "500",
         autoSize: true
       });
-	
+  
       this.addItems(
         [
         // TODO Activate Filter by special button
@@ -4039,7 +4039,7 @@ isc.TableWindow.addProperties({
 //---- Stand-along independent function, that creates TableWindow from elsewhere for entity view (DS) type ----
 function createTable(forType, context, callback, filter, rootIdValue, afterCreate) {
   // Dynamic DS creation if needed
-	testCreateDS(forType, 
+  testCreateDS(forType, 
     function(){
       
       initCreatedTable = function(table){
@@ -4052,7 +4052,7 @@ function createTable(forType, context, callback, filter, rootIdValue, afterCreat
         }
 
         // TODO here - add previous stored Filters if any
-        //		filter = {Del:false};
+        //    filter = {Del:false};
         if (context === undefined) {
           context = table;
         }
@@ -4110,7 +4110,7 @@ isc.InnerForm.addProperties({
   colWidths: ["10%", "23%", "10%", "23%", "10%", "23%"],
   layoutMargin: 2,
   cellPadding: 2,
-  //	cellBorder : 1, // <<< For layout testing only! In production - set to 0
+  //  cellBorder : 1, // <<< For layout testing only! In production - set to 0
   autoFocus: true,
   showTitlesWithErrorMessages: true
 });
@@ -4136,7 +4136,7 @@ isc.FormWindow.addProperties({
         this.content
       ]);
     if (this.valuesManager != null) {
-      //			testCreateDS(this.valuesManager.dataSource.ID);
+      //      testCreateDS(this.valuesManager.dataSource.ID);
       this.dataSource = this.valuesManager.dataSource.ID;
       // TODO: Add object description in window head
       var titleDS = this.getDataSource().title;
@@ -4379,12 +4379,16 @@ isc.LeafletCanvas.addProperties({
             
             var latFld = this.myForm.items.find({name:'Latitude'});
             var lngFld = this.myForm.items.find({name:'Longitude'});
+            var adrFld = this.myForm.items.find({name:'Longitude'});
             if(latFld && lngFld) {
               var lat = latFld.getValue();
               var lng = lngFld.getValue();
               if (lat && lng) {
                 this.mymap.setView([lat, lng], 16);
-                var marker = L.marker([lat, lng]).addTo(this.mymap);
+                this.marker = L.marker([lat, lng]).addTo(this.mymap);
+                //~ if (adrFld) {
+                  //~ marker.bindPopup(adrFld.getValue()).openPopup();
+                //~ }
               }
             } else {
               // TODO - set default to geolocation results...
@@ -4417,7 +4421,7 @@ isc.LeafletControl.addProperties({
   setValue: function(val) {
               if (val){
                 this.canvas.mymap.setView([val.lat, val.lng], 16);
-                L.marker([val.lat, val.lng]).addTo(this.canvas.mymap);
+                L.marker([val.lat, val.lng]).addTo(this.canvas.mymap).bindPopup(val.adr).openPopup();
              }
             },
   startRow:true,
