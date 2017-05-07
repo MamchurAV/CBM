@@ -4414,6 +4414,12 @@ isc.LeafletControl.addProperties({
                   canv.myForm = myForm;
                   return canv;
                 },
+  setValue: function(val) {
+              if (val){
+                this.canvas.mymap.setView([val.lat, val.lng], 16);
+                L.marker([val.lat, val.lng]).addTo(this.canvas.mymap);
+             }
+            },
   startRow:true,
   endRow: true,
   showTitle: false,
@@ -4476,6 +4482,9 @@ function fillGeocoding(form, item) {
                 form.items.find({name:'Latitude'}).setValue(result.lat);
                 form.items.find({name:'Longitude'}).setValue(result.lng);
                 form.items.find({name:'Address'}).setValue(result.adr);
+                if (form.items.find({name:'Map'})) {
+                  form.items.find({name:'Map'}).setValue(result);
+                }
               }
     );
     
