@@ -280,11 +280,16 @@ function generateDStext(forView, futherActions) {
           var viewFieldsCount = viewFields.getLength();
           for (var i = 0; i < viewFieldsCount; i++) {
             var currentRelation = relations.find("ID", viewFields[i].ForRelation);
+            
+            // No relation - means view only element - processed below
             if (!currentRelation) {
-              isc.warn(isc.CBMStrings.MD_NoRelationFound + viewFields[i].SysCode + isc.CBMStrings.MD_ForView + forView);
-              return null;
+              // isc.warn(isc.CBMStrings.MD_NoRelationFound + viewFields[i].SysCode + isc.CBMStrings.MD_ForView + forView);
+              // return null;
+              resultDS += "{name: \"" + viewFields[i].SysCode + "\", editorType: \"" + viewFields[i].ControlType + "\"}, ";
+              continue;
             }
 
+            // Ordinal relation-based element
             resultDS += "{ name: \"" + viewFields[i].SysCode + "\", ";
 
         //    var relationKindRec = relationKindRS.find("SysCode", currentRelation.RelationKind);
@@ -1639,7 +1644,7 @@ isc.CBMDataSource.addProperties({
   // ======= Some peace of presentation logic (even in DS): =================
   // ===== - default editing form. Can be overriden in child DS classes =====
 
-  // Some usefull pints:
+  // Some notes:
   // - FormWindow.contextObject -> record - So, form.contextObject is that _edited record_.
   // - record.valuesEditor -> valuesManager - So, record.valuesEditor is fiorm's valuesManager, where changed values ca be retrieved.
 
@@ -1652,8 +1657,6 @@ isc.CBMDataSource.addProperties({
       //           width: "95%", height: "95%", <- Adequate smaller height, not affected width
       //           width : "*", height : "*", <- Small adjusted to content height, not affected width
       //      autoSize : true, <- No affect
-      // cellBorder above - used for development purpouses, normally commented
-      cellBorder: 1, 
       backgroundColor: "#DBF5E9", //"#DDFFEE",// "#D9F9E9",//
       bodyColor: "#D9F7E9", //"#D9F9E9",
       overflow: "visible",
@@ -4422,7 +4425,9 @@ isc.LeafletControl.addProperties({
   setValue: function(val) {
               if (val){
                 this.canvas.mymap.setView([val.lat, val.lng], 16);
-                this.canvas.marker.remove();
+                if (this.canvas.marker) {
+                  this.canvas.marker.remove();
+                }
                 this.canvas.marker = L.marker([val.lat, val.lng]).addTo(this.canvas.mymap).bindPopup(val.adr).openPopup();
               } 
               else if (!this.canvas.marker) { // <<< to prevent second initialization

@@ -1290,6 +1290,7 @@ isc.CBMDataSource.create({
   }]
 });
 
+
 isc.CBMDataSource.create({
   ID: "PrgViewField",
   dbName: Window.default_DB,
@@ -1534,8 +1535,7 @@ isc.CBMDataSource.create({
     }, {
       name: "PickListWidth",
       type: "integer",
-      title: "List width",
-      defaultValue: 400
+      title: "List width"
     }, {
       name: "PickListFields",
       type: "text",
