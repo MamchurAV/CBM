@@ -341,10 +341,11 @@ var loginClose = function () {
 
   // --- TODO - switch to locale format
   var dateTimeFormat = "ddd DD-MM-YYYY HH:mm";
+  // var dateTimeFormat = "DD-MM-YYYY HH:mm"; <<< Remooving ddd part leads to ignore day-month order, no matter that format  is DD:MM
   isc.Date.setShortDatetimeDisplayFormat(function () {
     return moment(this.toString()).format(dateTimeFormat)
   });
-  isc.Date.setNormalDatetimeDisplayFormat("toEuropeanShortDatetime");
+//  isc.Date.setNormalDatetimeDisplayFormat("toEuropeanShortDatetime");
   isc.Date.setInputFormat("DMY");
   isc.Date.setDefaultDateSeparator("/");
   mainControlPanel.getFields()[0].setValue(curr_Date.local().format(dateTimeFormat));

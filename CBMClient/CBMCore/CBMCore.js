@@ -1652,6 +1652,8 @@ isc.CBMDataSource.addProperties({
       //           width: "95%", height: "95%", <- Adequate smaller height, not affected width
       //           width : "*", height : "*", <- Small adjusted to content height, not affected width
       //      autoSize : true, <- No affect
+      // cellBorder above - used for development purpouses, normally commented
+      cellBorder: 1, 
       backgroundColor: "#DBF5E9", //"#DDFFEE",// "#D9F9E9",//
       bodyColor: "#D9F7E9", //"#D9F9E9",
       overflow: "visible",
@@ -3862,7 +3864,11 @@ isc.BaseWindow.addProperties({
   //  showFooter:true,
   canDragResize: true,
   showResizer: true,
-  resizeBarSize: 6,
+  resizeBarSize: 10, //6,
+    resizeFrom:["T","L","B","R","TL","BL","TR","BR"],
+    edgeMarginSize:10,
+
+  
   isModal: false,
   autoDraw: false,
   showMaximizeButton: true,
@@ -4358,42 +4364,28 @@ isc.AzureUploadControl.addProperties({
 
 // ===================== Geospatial section ==============================
 
-function getLocation() {
+function getGeolocation() {
+  //TODO ***
 }
 
 // ------------------------ Azure direct upload control  ----------------------------
 isc.defineClass("LeafletCanvas", "Canvas");
 isc.LeafletCanvas.addProperties({
   
-    getInnerHTML : function () {
-                      var divHtml = '<div id=leaflet_' + this.ID + ' style="height: 400px;">Place for Map</div>';
+    getInnerHTML: function () {
+                      var divHtml = '<div id=leaflet_' + this.ID + ' style="height: auto; min-height: 200px;">Place for Map</div>';
                       return divHtml;
                     },
 
-    draw : function () {
+    draw: function () {
             if (!this.readyToDraw()) return this;
             this.Super("draw", arguments);
             
             this.div = document.getElementById("leaflet_" + this.ID);
-            this.mymap = L.map(this.div);
+            var haha = this.height;
+            this.div.style.height = haha + "px";
             
-            var latFld = this.myForm.items.find({name:'Latitude'});
-            var lngFld = this.myForm.items.find({name:'Longitude'});
-            var adrFld = this.myForm.items.find({name:'Longitude'});
-            if(latFld && lngFld) {
-              var lat = latFld.getValue();
-              var lng = lngFld.getValue();
-              if (lat && lng) {
-                this.mymap.setView([lat, lng], 16);
-                this.marker = L.marker([lat, lng]).addTo(this.mymap);
-                //~ if (adrFld) {
-                  //~ marker.bindPopup(adrFld.getValue()).openPopup();
-                //~ }
-              }
-            } else {
-              // TODO - set default to geolocation results...
-              mymap.setView([53.747613, 87.123332], 16);
-            }
+            this.mymap = L.map(this.div);
             
             L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token={accessToken}', {
             attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="http://mapbox.com">Mapbox</a>',
@@ -4405,8 +4397,16 @@ isc.LeafletCanvas.addProperties({
             this.mymap.iscContext = this;
              
             return this;
-       },
+          },
        
+    resized:  function(){
+                this.Super("resized", arguments);
+                if (this.div && this.div.style) {
+                  var haha = this.height;
+                  this.div.style.height = haha + "px";
+                }
+              },
+                    
     redrawOnResize: false 
 }); 
 
@@ -4418,17 +4418,41 @@ isc.LeafletControl.addProperties({
                   canv.myForm = myForm;
                   return canv;
                 },
+                
   setValue: function(val) {
               if (val){
                 this.canvas.mymap.setView([val.lat, val.lng], 16);
-                L.marker([val.lat, val.lng]).addTo(this.canvas.mymap).bindPopup(val.adr).openPopup();
-             }
+                this.canvas.marker.remove();
+                this.canvas.marker = L.marker([val.lat, val.lng]).addTo(this.canvas.mymap).bindPopup(val.adr).openPopup();
+              } 
+              else if (!this.canvas.marker) { // <<< to prevent second initialization
+                // Attempt to initialize by expected fields
+                var latFld = this.canvas.myForm.items.find({name:'Latitude'});
+                var lngFld = this.canvas.myForm.items.find({name:'Longitude'});
+                var adrFld = this.canvas.myForm.items.find({name:'Address'});
+                if(latFld && lngFld) {
+                  var lat = latFld.getValue();
+                  var lng = lngFld.getValue();
+                  if (lat && lng) {
+                    this.canvas.mymap.setView([lat, lng], 16);
+                    if (adrFld) {
+                      var adr = adrFld.getValue();
+                      this.canvas.marker = L.marker([lat, lng]).addTo(this.canvas.mymap).bindPopup(adr).openPopup();
+                    } else {
+                      this.canvas.marker = L.marker([lat, lng]).addTo(this.canvas.mymap);
+                    }
+                  }
+                }             
+              }
             },
+  
   startRow:true,
   endRow: true,
   showTitle: false,
   colSpan: 6,
-  rowSpan: '*'
+  rowSpan: '*',
+  height: '*',
+  overflow: 'hidden'
 });
 
 
