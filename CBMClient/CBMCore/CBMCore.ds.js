@@ -565,15 +565,12 @@ isc.CBMDataSource.create({
     name: "ForConcept",
     type: "Concept",
     title: "Belongs to Concept",
-    editorType: "LinkControl", //"comboBox",
+    editorType: "LinkControl",
     optionDataSource: "Concept",
     valueField: "ID",
     displayField: "SysCode",
     pickListWidth: 450,
     pickListFields: [{
-      name: "ID",
-      width: 30
-    }, {
       name: "SysCode"
     }, {
       name: "Description"

@@ -283,17 +283,13 @@ function generateDStext(forView, futherActions) {
             
             // No relation - means view only element - processed below
             if (!currentRelation) {
-              // isc.warn(isc.CBMStrings.MD_NoRelationFound + viewFields[i].SysCode + isc.CBMStrings.MD_ForView + forView);
-              // return null;
               resultDS += "{name: \"" + viewFields[i].SysCode + "\", editorType: \"" + viewFields[i].ControlType + "\"}, ";
               continue;
             }
 
-            // Ordinal relation-based element
+            // Ordinal relation-based element creation section
             resultDS += "{ name: \"" + viewFields[i].SysCode + "\", ";
 
-        //    var relationKindRec = relationKindRS.find("SysCode", currentRelation.RelationKind);
-        //    var kind = relationKindRec.SysCode;
             var kind = currentRelation.RelationKind;
             resultDS += "kind: \"" + kind + "\", ";
 
@@ -4367,11 +4363,8 @@ isc.AzureUploadControl.addProperties({
 
 // ===================== Geospatial section ==============================
 
-function getGeolocation() {
-  //TODO ***
-}
-
-// ------------------------ Azure direct upload control  ----------------------------
+// -------------------------- Leaflet control  ----------------------------
+// ----------------- Inner canvas for leaflet control  --------------------
 isc.defineClass("LeafletCanvas", "Canvas");
 isc.LeafletCanvas.addProperties({
   
@@ -4413,6 +4406,7 @@ isc.LeafletCanvas.addProperties({
     redrawOnResize: false 
 }); 
 
+// ---------------------- Leaflet control itself ------------------------
 isc.ClassFactory.defineClass("LeafletControl", isc.CanvasItem);
 isc.LeafletControl.addProperties({
   shouldSaveValue: true, 
@@ -4440,12 +4434,21 @@ isc.LeafletControl.addProperties({
                   var lng = lngFld.getValue();
                   if (lat && lng) {
                     this.canvas.mymap.setView([lat, lng], 16);
-                    if (adrFld) {
+                    if (adrFld && adrFld.getValue()) {
                       var adr = adrFld.getValue();
                       this.canvas.marker = L.marker([lat, lng]).addTo(this.canvas.mymap).bindPopup(adr).openPopup();
                     } else {
                       this.canvas.marker = L.marker([lat, lng]).addTo(this.canvas.mymap);
                     }
+                  } else {
+                    var that = this;
+                    navigator.geolocation.getCurrentPosition(
+                        function(position) {
+                          that.canvas.myForm.items.find({name:'Latitude'}).setValue(position.coords.latitude);
+                          that.canvas.myForm.items.find({name:'Longitude'}).setValue(position.coords.longitude);
+                          that.canvas.mymap.setView([position.coords.latitude, position.coords.longitude], 13);
+                        }
+                    );
                   }
                 }             
               }
