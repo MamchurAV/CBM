@@ -70,7 +70,8 @@ public class DataAccessService extends ServerResource {
 		String outTrans = "[";
 		String outSingleOper = null;
 		
-		if (dsTransaction.transactionNum == -2) {
+		if (dsTransaction.transactionNum == -2
+			|| dsTransaction.operations.size() == 0) {
 			return "//'\"]]>>isc_JSONResponseStart>>" + CBMServerMessages.noRequestInterior() + Request.getCurrent().toString() + "//isc_JSONResponseEnd";
 		}
 		

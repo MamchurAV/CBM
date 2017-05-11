@@ -281,8 +281,8 @@ public class MSSqlDataBase implements I_DataBase {
 								{
 									if (val.equals("true")) { val = "1";}
 									else if (val.equals("false")){ val = "0";}
-								}
-								if (val.equalsIgnoreCase("null")
+									valuesPart += val + ", ";
+								} else if (val.equalsIgnoreCase("null")
 										|| colInfo[2].equals("Integer")
 										|| colInfo[2].equals("Bigint")
 										|| colInfo[2].equals("Decimal")
@@ -291,9 +291,13 @@ public class MSSqlDataBase implements I_DataBase {
 										)
 								{
 									valuesPart += val + ", ";
-								}
-								else
-								{
+								} else if (colInfo[2].equals("GUID")
+										||colInfo[2].equals("Date")
+										|| colInfo[2].equals("DateTime")
+										|| colInfo[2].equals("Time")){
+									valuesPart += "'" + val + "', "; 
+								} else {
+									// For String types - unicode prefix (no matter if column is not unicode-aware)
 									valuesPart += "N'" + val + "', "; 
 								}
 							}
@@ -315,7 +319,7 @@ public class MSSqlDataBase implements I_DataBase {
 			}
 			
 			// For inherited-part tables, with no explicitly-defined ID
-			if (!columnsPart.toUpperCase().startsWith("ID, ")){
+			if (!columnsPart.toUpperCase().startsWith("ID,")){
 				columnsPart = "ID, " + columnsPart;
 				valuesPart = "'" + idValue + "', " + valuesPart;
 			}
@@ -437,8 +441,8 @@ public class MSSqlDataBase implements I_DataBase {
 									{
 										if (val.equals("true")) { val = "1";}
 										else if (val.equals("false")){ val = "0";}
-									}
-									if (val.equalsIgnoreCase("null")
+										updatePart += colInfo[0] + "=" + val + ", ";
+									} else if (val.equalsIgnoreCase("null")
 											|| colInfo[2].equals("Integer")
 											|| colInfo[2].equals("Bigint")
 											|| colInfo[2].equals("Decimal")
@@ -447,6 +451,11 @@ public class MSSqlDataBase implements I_DataBase {
 											)
 									{
 										updatePart += colInfo[0] + "=" + val + ", ";
+									} else if (colInfo[2].equals("GUID")
+											||colInfo[2].equals("Date")
+											|| colInfo[2].equals("DateTime")
+											|| colInfo[2].equals("Time")) {
+										updatePart += colInfo[0] + "= '" + val + "', ";
 									}
 									else
 									{
@@ -484,7 +493,6 @@ public class MSSqlDataBase implements I_DataBase {
 	            dbCon = dataSource.getConnection();
 	            
 				statement = dbCon.createStatement();
-// MySQL feature				statement.executeUpdate("SET NAMES 'utf8'");
 				out.retCode = statement.executeUpdate(sql);
 				
 				statement.close();

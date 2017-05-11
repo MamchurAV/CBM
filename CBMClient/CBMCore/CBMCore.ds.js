@@ -1,7 +1,6 @@
 ﻿//======================= Technological DataSources ===========================
 isc.CBMDataSource.create({
   ID: "UserRights",
-  dbName: Window.default_DB,
   fields: [{
     name: "ForUser",
     type: "text",
@@ -35,7 +34,6 @@ isc.CBMDataSource.create({
 
 isc.CBMDataSource.create({
   ID: "WindowSettings",
-  dbName: Window.default_DB,
   fields: [{
     name: "ForType",
     type: "text",
@@ -84,7 +82,6 @@ isc.CBMDataSource.create({
 
 isc.CBMDataSource.create({
   ID: "ListSettings",
-  dbName: Window.default_DB,
   fields: [{
     name: "ForType",
     type: "text",
@@ -114,7 +111,6 @@ isc.CBMDataSource.create({
 isc.CBMDataSource.create({
   ID: "Concept",
   title: "Concept",
-  dbName: Window.default_DB,
   titleField: "SysCode",
   infoField: "Description",
   isHierarchy: true,
@@ -546,7 +542,6 @@ isc.DataSource.create({
 // --- Functions (methods) and even functional blocks for Conjcept
 isc.CBMDataSource.create({
   ID: "PrgFunction",
-  dbName: Window.default_DB,
   titleField: "SysCode",
   infoField: "Description",
   fields: [{
@@ -596,7 +591,6 @@ isc.CBMDataSource.create({
 
 isc.CBMDataSource.create({
   ID: "PrgVersion",
-  dbName: Window.default_DB,
   titleField: "SysCode",
   infoField: "Description",
   fields: [{
@@ -651,7 +645,6 @@ isc.CBMDataSource.create({
 // VVV TODO VVV Drop or make static DataSource, DataLocation and DataField DS-es.
 isc.CBMDataSource.create({
   ID: "DBStorage",
-  dbName: Window.default_DB,
   titleField: "SysCode",
   infoField: "Description",
   fields: [{
@@ -691,7 +684,6 @@ isc.CBMDataSource.create({
 // ----- Relation group ----------------------------
 isc.CBMDataSource.create({
   ID: "Relation",
-  dbName: Window.default_DB,
 //  	cacheAllData: true, 
   titleField: "SysCode",
   infoField: "Description",
@@ -977,7 +969,8 @@ isc.CBMDataSource.create({
     titleOrientation: "top",
     colSpan: 2,
     length: 2000,
-    UIPath: "Information System aspects"
+    UIPath: "Information System aspects",
+    inList: true
   }, {
     name: "ExprValidate",
     type: "text",
@@ -1133,7 +1126,6 @@ isc.DataSource.create({
 // ----- Presentation Views group ----------------------------
 isc.CBMDataSource.create({
   ID: "PrgView",
-  dbName: Window.default_DB,
 //  	cacheAllData: true, 
   titleField: "SysCode",
   infoField: "Description",
@@ -1290,7 +1282,6 @@ isc.CBMDataSource.create({
 
 isc.CBMDataSource.create({
   ID: "PrgViewField",
-  dbName: Window.default_DB,
  	//cacheAllData: true, 
   titleField: "SysCode",
   infoField: "Description",
@@ -1553,7 +1544,6 @@ isc.CBMDataSource.create({
 //--- Menu metadata DS ---
 isc.CBMDataSource.create({
   ID: "PrgMenu",
-  dbName: Window.default_DB,
   titleField: "SysCode",
   infoField: "Description",
   fields: [{
@@ -1581,6 +1571,8 @@ isc.CBMDataSource.create({
     copyLinked: true,
     deleteLinked: true,
     canSave: true,
+    colSpan: 6,
+    startRow: true,
     editorType: "CollectionAggregateControl",
     relatedConcept: "PrgMenuItem",
     backLinkRelation: "ForMenu",
@@ -1591,7 +1583,6 @@ isc.CBMDataSource.create({
 
 isc.CBMDataSource.create({
   ID: "PrgMenuItem",
-  dbName: Window.default_DB,
   titleField: "Description",
   infoField: "SysCode",
   isHierarchy: true,
@@ -1686,7 +1677,6 @@ isc.CBMDataSource.create({
 //========================================================================
 isc.CBMDataSource.create({
   ID: "PrgComponent",
-  dbName: Window.default_DB,
   titleField: "SysCode",
   fields: [{
     name: "SysCode",

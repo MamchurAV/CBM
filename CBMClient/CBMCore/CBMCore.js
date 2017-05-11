@@ -146,13 +146,13 @@ function collect() {
 
 /**
  * Fast UUID generator, RFC4122 version 4 compliant.
+ * (Chosen after speed tests! - MAV)
+ *
  * @author Jeff Ward (jcward.com).
  * @license MIT license
  * @link http://stackoverflow.com/questions/105034/how-to-create-a-guid-uuid-in-javascript/21963136#21963136
  *
- * (Chosen after speed tests!)
- *
- * @coauthor  Alexander Mamchur change first part of UUID
+ * Alexander Mamchur have modified first segment of UUID
  * to gain sequential growing UUID-s for DBMS storage efficiency.
  * (Not for MSSQL due to it-s specific GUID structure! (back ordering sequence))
  **/
@@ -163,19 +163,21 @@ var UUID = (function () {
     lut[i] = (i < 16 ? '0' : '') + (i).toString(16);
   }
   self.generate = function () {
-    //    var d0 = Math.random()*0xffffffff|0; // <<< Original Jeff Ward's version
+    // var d0 = Math.random() * 0xffffffff | 0; // <<< Original Jeff Ward's version
     var d0 = new Date().getTime().toString(16).slice(-8); // <<< Alexander Mamchur replacement to gain sequential growing first part
     var d1 = Math.random() * 0xffffffff | 0;
     var d2 = Math.random() * 0xffffffff | 0;
     var d3 = Math.random() * 0xffffffff | 0;
+    // VVVVV Original Jeff Ward's version
     // return lut[d0&0xff]+lut[d0>>8&0xff]+lut[d0>>16&0xff]+lut[d0>>24&0xff]+'-'+
     // lut[d1&0xff]+lut[d1>>8&0xff]+'-'+lut[d1>>16&0x0f|0x40]+lut[d1>>24&0xff]+'-'+
     // lut[d2&0x3f|0x80]+lut[d2>>8&0xff]+'-'+lut[d2>>16&0xff]+lut[d2>>24&0xff]+
-    // lut[d3&0xff]+lut[d3>>8&0xff]+lut[d3>>16&0xff]+lut[d3>>24&0xff]; // <<< Original Jeff Ward's version
+    // lut[d3&0xff]+lut[d3>>8&0xff]+lut[d3>>16&0xff]+lut[d3>>24&0xff]; 
+    // ^^^^^ Original Jeff Ward's version
     return d0 + '-' +
-      lut[d1 & 0xff] + lut[d1 >> 8 & 0xff] + '-' + lut[d1 >> 16 & 0x0f | 0x40] + lut[d1 >> 24 & 0xff] + '-' +
-      lut[d2 & 0x3f | 0x80] + lut[d2 >> 8 & 0xff] + '-' + lut[d2 >> 16 & 0xff] + lut[d2 >> 24 & 0xff] +
-      lut[d3 & 0xff] + lut[d3 >> 8 & 0xff] + lut[d3 >> 16 & 0xff] + lut[d3 >> 24 & 0xff];
+    lut[d1 & 0xff] + lut[d1 >> 8 & 0xff] + '-' + lut[d1 >> 16 & 0x0f | 0x40] + lut[d1 >> 24 & 0xff] + '-' +
+    lut[d2 & 0x3f | 0x80] + lut[d2 >> 8 & 0xff] + '-' + lut[d2 >> 16 & 0xff] + lut[d2 >> 24 & 0xff] +
+    lut[d3 & 0xff] + lut[d3 >> 8 & 0xff] + lut[d3 >> 16 & 0xff] + lut[d3 >> 24 & 0xff];
   }
   return self;
 })();
@@ -228,9 +230,13 @@ function generateDStext(forView, futherActions) {
   resultDS += "title: \"" + dsTitle + "\", ";
   if (conceptRec.ExprToString && conceptRec.ExprToString !== "null") {
     resultDS += "titleField: \"" + conceptRec.ExprToString + "\", ";
+  } else {
+    resultDS += "titleField: \"Description\", ";
   }
   if (conceptRec.ExprToStringDetailed && conceptRec.ExprToStringDetailed !== "null") {
     resultDS += "infoField: \"" + conceptRec.ExprToStringDetailed + "\", ";
+  } else {
+    resultDS += "infoField: \"Description\", ";
   }
   if (conceptRec.IsHierarchy === true) {
     resultDS += "isHierarchy: " + conceptRec.IsHierarchy + ", ";
@@ -323,9 +329,15 @@ function generateDStext(forView, futherActions) {
             if (viewFields[i].Hidden === true) {
               resultDS += "hidden: true, ";
             }
-            if (viewFields[i].Mandatory === true) {
+            // If "Mandatory" property is set on View level - it override that set in Relation
+            if (!viewFields[i].Mandatory ) {
+              if (currentRelation.Mandatory === true) {
+                resultDS += "required: true, ";
+              }
+            } else if (viewFields[i].Mandatory === true) {
               resultDS += "required: true, ";
             }
+              
             if (currentRelation.ExprDefault && currentRelation.ExprDefault !== "null" && currentRelation.ExprDefault !== null) {
               resultDS += "defaultValue: \"" + currentRelation.ExprDefault + "\", ";
             }
@@ -355,8 +367,8 @@ function generateDStext(forView, futherActions) {
             }
             //TODO ? Maybe move items below to kind-specific places?
             resultDS += "align: \"left\", ";
-            resultDS += "vAlign: \"bottom\", ";
-            resultDS += "titleVAlign: \"bottom\", ";
+            resultDS += "vAlign: \"center\", ";
+            resultDS += "titleVAlign: \"center\", ";
             
             if (currentRelation.CopyValue === true) {
               resultDS += "copyValue: true, ";
@@ -414,6 +426,7 @@ function generateDStext(forView, futherActions) {
                 case "StandardString":
                 case "LongString":
                 case "ShortString":
+                case "GUID":
                   resultDS += "type: \"text\"";
                   break;
                 case "StandardMlString":
@@ -439,7 +452,7 @@ function generateDStext(forView, futherActions) {
                   resultDS += "type: \"datetime\"";
                   break;
                 case "TimePrecize":
-                  resultDS += "type: \"time\"";
+                  resultDS += "type: \"datetime\"";
                   break;
                 case "Time":
                   resultDS += "type: \"time\"";
@@ -1593,7 +1606,7 @@ isc.CBMDataSource.addProperties({
               }
             }
           };
-          cloneNextRecord(); // First call.
+          cloneNextRecord(); // First call - start recursion
         }
       }
     );
@@ -1915,7 +1928,7 @@ isc.CBMDataSource.addProperties({
           } else {
             if (!topCancel) {
               TransactionManager.add(record, record.currentTransaction);
-              isc.DataSource.get(this.dataSource).onSave(record);
+//              isc.DataSource.get(this.dataSource).onSave(record);
             }
             isc.DataSource.get(this.dataSource).onSave(record);
             TransactionManager.commit(record.currentTransaction);
@@ -2122,13 +2135,13 @@ var CBMobject = {
     }
     // Get CBM metadata descriptions (we need it to discover really persistent fields)
     var rec = {}; // Object.create();
-//    var atrNames = Object.getOwnPropertyNames(obj); ////////////////////??? What's better?
+//    var atrNames = Object.getOwnPropertyNames(obj); // <<< TODO ??? Deside - What's better?
     var atrNames = this.ds.getFieldNames(false);
     var n = atrNames.length;
     for (var i = 0; i < n; i++) {
       var rel = this.ds.getRelation(atrNames[i]);
       // Copy to returned "rec" only persistent fields
-      if (rel && rel.DBColumn && rel.DBColumn !== null) {
+      if (rel && rel.DBColumn && rel.DBColumn !== null && rel.DBTable && rel.DBTable !== null) {
         rec[atrNames[i]] = this[atrNames[i]];
       }
     }
@@ -4493,9 +4506,10 @@ function directGeocodingYandex(address, callback) {
 
 // Provide geocoding search by possible services, and user's choice from several results
 // Expects providers to return results in array with structure: {lat:*, lng:*, adr:*}
-function getGeocodingResults(form, address, callback) {
+function getGeocodingResults(address, form, callback) {
+  
     // TODO: Gather results from searching by several geocoding service providers
-    directGeocodingYandex(form.items.find({name:'Address'}).getValue(), 
+    directGeocodingYandex(address, 
               function(results) {
                 // TODO: Let user make choice if several points discovered
                 // Show results in form's Map control
@@ -4513,17 +4527,26 @@ function getGeocodingResults(form, address, callback) {
 // For correct work - assumed existance of fields "Address", "Latitude" and "Longitude" on form
 function fillGeocoding(form, item) {
   
-    getGeocodingResults(form, form.items.find({name:'Address'}).getValue(), 
-              function(result) {
-                form.items.find({name:'Latitude'}).setValue(result.lat);
-                form.items.find({name:'Longitude'}).setValue(result.lng);
-                form.items.find({name:'Address'}).setValue(result.adr);
-                if (form.items.find({name:'Map'})) {
-                  form.items.find({name:'Map'}).setValue(result);
+ 
+    var adrFld = form.items.find({name:'Address'});
+    if (!adrFld) {
+      adrFld = form.items.find({name:'Description'});
+    }
+    if (adrFld) {
+      getGeocodingResults(adrFld.getValue(), form,
+                function(result) {
+                  form.items.find({name:'Latitude'}).setValue(result.lat);
+                  form.items.find({name:'Longitude'}).setValue(result.lng);
+                  // Set address to "Address" field only, not in case of "Description"
+                  if (adrFld.name === 'Address') {
+                    form.items.find({name:'Address'}).setValue(result.adr);
+                  }
+                  if (form.items.find({name:'Map'})) {
+                    form.items.find({name:'Map'}).setValue(result);
+                  }
                 }
-              }
-    );
-    
+      );
+    }
     return false;
 }
 
