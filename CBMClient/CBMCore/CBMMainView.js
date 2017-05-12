@@ -329,7 +329,7 @@ var loginClose = function () {
   document.head.appendChild(scriptCBM);
 
   // --- Load CBM DataSources, using choosen localization
-  //// TEMPORALLY OFF>>> loadStaticDataSources();
+  loadStaticDataSources();
 
   // --- Reset session Isomorphic messages locale according to user choice
   if (curr_Lang !== "en-GB") {

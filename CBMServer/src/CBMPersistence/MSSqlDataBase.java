@@ -18,6 +18,7 @@ import CBMMeta.SelectTemplate;
 import CBMServer.CBMStart;
 import CBMServer.DSRequest;
 import CBMServer.DSResponce;
+import CBMUtils.StringHelper;
 
 
 
@@ -159,7 +160,7 @@ public class MSSqlDataBase implements I_DataBase {
 		}
 		
 		// --- After(!) user-defined sort - add MetaModel defined default order ---
-		if (selTempl.orderby != null)
+		if (!StringHelper.IsNullOrWhiteSpace(selTempl.orderby))
 		{
 			orderPart += selTempl.orderby; // MetaModel defined <inTempl.orderby> MUST ends with ID.
 		}
@@ -180,8 +181,8 @@ public class MSSqlDataBase implements I_DataBase {
 			} catch (SQLException e) {
 				e.printStackTrace();
 				dsResponce.retCode = -1;
-				dsResponce.retMsg = e.toString();
-				return dsResponce; // Error-reporting responce return
+				dsResponce.retMsg = StringHelper.forJSON(e.toString()) + " - while pre-select request for <" + dsRequest.dataSource + "> class. SQL:<" + StringHelper.forJSON(sql) + ">";
+				return dsResponce; // Error-reporting response return
 			} finally {
 			    try {
 			        if(rsCount != null) rsCount.close();
@@ -214,9 +215,9 @@ public class MSSqlDataBase implements I_DataBase {
 		} catch (SQLException e) {
 			e.printStackTrace();
 			dsResponce.retCode = -1;
-			dsResponce.retMsg = e.toString() + " while selecting data of <" + dsRequest.dataSource + "> class. SQL:<" + sql + ">";
-			return dsResponce; // Error-reporting responce return
-		} 
+			dsResponce.retMsg = StringHelper.forJSON(e.toString()) + " - while selecting data of <" + dsRequest.dataSource + "> class. SQL:<" + StringHelper.forJSON(sql) + ">";
+			return dsResponce; // Error-reporting response return
+		}
 		dsResponce.retCode = 0;
 		return dsResponce;
 	}
@@ -337,8 +338,8 @@ public class MSSqlDataBase implements I_DataBase {
 			catch (SQLException e) {
 				e.printStackTrace();
 				out.retCode = -1;
-				out.retMsg = e.toString() + " while <" + dsRequest.dataSource + "> inserting.    SQL: <" + sql + ">";
-				return out;// Error-reporting responce return
+				out.retMsg = StringHelper.forJSON(e.toString()) + " while <" + dsRequest.dataSource + "> inserting.    SQL: <" + StringHelper.forJSON(sql) + ">";
+				return out;// Error-reporting response return
 			} finally {
 			    try {
 			        if(statement != null) statement.close();
@@ -501,8 +502,8 @@ public class MSSqlDataBase implements I_DataBase {
 			catch (SQLException e) {
 				e.printStackTrace();
 				out.retCode = -1;
-				out.retMsg = e.toString() + " while <" + dsRequest.dataSource + "> updating.    SQL: <" + sql + ">";
-				return out;// Error-reporting responce return
+				out.retMsg = StringHelper.forJSON(e.toString()) + " while <" + dsRequest.dataSource + "> updating.    SQL: <" + StringHelper.forJSON(sql) + ">";
+				return out;// Error-reporting response return
 			} finally {
 			    try {
 			        if(statement != null) statement.close();
@@ -564,7 +565,7 @@ public class MSSqlDataBase implements I_DataBase {
 			catch (SQLException e) {
 				e.printStackTrace();
 				out.retCode = -1;
-				out.retMsg = e.toString() + " while <" + dsRequest.dataSource + "> deleting. SQL:<" + sql + ">";
+				out.retMsg = StringHelper.forJSON(e.toString()) + " while <" + dsRequest.dataSource + "> deleting. SQL:<" + StringHelper.forJSON(sql) + ">";
 				return out;
 			} finally {
 			    try {

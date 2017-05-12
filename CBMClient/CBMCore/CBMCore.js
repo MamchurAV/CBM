@@ -183,10 +183,16 @@ var UUID = (function () {
 })();
 
 
+
 // ============================================================================
-// ======= Dynamic creation of Isomorphic DataSource (DS) from Metadata =======
+// ============================================================================
+// ============================================================================
+// ======================== CBM - specific functions ==========================
+// ============================================================================
+// ============================================================================
 // ============================================================================
 
+// ======= Dynamic creation of Isomorphic DataSource (DS) from Metadata =======
 // --- Function that generates Isomorphic DataSource (DS) text from universal CBM metadata. ---
 function generateDStext(forView, futherActions) {
   // --- Get all concept metadata ---
@@ -367,8 +373,8 @@ function generateDStext(forView, futherActions) {
             }
             //TODO ? Maybe move items below to kind-specific places?
             resultDS += "align: \"left\", ";
-            resultDS += "vAlign: \"center\", ";
-            resultDS += "titleVAlign: \"center\", ";
+            // resultDS += "vAlign: \"center\", ";
+            // resultDS += "titleVAlign: \"center\", ";
             
             if (currentRelation.CopyValue === true) {
               resultDS += "copyValue: true, ";
@@ -927,6 +933,7 @@ function getRelationsForViewConcept(forView, callback) {
 }
 
 
+
 // ============================================================================
 // ====================== Transactional data processing =======================
 // ============================================================================
@@ -989,18 +996,26 @@ TransactionManager.commit = function (transact, callback) {
     if (len === 0) {
       return;
     }
-    var i = 0;
-    for (i; i < len - 1; i++) {
+    // Process saving in back order - so that main cases of records dependency are resolved.
+    // For more complicated cases - TODO: analyse dependensies and establish right order...
+    var i = len - 1;
+    for (i; i > 0; i--) {
       currTrans.Changes[i].save(true); // Call CBMobject's save()
       currTrans.Changes[i].currentTransaction = null;
     }
-    currTrans.Changes[i].save(true, undefined, undefined, callback); // TODO: <<<this is not solution -  Last call CBMobject's save() - with callback
+    // The last object in transaction 
+    if (currTrans.Id !== "default") {
+      currTrans.Changes[i].save(true, undefined, undefined);
+    } else {
+      // Last call CBMobject's save() - with callback
+      currTrans.Changes[i].save(true, undefined, undefined, callback);
+    }
     currTrans.Changes[i].currentTransaction = null;
     this.clear(currTrans);
     // this.close(currTrans);
     // -- Commit default transaction too!!!
     if (currTrans.Id !== "default") {
-      this.commit(this.transactions.find("Id", "default"));
+      this.commit(this.transactions.find("Id", "default"), callback);
     }
   }
 };
