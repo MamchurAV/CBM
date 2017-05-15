@@ -1921,9 +1921,10 @@ isc.CBMDataSource.addProperties({
               record[attr] = values[attr];
             }
             // TODO !!! Universalize kontrol type below
-            var relation = this.getDataSource().relations.find({SysCode:attr});
-            if (relation && relation.editorType === "WeekWorkControl") {
-              var item = this.getItem(attr);
+            var attrStr = "" + attr;
+            var field = this.getDataSource().fields[attrStr];
+            if (field && field.editorType === "WeekWorkControl") {
+              var item = this.valuesManager.getItem(attrStr);
               if (item) {
                 item.saveCollection();
               }
@@ -3962,7 +3963,7 @@ isc.WeekWorkControl.addProperties({
               that.dynaForm.items.find({name:"end" + i}).setValue(end); 
             }
           }
-          that.storeValue(records);
+          that.storeValue(that.records);
         }
       }
     );
