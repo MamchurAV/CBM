@@ -630,9 +630,9 @@ isc.CBMDataSource.create({
   infoField: "Description",
   isHierarchy: true,
   canExpandRecords: true,
-/*  expansionMode: "related",
-  detailDS: "SteelStructureProdRoot",
-  childExpansionMode: "related",*/
+  // expansionMode: "related",
+  // detailDS: "SteelStructureProdRoot",
+  // childExpansionMode: "related",
   fields: [{
     name: "ID",
     title: "ID",

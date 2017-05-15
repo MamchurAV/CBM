@@ -2396,18 +2396,21 @@ function deleteRecord(record, delMode, mainToBin) {
     });
   }
 
-  // Process linked (aggregated) dependent records
+  // Deletion process itself
   var ds = isc.DataSource.get(record.Concept);
   if (!ds) {
     isc.warn(isc.CBMStrings.NoDataSourceDefined + " (in function deleteRecord(). )");
     return;
   }
+  // Process linked (aggregated) dependent records
   var atrNames = ds.getFieldNames(false);
-  // Process composite aggregated records
   for (var i = 0; i < atrNames.length; i++) {
     var fld = ds.getField(atrNames[i]);
     // TODO: Replace DS editor type to MD association type, or MD but from DS (where it will exist)?
-    if ((fld.editorType == "CollectionControl" || fld.editorType == "CollectionAggregateControl") && fld.deleteLinked == true) {
+    if ((fld.editorType == "CollectionControl" 
+          || fld.editorType == "CollectionAggregateControl"
+          || fld.editorType == "RelationsAggregateControl"
+          || fld.editorType == "CollectionCrossControl") && fld.deleteLinked == true) {
       deleteCollection(fld, record, delMode, ds.isDeleteToBin());
     } else if ((fld.editorType == "LinkControl" || fld.editorType == "combobox") && fld.deleteLinked == true) {
       deleteLinkedRecord(fld, record, delMode, ds.isDeleteToBin());
@@ -3876,6 +3879,107 @@ isc.CollectionCrossControl.addProperties({
  */
  
  
+
+// -------------------------------- CollectionControl aggregate control (strong-dependent collection) ------------------------------------------------
+isc.ClassFactory.defineClass("WeekWorkControl", isc.CanvasItem);
+isc.WeekWorkControl.addProperties({
+  //    height: "*",  width: "*", <- seems the same
+  //    height: "88%",  width: "88%", //<- very narrow, but normal hight! (???)
+  rowSpan: "*",
+  colSpan: "*",
+  shouldSaveValue: true, // Don't switch, or showValue() won't be called
+  dynaForm: null,
+  records: null,
+      
+  createCanvas: function (form) {
+    this.dynaForm = isc.DynamicForm.create({
+      autoDraw: false,
+      width: "*", height: "*",
+      numCols: 3,
+      backgroundColor:"#CCEEDD",
+      border: "1px solid blue",
+      dataSource: (this.optionDataSource ? this.optionDataSource : this.relatedConcept),
+      context: form,
+
+      fields: [
+      {name: "day1", title: "пн.", type: "time"}, {name: "end1", showTitle: false, type: "time"}, 
+      {name: "day2", title: "вт.", type: "time"}, {name: "end2", showTitle: false, type: "time"}, 
+      {name: "day3", title: "ср.", type: "time"}, {name: "end3", showTitle: false, type: "time"}, 
+      {name: "day4", title: "чт.", type: "time"}, {name: "end4", showTitle: false, type: "time"}, 
+      {name: "day5", title: "пт.", type: "time"}, {name: "end5", showTitle: false, type: "time"}, 
+      {name: "day6", title: "сб.", type: "time"}, {name: "end6", showTitle: false, type: "time"}, 
+      {name: "day7", title: "вс.", type: "time"}, {name: "end7", showTitle: false, type: "time"}
+      ]
+    });
+    return this.dynaForm;
+  },
+
+  showValue: function (displayValue, dataValue, form, item) {
+    this.mainID = form.valuesManager.getValue(this.mainIDProperty);
+    if (typeof(this.mainID) != "undefined") {
+      var filterString = "{\"" + this.backLinkRelation + "\" : \"" + this.mainID + "\"}";
+      var filter = parseJSON(filterString);
+    }
+    
+    that = this;
+    this.dynaForm.dataSource.fetchData(
+      filter,
+      function (dsResponce, data, dsRequest) {
+        if (data.length > 0) {
+          that.records = data;
+          for (var i = 1; i < 8; i++) {
+            var record = data.find({Day: i});
+            if (record) {
+              var beg = record.OpeningTime.substr(11,5); // like: 1900-01-01 10:00:00.0
+              var end = record.ClosingTime.substr(11,5);
+              that.dynaForm.items.find({name:"day" + i}).setValue(beg); 
+              that.dynaForm.items.find({name:"end" + i}).setValue(end); 
+            }
+          }
+        }
+      }
+    );
+  },
+  
+  getValue: function() {
+    if (!this.records) {return;}
+    
+    for (var i = 1; i < 8; i++) {
+      var begFld = this.dynaForm.getItem("day" + i);
+      var endFld = this.dynaForm.getItem("end" + i);
+      if (!begFld || !endFld) {return;}
+      var beg = begFld.getValue();
+      var end = endFld.getValue();
+
+      var record = this.records.find({Day: i});
+      if ((beg || end) && !record) {
+        // Inserting 
+        
+      } else if (record 
+          && ((new Date(record.OpeningTime).getHours() !== beg.getHours()) 
+              || (new Date(record.OpeningTime).getMinutes() !== beg.getMinutes()) 
+           || (new Date(record.ClosingTime).getHours() !== end.getHours()) 
+              || (new Date(record.ClosingTime).getMinutes() !== end.getMinutes()))) 
+      {
+        // Update 
+        
+      } else if (record && !beg && !end) {
+        // Deleting
+        
+      }
+    }
+    
+    return this.records;
+  },
+  
+  changed: function() {
+    storeValue(this.records);
+  }
+
+}); // <<< End WeekWorkControl control.
+
+ 
+ 
 // ==========================================================================
 // ================= CBM Windows / Dialogs components =======================
 // ==========================================================================
@@ -4210,8 +4314,8 @@ isc.FormWindow.addProperties({
   saveGridsInItems: function(items) {
     for (var i= 0; i < items.length; i++) {
       var item = items[i];
-      if (item.kind === "BackAggregate" || item.kind === "BackLink" || item.kind === "CrossLink"
-          || item.editorType === "CollectionAggregateControl" || item.editorType === "CollectionControl"
+      if (/*item.kind === "BackAggregate" || item.kind === "BackLink" || item.kind === "CrossLink"
+          || */item.editorType === "CollectionAggregateControl" || item.editorType === "CollectionControl"
           || item.editorType ===  "CollectionCrossControl" || item.editorType === "RelationsAggregateControl") {
         
         // In case Save or [X] pressed - save in-grid editings 

@@ -163,8 +163,11 @@ public class MSSqlDataBase implements I_DataBase {
 		if (!StringHelper.IsNullOrWhiteSpace(selTempl.orderby))
 		{
 			orderPart += selTempl.orderby; // MetaModel defined <inTempl.orderby> MUST ends with ID.
+		} else {
+			orderPart += "Id";	
 		}
-		sql += orderPart.equals("") ? " ORDER BY id " : " order by " + orderPart;
+		// sql += StringHelper.IsNullOrWhiteSpace(orderPart) ? " ORDER BY id " : " order by " + orderPart;
+		sql += " order by " + orderPart;
 
 		// --- Paging pre-request ---
 		if (dsRequest!= null && dsRequest.endRow != 0) {
