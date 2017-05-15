@@ -1920,6 +1920,14 @@ isc.CBMDataSource.addProperties({
             if (values.hasOwnProperty(attr)) {
               record[attr] = values[attr];
             }
+            // TODO !!! Universalize kontrol type below
+            var relation = this.getDataSource().relations.find({SysCode:attr});
+            if (relation && relation.editorType === "WeekWorkControl") {
+              var item = this.getItem(attr);
+              if (item) {
+                item.saveCollection();
+              }
+            }
           }
           // Separately assign Concept property (that can be not in DS fields)
           if (record.Concept === undefined || record.Concept === null) {
@@ -2396,14 +2404,14 @@ function deleteRecord(record, delMode, mainToBin) {
     });
   }
 
-  // Deletion process itself
+  // Deletion process
   var ds = isc.DataSource.get(record.Concept);
   if (!ds) {
     isc.warn(isc.CBMStrings.NoDataSourceDefined + " (in function deleteRecord(). )");
     return;
   }
-  // Process linked (aggregated) dependent records
   var atrNames = ds.getFieldNames(false);
+  // Process linked (aggregated) dependent records
   for (var i = 0; i < atrNames.length; i++) {
     var fld = ds.getField(atrNames[i]);
     // TODO: Replace DS editor type to MD association type, or MD but from DS (where it will exist)?
@@ -2436,8 +2444,14 @@ function deleteRecord(record, delMode, mainToBin) {
 };
 
 
+
+
+// ========================================================================================
+// ========================================================================================
 // ===================== Universal UI components and UI infrastructure ====================
 // ========================================================================================
+// ========================================================================================
+
 //========================== CBM custom interface control types ===========================
 
 isc.SimpleType.create({
@@ -2687,6 +2701,17 @@ var switchLanguage = function (field, value, lang) {
   // So, while redraw(), item_Lang language part will be extracted an represented.
   field.redraw();
 };
+
+
+
+// ============================= Other Text controls ==================================
+
+// --- "Small multiline" text control ---
+isc.defineClass("SmallMultilineText", "TextAreaItem");
+isc.SmallMultilineText.addProperties({
+  height: 40
+});
+
 
 
 // =============================================================================================
@@ -3890,6 +3915,7 @@ isc.WeekWorkControl.addProperties({
   shouldSaveValue: true, // Don't switch, or showValue() won't be called
   dynaForm: null,
   records: null,
+  maxHeight: 185,
       
   createCanvas: function (form) {
     this.dynaForm = isc.DynamicForm.create({
@@ -3936,12 +3962,13 @@ isc.WeekWorkControl.addProperties({
               that.dynaForm.items.find({name:"end" + i}).setValue(end); 
             }
           }
+          that.storeValue(records);
         }
       }
     );
   },
-  
-  getValue: function() {
+ 
+  saveCollection: function() {
     if (!this.records) {return;}
     
     for (var i = 1; i < 8; i++) {
@@ -3969,11 +3996,6 @@ isc.WeekWorkControl.addProperties({
       }
     }
     
-    return this.records;
-  },
-  
-  changed: function() {
-    storeValue(this.records);
   }
 
 }); // <<< End WeekWorkControl control.
