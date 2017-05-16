@@ -106,7 +106,7 @@ function syncronize(src, dest, exclude) {
     if (src.hasOwnProperty(attr)
       && dest.hasOwnProperty(attr)
       /*&& !dest.overloaded*/
-      && exclude.indexOf(attr) === -1) {
+      && (!exclude || exclude.indexOf(attr) === -1) ) {
       // Aggregated object
       /*      if (destRelationsMeta[attr].RelationKind === "AggregateLink"){
        dest[attr] = syncronize(src[attr]);
@@ -130,11 +130,13 @@ function syncronize(src, dest, exclude) {
   }
 };
 
-// --- Create new object "concatenating" arguments, NOT replacing existing (from first objects) properties.
-function collect() {
-  var ret = {};
+// ----- Includes properties (with values) from secontd and more objects to first one.
+// Properties from first object (or just included) are NOT replaced by that in later objects.
+// - So priority is established from first to lust.
+function collectObjects() {
+  var ret = arguments[0]; //{};
   var len = arguments.length;
-  for (var i = 0; i < len; i++) {
+  for (var i = 1; i < len; i++) {
     for (var p in arguments[i]) {
       if (arguments[i].hasOwnProperty(p) && ret[p] === undefined) {
         ret[p] = arguments[i][p];
@@ -1914,15 +1916,16 @@ isc.CBMDataSource.addProperties({
         if (this.valuesManager.validate(true)) {
           var values = this.valuesManager.getValues();
           // Construct CBMobject to gather edited values back from ValuesManager before save
-          // TODO not new! Editexisting record?
+          // TODO not new! Edit existing record?
           var record = Object.create(CBMobject);
           for (var attr in values) {
             if (values.hasOwnProperty(attr)) {
               record[attr] = values[attr];
             }
-            // TODO !!! Universalize kontrol type below
+            // Initialize Save() for non-standard controls
             var attrStr = "" + attr;
             var field = this.getDataSource().fields[attrStr];
+            // TODO !!! Universalize kontrol type below
             if (field && field.editorType === "WeekWorkControl") {
               var item = this.valuesManager.getItem(attrStr);
               if (item) {
@@ -3587,6 +3590,7 @@ isc.InnerGrid.addProperties({
 }); // ----- END InnerGrid ------
 
 
+
 //----------------------------------------------------------------------------------------------------
 // -------------------------------- CollectionControl (Back-link) control ------------------------------------------------
 isc.ClassFactory.defineClass("CollectionControl", isc.CanvasItem);
@@ -3595,6 +3599,7 @@ isc.CollectionControl.addProperties({
   //    height: "88%",  width: "88%", //<- very narrow, but normal hight! (???)
   rowSpan: "*",
   colSpan: "*",
+  vAlign: "top",
   shouldSaveValue: true, // Don't switch, or showValue() won't be called
 
   innerGrid: null,
@@ -3805,6 +3810,7 @@ isc.CollectionCrossControl.addProperties({
   //    height: "88%",  width: "88%", //<- very narrow, but normal hight! (???)
   rowSpan: "*",
   colSpan: "*",
+  vAlign: "top",
   shouldSaveValue: true, // Don't switch, or showValue() won't be called
 
   innerGrid: null,
@@ -3869,7 +3875,7 @@ isc.CollectionCrossControl.addProperties({
 }); // <<< End CollectionControl (Cross-link) control
 
 
-// -------------------------- CollectionControl control for direct-linked objects -----------------------------
+// ----------------- CollectionControl for direct-linked objects --------------
 // TODO: ***
 /*isc.ClassFactory.defineClass("CollectionDirectItem", "CollectionControl");
  isc.CollectionAggregateControl.addProperties({
@@ -3906,36 +3912,39 @@ isc.CollectionCrossControl.addProperties({
  
  
 
-// -------------------------------- CollectionControl aggregate control (strong-dependent collection) ------------------------------------------------
+// ----------------- Special control for single week working time ------------------
+// TODO !!! switch from special "WorkingTime" implementation to work on universal TimePeriod structure
 isc.ClassFactory.defineClass("WeekWorkControl", isc.CanvasItem);
 isc.WeekWorkControl.addProperties({
   //    height: "*",  width: "*", <- seems the same
   //    height: "88%",  width: "88%", //<- very narrow, but normal hight! (???)
   rowSpan: "*",
   colSpan: "*",
+  vAlign: "top",
+  maxHeight: 190,
   shouldSaveValue: true, // Don't switch, or showValue() won't be called
   dynaForm: null,
   records: null,
-  maxHeight: 185,
       
   createCanvas: function (form) {
     this.dynaForm = isc.DynamicForm.create({
       autoDraw: false,
       width: "*", height: "*",
       numCols: 3,
-      backgroundColor:"#CCEEDD",
+      backgroundColor:"#CFEEDD",
       border: "1px solid blue",
+      cellPadding: 5,
       dataSource: (this.optionDataSource ? this.optionDataSource : this.relatedConcept),
       context: form,
 
       fields: [
-      {name: "day1", title: "пн.", type: "time"}, {name: "end1", showTitle: false, type: "time"}, 
-      {name: "day2", title: "вт.", type: "time"}, {name: "end2", showTitle: false, type: "time"}, 
-      {name: "day3", title: "ср.", type: "time"}, {name: "end3", showTitle: false, type: "time"}, 
-      {name: "day4", title: "чт.", type: "time"}, {name: "end4", showTitle: false, type: "time"}, 
-      {name: "day5", title: "пт.", type: "time"}, {name: "end5", showTitle: false, type: "time"}, 
-      {name: "day6", title: "сб.", type: "time"}, {name: "end6", showTitle: false, type: "time"}, 
-      {name: "day7", title: "вс.", type: "time"}, {name: "end7", showTitle: false, type: "time"}
+      {name:"day1", title:"ПН", type:"time", hint:"мм:сс", textAlign:"right"}, {name:"end1", showTitle:false, type:"time", hint:"мм:сс", textAlign:"right"}, 
+      {name:"day2", title:"ВТ", type:"time", hint:"мм:сс", textAlign:"right"}, {name:"end2", showTitle:false, type:"time", hint:"мм:сс", textAlign:"right"}, 
+      {name:"day3", title:"СР", type:"time", hint:"мм:сс", textAlign:"right"}, {name:"end3", showTitle:false, type:"time", hint:"мм:сс", textAlign:"right"}, 
+      {name:"day4", title:"ЧТ", type:"time", hint:"мм:сс", textAlign:"right"}, {name:"end4", showTitle:false, type:"time", hint:"мм:сс", textAlign:"right"}, 
+      {name:"day5", title:"ПТ", type:"time", hint:"мм:сс", textAlign:"right"}, {name:"end5", showTitle:false, type:"time", hint:"мм:сс", textAlign:"right"}, 
+      {name:"day6", title:"СБ", type:"time", hint:"мм:сс", textAlign:"right"}, {name:"end6", showTitle:false, type:"time", hint:"мм:сс", textAlign:"right"}, 
+      {name:"day7", title:"ВС", type:"time", hint:"мм:сс", textAlign:"right"}, {name:"end7", showTitle:false, type:"time", hint:"мм:сс", textAlign:"right"}
       ]
     });
     return this.dynaForm;
@@ -3970,7 +3979,7 @@ isc.WeekWorkControl.addProperties({
   },
  
   saveCollection: function() {
-    if (!this.records) {return;}
+    var record = null;
     
     for (var i = 1; i < 8; i++) {
       var begFld = this.dynaForm.getItem("day" + i);
@@ -3979,10 +3988,26 @@ isc.WeekWorkControl.addProperties({
       var beg = begFld.getValue();
       var end = endFld.getValue();
 
-      var record = this.records.find({Day: i});
+      record = null;
+      if (this.records) {
+        record = this.records.find({Day: i});
+      }
       if ((beg || end) && !record) {
         // Inserting 
-        
+        var record = Object.create(CBMobject);
+        record.ID = isc.IDProvider.getNextID();
+        record.Concept = "WorkingTime"
+        record.Day = i;
+        record.Offer = this.mainID;
+        record.OpeningTime = beg;
+        record.ClosingTime = end;
+        record.CreateTime = new Date();
+        record.infoState = "new";
+        record.save(true);
+      } else if (record && !beg && !end) {
+        // Deleting
+ //       deleteRecord(record);
+        this.dynaForm.dataSource.removeData(record)
       } else if (record 
           && ((new Date(record.OpeningTime).getHours() !== beg.getHours()) 
               || (new Date(record.OpeningTime).getMinutes() !== beg.getMinutes()) 
@@ -3990,13 +4015,14 @@ isc.WeekWorkControl.addProperties({
               || (new Date(record.ClosingTime).getMinutes() !== end.getMinutes()))) 
       {
         // Update 
-        
-      } else if (record && !beg && !end) {
-        // Deleting
-        
+        var cbmRecord = Object.create(CBMobject);
+        collectObjects(cbmRecord, record); 
+        cbmRecord.OpeningTime = beg;
+        cbmRecord.ClosingTime = end;
+        cbmRecord.infoState = "changed";
+        cbmRecord.save(true);
       }
     }
-    
   }
 
 }); // <<< End WeekWorkControl control.
