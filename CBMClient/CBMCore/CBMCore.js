@@ -3966,8 +3966,16 @@ isc.WeekWorkControl.addProperties({
           for (var i = 1; i < 8; i++) {
             var record = data.find({Day: i});
             if (record) {
-              var beg = record.OpeningTime.substr(11,5); // like: 1900-01-01 10:00:00.0
-              var end = record.ClosingTime.substr(11,5);
+              if (record.OpeningTime.indexOf(':') === 2) {
+                var beg = record.OpeningTime.substr(0,5); // like: 10:00:00.0
+              } else {
+                var beg = record.OpeningTime.substr(11,5); // like: 1900-01-01 10:00:00.0
+              }
+              if (record.OpeningTime.indexOf(':') === 2) {
+                var end = record.ClosingTime.substr(0,5); // like: 10:00:00.0
+              } else {
+                var end = record.ClosingTime.substr(11,5); // like: 1900-01-01 10:00:00.0
+              }
               that.dynaForm.items.find({name:"day" + i}).setValue(beg); 
               that.dynaForm.items.find({name:"end" + i}).setValue(end); 
             }
@@ -3994,20 +4002,26 @@ isc.WeekWorkControl.addProperties({
       }
       if ((beg || end) && !record) {
         // Inserting 
-        var record = Object.create(CBMobject);
-        record.ID = isc.IDProvider.getNextID();
-        record.Concept = "WorkingTime"
-        record.Day = i;
-        record.Offer = this.mainID;
-        record.OpeningTime = beg;
-        record.ClosingTime = end;
-        record.CreateTime = new Date();
-        record.infoState = "new";
-        record.save(true);
+        var cbmRecord = Object.create(CBMobject);
+        cbmRecord.ID = isc.IDProvider.getNextID();
+        cbmRecord.Concept = this.relatedConcept;
+        cbmRecord.Day = i;
+        cbmRecord.Offer = this.mainID;
+        cbmRecord.OpeningTime = beg;
+        cbmRecord.ClosingTime = end;
+        cbmRecord.CreateTime = new Date();
+        cbmRecord.infoState = "new";
+        TransactionManager.add(cbmRecord);
+        addDataToCache(cbmRecord);
+        if (!this.records) {
+          this.records = [];
+        }
+        this.records.add(cbmRecord);
       } else if (record && !beg && !end) {
         // Deleting
- //       deleteRecord(record);
-        this.dynaForm.dataSource.removeData(record)
+        this.dynaForm.dataSource.removeData(record);
+        removeDataFromCache(record);
+        this.records.remove(cbmRecord);
       } else if (record 
           && ((new Date(record.OpeningTime).getHours() !== beg.getHours()) 
               || (new Date(record.OpeningTime).getMinutes() !== beg.getMinutes()) 
@@ -4017,10 +4031,14 @@ isc.WeekWorkControl.addProperties({
         // Update 
         var cbmRecord = Object.create(CBMobject);
         collectObjects(cbmRecord, record); 
+        if (!cbmRecord.Concept) {
+          cbmRecord.Concept = this.relatedConcept;
+        }
         cbmRecord.OpeningTime = beg;
         cbmRecord.ClosingTime = end;
         cbmRecord.infoState = "changed";
-        cbmRecord.save(true);
+        TransactionManager.add(cbmRecord);
+        updateDataInCache(cbmRecord);
       }
     }
   }
