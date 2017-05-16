@@ -2930,7 +2930,8 @@ isc.InnerGrid.addProperties({
   // listSettingsApplied : false,
   treeRoot: null,
 //  contextObject: null,
-
+  isFilterVisible: false,
+  
   addFilter: function (keyName, criteriaValue, sys) {
     this.filters.add(keyName, criteriaValue, sys);
   },
@@ -3454,7 +3455,10 @@ isc.InnerGrid.addProperties({
           icon: isc.Page.getAppImgDir() + "filter.png",
           prompt: isc.CBMStrings.InnerGrid_AutoFilter,
           click: function () { // TODO: below - sample only!!!
-            grid.filterData(advancedFilter.getCriteria());
+            //grid.filterData(advancedFilter.getCriteria());
+            var thisGrid = this.parentElement.parentElement;
+            thisGrid.parentElement.isFilterVisible = !thisGrid.parentElement.isFilterVisible; 
+            thisGrid.members[1].setShowFilterEditor(thisGrid.parentElement.isFilterVisible);
             return false;
           }
         }),
