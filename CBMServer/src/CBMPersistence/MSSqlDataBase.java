@@ -301,6 +301,7 @@ public class MSSqlDataBase implements I_DataBase {
 										|| colInfo[2].equals("Time")){
 									valuesPart += "'" + val + "', "; 
 								} else {
+									val = val.replaceAll("'", "''");
 									// For String types - unicode prefix (no matter if column is not unicode-aware)
 									valuesPart += "N'" + val + "', "; 
 								}
@@ -463,6 +464,7 @@ public class MSSqlDataBase implements I_DataBase {
 									}
 									else
 									{
+										val = val.replaceAll("'", "''");
 										updatePart += colInfo[0] + "= N'" + val + "', ";
 									}
 								}

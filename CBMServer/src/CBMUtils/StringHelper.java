@@ -35,6 +35,7 @@ public class StringHelper {
         return result.toString();
     }
     
+    
     public static boolean IsNullOrWhiteSpace(String str){
     	return  str == null || str.trim().isEmpty();
     }

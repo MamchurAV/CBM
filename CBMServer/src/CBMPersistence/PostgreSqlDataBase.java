@@ -300,6 +300,7 @@ public class PostgreSqlDataBase implements I_DataBase {
 								}
 								else
 								{
+									val = val.replaceAll("'", "''");
 									valuesPart += "'" + val + "', "; 
 								}
 							}
@@ -456,6 +457,7 @@ public class PostgreSqlDataBase implements I_DataBase {
 									}
 									else
 									{
+										val = val.replaceAll("'", "''");
 										updatePart += colInfo[0] + "='" + val + "', ";
 									}
 								}

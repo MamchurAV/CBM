@@ -81,7 +81,7 @@ public class CBMRestlet extends Application {
     		Statement statement = null;
     		String inact = CBMStart.getParam("inactivityInterval");
     		if (inact == null) {
-    			inact = "4h";
+    			inact = "4";
     		}
 			try {
 				// --- Central Metadata-hosting database connection
@@ -93,16 +93,16 @@ public class CBMRestlet extends Application {
 				String dbType = CBMStart.getParam("primaryDBType");
 				switch (dbType){
 				case "PostgreSql":
-					statement.executeUpdate("DELETE FROM cbm.startsession WHERE Moment <= localtimestamp - interval '" + inact + "'");
+					statement.executeUpdate("DELETE FROM cbm.startsession WHERE Moment <= localtimestamp - interval '" + inact + "h'");
 					break;
 				case "DB2":	
 					statement.executeUpdate("DELETE FROM cbm.startsession WHERE Moment <= sysdate() - 0.0283");
 					break;
 				case "MySQL":	
-					statement.executeUpdate("DELETE FROM cbm.startsession WHERE Moment <= date_sub(sysdate(), INTERVAL 30 minute)");
+					statement.executeUpdate("DELETE FROM cbm.startsession WHERE Moment <= date_sub(sysdate(), INTERVAL 50 minute)");
 					break;
 				case "MSSQL":	
-					statement.executeUpdate("DELETE FROM cbm.startsession WHERE Moment <= GETDATE() - 0.0283");
+					statement.executeUpdate("DELETE FROM cbm.startsession WHERE Moment <= DATEADD(\"hh\", -" + inact + ", GETDATE())");
 					break;
 				}
 				statement.close();

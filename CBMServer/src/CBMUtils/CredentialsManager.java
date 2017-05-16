@@ -493,8 +493,8 @@ public class CredentialsManager implements I_AutentificationManager {
 				// TODO Analyze emergency here!!! Not found == Bad sign!!!
 //				outMsg = "Not found User (while sequential, not first, request)";
  				// TODO use localized message from CBMServerMessages class here. Temporary variant below
-				outMsg = "Вы не обращались к серверу более  " + CBMStart.getParam("inactivityInterval") + ". Вам придется перевойти в программу. Не пользуйтесь <обновлением> страницы, используйте оканчивающийся на CBMStart адрес.";
-//				outMsg = "You seems to be inactive for more than " + CBMStart.getParam("inactivityInterval") + ". Relogin please. Not <Reload> page, but use CBMStart URL.";
+				outMsg = "Вы не обращались к серверу более  " + CBMStart.getParam("inactivityInterval") + " часов. Вам придется перевойти в программу.";
+//				outMsg = "You seems to be inactive for more than " + CBMStart.getParam("inactivityInterval") + " hours. Relogin please.";
 			}
 		} catch (SQLException ex) {
 			System.out.println("SQLException: " + ex.getMessage());
