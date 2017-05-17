@@ -210,18 +210,12 @@ function generateDStext(forView, futherActions) {
   }
 
 // --- Creation of head part of DS ---
-//  resultDS = "isc.CBMDataSource.create({ID:\"" + forView + "\", dbName: Window.default_DB, ";
-// ---------
   resultDS = "isc.CBMDataSource.create({ID:\"" + forView + "\",";
 
   if (conceptRec.DataBaseStore && conceptRec.DataBaseStore !== "null") {
     resultDS += "dbName: \"" + conceptRec.DataBaseStore.ConnectionParams + "\", ";
   } 
-  //else {
-  //  resultDS += "dbName: Window.default_DB, ";
-  //}
 
-//---------
   var dsTitle = getLang(viewRec["Description"], tmp_Lang, true);
   if (dsTitle === null) {
     dsTitle = getLang(conceptRec["Description"], tmp_Lang, true)
@@ -268,15 +262,11 @@ function generateDStext(forView, futherActions) {
     resultDS += "childExpansionMode: \"" + viewRec.ChildExpansionMode + "\", ";
   }
 
-//  resultDS += "nullStringValue: \"\", nullIntegerValue: \"\", nullFloatValue: \"\", nullDateValue: new Date(), ";
-
-  // --- DS Fields creation ---
+  // ---------- DS Fields creation ----------
   resultDS += "fields: [";
   // --- Some preparations ---
   var viewFields;
   var relations;
-//  var filter = parseJSON("{\"ForPrgView\" : \"" + viewRec.ID + "\" }");
-//    {"ForPrgView": viewRec.ID},
   isc.DataSource.get("PrgViewField").fetchData(
     {ForPrgView: viewRec.ID},
     function (dsResponce, data, dsRequest) {
@@ -285,7 +275,13 @@ function generateDStext(forView, futherActions) {
       isc.warn("No ViewFields found for " + forView);
       return null;
     }
-    // Relations with respect of base concepts relations
+
+    // No "Concept" field in View - create it mandatory 
+    if (!viewFields.find({SysCode: "Concept"})) {
+      resultDS += "{name: \"Concept\", type: \"text\", hidden: true}, ";
+    }
+    
+    // --- Relations with respect of base concepts relations ---
     getRelationsForConcept(conceptRec.ID,
         function (relationsData) {
             relations = relationsData;
@@ -295,13 +291,14 @@ function generateDStext(forView, futherActions) {
           for (var i = 0; i < viewFieldsCount; i++) {
             var currentRelation = relations.find("ID", viewFields[i].ForRelation);
             
+            // ------ Some soecial cases -------
             // No relation - means view only element - processed below
             if (!currentRelation) {
               resultDS += "{name: \"" + viewFields[i].SysCode + "\", editorType: \"" + viewFields[i].ControlType + "\"}, ";
               continue;
             }
 
-            // Ordinal relation-based element creation section
+            // ------ Ordinal relation-based element creation section ------
             resultDS += "{ name: \"" + viewFields[i].SysCode + "\", ";
 
             var kind = currentRelation.RelationKind;
@@ -1173,7 +1170,7 @@ isc.FilterSet.addProperties({
 
 
 // =============================================================================
-// ===================== CBM Base Classes (DataSources) ========================
+// ================== CBM Base Classes (isc's DataSources) =====================
 // =============================================================================
 
 // ------------------- Base CRUD setup ---------------
@@ -1464,7 +1461,7 @@ isc.CBMDataSource.addProperties({
     this.setID(cbmRecord);
     cbmRecord.Concept = this.ID;
     cbmRecord.infoState = "new";
-    if (cbmRecord.Del === null) {
+    if (cbmRecord.Del) {
       cbmRecord.Del = false;
     }
     return cbmRecord;
@@ -1845,11 +1842,12 @@ isc.CBMDataSource.addProperties({
           this.topElement.savePosition();
           
           if (this.topElement.contextObject !== null // <<< Can be null if window opend for multi-records editing
-        && this.topElement.contextObject.currentTransaction !== null
-            && this.topElement.contextObject.currentTransaction.Changes.length > 0) {
+              && this.topElement.contextObject.currentTransaction !== null
+              && this.topElement.contextObject.currentTransaction.Changes.length > 0) 
+          {
             var that = this;
             isc.confirm(isc.CBMStrings.CancelButton_SaveOrNot,
-              function (ok) {
+ /*             function (ok) {
                 if (ok) {
                   // If top-level Cancel pressed, but inner savings exists - save them
                   if (!context.dependent) {
@@ -1866,6 +1864,36 @@ isc.CBMDataSource.addProperties({
                   that.topElement.discard();
                 }
                 return false;
+              },*/
+              null, // <<< Callback - not used
+              {buttons: [//isc.Dialog.OK,
+                          { title:"Сохранить", 
+                            click: function() {
+                                     // If top-level Cancel pressed, but inner savings exists - save them
+                                    if (!context.dependent) {
+                                      that.topElement.save(true); // true means top-level flag
+                                    } else {
+                                      that.topElement.destroy();
+                                    }
+                                    this.topElement.close();
+                                    return false;
+                                  } 
+                          },
+                          isc.LayoutSpacer.create({width:50}),  
+                          { title:"НЕ сохранять", 
+                            click: function() {
+                                    // TODO: Clean TransactionManager (if top-level answer???)
+                                    if (!context.dependent) {
+                                      // TODO - put all changes to this transaction - Don't use "Default" one!!!
+                                      TransactionManager.clear(record.currentTransaction);
+                                      delete record.currentTransaction;
+                                    }
+                                    that.topElement.discard();
+                                    this.topElement.close();
+                                    return false;
+                                  }                                    
+                          }
+                        ]
               }
             );
           } else {
@@ -1955,7 +1983,7 @@ isc.CBMDataSource.addProperties({
           } else {
             if (!topCancel) {
               TransactionManager.add(record, record.currentTransaction);
-//              isc.DataSource.get(this.dataSource).onSave(record);
+//              isc.DataSource.get(this.dataSource).onSave(record); // ????? Why commented?
             }
             isc.DataSource.get(this.dataSource).onSave(record);
             TransactionManager.commit(record.currentTransaction);
@@ -2168,7 +2196,9 @@ var CBMobject = {
     for (var i = 0; i < n; i++) {
       var rel = this.ds.getRelation(atrNames[i]);
       // Copy to returned "rec" only persistent fields
-      if (rel && rel.DBColumn && rel.DBColumn !== null && rel.DBTable && rel.DBTable !== null) {
+      if (rel && ((rel.DBColumn && rel.DBColumn !== null && rel.DBTable && rel.DBTable !== null)
+          // Or - field is explicitly marked as not-persistent
+          || rel.RelationKind === "Value" || rel.RelationKind === "Link")) {
         rec[atrNames[i]] = this[atrNames[i]];
       }
     }
@@ -2217,7 +2247,15 @@ var CBMobject = {
       } else {
         updateDataInCache(this);
       }
+    } else if (this.infoState === "deleted") {
+      if (real) {
+        this.ds.removeData(this);
+ //       removeDataFromCache(this); // <<< More likely redundant. Remove after tests...
+      } else {
+        removeDataFromCache(this);
+      }
     }
+    
     if (callback) {
       callback();
     }
@@ -2234,6 +2272,7 @@ var CBMobject = {
   },
 
 }; // ---^^^---------- END CBMobject ----------------^^^---
+
 
 // -------- CBMobject - related functions and classes -------
 // --------- Transform simple JS object to CBMobject --------
@@ -2430,6 +2469,8 @@ function deleteRecord(record, delMode, mainToBin) {
   }
   // Process main record
   if (delMode == "deleteForce") {
+//    record.infoState = "deleted";
+//    TransactionManager.add(record); // deleteForced - more likely intends real delete  
     ds.removeData(record);
   } else { // delMode != "deleteForce" - process depending on "Del" flag existence
     if (record.Del != undefined) { // "Del" flag exists
@@ -2438,11 +2479,14 @@ function deleteRecord(record, delMode, mainToBin) {
       } else { // delMode == "restore" remains
         record.Del = false;
       }
-      ds.updateData(record);
+      record.infoState = "changed";
+      TransactionManager.add(record);
     }
     // Conditions below - to protect from physical deletion "Del-less" aggregated records
     else if (mainToBin == undefined || !mainToBin) { // // No "Del" flag exists
-      ds.removeData(record);
+      record.infoState = "deleted";
+      TransactionManager.add(record);
+      removeDataFromCache(record);
     }
   }
 };
@@ -2806,11 +2850,10 @@ function deleteSelectedRecords(innerGrid, mode) {
   isc.confirm(isc.CBMStrings.InnerGridMenu_DeletionPrompt,
     function (ok) {
       if (ok) {
-        var n = that.grid.getSelectedRecords().getLength();
-        var i;
-        for (i = 0; i < n; i++) {
-          var record = that.grid.getSelectedRecords()[i];
-          deleteRecord(record, mode);
+        while (that.grid.getSelectedRecords().length > 0) {
+          var record = that.grid.getSelectedRecords()[0];
+          cbmRecord = createFromRecord(record);
+          deleteRecord(cbmRecord, mode);
         }
         that.refresh();
       }
@@ -3224,13 +3267,13 @@ isc.InnerGrid.addProperties({
             records[0]["infoState"] = "new";
             // If hierarchy - set parent value as in selected record (if any selected)
             var hierarchyLink = ds.findRelation({HierarchyLink: true}).SysCode; 
-            if (this.getSelection().length > 0) {
+            if (hierarchyLink && this.getSelection().length > 0) {
               records[0][hierarchyLink] = this.getSelection()[0][hierarchyLink];
             }
             // --- Set fields partisipating in criteria to criteria value ---
             var criter = this.getCriteria();
             for (var fld in criter) {
-              if (criter.hasOwnProperty(fld)) {
+              if (records[0].hasOwnProperty(fld)) {
                 records[0][fld] = criter[fld];
               }
             }
@@ -3722,7 +3765,7 @@ isc.CollectionAggregateControl.addProperties({
         }
       }
       this.innerGrid.fetchData(function (dsResponse, data, dsRequest) {
-          if (typeof(this.getDataSource) == "undefined") {
+          if (!this.getDataSource) {
             if (!this.hasAllData()) {
               this.setCacheData(data);
             }
@@ -4006,6 +4049,7 @@ isc.WeekWorkControl.addProperties({
       }
       if ((beg || end) && !record) {
         // Inserting 
+        // TODO!!! Switch to CBMDataSourse.createInstance()
         var cbmRecord = Object.create(CBMobject);
         cbmRecord.ID = isc.IDProvider.getNextID();
         cbmRecord.Concept = this.relatedConcept;
