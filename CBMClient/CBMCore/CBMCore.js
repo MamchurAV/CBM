@@ -2026,9 +2026,13 @@ isc.CBMDataSource.addProperties({
         stateTitle = isc.CBMStrings.InfoState_deleted;
         break;
     }
-    ;
+    
+    if (this.contextObject && this.contextObject.Description) {
+      form.title = form.title + " <" + this.contextObject.Description + "> - (" + stateTitle + ")";
+    } else {
+      form.title = form.title + " - (" + stateTitle + ")";
+    }
 
-    form.title = form.title + " - (" + stateTitle + ")";
 
     form.show();
     if (record["infoState"] == "loaded") {
@@ -2415,84 +2419,461 @@ function createFrom(srcRecords, resultClass, initFunc, context) {
   this.newRecord();
 };
 
+/*
+// FIRST VARIANT
+  // ======================= Copying logic section =======================
+  cloneMainInstance: function (srcRecord) {
+    var thatDS = this;
+    var record = Object.create(CBMobject);
+    var atrNames = this.getFieldNames(false);
+    var n = atrNames.length;
+    for (var i = 0; i < n; i++) {
+      record[atrNames[i]] = clone(srcRecord[atrNames[i]]);
+    }
+    // Separately assign Concept property (that can be not in DS fields)
+    if (srcRecord.Concept) {
+      record.Concept = srcRecord.Concept;
+    } else {
+      record.Concept = thatDS.ID;
+    }
+
+    thatDS.beforeCopy(record);
+    thatDS.setNullID(record);
+    thatDS.setID(record);
+    record["infoState"] = "copy";
+    if (typeof(record["Del"]) != "undefined") {
+      record["Del"] = false;
+    }
+    record.currentTransaction = srcRecord.currentTransaction;
+    return record;
+  },
+
+  // -- Deeper structures copying --
+  cloneRelatedInstances: function (srcRecord, record, cloneNextRecord, afterCopyCallbacks, outerCallback) {
+    var thatDS = this;
+    var atrNames = thatDS.getFieldNames(false);
+    // Discover structural fields
+    var fieldsToCopyCollection = [];
+    var n = atrNames.length;
+    for (var i = 0; i < n; i++) {
+      var fld = thatDS.getField(atrNames[i]);
+      // TODO switch to Relation kind instead of editorType
+      if (fld.editorType == "CollectionAggregateControl") {
+        if (fld.copyLinked === true) {
+          fieldsToCopyCollection.push(fld);
+        }
+      } else if (fld.copyValue !== undefined && fld.copyValue === false) {
+        record[fld] = null; // Clear not-copied fields
+      }
+    }
+    // Deep collection copying (for fields having copyLinked flag true)
+    if (fieldsToCopyCollection.length > 0) {
+      var iFld = -1;
+      var recursiveCopyCollection = function () {
+        iFld += 1;
+        if (iFld < fieldsToCopyCollection.length) {
+          if (iFld == fieldsToCopyCollection.length - 1 && (thatDS.afterCopy || afterCopyCallbacks || outerCallback)) {
+            if (!afterCopyCallbacks) {
+              afterCopyCallbacks = [];
+            }
+            if (thatDS.afterCopy) {
+              afterCopyCallbacks.push({func: thatDS.afterCopy, rec: record, outerCall: outerCallback});
+            } else if (outerCallback) {
+              afterCopyCallbacks.push({func: outerCallback, rec: [record], outerCall: null});
+            }
+            thatDS.copyCollection(fieldsToCopyCollection[iFld], srcRecord, record, recursiveCopyCollection, cloneNextRecord, afterCopyCallbacks);
+          } else {
+            thatDS.copyCollection(fieldsToCopyCollection[iFld], srcRecord, record, recursiveCopyCollection, cloneNextRecord);
+          }
+        }
+      }
+      recursiveCopyCollection(); // First call
+    } else { // -- No structural fields - Execute afterCopy functions
+      if (cloneNextRecord !== undefined) {
+        cloneNextRecord();
+      }
+      if (thatDS.afterCopy) {
+        thatDS.afterCopy(record, srcRecord);
+      }
+      if (afterCopyCallbacks !== undefined) {
+        for (var i = afterCopyCallbacks.length - 1; i >= 0; i--) {
+          afterCopyCallbacks[i].func(afterCopyCallbacks[i].rec, afterCopyCallbacks[i].outerCall);
+        }
+        afterCopyCallbacks.popAll();
+      }
+      if (outerCallback !== undefined) {
+        outerCallback([record]);
+      }
+    }
+  },
+
+  copyCollection: function (fld, srcRecord, record, recursiveCopyCollection, cloneNextRecordPrev, callbacks) {
+    record[fld.name] = [];
+    isc.DataSource.get(fld.relatedConcept).fetchData(
+      parseJSON("{\"" + fld.backLinkRelation + "\" : \"" + srcRecord[fld.mainIDProperty] + "\", \"Del\": false }"),
+      function (dsResponce, data, dsRequest) {
+        if (data.length === 0) {
+          if (cloneNextRecordPrev) {
+            cloneNextRecordPrev();
+          }
+          if (recursiveCopyCollection) {
+            recursiveCopyCollection();
+          }
+          if (callbacks !== undefined) {
+            for (var i = callbacks.length - 1; i >= 0; i--) {
+              setTimeout(callbacks[i].func(callbacks[i].rec, callbacks[i].outerCall), 0);
+            }
+            callbacks.popAll();
+          }
+        } else {
+          var z = -1;
+//          var dsRelated = this; // Closures-based variant
+          function cloneNextRecord() {
+            var recNew = null;
+            z += 1;
+            if (z < data.length) {
+              var rec = data[z];
+              var dsRelated = isc.DataSource.getDataSource(fld.relatedConcept); // Instead of closures - define very time here
+              if (z < data.length - 1) {
+                recNew = dsRelated.cloneMainInstance(rec, cloneNextRecord);
+                recNew[fld.backLinkRelation] = record["ID"];
+                function cloneRecordRelatedInstances() {
+                  dsRelated.cloneRelatedInstances(rec, recNew, cloneNextRecord);
+                }
+
+                addDataToCache(recNew);
+                TransactionManager.add(recNew, recNew.currentTransaction);
+                cloneRecordRelatedInstances();
+              } else {  // The last record - callbacks and post-actions provided
+                recNew = dsRelated.cloneMainInstance(rec);
+                recNew[fld.backLinkRelation] = record["ID"];
+                function cloneLastRecordRelatedInstances() {
+                  dsRelated.cloneRelatedInstances(rec, recNew, cloneNextRecord, callbacks); // The last row only - processed with callbacks
+                  if (recursiveCopyCollection) {
+                    recursiveCopyCollection();
+                  }
+                  if (cloneNextRecordPrev) {
+                    cloneNextRecordPrev();
+                  }
+                }
+
+                addDataToCache(recNew);
+                TransactionManager.add(recNew, recNew.currentTransaction);
+                cloneLastRecordRelatedInstances();
+              }
+            }
+          };
+          cloneNextRecord(); // First call - start recursion
+        }
+      }
+    );
+  },
+
+  cloneInstance: function (srcRecord, outerCallback) {
+    var newRecord = this.cloneMainInstance(srcRecord);
+    // Adding record to cache makes it visible in all bounded widgets.
+    // So, if it's not desirable - source (!) record can be marked notShow=true.
+    if (!srcRecord.notShow) {
+      addDataToCache(newRecord);
+      TransactionManager.add(newRecord, newRecord.currentTransaction);
+    }
+    this.cloneRelatedInstances(srcRecord, newRecord, undefined, undefined, outerCallback);
+    return newRecord;
+  },
+
+
+
 // --- Universal function that provide deletion of Record ---
 // --- Deletion processed to trash bin, or physically, depending on "Del" flag existence, and additional mode
-function deleteRecord(record, delMode, mainToBin) {
-  // --- Internal functions ---
-  var deleteCollection = function (fld, record, delMode, mainToBin) {
-    var collectionRS = isc.ResultSet.create({
-      dataSource: fld.relatedConcept,
-      fetchMode: "paged",
-      criteria: parseJSON("{\"" + fld.backLinkRelation + "\" : \"" + record[fld.mainIDProperty] + "\"}"),
-      dataArrived: function (startRow, endRow) {
-        var collectionNew = [];
-        for (var i = startRow; i < endRow; i++) {
-          var rec = this.get(i);
-          deleteRecord(rec, delMode, mainToBin);
-        }
-        collectionRS.dataArrived = undefined;
-      }
-    });
-    collectionRS.getRange(0, 100000); // Some compromise - composite aggregated records of number no more than 100 000
-  }
-
-  var deleteLinkedRecord = function (fld, record, delMode, mainToBin) {
-    var dsInner = isc.DataSource.get(fld.relatedConcept);
-    if (!dsInner) {
-      isc.warn(isc.CBMStrings.NoDataSourceDefined + isc.CBMStrings.MD_ForViewField + fld.name + " (in function deleteLinkedRecord(). It's most likely You set flag CopyLinked for Attribute with no need.)");
-      return;
-    }
-    dsInner.fetchRecord(record[fld], function (dsResponse, data, dsRequest) {
-      deleteRecord(data, delMode, mainToBin);
-    });
-  }
-
-  // Deletion process
+function deleteRecord(record, delMode, mainToBin,  checkAttrProcessed) {
   var ds = isc.DataSource.get(record.Concept);
   if (!ds) {
     isc.warn(isc.CBMStrings.NoDataSourceDefined + " (in function deleteRecord(). )");
     return;
   }
+  var useBin = ds.isDeleteToBin();
+  
+  if (!record.currentTransaction && delMode !== "deleteForce") {
+    record.currentTransaction = TransactionManager.createTransaction();
+  }
+ 
+  // --- Internal functions ---
+   
+  // Process main record
+  var deleteMainRecord = function(){
+    if (delMode === "deleteForce") {
+      ds.removeData(record);
+      removeDataFromCache(record);
+    } else { // delMode != "deleteForce" - process depending on "Del" flag existence
+      if (record.Del != undefined) { // "Del" flag exists
+        record.infoState = "changed";
+        if (delMode == "delete") {
+          record.Del = true;
+          updateDataInCache(record);
+        } else { // delMode == "restore"
+          record.Del = false;
+          removeDataFromCache(record); // <<< To prevent dubles
+          addDataToCache(record);
+        }
+        TransactionManager.add(record);
+      }
+      // Conditions below - to protect from physical deletion "Del-less" aggregated records
+      else if (mainToBin == undefined || !mainToBin) {
+        record.infoState = "deleted";
+        TransactionManager.add(record);
+        removeDataFromCache(record);
+      }
+    }
+  }
+  
+  // Semaphore for complicated attributes in parallel processing before main record
+  var attributesProcessed = 0;
+  var collectionsProcessed = 0;
+  
+  var checkAttrProcessed = function() {
+    attributesProcessed--;
+    if (attributesProcessed < 1) {
+      deleteMainRecord();
+    }
+  }
+  
+  var countCollection = function (fld, mainRecord, delMode) {
+    var collectionRS = isc.ResultSet.create({
+      dataSource: fld.relatedConcept,
+      fetchMode: "paged",
+      criteria: parseJSON("{\"" + fld.backLinkRelation + "\" : \"" + mainRecord[fld.mainIDProperty] + "\"}"),
+      dataArrived: function (startRow, endRow) {
+        attributesProcessed += endRow - startRow;
+        collectionRS.dataArrived = undefined;
+      }
+    });
+    collectionRS.getRange(0, 100000); // Some compromise - allow no more than 100 000 aggregated records 
+  }
+
+  var deleteCollection = function (fld, mainRecord, delMode, mainToBin) {
+    var collectionRS = isc.ResultSet.create({
+      dataSource: fld.relatedConcept,
+      fetchMode: "paged",
+      criteria: parseJSON("{\"" + fld.backLinkRelation + "\" : \"" + mainRecord[fld.mainIDProperty] + "\"}"),
+      dataArrived: function (startRow, endRow) {
+        for (var i = startRow; i < endRow; i++) {
+          var rec = this.get(startRow);  // <<< Delete aways the first record - to workaround cache sync problem
+          if (delMode !== "deleteForce" && mainRecord.currentTransaction) {
+            rec.currentTransaction = mainRecord.currentTransaction;
+          }
+          deleteRecord(rec, delMode, mainToBin,  checkAttrProcessed); // <<< Main action!
+        }
+        collectionRS.dataArrived = undefined;
+      }
+    });
+    collectionRS.getRange(0, 100000); // Some compromise - allow no more than 100 000 aggregated records 
+  }
+
+  var deleteLinkedRecord = function (fld, mainRecord, delMode, mainToBin) {
+    var dsInner = isc.DataSource.get(fld.relatedConcept);
+    if (!dsInner) {
+      isc.warn(isc.CBMStrings.NoDataSourceDefined + isc.CBMStrings.MD_ForViewField + fld.name + " (in function deleteLinkedRecord(). It's most likely You set flag CopyLinked for Attribute with no need.)");
+      return;
+    }
+    dsInner.fetchRecord(mainRecord[fld], function (dsResponse, data, dsRequest) {
+      data.currentTransaction = mainRecord.currentTransaction;
+      deleteRecord(data, delMode, mainToBin,  checkAttrProcessed); // <<<  Main action!
+    });
+  }
+  
+  // --- Deletion process flow ---
   var atrNames = ds.getFieldNames(false);
-  // Process linked (aggregated) dependent records
+ 
+  // Second (main) cycle - actually process aggregated(/linked) records, and main record in the end
+  var doDeleteDependent = function() {
+    for (var i = 0; i < atrNames.length; i++) {
+      var fld = ds.getField(atrNames[i]);
+      // TODO: Replace DS editor type to MD association type, or MD but from DS (where it will exist)?
+      if ((fld.editorType === "CollectionControl" 
+            || fld.editorType === "CollectionAggregateControl"
+            || fld.editorType === "RelationsAggregateControl"
+            || fld.editorType === "CollectionCrossControl") && fld.deleteLinked === true) {
+        deleteCollection(fld, record, delMode, useBin);
+      } else if ((fld.editorType === "LinkControl" || fld.editorType === "combobox") && fld.deleteLinked === true) {
+        deleteLinkedRecord(fld, record, delMode, useBin);
+      }
+    }
+  }
+
+  // First cycle - prepare <attributesProcessed> semaphore for aggregated(/linked) records
   for (var i = 0; i < atrNames.length; i++) {
     var fld = ds.getField(atrNames[i]);
     // TODO: Replace DS editor type to MD association type, or MD but from DS (where it will exist)?
-    if ((fld.editorType == "CollectionControl" 
-          || fld.editorType == "CollectionAggregateControl"
-          || fld.editorType == "RelationsAggregateControl"
-          || fld.editorType == "CollectionCrossControl") && fld.deleteLinked == true) {
-      deleteCollection(fld, record, delMode, ds.isDeleteToBin());
-    } else if ((fld.editorType == "LinkControl" || fld.editorType == "combobox") && fld.deleteLinked == true) {
-      deleteLinkedRecord(fld, record, delMode, ds.isDeleteToBin());
+    if ((fld.editorType === "CollectionControl" 
+          || fld.editorType === "CollectionAggregateControl"
+          || fld.editorType === "RelationsAggregateControl"
+          || fld.editorType === "CollectionCrossControl") && fld.deleteLinked === true) {
+      countCollection(fld, record, delMode);
+    } else if ((fld.editorType === "LinkControl" || fld.editorType === "combobox") && fld.deleteLinked === true) {
+      attributesProcessed++; // <<< Prepare semaphore counter
     }
   }
-  // Process main record
-  if (delMode == "deleteForce") {
-//    record.infoState = "deleted";
-//    TransactionManager.add(record); // deleteForced - more likely intends real delete  
-    ds.removeData(record);
-  } else { // delMode != "deleteForce" - process depending on "Del" flag existence
-    if (record.Del != undefined) { // "Del" flag exists
-      if (delMode == "delete") {
-        record.Del = true;
-      } else { // delMode == "restore" remains
-        record.Del = false;
+  
+  // deleteMainRecord() _maybe(!)_ execution
+  if (checkAttrProcessed) {
+    checkAttrProcessed();
+  }
+  
+ };
+*/
+
+// --- Universal function that provide deletion of Record ---
+// --- Deletion processed to trash bin, or physically, depending on "Del" flag existence, and additional mode
+// --- DRAFT VARIANT 
+// (Semaphore prepared while processing cycle - so first async results MUST returnes after ALL async calls are made)
+function deleteRecord(record, delMode, mainToBin,  checkAttrProcessedComesInArgs, lastMain) {
+  var ds = isc.DataSource.get(record.Concept);
+  if (!ds) {
+    isc.warn(isc.CBMStrings.NoDataSourceDefined + " (in function deleteRecord(). )");
+    return;
+  }
+  var useBin = ds.isDeleteToBin();
+  
+  if (!record.currentTransaction && delMode !== "deleteForce") {
+    record.currentTransaction = TransactionManager.createTransaction();
+  }
+ 
+  // --- Internal functions ---
+   
+  // Real deletion of record
+  var deleteMainRecord = function(deletedRecord){
+    var ds = isc.DataSource.get(record.Concept);
+    if (delMode === "deleteForce") {
+      ds.removeData(deletedRecord);
+      removeDataFromCache(deletedRecord);
+    } else { // delMode != "deleteForce" - process depending on "Del" flag existence
+      if (deletedRecord.Del != undefined) { // "Del" flag exists
+        deletedRecord.infoState = "changed";
+        if (delMode == "delete") {
+          deletedRecord.Del = true;
+          updateDataInCache(deletedRecord);
+        } else { // delMode == "restore"
+          deletedRecord.Del = false;
+          removeDataFromCache(deletedRecord); // <<< To prevent dubles
+          addDataToCache(deletedRecord);
+        }
+        TransactionManager.add(deletedRecord);
       }
-      record.infoState = "changed";
-      TransactionManager.add(record);
-    }
-    // Conditions below - to protect from physical deletion "Del-less" aggregated records
-    else if (mainToBin == undefined || !mainToBin) { // // No "Del" flag exists
-      record.infoState = "deleted";
-      TransactionManager.add(record);
-      removeDataFromCache(record);
+      // Conditions below - to protect from physical deletion "Del-less" aggregated records
+      else if (mainToBin == undefined || !mainToBin) {
+        deletedRecord.infoState = "deleted";
+        TransactionManager.add(deletedRecord);
+        removeDataFromCache(deletedRecord);
+      }
     }
   }
+  
+  // Semaphore for complicated attributes in parallel processing before main record
+  var attributesProcessed = 0;
+  
+  var checkAttrProcessed = function() {
+    attributesProcessed--;
+    if (attributesProcessed <= 0) {
+      deleteMainRecord(record);
+    }
+  }
+
+  var deleteCollection = function (fld, mainRecord, delMode, mainToBin, last) {
+    var collectionRS = isc.ResultSet.create({
+      dataSource: fld.relatedConcept,
+      fetchMode: "paged",
+      criteria: parseJSON("{\"" + fld.backLinkRelation + "\" : \"" + mainRecord[fld.mainIDProperty] + "\"}"),
+      dataArrived: function (startRow, endRow) {
+        //No records returned, and attribute processed is the last, 
+        //and no deeper calls on previous attrsibutes - execute main deletion
+        if (last && startRow === endRow && attributesProcessed === 0) {
+          deleteMainRecord(mainRecord);
+        }
+        for (var i = startRow; i < endRow; i++) {
+          var rec = this.get(startRow);  // <<< Delete aways the first record - to workaround cache sync problem
+          if (delMode !== "deleteForce" && mainRecord.currentTransaction) {
+            rec.currentTransaction = mainRecord.currentTransaction;
+          }
+          attributesProcessed++;
+          var lastlast = last && (i >= (endRow - 1))
+          deleteRecord(rec, delMode, mainToBin,  checkAttrProcessed, lastlast); // <<< Main action!
+        }
+        collectionRS.dataArrived = undefined;
+      }
+    });
+    collectionRS.getRange(0, 100000); // Some compromise - allow no more than 100 000 aggregated records 
+  }
+
+  var deleteLinkedRecord = function (fld, mainRecord, delMode, mainToBin, last) {
+    var dsInner = isc.DataSource.get(fld.relatedConcept);
+    if (!dsInner) {
+      isc.warn(isc.CBMStrings.NoDataSourceDefined + isc.CBMStrings.MD_ForViewField + fld.name + " (in function deleteLinkedRecord(). It's most likely You set flag CopyLinked for Attribute with no need.)");
+      return;
+    }
+    dsInner.fetchRecord(mainRecord[fld], function (dsResponse, data, dsRequest) {
+      // No linked record, and attribute processed is the last, 
+      // and no deeper calls on previous attrsibutes - execute main deletion
+      if (last && !data && attributesProcessed === 0) {
+        deleteMainRecord(mainRecord);
+      }
+      data.currentTransaction = mainRecord.currentTransaction;
+      attributesProcessed++;
+      deleteRecord(data, delMode, mainToBin,  checkAttrProcessed); // <<<  Main action!
+    });
+  }
+  
+  // --- Deletion process flow ---
+  var atrNames = ds.getFieldNames(false);
+  // Discover collections / aggregated links fields
+  var structuralFields = [];
+  var n = atrNames.length;
+  for (var i = 0; i < n; i++) {
+    var fld = ds.getField(atrNames[i]);
+    // TODO switch to Relation kind instead of editorType
+    if (fld.editorType === "CollectionControl" 
+          || fld.editorType === "CollectionAggregateControl"
+          || fld.editorType === "RelationsAggregateControl"
+          || fld.editorType === "CollectionCrossControl"
+          || fld.editorType === "LinkControl" || fld.editorType === "combobox") {
+      if (fld.deleteLinked === true) {
+        structuralFields.push(fld);
+      }
+    }
+  }
+  var n = structuralFields.length;
+  
+  // No records returned, and attribute processed is the last, 
+  // and no deeper calls on previous attrsibutes - execute main deletion
+  if (n === 0) {
+    attributesProcessed--;
+    deleteMainRecord(record);
+  }
+
+  // Main cycle - actually process aggregated(/linked) records, and main record in the end
+  var last = false;
+  for (var i = 0; i < n; i++) {
+    var fld = structuralFields[i];
+    // TODO: Replace DS editor type to MD association type, or MD but from DS (where it will exist)?
+    if (fld.editorType === "CollectionControl" 
+          || fld.editorType === "CollectionAggregateControl"
+          || fld.editorType === "RelationsAggregateControl"
+          || fld.editorType === "CollectionCrossControl") {
+      if (i === n-1) {last = true;}
+      deleteCollection(fld, record, delMode, useBin, last);
+    } else if (fld.editorType === "LinkControl" || fld.editorType === "combobox") {
+      deleteLinkedRecord(fld, record, delMode, useBin, last);
+    }
+  }
+   
+  // deleteMainRecord() _maybe(!)_ execution
+  if (checkAttrProcessedComesInArgs && lastMain) {
+    checkAttrProcessedComesInArgs();
+  }
+ 
 };
 
-
-
+ 
+ 
 
 // ========================================================================================
 // ========================================================================================
@@ -2576,6 +2957,7 @@ var flagImageURLSuffix = ".png";
 // };
 
 // --- Base String language-part extraction function
+// Returnes string for language (in fact - string part for that language)
 // If strictLang==false - returns strictly requested language value, or null.
 function getLang(value, language, strictLang) {
   if (!value || value === "null" || value === null) {
@@ -2598,8 +2980,8 @@ function getLang(value, language, strictLang) {
     }
   }
   // --- For multilanguage string - try to find requested language part,
-  // and if not found - returns first part, no matter prefixed by locale  or not.
-  // Language prefix are in all cases removed.
+  // and if not found - returns first part, no matter prefixed by locale or not.
+  // Language prefix are in all cases removed from returned string.
   var out = value;
   var i = value.indexOf("~|" + language); // Is there part for  requested locale?
   if (i != -1) { // Locale exists
@@ -2850,7 +3232,8 @@ function deleteSelectedRecords(innerGrid, mode) {
   isc.confirm(isc.CBMStrings.InnerGridMenu_DeletionPrompt,
     function (ok) {
       if (ok) {
-        while (that.grid.getSelectedRecords().length > 0) {
+        var n = that.grid.getSelectedRecords().length;
+        for (var i = 0; i < n; i++) {
           var record = that.grid.getSelectedRecords()[0];
           cbmRecord = createFromRecord(record);
           deleteRecord(cbmRecord, mode);
@@ -2895,7 +3278,8 @@ var defaultContextMenuData = [{
   isSeparator: true
 }, {
   click: function () {
-    deleteSelectedRecords(this.context.parentElement.parentElement, "delete");
+    var deleteMode = this.context.parentElement.parentElement.context ? "delete" : "deleteForce";
+    deleteSelectedRecords(this.context.parentElement.parentElement, deleteMode);
     return false;
   }
 }];
@@ -2986,6 +3370,9 @@ isc.InnerGrid.addProperties({
     }
   },
 
+  // iSC-supplied Function preserves locally changed data from been overriden.
+  // So sometime may cause confusion.
+  // TODO: - make cuch cases more clear
   refresh: function () {
     this.grid.invalidateCache();
     // this.grid.refreshData();
@@ -3166,9 +3553,11 @@ isc.InnerGrid.addProperties({
       }
 
       that["filters"] = isc.FilterSet.create(); // TODO: (?) - switch "FilterSet" to simple JS object???
-      // By default
-      that.addFilter("Del", {"Del": false}, true);
-      that.applyFilters();
+      // By default 
+      if (ds.isDeleteToBin()) {
+        that.addFilter("Del", {"Del": false}, true);
+        that.applyFilters();
+      }
 
       that.grid.setFields(flds);
       if (typeof(that.treeRoot) != "undefined") {
@@ -3470,7 +3859,8 @@ isc.InnerGrid.addProperties({
           prompt: isc.CBMStrings.InnerGrid_Delete,
           hoverWidth: 130,
           click: function () {
-            deleteSelectedRecords(this.parentElement.parentElement.parentElement, "delete");
+            var deleteMode = this.parentElement.parentElement.parentElement.context ? "delete" : "deleteForce";
+            deleteSelectedRecords(this.parentElement.parentElement.parentElement, deleteMode);
             return false;
           },
           visibility: (that.getDataSource().isDeleteToBin() ? "hidden" : "inherit")
