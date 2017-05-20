@@ -2421,167 +2421,6 @@ function createFrom(srcRecords, resultClass, initFunc, context) {
 
 /*
 // FIRST VARIANT
-  // ======================= Copying logic section =======================
-  cloneMainInstance: function (srcRecord) {
-    var thatDS = this;
-    var record = Object.create(CBMobject);
-    var atrNames = this.getFieldNames(false);
-    var n = atrNames.length;
-    for (var i = 0; i < n; i++) {
-      record[atrNames[i]] = clone(srcRecord[atrNames[i]]);
-    }
-    // Separately assign Concept property (that can be not in DS fields)
-    if (srcRecord.Concept) {
-      record.Concept = srcRecord.Concept;
-    } else {
-      record.Concept = thatDS.ID;
-    }
-
-    thatDS.beforeCopy(record);
-    thatDS.setNullID(record);
-    thatDS.setID(record);
-    record["infoState"] = "copy";
-    if (typeof(record["Del"]) != "undefined") {
-      record["Del"] = false;
-    }
-    record.currentTransaction = srcRecord.currentTransaction;
-    return record;
-  },
-
-  // -- Deeper structures copying --
-  cloneRelatedInstances: function (srcRecord, record, cloneNextRecord, afterCopyCallbacks, outerCallback) {
-    var thatDS = this;
-    var atrNames = thatDS.getFieldNames(false);
-    // Discover structural fields
-    var fieldsToCopyCollection = [];
-    var n = atrNames.length;
-    for (var i = 0; i < n; i++) {
-      var fld = thatDS.getField(atrNames[i]);
-      // TODO switch to Relation kind instead of editorType
-      if (fld.editorType == "CollectionAggregateControl") {
-        if (fld.copyLinked === true) {
-          fieldsToCopyCollection.push(fld);
-        }
-      } else if (fld.copyValue !== undefined && fld.copyValue === false) {
-        record[fld] = null; // Clear not-copied fields
-      }
-    }
-    // Deep collection copying (for fields having copyLinked flag true)
-    if (fieldsToCopyCollection.length > 0) {
-      var iFld = -1;
-      var recursiveCopyCollection = function () {
-        iFld += 1;
-        if (iFld < fieldsToCopyCollection.length) {
-          if (iFld == fieldsToCopyCollection.length - 1 && (thatDS.afterCopy || afterCopyCallbacks || outerCallback)) {
-            if (!afterCopyCallbacks) {
-              afterCopyCallbacks = [];
-            }
-            if (thatDS.afterCopy) {
-              afterCopyCallbacks.push({func: thatDS.afterCopy, rec: record, outerCall: outerCallback});
-            } else if (outerCallback) {
-              afterCopyCallbacks.push({func: outerCallback, rec: [record], outerCall: null});
-            }
-            thatDS.copyCollection(fieldsToCopyCollection[iFld], srcRecord, record, recursiveCopyCollection, cloneNextRecord, afterCopyCallbacks);
-          } else {
-            thatDS.copyCollection(fieldsToCopyCollection[iFld], srcRecord, record, recursiveCopyCollection, cloneNextRecord);
-          }
-        }
-      }
-      recursiveCopyCollection(); // First call
-    } else { // -- No structural fields - Execute afterCopy functions
-      if (cloneNextRecord !== undefined) {
-        cloneNextRecord();
-      }
-      if (thatDS.afterCopy) {
-        thatDS.afterCopy(record, srcRecord);
-      }
-      if (afterCopyCallbacks !== undefined) {
-        for (var i = afterCopyCallbacks.length - 1; i >= 0; i--) {
-          afterCopyCallbacks[i].func(afterCopyCallbacks[i].rec, afterCopyCallbacks[i].outerCall);
-        }
-        afterCopyCallbacks.popAll();
-      }
-      if (outerCallback !== undefined) {
-        outerCallback([record]);
-      }
-    }
-  },
-
-  copyCollection: function (fld, srcRecord, record, recursiveCopyCollection, cloneNextRecordPrev, callbacks) {
-    record[fld.name] = [];
-    isc.DataSource.get(fld.relatedConcept).fetchData(
-      parseJSON("{\"" + fld.backLinkRelation + "\" : \"" + srcRecord[fld.mainIDProperty] + "\", \"Del\": false }"),
-      function (dsResponce, data, dsRequest) {
-        if (data.length === 0) {
-          if (cloneNextRecordPrev) {
-            cloneNextRecordPrev();
-          }
-          if (recursiveCopyCollection) {
-            recursiveCopyCollection();
-          }
-          if (callbacks !== undefined) {
-            for (var i = callbacks.length - 1; i >= 0; i--) {
-              setTimeout(callbacks[i].func(callbacks[i].rec, callbacks[i].outerCall), 0);
-            }
-            callbacks.popAll();
-          }
-        } else {
-          var z = -1;
-//          var dsRelated = this; // Closures-based variant
-          function cloneNextRecord() {
-            var recNew = null;
-            z += 1;
-            if (z < data.length) {
-              var rec = data[z];
-              var dsRelated = isc.DataSource.getDataSource(fld.relatedConcept); // Instead of closures - define very time here
-              if (z < data.length - 1) {
-                recNew = dsRelated.cloneMainInstance(rec, cloneNextRecord);
-                recNew[fld.backLinkRelation] = record["ID"];
-                function cloneRecordRelatedInstances() {
-                  dsRelated.cloneRelatedInstances(rec, recNew, cloneNextRecord);
-                }
-
-                addDataToCache(recNew);
-                TransactionManager.add(recNew, recNew.currentTransaction);
-                cloneRecordRelatedInstances();
-              } else {  // The last record - callbacks and post-actions provided
-                recNew = dsRelated.cloneMainInstance(rec);
-                recNew[fld.backLinkRelation] = record["ID"];
-                function cloneLastRecordRelatedInstances() {
-                  dsRelated.cloneRelatedInstances(rec, recNew, cloneNextRecord, callbacks); // The last row only - processed with callbacks
-                  if (recursiveCopyCollection) {
-                    recursiveCopyCollection();
-                  }
-                  if (cloneNextRecordPrev) {
-                    cloneNextRecordPrev();
-                  }
-                }
-
-                addDataToCache(recNew);
-                TransactionManager.add(recNew, recNew.currentTransaction);
-                cloneLastRecordRelatedInstances();
-              }
-            }
-          };
-          cloneNextRecord(); // First call - start recursion
-        }
-      }
-    );
-  },
-
-  cloneInstance: function (srcRecord, outerCallback) {
-    var newRecord = this.cloneMainInstance(srcRecord);
-    // Adding record to cache makes it visible in all bounded widgets.
-    // So, if it's not desirable - source (!) record can be marked notShow=true.
-    if (!srcRecord.notShow) {
-      addDataToCache(newRecord);
-      TransactionManager.add(newRecord, newRecord.currentTransaction);
-    }
-    this.cloneRelatedInstances(srcRecord, newRecord, undefined, undefined, outerCallback);
-    return newRecord;
-  },
-
-
 
 // --- Universal function that provide deletion of Record ---
 // --- Deletion processed to trash bin, or physically, depending on "Del" flag existence, and additional mode
@@ -2718,15 +2557,15 @@ function deleteRecord(record, delMode, mainToBin,  checkAttrProcessed) {
   if (checkAttrProcessed) {
     checkAttrProcessed();
   }
-  
  };
 */
 
 // --- Universal function that provide deletion of Record ---
 // --- Deletion processed to trash bin, or physically, depending on "Del" flag existence, and additional mode
 // --- DRAFT VARIANT 
-// (Semaphore prepared while processing cycle - so first async results MUST returnes after ALL async calls are made)
-function deleteRecord(record, delMode, mainToBin,  checkAttrProcessedComesInArgs, lastMain) {
+// (Semaphore prepared while processing cycle - so first async results MUST returnes after ALL async calls are made - not erlier)
+// TODO: Refactor significantly, so this variant is too chaotic, no matter that it works.
+function deleteRecord(record, delMode, mainToBin,  checkAttrProcessedComesInArgs, lastMain, attributesProcessed) {
   var ds = isc.DataSource.get(record.Concept);
   if (!ds) {
     isc.warn(isc.CBMStrings.NoDataSourceDefined + " (in function deleteRecord(). )");
@@ -2769,7 +2608,9 @@ function deleteRecord(record, delMode, mainToBin,  checkAttrProcessedComesInArgs
   }
   
   // Semaphore for complicated attributes in parallel processing before main record
-  var attributesProcessed = 0;
+  if (!attributesProcessed) {
+    var attributesProcessed = 0;
+  }
   
   var checkAttrProcessed = function() {
     attributesProcessed--;
@@ -2796,14 +2637,14 @@ function deleteRecord(record, delMode, mainToBin,  checkAttrProcessedComesInArgs
           }
           attributesProcessed++;
           var lastlast = last && (i >= (endRow - 1))
-          deleteRecord(rec, delMode, mainToBin,  checkAttrProcessed, lastlast); // <<< Main action!
+          attributesProcessed = deleteRecord(rec, delMode, mainToBin,  checkAttrProcessed, lastlast, attributesProcessed); // <<< Main action!
         }
         collectionRS.dataArrived = undefined;
       }
     });
     collectionRS.getRange(0, 100000); // Some compromise - allow no more than 100 000 aggregated records 
   }
-
+/*
   var deleteLinkedRecord = function (fld, mainRecord, delMode, mainToBin, last) {
     var dsInner = isc.DataSource.get(fld.relatedConcept);
     if (!dsInner) {
@@ -2821,7 +2662,7 @@ function deleteRecord(record, delMode, mainToBin,  checkAttrProcessedComesInArgs
       deleteRecord(data, delMode, mainToBin,  checkAttrProcessed); // <<<  Main action!
     });
   }
-  
+*/  
   // --- Deletion process flow ---
   var atrNames = ds.getFieldNames(false);
   // Discover collections / aggregated links fields
@@ -2834,43 +2675,60 @@ function deleteRecord(record, delMode, mainToBin,  checkAttrProcessedComesInArgs
           || fld.editorType === "CollectionAggregateControl"
           || fld.editorType === "RelationsAggregateControl"
           || fld.editorType === "CollectionCrossControl"
-          || fld.editorType === "LinkControl" || fld.editorType === "combobox") {
+          /*|| fld.editorType === "LinkControl" || fld.editorType === "combobox"*/) {
       if (fld.deleteLinked === true) {
         structuralFields.push(fld);
       }
     }
   }
-  var n = structuralFields.length;
+  var nStr = structuralFields.length;
   
   // No records returned, and attribute processed is the last, 
   // and no deeper calls on previous attrsibutes - execute main deletion
-  if (n === 0) {
+  if (nStr === 0) {
     attributesProcessed--;
     deleteMainRecord(record);
   }
 
   // Main cycle - actually process aggregated(/linked) records, and main record in the end
   var last = false;
-  for (var i = 0; i < n; i++) {
+  for (var i = 0; i < nStr; i++) {
     var fld = structuralFields[i];
     // TODO: Replace DS editor type to MD association type, or MD but from DS (where it will exist)?
     if (fld.editorType === "CollectionControl" 
           || fld.editorType === "CollectionAggregateControl"
           || fld.editorType === "RelationsAggregateControl"
           || fld.editorType === "CollectionCrossControl") {
-      if (i === n-1) {last = true;}
+      if (i === nStr-1) {last = true;}
       deleteCollection(fld, record, delMode, useBin, last);
-    } else if (fld.editorType === "LinkControl" || fld.editorType === "combobox") {
+    }/* else if (fld.editorType === "LinkControl" || fld.editorType === "combobox") {
       deleteLinkedRecord(fld, record, delMode, useBin, last);
-    }
+    }*/
   }
    
   // deleteMainRecord() _maybe(!)_ execution
   if (checkAttrProcessedComesInArgs && lastMain) {
     checkAttrProcessedComesInArgs();
   }
- 
+  
+  return attributesProcessed;
+
 };
+
+/////////////////////////////////////////////////////
+// TODO: -------- Perspective variant --------- //
+// ------- Universal function for complicated object processing -------
+processRecord: function(Record, methodToDo, mainFirst, outerCallback) {
+
+}
+
+processRelatedRecords: function(){
+}
+
+processCollection: function(){
+}
+
+////////////////////////////////////////////////////
 
  
  
