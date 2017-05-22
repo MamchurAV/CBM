@@ -219,7 +219,8 @@ public class StorageMetaData implements I_StorageMetaData {
 				+ "inner join  CBM.PrgViewField pvf on pvf.ForPrgView=pv.ID and pvf.Del='0' "
 				+ "inner join  CBM.Relation r on r.ID=pvf.ForRelation and r.Del='0' and r.dbtable is not null and r.dbcolumn is not null "
 				+ "inner join  CBM.Concept c on c.ID=r.RelatedConcept "; 
-		mdForSelect.where = "pv.syscode='" + forType + "' and pv.del='0' and pv.actual = '1'";
+		mdForSelect.where = "pv.syscode='" + forType + "' and pv.del='0' and pv.actual = '1' "
+				+ " and pvf.viewonly = '0'";
 		mdForSelect.orderby = "r.Odr, r.dbtable, pvf.Odr"; 
 
 		mdForSelect.columns = new HashMap<String,String>(5); 

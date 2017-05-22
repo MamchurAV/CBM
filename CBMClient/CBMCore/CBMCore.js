@@ -210,7 +210,7 @@ function generateDStext(forView, futherActions) {
   }
 
 // --- Creation of head part of DS ---
-  resultDS = "isc.CBMDataSource.create({ID:\"" + forView + "\",";
+  resultDS = "isc.CBMDataSource.create({ID: \"" + forView + "\",";
 
   if (conceptRec.DataBaseStore && conceptRec.DataBaseStore !== "null") {
     resultDS += "dbName: \"" + conceptRec.DataBaseStore.ConnectionParams + "\", ";
@@ -247,7 +247,7 @@ function generateDStext(forView, futherActions) {
     resultDS += "MenuAdditions: \"" + conceptRec.MenuAdditions + "\", ";
   }
   if (conceptRec.CreateFromMethods && conceptRec.CreateFromMethods !== "null") {
-    resultDS += "CreateFromMethods: \"" + conceptRec.CreateFromMethods + "\", ";
+    resultDS += "CreateFromMethods: " + conceptRec.CreateFromMethods + ", ";
   }
   if (viewRec.CanExpandRecords && viewRec.CanExpandRecords === true) {
     resultDS += "canExpandRecords: true, ";
@@ -1951,9 +1951,8 @@ isc.CBMDataSource.addProperties({
               record[attr] = values[attr];
             }
             // Initialize Save() for non-standard controls
-            var attrStr = "" + attr;
-            var field = this.getDataSource().fields[attrStr];
             // TODO !!! Universalize kontrol type below
+            var field = this.getDataSource().getFields()[attr];
             if (field && field.editorType === "WeekWorkControl") {
               var item = this.valuesManager.getItem(attrStr);
               if (item) {
@@ -2194,15 +2193,16 @@ var CBMobject = {
     }
     // Get CBM metadata descriptions (we need it to discover really persistent fields)
     var rec = {}; // Object.create();
-//    var atrNames = Object.getOwnPropertyNames(obj); // <<< TODO ??? Deside - What's better?
     var atrNames = this.ds.getFieldNames(false);
     var n = atrNames.length;
     for (var i = 0; i < n; i++) {
       var rel = this.ds.getRelation(atrNames[i]);
+      var fld = this.ds.getFields()[atrNames[i]];
       // Copy to returned "rec" only persistent fields
       if (rel && ((rel.DBColumn && rel.DBColumn !== null && rel.DBTable && rel.DBTable !== null)
-          // Or - field is explicitly marked as not-persistent
-          || rel.RelationKind === "Value" || rel.RelationKind === "Link")) {
+         /* TODO >>> What for ??? || rel.RelationKind === "Value" || rel.RelationKind === "Link"*/)
+          // AND - field is explicitly marked as not-persistent
+          && fld && !fld.ignore) {
         rec[atrNames[i]] = this[atrNames[i]];
       }
     }
@@ -2230,7 +2230,8 @@ var CBMobject = {
     }
     // Save main object
     if (this.infoState === "new" || this.infoState === "copy") {
-      // - If Data Source contains unsaved data of <this> object - remove it, and then add with normal save
+      // If Data Source contains unsaved data of <this> object 
+      //   - remove it, and then add with normal save
       if (this.ds.getCacheData() && this.ds.getCacheData().find({ID: this.ID})) {
         removeDataFromCache(this);
       }
@@ -2239,13 +2240,13 @@ var CBMobject = {
       if (context && !this.notShow) {
         context[contextField].push(this);
       }
-      //------------------
+
       if (real) {
         this.ds.addData(this.getPersistent());
       } else {
         addDataToCache(this);
       }
-    } else if (/*this.infoState === "loaded" || */ this.infoState === "changed") {
+    } else if (this.infoState === "changed") {
       if (real) {
         this.ds.updateData(this.getPersistent());
       } else {
@@ -2266,7 +2267,7 @@ var CBMobject = {
   },
 
 
-  //----------- Provides collection of Relation
+  //----------- Provides collection of Relation -----------------
   getRelatonsMeta: function () {
 
   },
@@ -2385,17 +2386,29 @@ function editRecords(records, context, conceptRecord, trans) {
 // initFunc   - is a function, that provide target-from-source fields initialisation.
 // context    - intended to be some ListGrid successor, that represent results.
 function createFrom(srcRecords, resultClass, initFunc, context) {
-  if (srcRecords == null) {
+  if (srcRecords === null) {
     isc.warn(isc.CBMStrings.ListCreateFrom_NoSelectionDone, this.innerCloseNoChoiceDlg);
     return;
   }
 
-  window.afterSetID = function (record, that) {
-    var mainObj = null;
+  initDestRecord = function (record) {
+    var mainObjID = null;
     if (context.topElement.valuesManager) {
-      mainObj = context.topElement.valuesManager.getValue("ID");
+      mainObjID = context.topElement.valuesManager.getValue("ID");
+      mainConcept = context.topElement.dataSource;
+      // Try to initialize main object link by naming agreements:
+      // (Attribute name == <linked concept name>, or "For" + <linked concept name>)
+      if (record[mainConcept] === null) {
+        record[mainConcept] = mainObjID;
+      } else if (record["For" + mainConcept] === null) {
+        record["For" + mainConcept] = mainObjID;
+      }
     }
-    initFunc(record, srcRecords[iteration], mainObj);
+    // Call additional specific initializations (if any)
+    // (Note that mainObjID and mainConcept are still supplied - for any...)
+    if (initFunc) {
+      initFunc(record, srcRecords[iteration], mainObjID, mainConcept);
+    }
     if (context) {
       context.addData(record);
     }
@@ -2413,6 +2426,7 @@ function createFrom(srcRecords, resultClass, initFunc, context) {
     } else {
       isc.Warn(isc.CBMStrings.ListCreateFrom_UndefinedClass);
     }
+    initDestRecord(newRec)
   };
 
   var iteration = 0;
@@ -2718,14 +2732,16 @@ function deleteRecord(record, delMode, mainToBin,  checkAttrProcessedComesInArgs
 /////////////////////////////////////////////////////
 // TODO: -------- Perspective variant --------- //
 // ------- Universal function for complicated object processing -------
-processRecord: function(Record, methodToDo, mainFirst, outerCallback) {
+function processRecord(Record, methodToDo, mainFirst, outerCallback) {
 
 }
 
-processRelatedRecords: function(){
+function processRelatedRecords(){
+  
 }
 
-processCollection: function(){
+function processCollection(){
+  
 }
 
 ////////////////////////////////////////////////////

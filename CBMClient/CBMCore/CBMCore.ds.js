@@ -451,14 +451,6 @@ isc.CBMDataSource.create({
       type: "text",
       UIPath: "Information System aspects"
     }, {
-      name: "MenuAdditions",
-      type: "text",
-      UIPath: "Information System aspects"
-    }, {
-      name: "CreateFromMethods",
-      type: "text",
-      UIPath: "Information System aspects"
-    }, {
       name: "IsHierarchy",
       type: "boolean",
       defaultValue: false,
@@ -496,6 +488,20 @@ isc.CBMDataSource.create({
       titleOrientation: "top",
       colSpan: 6,
       UIPath: "Information System aspects"
+    }, {
+      name: "MenuAdditions",
+      type: "text",
+      UIPath: "Functions",
+      titleOrientation: "top",
+      colSpan: 6,
+      length: 4000
+    }, {
+      name: "CreateFromMethods",
+      type: "text",
+      UIPath: "Functions",
+      titleOrientation: "top",
+      colSpan: 6,
+      length: 4000
     }, {
       name: "Functions",
       type: "PrgFunction",
