@@ -2587,9 +2587,9 @@ function deleteRecord(record, delMode, mainToBin,  checkAttrProcessedComesInArgs
   }
   var useBin = ds.isDeleteToBin();
   
-  if (!record.currentTransaction && delMode !== "deleteForce") {
-    record.currentTransaction = TransactionManager.createTransaction();
-  }
+  // if (!record.currentTransaction && delMode !== "deleteForce") {
+    // record.currentTransaction = TransactionManager.createTransaction();
+  // }
  
   // --- Internal functions ---
    
@@ -2730,17 +2730,63 @@ function deleteRecord(record, delMode, mainToBin,  checkAttrProcessedComesInArgs
 };
 
 /////////////////////////////////////////////////////
-// TODO: -------- Perspective variant --------- //
+// TODO: -------- Variant in work --------- //
 // ------- Universal function for complicated object processing -------
-function processRecord(Record, methodToDo, mainFirst, outerCallback) {
-
-}
-
-function processRelatedRecords(){
+function processRecord(record, methodToDo, mainFirst, outerCallback) {
+  if (mainFirst) {
+    methodToDo(record);
+  }
   
+  processRelatedRecords(record, methodToDo, mainFirst, outerCallback);
+
 }
 
-function processCollection(){
+function processRelatedRecords(record, methodToDo, mainFirst, outerCallback){
+  
+  var atrNames = ds.getFieldNames(false);
+  // --- Discover collections / aggregated links fields ---
+  var structuralFields = [];
+  var n = atrNames.length;
+  for (var i = 0; i < n; i++) {
+    var fld = ds.getField(atrNames[i]);
+    // TODO switch to Relation kind instead of editorType
+    if (fld.editorType === "CollectionControl" 
+          || fld.editorType === "CollectionAggregateControl"
+          || fld.editorType === "RelationsAggregateControl"
+          || fld.editorType === "CollectionCrossControl"
+          /*|| fld.editorType === "LinkControl" || fld.editorType === "combobox"*/) {
+      if (fld.deleteLinked === true) {
+        structuralFields.push(fld);
+      }
+    }
+  }
+  var nStr = structuralFields.length;
+  
+  // --- Process collections ---
+    // Semaphore for complicated attributes in parallel processing before main record
+  if (!attributesProcessed) {
+    var attributesProcessed = 0;
+  }
+  
+  // Main cycle - actually process aggregated(/linked) records, and main record in the end
+  var last = false;
+  for (var i = 0; i < nStr; i++) {
+    var fld = structuralFields[i];
+    // TODO: Replace DS editor type to MD association type, or MD but from DS (where it will exist)?
+    if (fld.editorType === "CollectionControl" 
+          || fld.editorType === "CollectionAggregateControl"
+          || fld.editorType === "RelationsAggregateControl"
+          || fld.editorType === "CollectionCrossControl") {
+      if (i === nStr-1) {last = true;}
+      deleteCollection(fld, record, delMode, useBin, last);
+    }/* else if (fld.editorType === "LinkControl" || fld.editorType === "combobox") {
+      deleteLinkedRecord(fld, record, delMode, useBin, last);
+    }*/
+  }
+
+}
+
+function processCollection(fld, record, methodToDo, mainFirst, outerCallback){
   
 }
 
@@ -3583,8 +3629,8 @@ isc.InnerGrid.addProperties({
         top: 250,
         left: 400,
         width: 82,
-        title: "Create from",
-        icon: isc.Page.getAppImgDir() + "new.png",
+        title: isc.CBMStrings.InnerGrid_CreateFrom, // "Create from",
+        icon: isc.Page.getAppImgDir() + "NewFromSelect.png",
         visibility: "hidden"
       });
       if (typeof(that.getDataSource().CreateFromMethods) != "undefined") {
