@@ -1514,7 +1514,7 @@ isc.CBMDataSource.addProperties({
     var n = atrNames.length;
     for (var i = 0; i < n; i++) {
       var fld = thatDS.getField(atrNames[i]);
-      if (fld.kind == "BackAggregate" || fld.kind == "BackLink") {
+      if (fld.kind === "BackAggregate" || fld.kind === "BackLink") {
         if (fld.copyLinked === true) {
           fieldsToCopyCollection.push(fld);
         }
@@ -2688,11 +2688,9 @@ function deleteRecord(record, delMode, contextGrid, mainToBin,  checkAttrProcess
   var n = atrNames.length;
   for (var i = 0; i < n; i++) {
     var fld = ds.getField(atrNames[i]);
-    // TODO switch to Relation kind instead of editorType
-    if (fld.editorType === "CollectionControl" 
-          || fld.editorType === "CollectionAggregateControl"
-          || fld.editorType === "RelationsAggregateControl"
-          || fld.editorType === "CollectionCrossControl"
+    if (fld.kind === "BackAggregate" 
+          || fld.kind === "BackLink" 
+          || fld.kind === "CrossLink"
           /*|| fld.editorType === "LinkControl" || fld.editorType === "combobox"*/) {
       if (fld.deleteLinked === true) {
         structuralFields.push(fld);
@@ -2712,11 +2710,9 @@ function deleteRecord(record, delMode, contextGrid, mainToBin,  checkAttrProcess
   var last = false;
   for (var i = 0; i < nStr; i++) {
     var fld = structuralFields[i];
-    // TODO: Replace DS editor type to MD association type, or MD but from DS (where it will exist)?
-    if (fld.editorType === "CollectionControl" 
-          || fld.editorType === "CollectionAggregateControl"
-          || fld.editorType === "RelationsAggregateControl"
-          || fld.editorType === "CollectionCrossControl") {
+    if (fld.kind === "BackAggregate" 
+          || fld.kind === "BackLink" 
+          || fld.kind === "CrossLink") {
       if (i === nStr-1) {last = true;}
       deleteCollection(fld, record, delMode, useBin, last);
     }/* else if (fld.editorType === "LinkControl" || fld.editorType === "combobox") {
