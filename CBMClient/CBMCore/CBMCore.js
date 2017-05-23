@@ -948,6 +948,7 @@ TransactionManager.createTransaction = function () {
   return newTransaction;
 }
 
+
 TransactionManager.getTransaction = function (transact) {
   var currTrans = null;
   if (transact) {
@@ -958,8 +959,9 @@ TransactionManager.getTransaction = function (transact) {
   return currTrans;
 };
 
-// - Add object to transaction -
-TransactionManager.add = function (obj, transact) {
+
+// ------- Add object to transaction -------
+TransactionManager.add = function (obj, transact, first) {
   var currTrans;
   if (transact) {
     currTrans = this.getTransaction(transact);
@@ -977,17 +979,22 @@ TransactionManager.add = function (obj, transact) {
       this.transactions.push(transact);
     }
   }
-  // --- Remove former stored object if that is the case ---
+  // Remove former stored object if that is the case
   for (var i = 0; i < currTrans.Changes.length; i++) {
     if (currTrans.Changes[i].ID === obj.ID) {
       currTrans.Changes.splice(i, 1);
     }
   }
-
-  currTrans.Changes.push(obj);
+  // Guarantie main object to be the first. Others - no matter.
+  if (first) {
+    currTrans.Changes.unshift(obj);
+  } else {
+    currTrans.Changes.push(obj);
+  }
 };
 
-TransactionManager.commit = function (transact, callback) {
+
+TransactionManager.commit = function (transact, callback, reverseOrder) {
   var currTrans = this.getTransaction(transact);
   if (currTrans !== null) {
     // TODO: Save objects in transaction to isc Data Source
@@ -995,10 +1002,9 @@ TransactionManager.commit = function (transact, callback) {
     if (len === 0) {
       return;
     }
-    // Process saving in back order - so that main cases of records dependency are resolved.
     // For more complicated cases - TODO: analyse dependensies and establish right order...
-    var i = len - 1;
-    for (i; i > 0; i--) {
+    var i = 0;
+    for (i; i < len - 1; i++) {
       currTrans.Changes[i].save(true); // Call CBMobject's save()
       currTrans.Changes[i].currentTransaction = null;
     }
@@ -1010,14 +1016,17 @@ TransactionManager.commit = function (transact, callback) {
       currTrans.Changes[i].save(true, undefined, undefined, callback);
     }
     currTrans.Changes[i].currentTransaction = null;
+    
     this.clear(currTrans);
-    // this.close(currTrans);
+    this.close(currTrans); // <<<<TODO Test uncommented (23.05.2017)
+    
     // -- Commit default transaction too!!!
     if (currTrans.Id !== "default") {
       this.commit(this.transactions.find("Id", "default"), callback);
     }
   }
 };
+
 
 TransactionManager.clear = function (transact) {
   var currTrans = this.getTransaction(transact);
@@ -1026,8 +1035,9 @@ TransactionManager.clear = function (transact) {
   }
 };
 
+
 TransactionManager.close = function (transact) {
-  if (transact) {
+  if (transact && transact.Id !== "default") {
     var currTrans = this.transactions.find("Id", transact.Id);
     for (var i = 0; i < this.transactions.length; i++) {
       if (this.transactions[i] === currTrans) {
@@ -1981,10 +1991,11 @@ isc.CBMDataSource.addProperties({
             that.destroyLater(that, 200);
           } else {
             if (!topCancel) {
-              TransactionManager.add(record, record.currentTransaction);
-//              isc.DataSource.get(this.dataSource).onSave(record); // ????? Why commented?
+              // Independent record must be the first in transaction(see true param) 
+              TransactionManager.add(record, record.currentTransaction, true);
+              isc.DataSource.get(this.dataSource).onSave(record);
             }
-            isc.DataSource.get(this.dataSource).onSave(record);
+//            isc.DataSource.get(this.dataSource).onSave(record);
             TransactionManager.commit(record.currentTransaction);
             delete record.currentTransaction;
             that.destroyLater(that, 200);
