@@ -1514,13 +1514,13 @@ isc.CBMDataSource.addProperties({
     var n = atrNames.length;
     for (var i = 0; i < n; i++) {
       var fld = thatDS.getField(atrNames[i]);
-      // TODO switch to Relation kind instead of editorType
-      if (fld.editorType == "CollectionAggregateControl") {
+      if (fld.kind == "BackAggregate" || fld.kind == "BackLink") {
         if (fld.copyLinked === true) {
           fieldsToCopyCollection.push(fld);
         }
       } else if (fld.copyValue !== undefined && fld.copyValue === false) {
-        record[fld] = null; // Clear not-copied fields
+        // Clear not-copied fields
+        record[fld] = null;
       }
     }
     // Deep collection copying (for fields having copyLinked flag true)
@@ -1954,7 +1954,7 @@ isc.CBMDataSource.addProperties({
             // TODO !!! Universalize kontrol type below
             var field = this.getDataSource().getFields()[attr];
             if (field && field.editorType === "WeekWorkControl") {
-              var item = this.valuesManager.getItem(attrStr);
+              var item = this.valuesManager.getItem(attr);
               if (item) {
                 item.saveCollection();
               }
@@ -2579,7 +2579,7 @@ function deleteRecord(record, delMode, mainToBin,  checkAttrProcessed) {
 // --- DRAFT VARIANT 
 // (Semaphore prepared while processing cycle - so first async results MUST returnes after ALL async calls are made - not erlier)
 // TODO: Refactor significantly, so this variant is too chaotic, no matter that it works.
-function deleteRecord(record, delMode, mainToBin,  checkAttrProcessedComesInArgs, lastMain, attributesProcessed) {
+function deleteRecord(record, delMode, contextGrid, mainToBin,  checkAttrProcessedComesInArgs, lastMain, attributesProcessed) {
   var ds = isc.DataSource.get(record.Concept);
   if (!ds) {
     isc.warn(isc.CBMStrings.NoDataSourceDefined + " (in function deleteRecord(). )");
@@ -2587,9 +2587,9 @@ function deleteRecord(record, delMode, mainToBin,  checkAttrProcessedComesInArgs
   }
   var useBin = ds.isDeleteToBin();
   
-  // if (!record.currentTransaction && delMode !== "deleteForce") {
-    // record.currentTransaction = TransactionManager.createTransaction();
-  // }
+  if (!record.currentTransaction && delMode !== "deleteForce") {
+    record.currentTransaction = TransactionManager.createTransaction();
+  }
  
   // --- Internal functions ---
    
@@ -2599,21 +2599,21 @@ function deleteRecord(record, delMode, mainToBin,  checkAttrProcessedComesInArgs
     if (delMode === "deleteForce") {
       ds.removeData(deletedRecord);
       removeDataFromCache(deletedRecord);
-    } else { // delMode != "deleteForce" - process depending on "Del" flag existence
-      if (deletedRecord.Del != undefined) { // "Del" flag exists
+    } else { // delMode !== "deleteForce" - process depending on "Del" flag existence
+      if (deletedRecord.Del !== undefined) { // "Del" flag exists
         deletedRecord.infoState = "changed";
-        if (delMode == "delete") {
+        if (delMode === "delete") {
           deletedRecord.Del = true;
           updateDataInCache(deletedRecord);
-        } else { // delMode == "restore"
+        } else { // delMode === "restore"
           deletedRecord.Del = false;
           removeDataFromCache(deletedRecord); // <<< To prevent dubles
           addDataToCache(deletedRecord);
         }
         TransactionManager.add(deletedRecord);
       }
-      // Conditions below - to protect from physical deletion "Del-less" aggregated records
-      else if (mainToBin == undefined || !mainToBin) {
+      // Conditions below - to protect from physical deletion of "Del-less" dependent records
+      else if (mainToBin === undefined || !mainToBin) {
         deletedRecord.infoState = "deleted";
         TransactionManager.add(deletedRecord);
         removeDataFromCache(deletedRecord);
@@ -2646,12 +2646,16 @@ function deleteRecord(record, delMode, mainToBin,  checkAttrProcessedComesInArgs
         }
         for (var i = startRow; i < endRow; i++) {
           var rec = this.get(startRow);  // <<< Delete aways the first record - to workaround cache sync problem
+          // For jast created (and already deleted) records - Concept may be not initialized
+          if (!rec.Concept) {
+            rec.Concept = this.dataSource.ID;
+          }
           if (delMode !== "deleteForce" && mainRecord.currentTransaction) {
             rec.currentTransaction = mainRecord.currentTransaction;
           }
           attributesProcessed++;
           var lastlast = last && (i >= (endRow - 1))
-          attributesProcessed = deleteRecord(rec, delMode, mainToBin,  checkAttrProcessed, lastlast, attributesProcessed); // <<< Main action!
+          attributesProcessed = deleteRecord(rec, delMode, contextGrid, mainToBin,  checkAttrProcessed, lastlast, attributesProcessed); // <<< Main action!
         }
         collectionRS.dataArrived = undefined;
       }
@@ -2673,7 +2677,7 @@ function deleteRecord(record, delMode, mainToBin,  checkAttrProcessedComesInArgs
       }
       data.currentTransaction = mainRecord.currentTransaction;
       attributesProcessed++;
-      deleteRecord(data, delMode, mainToBin,  checkAttrProcessed); // <<<  Main action!
+      deleteRecord(data, delMode, contextGrid, mainToBin,  checkAttrProcessed); // <<<  Main action!
     });
   }
 */  
@@ -2730,7 +2734,7 @@ function deleteRecord(record, delMode, mainToBin,  checkAttrProcessedComesInArgs
 };
 
 /////////////////////////////////////////////////////
-// TODO: -------- Variant in work --------- //
+// TODO: -------- DRAFT Variant in work --------- //
 // ------- Universal function for complicated object processing -------
 function processRecord(record, methodToDo, mainFirst, outerCallback) {
   if (mainFirst) {
@@ -2790,7 +2794,7 @@ function processCollection(fld, record, methodToDo, mainFirst, outerCallback){
   
 }
 
-////////////////////////////////////////////////////
+///////////// END DRAFT WORK ///////////////////////////////////////
 
  
  
@@ -3140,25 +3144,30 @@ isc.MultiLinkControl.addProperties({
 // =============================================================================================
 // ========================== Grid-related controls infrastructure =============================
 // =============================================================================================
-// --- Delete selected in grid records in conjunction with delete mode
+// --- Delete selected in grid records acording to delete mode
 //  parameter: mode - real deletion, or using "Del" property deletion throw trash bin.
 function deleteSelectedRecords(innerGrid, mode) {
   if (mode === "restore") {
     restoreSelectedRecords(innerGrid, mode);
     return;
   }
-  var that = innerGrid;
-  var ds = innerGrid.getDataSource(); // <<< TODO: get concrete DS for record
+  var gridDS = innerGrid.getDataSource().ID;
   isc.confirm(isc.CBMStrings.InnerGridMenu_DeletionPrompt,
     function (ok) {
       if (ok) {
-        var n = that.grid.getSelectedRecords().length;
+        var n = innerGrid.grid.getSelectedRecords().length;
         for (var i = 0; i < n; i++) {
-          var record = that.grid.getSelectedRecords()[0];
+          var record = innerGrid.grid.getSelectedRecords()[0];
+          if(!record.Concept) {
+            record.Concept = gridDS;
+          }
           cbmRecord = createFromRecord(record);
-          deleteRecord(cbmRecord, mode);
+          // Supply transactional context to deleted record
+          if (innerGrid.context && innerGrid.context.valuesManager) {
+            cbmRecord.currentTransaction = innerGrid.context.valuesManager.getValues().currentTransaction;
+          }
+          deleteRecord(cbmRecord, mode, innerGrid);
         }
-        that.refresh();
       }
     }
   );
@@ -3629,7 +3638,7 @@ isc.InnerGrid.addProperties({
         top: 250,
         left: 400,
         width: 82,
-        title: isc.CBMStrings.InnerGrid_CreateFrom, // "Create from",
+        title: isc.CBMStrings.InnerGrid_CreateFrom,
         icon: isc.Page.getAppImgDir() + "NewFromSelect.png",
         visibility: "hidden"
       });
