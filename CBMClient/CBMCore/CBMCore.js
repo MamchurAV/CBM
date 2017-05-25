@@ -965,26 +965,32 @@ TransactionManager.add = function (obj, transact, first) {
   var currTrans;
   if (transact) {
     currTrans = this.getTransaction(transact);
-  } else if (obj.currentTransaction) {
+    // If tansact-parameter not in TransactionManager - add it
+    if (!currTrans) {
+      this.transactions.push(transact);
+      currTrans = transact;
+    }
+    obj.currentTransaction = transact;
+  } 
+  else if (obj.currentTransaction) {
     currTrans = this.getTransaction(obj.currentTransaction);
-  } else {
+    if (!currTrans) {
+      this.transactions.push(obj.currentTransaction);
+      currTrans = obj.currentTransaction;
+    }
+  } 
+  else {
     currTrans = this.transactions.find("Id", "default");
     obj.currentTransaction = currTrans;
   }
-  // If tansact-parameter not in TransactionManager - simply add it!
-  if (!currTrans || currTrans === null) {
-    if (transact) {
-      this.transactions.push(transact);
-    } else if (obj.currentTransaction) {
-      this.transactions.push(transact);
-    }
-  }
+  
   // Remove former stored object if that is the case
   for (var i = 0; i < currTrans.Changes.length; i++) {
     if (currTrans.Changes[i].ID === obj.ID) {
       currTrans.Changes.splice(i, 1);
     }
   }
+  
   // Guarantie main object to be the first. Others - no matter.
   if (first) {
     currTrans.Changes.unshift(obj);
@@ -2444,152 +2450,11 @@ function createFrom(srcRecords, resultClass, initFunc, context) {
   this.newRecord();
 };
 
-/*
-// FIRST VARIANT
-
-// --- Universal function that provide deletion of Record ---
-// --- Deletion processed to trash bin, or physically, depending on "Del" flag existence, and additional mode
-function deleteRecord(record, delMode, mainToBin,  checkAttrProcessed) {
-  var ds = isc.DataSource.get(record.Concept);
-  if (!ds) {
-    isc.warn(isc.CBMStrings.NoDataSourceDefined + " (in function deleteRecord(). )");
-    return;
-  }
-  var useBin = ds.isDeleteToBin();
-  
-  if (!record.currentTransaction && delMode !== "deleteForce") {
-    record.currentTransaction = TransactionManager.createTransaction();
-  }
- 
-  // --- Internal functions ---
-   
-  // Process main record
-  var deleteMainRecord = function(){
-    if (delMode === "deleteForce") {
-      ds.removeData(record);
-      removeDataFromCache(record);
-    } else { // delMode != "deleteForce" - process depending on "Del" flag existence
-      if (record.Del != undefined) { // "Del" flag exists
-        record.infoState = "changed";
-        if (delMode == "delete") {
-          record.Del = true;
-          updateDataInCache(record);
-        } else { // delMode == "restore"
-          record.Del = false;
-          removeDataFromCache(record); // <<< To prevent dubles
-          addDataToCache(record);
-        }
-        TransactionManager.add(record);
-      }
-      // Conditions below - to protect from physical deletion "Del-less" aggregated records
-      else if (mainToBin == undefined || !mainToBin) {
-        record.infoState = "deleted";
-        TransactionManager.add(record);
-        removeDataFromCache(record);
-      }
-    }
-  }
-  
-  // Semaphore for complicated attributes in parallel processing before main record
-  var attributesProcessed = 0;
-  var collectionsProcessed = 0;
-  
-  var checkAttrProcessed = function() {
-    attributesProcessed--;
-    if (attributesProcessed < 1) {
-      deleteMainRecord();
-    }
-  }
-  
-  var countCollection = function (fld, mainRecord, delMode) {
-    var collectionRS = isc.ResultSet.create({
-      dataSource: fld.relatedConcept,
-      fetchMode: "paged",
-      criteria: parseJSON("{\"" + fld.backLinkRelation + "\" : \"" + mainRecord[fld.mainIDProperty] + "\"}"),
-      dataArrived: function (startRow, endRow) {
-        attributesProcessed += endRow - startRow;
-        collectionRS.dataArrived = undefined;
-      }
-    });
-    collectionRS.getRange(0, 100000); // Some compromise - allow no more than 100 000 aggregated records 
-  }
-
-  var deleteCollection = function (fld, mainRecord, delMode, mainToBin) {
-    var collectionRS = isc.ResultSet.create({
-      dataSource: fld.relatedConcept,
-      fetchMode: "paged",
-      criteria: parseJSON("{\"" + fld.backLinkRelation + "\" : \"" + mainRecord[fld.mainIDProperty] + "\"}"),
-      dataArrived: function (startRow, endRow) {
-        for (var i = startRow; i < endRow; i++) {
-          var rec = this.get(startRow);  // <<< Delete aways the first record - to workaround cache sync problem
-          if (delMode !== "deleteForce" && mainRecord.currentTransaction) {
-            rec.currentTransaction = mainRecord.currentTransaction;
-          }
-          deleteRecord(rec, delMode, mainToBin,  checkAttrProcessed); // <<< Main action!
-        }
-        collectionRS.dataArrived = undefined;
-      }
-    });
-    collectionRS.getRange(0, 100000); // Some compromise - allow no more than 100 000 aggregated records 
-  }
-
-  var deleteLinkedRecord = function (fld, mainRecord, delMode, mainToBin) {
-    var dsInner = isc.DataSource.get(fld.relatedConcept);
-    if (!dsInner) {
-      isc.warn(isc.CBMStrings.NoDataSourceDefined + isc.CBMStrings.MD_ForViewField + fld.name + " (in function deleteLinkedRecord(). It's most likely You set flag CopyLinked for Attribute with no need.)");
-      return;
-    }
-    dsInner.fetchRecord(mainRecord[fld], function (dsResponse, data, dsRequest) {
-      data.currentTransaction = mainRecord.currentTransaction;
-      deleteRecord(data, delMode, mainToBin,  checkAttrProcessed); // <<<  Main action!
-    });
-  }
-  
-  // --- Deletion process flow ---
-  var atrNames = ds.getFieldNames(false);
- 
-  // Second (main) cycle - actually process aggregated(/linked) records, and main record in the end
-  var doDeleteDependent = function() {
-    for (var i = 0; i < atrNames.length; i++) {
-      var fld = ds.getField(atrNames[i]);
-      // TODO: Replace DS editor type to MD association type, or MD but from DS (where it will exist)?
-      if ((fld.editorType === "CollectionControl" 
-            || fld.editorType === "CollectionAggregateControl"
-            || fld.editorType === "RelationsAggregateControl"
-            || fld.editorType === "CollectionCrossControl") && fld.deleteLinked === true) {
-        deleteCollection(fld, record, delMode, useBin);
-      } else if ((fld.editorType === "LinkControl" || fld.editorType === "combobox") && fld.deleteLinked === true) {
-        deleteLinkedRecord(fld, record, delMode, useBin);
-      }
-    }
-  }
-
-  // First cycle - prepare <attributesProcessed> semaphore for aggregated(/linked) records
-  for (var i = 0; i < atrNames.length; i++) {
-    var fld = ds.getField(atrNames[i]);
-    // TODO: Replace DS editor type to MD association type, or MD but from DS (where it will exist)?
-    if ((fld.editorType === "CollectionControl" 
-          || fld.editorType === "CollectionAggregateControl"
-          || fld.editorType === "RelationsAggregateControl"
-          || fld.editorType === "CollectionCrossControl") && fld.deleteLinked === true) {
-      countCollection(fld, record, delMode);
-    } else if ((fld.editorType === "LinkControl" || fld.editorType === "combobox") && fld.deleteLinked === true) {
-      attributesProcessed++; // <<< Prepare semaphore counter
-    }
-  }
-  
-  // deleteMainRecord() _maybe(!)_ execution
-  if (checkAttrProcessed) {
-    checkAttrProcessed();
-  }
- };
-*/
-
 // --- Universal function that provide deletion of Record ---
 // --- Deletion processed to trash bin, or physically, depending on "Del" flag existence, and additional mode
 // --- DRAFT VARIANT 
 // (Semaphore prepared while processing cycle - so first async results MUST returnes after ALL async calls are made - not erlier)
-// TODO: Refactor significantly, so this variant is too chaotic, no matter that it works.
+// TODO: Refactor significantly, so this implementation is too chaotic, no matter that it works.
 function deleteRecord(record, delMode, contextGrid, mainToBin,  checkAttrProcessedComesInArgs, lastMain, attributesProcessed) {
   var ds = isc.DataSource.get(record.Concept);
   if (!ds) {
@@ -2673,7 +2538,7 @@ function deleteRecord(record, delMode, contextGrid, mainToBin,  checkAttrProcess
     });
     collectionRS.getRange(0, 100000); // Some compromise - allow no more than 100 000 aggregated records 
   }
-/*
+
   var deleteLinkedRecord = function (fld, mainRecord, delMode, mainToBin, last) {
     var dsInner = isc.DataSource.get(fld.relatedConcept);
     if (!dsInner) {
@@ -2691,7 +2556,7 @@ function deleteRecord(record, delMode, contextGrid, mainToBin,  checkAttrProcess
       deleteRecord(data, delMode, contextGrid, mainToBin,  checkAttrProcessed); // <<<  Main action!
     });
   }
-*/  
+  
   // --- Deletion process flow ---
   var atrNames = ds.getFieldNames(false);
   // Discover collections / aggregated links fields
@@ -2702,7 +2567,7 @@ function deleteRecord(record, delMode, contextGrid, mainToBin,  checkAttrProcess
     if (fld.kind === "BackAggregate" 
           || fld.kind === "BackLink" 
           || fld.kind === "CrossLink"
-          /*|| fld.editorType === "LinkControl" || fld.editorType === "combobox"*/) {
+          || fld.kind === "Aggregate" || fld.kind === "Link") {
       if (fld.deleteLinked === true) {
         structuralFields.push(fld);
       }
@@ -2726,9 +2591,9 @@ function deleteRecord(record, delMode, contextGrid, mainToBin,  checkAttrProcess
           || fld.kind === "CrossLink") {
       if (i === nStr-1) {last = true;}
       deleteCollection(fld, record, delMode, useBin, last);
-    }/* else if (fld.editorType === "LinkControl" || fld.editorType === "combobox") {
+    } else if (fld.kind === "Aggregate" || fld.kind === "Link") {
       deleteLinkedRecord(fld, record, delMode, useBin, last);
-    }*/
+    }
   }
    
   // deleteMainRecord() _maybe(!)_ execution
@@ -2844,6 +2709,37 @@ isc.SimpleType.create({
 
 });
 
+// -------------- time UI enhenced variant ----------------
+function formatTime (value) {
+  if (value.length > 6) {return value.substring(0,4);}
+  return value;
+}
+
+// TODO - Does not substitute base "time" funcs. :-(
+isc.SimpleType.create({
+  name: "timeCBM",
+  inheritsFrom: "time",
+  
+  normalDisplayFormatter: function (value) {
+    return formatTime(value);
+  },
+  
+  shortDisplayFormatter: function (value) {
+    return formatTime(value);
+  },
+
+  
+  editFormatter: function (value) {
+    return formatTime(value);
+  },
+  
+  parseInput: function (value) {
+    return formatTime(value);
+  }
+
+
+});
+
 
 // ======================================================================
 // =================== Multi-language support section ===================
@@ -2915,10 +2811,10 @@ function getLang(value, language, strictLang) {
   // Language prefix are in all cases removed from returned string.
   var out = value;
   var i = value.indexOf("~|" + language); // Is there part for  requested locale?
-  if (i != -1) { // Locale exists
+  if (i !== -1) { // Locale exists
     var tmp = value.slice(i + 8);
     i = tmp.indexOf("~|", 1);
-    if (i != -1) { // The substring is not the last
+    if (i !== -1) { // The substring is not the last
       out = tmp.substring(0, i);
     } else {
       out = tmp;
@@ -2933,7 +2829,7 @@ function getLang(value, language, strictLang) {
     return null;
   }
   // If the first part is language-prefixed - remove that prefix
-  if (out.charAt(0) == "~") {
+  if (out.charAt(0) === "~") {
     out = out.slice(8);
   }
 
@@ -2956,7 +2852,7 @@ isc.SimpleType.create({
   },
 
   editFormatter: function (value, field, form, record) {
-    if (value == null) return "";
+    if (value === null) return "";
     var lang = tmp_Lang; // Default - global current language
     var strict = false;
     if (field && field.itemLang) {
@@ -2969,20 +2865,20 @@ isc.SimpleType.create({
   parseInput: function (value, field, form, record) {
     var fullValue = field.getValue();
     if (!fullValue || fullValue == null || fullValue === "null" || fullValue === "") {
-      if (value == null) {
+      if (value === null) {
         return null;
       } else {
         return "~|" + field.itemLang + "|" + value;
       }
     }
     var out = fullValue;
-    if (value == null) {
+    if (value === null) {
       value = "";
     }
     if (field && field.itemLang) {
       // If edited language part exists - remove old value - insert new
       var i = fullValue.indexOf("~|" + field.itemLang); // Is there part for  requested locale?
-      if (i != -1) { // Locale exists
+      if (i !== -1) { // Locale exists
         var j = fullValue.indexOf("~|", i + 1); // Existence of successor parts
         out = fullValue.slice(0, i + 8) + value;
         if (j != -1) {
@@ -2995,12 +2891,12 @@ isc.SimpleType.create({
         // OR - replace in all cases the first part
         i = fullValue.indexOf("~|"); // Test if first part starts with language prefix
         j = fullValue.indexOf("~|", 1);
-        if (i == 0) { // Preserve language prefix of first part in all cases
+        if (i === 0) { // Preserve language prefix of first part in all cases
           out = fullValue.slice(0, 8) + value;
         } else {
           out = value;
         }
-        if (j != -1) {
+        if (j !== -1) {
           out = out + fullValue.slice(j);
         }
       }
@@ -4289,8 +4185,6 @@ isc.CollectionCrossControl.addProperties({
 // TODO !!! switch from special "WorkingTime" implementation to work on universal TimePeriod structure
 isc.ClassFactory.defineClass("WeekWorkControl", isc.CanvasItem);
 isc.WeekWorkControl.addProperties({
-  //    height: "*",  width: "*", <- seems the same
-  //    height: "88%",  width: "88%", //<- very narrow, but normal hight! (???)
   rowSpan: "*",
   colSpan: "*",
   vAlign: "top",
@@ -4311,13 +4205,13 @@ isc.WeekWorkControl.addProperties({
       context: form,
 
       fields: [
-      {name:"day1", title:"ПН", type:"time", hint:"мм:сс", textAlign:"right"}, {name:"end1", showTitle:false, type:"time", hint:"мм:сс", textAlign:"right"}, 
-      {name:"day2", title:"ВТ", type:"time", hint:"мм:сс", textAlign:"right"}, {name:"end2", showTitle:false, type:"time", hint:"мм:сс", textAlign:"right"}, 
-      {name:"day3", title:"СР", type:"time", hint:"мм:сс", textAlign:"right"}, {name:"end3", showTitle:false, type:"time", hint:"мм:сс", textAlign:"right"}, 
-      {name:"day4", title:"ЧТ", type:"time", hint:"мм:сс", textAlign:"right"}, {name:"end4", showTitle:false, type:"time", hint:"мм:сс", textAlign:"right"}, 
-      {name:"day5", title:"ПТ", type:"time", hint:"мм:сс", textAlign:"right"}, {name:"end5", showTitle:false, type:"time", hint:"мм:сс", textAlign:"right"}, 
-      {name:"day6", title:"СБ", type:"time", hint:"мм:сс", textAlign:"right"}, {name:"end6", showTitle:false, type:"time", hint:"мм:сс", textAlign:"right"}, 
-      {name:"day7", title:"ВС", type:"time", hint:"мм:сс", textAlign:"right"}, {name:"end7", showTitle:false, type:"time", hint:"мм:сс", textAlign:"right"}
+      {name:"day1", title:"ПН", type:"timeCBM", hint:"мм:сс", textAlign:"right", parseEditorValue: formatTime}, {name:"end1", showTitle:false, type:"time", hint:"мм:сс", textAlign:"right", parseEditorValue: formatTime}, 
+      {name:"day2", title:"ВТ", type:"time", hint:"мм:сс", textAlign:"right", parseEditorValue: formatTime}, {name:"end2", showTitle:false, type:"time", hint:"мм:сс", textAlign:"right", parseEditorValue: formatTime}, 
+      {name:"day3", title:"СР", type:"time", hint:"мм:сс", textAlign:"right", parseEditorValue: formatTime}, {name:"end3", showTitle:false, type:"time", hint:"мм:сс", textAlign:"right", parseEditorValue: formatTime}, 
+      {name:"day4", title:"ЧТ", type:"time", hint:"мм:сс", textAlign:"right", parseEditorValue: formatTime}, {name:"end4", showTitle:false, type:"time", hint:"мм:сс", textAlign:"right", parseEditorValue: formatTime}, 
+      {name:"day5", title:"ПТ", type:"time", hint:"мм:сс", textAlign:"right", parseEditorValue: formatTime}, {name:"end5", showTitle:false, type:"time", hint:"мм:сс", textAlign:"right", parseEditorValue: formatTime}, 
+      {name:"day6", title:"СБ", type:"time", hint:"мм:сс", textAlign:"right", parseEditorValue: formatTime}, {name:"end6", showTitle:false, type:"time", hint:"мм:сс", textAlign:"right", parseEditorValue: formatTime}, 
+      {name:"day7", title:"ВС", type:"time", hint:"мм:сс", textAlign:"right", parseEditorValue: formatTime}, {name:"end7", showTitle:false, type:"time", hint:"мм:сс", textAlign:"right", parseEditorValue: formatTime}
       ]
     });
     return this.dynaForm;
@@ -4419,7 +4313,6 @@ isc.WeekWorkControl.addProperties({
 
 }); // <<< End WeekWorkControl control.
 
- 
  
 // ==========================================================================
 // ================= CBM Windows / Dialogs components =======================
