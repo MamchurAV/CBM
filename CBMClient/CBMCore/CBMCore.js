@@ -2711,8 +2711,10 @@ isc.SimpleType.create({
 
 // -------------- time UI enhenced variant ----------------
 function formatTime (value) {
-  if (value.length > 6) {return value.substring(0,4);}
-  return value;
+  if (value.length > 6) {
+    value = value.substring(0,4);
+  }
+  return value.match(/^\d{1,2}:?\d{1,2}/);
 }
 
 // TODO - Does not substitute base "time" funcs. :-(
