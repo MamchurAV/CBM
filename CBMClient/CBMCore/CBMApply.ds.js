@@ -1,4 +1,101 @@
-﻿isc.CBMDataSource.create({
+﻿function createPayload(dstRec, srcRec, callback) {
+  // Not finished!!! Async flow and quorters escaping...
+    var org = isc.DataSource.get('Organization').getCacheData().find({ID: srcRec.Organization});
+    dstRec.Payload = '{\
+    "id": "' + srcRec.ID + '",\
+    "title": "' + srcRec.Name + '",\
+    "description": "' + srcRec.Name + '",\
+    "isRecommended": ' + srcRec.isRecommended + ',\
+    "topRated": ' + srcRec.TopRated + ',\
+    "price": "' + srcRec.Price + '",\
+    "organization": {\
+      "organization_id": "' + srcRec.Organization + '",\
+      "organization_name": "' + org.Description + '"\
+    },\
+    "birthdayDiscount": ' + srcRec.BirthdayDiscount + ',\
+    "certificates": ' + srcRec.Certificates + ',\
+    "giftCertificates": ' + srcRec.GiftCertificates + ',\
+    "forMan": ' + srcRec.ForMan + ',\
+    "forWoman": ' + srcRec.ForWoman + ',\
+    "forBoy": ' + srcRec.ForBoy + ',\
+    "forGirl": ' + srcRec.ForGirl + ',';
+    // isc.DataSource.get('Contacts').fetchData(
+      // {Offer: srcRec.SourceID},
+      // function (dsResponce, data, dsRequest) {
+        // if (data.length > 0) {
+          // for (var geo=0; geo < data.length; geo++)
+          // var geo = data[0]; 
+          // //TODO!!!!! Continue collections loading in async fashion!!!!!!!!!!!!!!!!!!
+          
+        // }
+      // }
+    // );
+    var geo = {Latitude: 53.760225, Longitude: 87.146347}
+    
+  
+  var mediaFiles =  '"coverInfo": [\
+      {\
+        "image": "http://aydadev.blob.core.windows.net/media/80deaa53-64e8-4e51-90df-d260183ebf94.jpg",\
+        "video": null,\
+        "description": "1",\
+        "type": "Основное",\
+        "contactLink": null,\
+        "id": "0ef1bf0e-36fd-48bf-9f50-319dcc5775c4",\
+        "createTime": "2017-05-16T01:49:03.126"\
+      }\
+    ],';
+    
+  var contacts = '"contact_info": [\
+      {\
+        "type": 0,\
+        "value": "8-3843-333-500"\
+      },\
+      {\
+        "type": 1,\
+        "value": "vk.com/club63558597"\
+      }\
+    ],';
+    
+    var workingHours = '"workingHours": [\
+      {\
+        "day": "Пн",\
+        "timeRange": "09:00\n20:00"\
+      },\
+      {\
+        "day": "Вт",\
+        "timeRange": "09:00\n20:00"\
+      },\
+      {\
+        "day": "Ср",\
+        "timeRange": "09:00\n20:00"\
+      },\
+      {\
+        "day": "Чт",\
+        "timeRange": "09:00\n20:00"\
+      },\
+      {\
+        "day": "Пт",\
+        "timeRange": "09:00\n20:00"\
+      },\
+      {\
+        "day": "Сб",\
+        "timeRange": "09:00\n20:00"\
+      },\
+      {\
+        "day": "Вс",\
+        "timeRange": "10:00\n19:00"\
+      }\
+    ]';
+    
+// >>> All by callbacks stack  dstRec.Payload = singlePart + geoInfo + mediaFiles + contacts + workingHours;  
+  
+  if (callback) {
+    callback(dstRec);
+  }
+}
+
+
+isc.CBMDataSource.create({
     ID: "WorkingTimeInput",
     title: "Время работы",
     titleField: "Description",

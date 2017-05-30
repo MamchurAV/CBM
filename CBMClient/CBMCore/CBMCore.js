@@ -1477,7 +1477,7 @@ isc.CBMDataSource.addProperties({
     this.setID(cbmRecord);
     cbmRecord.Concept = this.ID;
     cbmRecord.infoState = "new";
-    if (cbmRecord.Del) {
+    if (cbmRecord.Del === null) {
       cbmRecord.Del = false;
     }
     return cbmRecord;
@@ -2183,7 +2183,7 @@ var CBMobject = {
 
   // -------- Compete record retrieval from DS (/persistent storage) and construction ----------
   /*  loadRecord: function(ID, callback){
-   if (this.ds === null) {
+   if (!this.ds) {
    this.ds = isc.DataSource.get(this.Concept);
    }
    var atrNames = this.ds.getFieldNames(false);
@@ -2205,7 +2205,7 @@ var CBMobject = {
    */
   // -------- Returns object that has only persistent fields ---------
   getPersistent: function () {
-    if (this.ds === null) {
+    if (!this.ds) {
       this.ds = isc.DataSource.get(this.Concept);
     }
     // Get CBM metadata descriptions (we need it to discover really persistent fields)
@@ -2242,7 +2242,7 @@ var CBMobject = {
 
   // ----------------- Complete record save to persistent storage -------------------------
   save: function (real, context, contextField, callback) {
-    if (!this.ds || this.ds === null) {
+    if (!this.ds) {
       this.ds = isc.DataSource.get(this.Concept);
     }
     // Save main object
@@ -2283,7 +2283,31 @@ var CBMobject = {
     }
   },
 
-
+  
+  // Defaults setting
+  setDefaults: function(){
+    if (!this.ds) {
+      this.ds = isc.DataSource.get(this.Concept);
+    }
+    var flds = this.ds.getFields(false);
+    for (var fld  in flds) {
+      if (flds.hasOwnProperty(fld)) {
+        if (flds[fld].defaultValue) {
+          try{
+            this[fld] = eval(flds[fld].defaultValue);
+          } catch (e) {
+            if (e instanceof SyntaxError || e instanceof ReferenceError) {
+            // Simply ignore
+            } else {
+              throw(e);
+            }
+          }
+        }
+      }
+    }
+  },
+  
+  
   //----------- Provides collection of Relation -----------------
   getRelatonsMeta: function () {
 
@@ -2410,6 +2434,7 @@ function createFrom(srcRecords, resultClass, initFunc, context) {
 
   initDestRecord = function (record) {
     var mainObjID = null;
+    var mainConcept = null;
     if (context.topElement.valuesManager) {
       mainObjID = context.topElement.valuesManager.getValue("ID");
       mainConcept = context.topElement.dataSource;
@@ -2424,10 +2449,23 @@ function createFrom(srcRecords, resultClass, initFunc, context) {
     // Call additional specific initializations (if any)
     // (Note that mainObjID and mainConcept are still supplied - for any...)
     if (initFunc) {
-      initFunc(record, srcRecords[iteration], mainObjID, mainConcept);
-    }
-    if (context) {
-      context.addData(record);
+      if (mainConcept) {
+        // mainObjID and mainConcept exists, Sync record to context placement
+        initFunc(record, srcRecords[iteration], mainObjID, mainConcept);
+        if (context) {
+          record =  record.getPersistent();
+          setTimeout(context.addData(record), 0);
+        }
+      } else {
+        // No mainObjID and mainConcept exists, Async to context placement
+        initFunc(record, srcRecords[iteration],
+        function(record){
+          if (context) {
+            record =  record.getPersistent();
+            setTimeout(context.addData(record), 0);
+          }
+        });
+      }
     }
     iteration++;
     if (iteration < srcRecords.getLength()) {
@@ -2443,12 +2481,14 @@ function createFrom(srcRecords, resultClass, initFunc, context) {
     } else {
       isc.Warn(isc.CBMStrings.ListCreateFrom_UndefinedClass);
     }
+    newRec.setDefaults();
     initDestRecord(newRec)
   };
 
   var iteration = 0;
   this.newRecord();
 };
+
 
 // --- Universal function that provide deletion of Record ---
 // --- Deletion processed to trash bin, or physically, depending on "Del" flag existence, and additional mode
@@ -2711,10 +2751,10 @@ isc.SimpleType.create({
 
 // -------------- time UI enhenced variant ----------------
 function formatTime (value) {
-  if (value.length > 6) {
+  if (value && value.length > 6) {
     value = value.substring(0,4);
   }
-  return value.match(/^\d{1,2}:?\d{1,2}/);
+  return value ? value.match(/^\d{1,2}:?\d{1,2}/) : "";
 }
 
 // TODO - Does not substitute base "time" funcs. :-(
