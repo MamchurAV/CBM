@@ -3584,7 +3584,7 @@ isc.InnerGrid.addProperties({
         left: 400,
         width: 82,
         title: isc.CBMStrings.InnerGrid_CreateFrom,
-        icon: isc.Page.getAppImgDir() + "NewFromSelect.png",
+        icon: isc.Page.getAppImgDir() + "newFromSelect.png",
         visibility: "hidden"
       });
       if (typeof(that.getDataSource().CreateFromMethods) != "undefined") {
