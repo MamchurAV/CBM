@@ -1991,7 +1991,7 @@ isc.CBMDataSource.addProperties({
 
           var that = this;
           if (context.dependent) {
-            record.store(); // <<< TODO Is it actual?
+            record.store();
             TransactionManager.add(record, record.currentTransaction);
             isc.DataSource.get(this.dataSource).onSave(record);
             that.destroyLater(that, 200);
@@ -2000,12 +2000,26 @@ isc.CBMDataSource.addProperties({
               // Independent record must be the first in transaction(see true param) 
               TransactionManager.add(record, record.currentTransaction, true);
               isc.DataSource.get(this.dataSource).onSave(record);
+               
+              record.store();
+              // if(context.parentElement.parentElement.canvasItem
+                 // && context.parentElement.parentElement.canvasItem.needRefresh) {
+                // context.parentElement.parentElement.canvasItem.showValue("", null, 
+                // context.parentElement.parentElement.parentElement, 
+                // context.parentElement.parentElement.canvasItem);
             }
-//            isc.DataSource.get(this.dataSource).onSave(record);
+          }
             TransactionManager.commit(record.currentTransaction);
             delete record.currentTransaction;
             that.destroyLater(that, 200);
           }
+                         
+          if(context.parentElement.parentElement.canvasItem
+             && context.parentElement.parentElement.canvasItem.needRefresh) {
+            context.parentElement.parentElement.canvasItem.showValue("", null, 
+            context.parentElement.parentElement.parentElement, 
+            context.parentElement.parentElement.canvasItem);
+
           return false;
         }
       },
@@ -4048,6 +4062,7 @@ isc.CollectionAggregateControl.addProperties({
 // ------------ Relations for Concept(/Kind) specific CollectionControl ------------------------------------------------
 isc.ClassFactory.defineClass("RelationsAggregateControl", isc.CollectionAggregateControl);
 isc.RelationsAggregateControl.addProperties({ 
+  needRefresh: true, // Means that this control does not refresh itself when DS changes, so need explicit showValue() call
   createCanvas: function (form) {
   this.Super("createCanvas", arguments);    
   // Array of hilite-objects to apply to the grid
