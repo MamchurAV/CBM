@@ -107,6 +107,7 @@ isc.CBMDataSource.create({
   }]
 });
 
+
 // ----- Concept DS ----------------------------
 isc.CBMDataSource.create({
   ID: "Concept",
@@ -126,7 +127,9 @@ isc.CBMDataSource.create({
       icon: isc.Page.getAppImgDir() + "view.png",
       click: function () {
         var ds = this.context.getSelectedRecord()["SysCode"];	
-        createTable(ds);
+        if (ds) {
+          createTable(ds);
+        }
         return false;
       },
     }, {

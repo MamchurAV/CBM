@@ -426,7 +426,11 @@ isc.TreeGrid.create({
   ID: "navigationTree",
   dataSource: "PrgMenuItem",
   nodeClick: function (viewer, node, recordNum) {
-    createTable(node.SysCode);
+    if (node.SysCode) {
+      createTable(node.SysCode);
+    } else if (CalledMethod){
+      eval(CalledMethod);
+    }
     return false;
   },
   showHeader: false,
