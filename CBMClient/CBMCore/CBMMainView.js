@@ -427,9 +427,13 @@ isc.TreeGrid.create({
   dataSource: "PrgMenuItem",
   nodeClick: function (viewer, node, recordNum) {
     if (node.SysCode) {
-      createTable(node.SysCode);
-    } else if (CalledMethod){
-      eval(CalledMethod);
+      if (isc.DataSource.get(node.SysCode)) {
+        createTable(node.SysCode);
+      } else {
+        eval(node.SysCode);
+      }
+    } else if (node.CalledMethod){
+      eval(node.CalledMethod);
     }
     return false;
   },

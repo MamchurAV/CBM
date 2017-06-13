@@ -4925,6 +4925,20 @@ isc.LeafletCanvas.addProperties({
                   this.div.style.height = haha + "px";
                 }
               },
+              
+    // Value expected to be supplied in form of object:
+    // { lat:###, lng:###, zoom:###, points:[{lat:###, lng:###, descr:###}]} 
+    setValue: function(val) {
+                if (val){
+                  this.mymap.setView([val.lat, val.lng], val.zoom);
+                  if (this.marker) {
+                    this.marker.remove();
+                  }
+                  for (var i = 0; i < val.points.length; i++) {
+                    this.marker = L.marker([val.points[i].lat, val.points[i].lng]).addTo(this.mymap).bindPopup(val.points[i].descr).openPopup();
+                  }
+                } 
+              },         
                     
     redrawOnResize: false 
 }); 
@@ -4938,14 +4952,11 @@ isc.LeafletControl.addProperties({
                   canv.myForm = myForm;
                   return canv;
                 },
-                
+  // Value can be supplied in form of object:
+  // { lat:###, lng:###, zoom:###, points:[{lat:###, lng:###, descr:###}]} 
   setValue: function(val) {
               if (val){
-                this.canvas.mymap.setView([val.lat, val.lng], 16);
-                if (this.canvas.marker) {
-                  this.canvas.marker.remove();
-                }
-                this.canvas.marker = L.marker([val.lat, val.lng]).addTo(this.canvas.mymap).bindPopup(val.adr).openPopup();
+                this.canvas.setValue(val);
               } 
               else if (!this.canvas.marker) { // <<< to prevent second initialization
                 // Attempt to initialize by expected fields

@@ -94,6 +94,36 @@
   }
 }
 
+isc.BaseWindow.create({
+  ID: "AydaMapWindow", 
+  title: "Map window",
+  // autoSize: true,
+  // canDragReposition: true,
+  // canDragResize: true,
+  items: [
+    // isc.DynamicForm.create({
+      // fields: [
+      // {name: "Map", type: "PrgComponent", editorTYpe: "LeafletControl" }
+      // ]
+    // })
+    isc.LeafletCanvas.create()
+  ],
+  
+  draw: function () {
+    if (!this.readyToDraw()) return this;
+    this.Super("draw", arguments);
+    
+    var that = this;
+    // navigator.geolocation.getCurrentPosition(
+        // function(position) {
+          // that.items[0].mymap.setView([position.coords.latitude, position.coords.longitude], 13);
+        // }
+    // );
+//    that.items[0].mymap.setView([54.000000, 87.000000], 13);
+    that.items[0].setValue({ lat:54.000000, lng:87.000000, zoom:13, points:[{lat:53.900000, lng:87.100000, descr:"1"}, {lat:54.100000, lng:87.200000, descr:"Dva"}]})
+
+  }
+});
 
 isc.CBMDataSource.create({
     ID: "WorkingTimeInput",
