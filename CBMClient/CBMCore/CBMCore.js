@@ -4404,7 +4404,7 @@ isc.BaseWindow.addProperties({
   winPosExists: true,
   contextString: "",
   canFocus: true,
-  //    hiliteHeaderStyle: "WindowHiliteHeader",
+  hiliteHeaderStyle: "WindowHiliteHeader",
   //    showHeaderBackground: false,
   // TODO: Provide Active (focused) window hilightning
   // headerProperties : {canFocus : true, focusChanged : function(hasFocus){
@@ -4437,6 +4437,7 @@ isc.BaseWindow.addProperties({
   // this.redraw();
   // }
   // },
+  
   setPosition: function () {
     this.winPos = windowSettingsRS.find({
       ForUser: curr_User,
@@ -4890,9 +4891,11 @@ isc.AzureUploadControl.addProperties({
 // ----------------- Inner canvas for leaflet control  --------------------
 isc.defineClass("LeafletCanvas", "Canvas");
 isc.LeafletCanvas.addProperties({
+    height: "*",
+    width: "100%", // Using "*" leads to fixed this canvas and window body size of 100px (if placefd i the window directly)
   
     getInnerHTML: function () {
-                      var divHtml = '<div id=leaflet_' + this.ID + ' style="height: auto; min-height: 200px;">Place for Map</div>';
+                      var divHtml = '<div id=leaflet_' + this.ID + ' style="height: auto; min-height: 200px; width: auto;">Place for Map</div>';
                       return divHtml;
                     },
 
@@ -4914,6 +4917,11 @@ isc.LeafletCanvas.addProperties({
             }).addTo(this.mymap);
             
             this.mymap.iscContext = this;
+            
+            var that = this;
+            this.mymap.on('zoomend', function() {
+              that.zoomEnd();
+            });  
              
             return this;
           },
@@ -4923,6 +4931,8 @@ isc.LeafletCanvas.addProperties({
                 if (this.div && this.div.style) {
                   var haha = this.height;
                   this.div.style.height = haha + "px";
+                  var vava = this.width;
+                  this.div.style.width = vava + "px";
                 }
               },
               
@@ -4938,8 +4948,13 @@ isc.LeafletCanvas.addProperties({
                     this.marker = L.marker([val.points[i].lat, val.points[i].lng]).addTo(this.mymap).bindPopup(val.points[i].descr).openPopup();
                   }
                 } 
-              },         
-                    
+              }, 
+              
+    zoomEnd: function(){
+                if (this.zoomEndProcess) { this.zoomEndProcess(); }
+              },
+                
+   
     redrawOnResize: false 
 }); 
 

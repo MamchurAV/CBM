@@ -97,33 +97,78 @@
 isc.BaseWindow.create({
   ID: "AydaMapWindow", 
   title: "Map window",
-  // autoSize: true,
-  // canDragReposition: true,
-  // canDragResize: true,
   items: [
-    // isc.DynamicForm.create({
-      // fields: [
-      // {name: "Map", type: "PrgComponent", editorTYpe: "LeafletControl" }
-      // ]
-    // })
     isc.LeafletCanvas.create()
   ],
   
   draw: function () {
+    this.setPosition();
     if (!this.readyToDraw()) return this;
     this.Super("draw", arguments);
     
-    var that = this;
-    // navigator.geolocation.getCurrentPosition(
-        // function(position) {
-          // that.items[0].mymap.setView([position.coords.latitude, position.coords.longitude], 13);
-        // }
-    // );
-//    that.items[0].mymap.setView([54.000000, 87.000000], 13);
-    that.items[0].setValue({ lat:54.000000, lng:87.000000, zoom:13, points:[{lat:53.900000, lng:87.100000, descr:"1"}, {lat:54.100000, lng:87.200000, descr:"Dva"}]})
-
+    var map = this.items[0];
+    map.zoomEndProcess = function(){
+      var bounds = map.mymap.getBounds();
+      var zoom = map.mymap.getZoom();
+      //Call Ayda service for objectson the map
+      getAydaMapItems(bounds, 
+        function(){
+          // Set markers to the map
+          var a = 1;
+        }
+      );
+    }
+    // Initial map settings (maybe removed or adjusted to some universal point)
+    this.items[0].setValue({ lat:54.000000, lng:87.000000, zoom:13, points:[{lat:53.900000, lng:87.100000, descr:"1"}, {lat:54.100000, lng:87.200000, descr:"Dva"}]})
   }
 });
+
+function getAydaMapItems(bounds, callback) {
+  var lat1 = bounds.getSouthWest().lat;
+  var lng1 = bounds.getSouthWest().lng;
+  var lat2 = bounds.getNorthEast().lat;
+  var lng2 = bounds.getNorthEast().lng;
+  var latC = bounds.getCenter().lat;
+  var lngC = bounds.getCenter().lng;
+  var dataPayload = {
+           "LeftBottom": {"latitude": lat1, "longitude": lng1},
+           "RightTop": {"latitude": lat2, "longitude": lng2},
+           "currentLocation": {"latitude": latC, "longitude": lngC},
+           "filters": {
+              "categories": [],
+              "discountForBirthday": false,
+              "certificate": false,
+              "giftCertificate": false,
+              "forMan": false,
+              "forWoman": false,
+              "forBoy": false,
+              "forGirl": false,
+              "radius": 100000
+            }
+          };
+  isc.RPCManager.sendRequest({
+    useSimpleHttp: true,
+   // contentType: "application/json",
+    transport: "xmlHttpRequest",
+   // httpHeaders: {"Content-Type": "application/json"},
+    httpMethod: "POST",
+    actionURL: "http://192.168.31.62:5000/api/Catalog/MapItems",
+    data: dataPayload,
+    callback: function(RPCResponse) {
+        var resp = parseJSON(RPCResponse.data);
+        var results = [];
+        for (var i = 0; i < resp.response.GeoObjectCollection.featureMember.length; i++) {
+          // var coordsAdr = resp.response.GeoObjectCollection.featureMember[i].GeoObject.metaDataProperty.GeocoderMetaData.text;
+          // var pos = resp.response.GeoObjectCollection.featureMember[i].GeoObject.Point.pos;
+          // var coords = pos.split(' ');
+          //results.add({lat: coords[1], lng: coords[0], adr: coordsAdr});
+        } 
+        callback(results);
+    }
+  });
+}
+
+
 
 isc.CBMDataSource.create({
     ID: "WorkingTimeInput",
