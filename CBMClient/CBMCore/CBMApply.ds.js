@@ -106,66 +106,64 @@ isc.BaseWindow.create({
     if (!this.readyToDraw()) return this;
     this.Super("draw", arguments);
     
-    var map = this.items[0];
-    map.zoomEndProcess = function(){
-      var bounds = map.mymap.getBounds();
-      var zoom = map.mymap.getZoom();
+    var map = this.items[0].mymap;
+    var markerGroup = L.layerGroup().addTo(map);
+    
+    // Add to map specific dataRefresh() function
+    //(TODO: - optimize data retrieving and settting for changed visual area only ???(to think!!!))
+    this.items[0].dataRefresh = function(changeType){
+      var bounds = map.getBounds();
+      var zoom = map.getZoom();
       //Call Ayda service for objectson the map
       getAydaMapItems(bounds, 
-        function(){
+        function(responce){
+          // Clear previous markers 
+          if (changeType === "zoom") {
+            markerGroup.clearLayers();
+          }
           // Set markers to the map
-          var a = 1;
+          for (var i = 0; i < responce.length; i++){
+            var p = responce[i];
+            //L.marker([p.point.latitude, p.point.longitude]).addTo(map).bindPopup(p.description).openPopup();
+            L.marker([p.point.latitude, p.point.longitude]).addTo(markerGroup).bindPopup(p.description).openPopup();
+          }
         }
       );
     }
     // Initial map settings (maybe removed or adjusted to some universal point)
-    this.items[0].setValue({ lat:54.000000, lng:87.000000, zoom:13, points:[{lat:53.900000, lng:87.100000, descr:"1"}, {lat:54.100000, lng:87.200000, descr:"Dva"}]})
+    this.items[0].setValue({lat:53.767027, lng:87.109418, zoom:13})
   }
 });
 
-function getAydaMapItems(bounds, callback) {
+function getAydaMapItems(bounds, callbackOuter) {
   var lat1 = bounds.getSouthWest().lat;
   var lng1 = bounds.getSouthWest().lng;
   var lat2 = bounds.getNorthEast().lat;
   var lng2 = bounds.getNorthEast().lng;
   var latC = bounds.getCenter().lat;
   var lngC = bounds.getCenter().lng;
-  var dataPayload = {
-           "LeftBottom": {"latitude": lat1, "longitude": lng1},
-           "RightTop": {"latitude": lat2, "longitude": lng2},
-           "currentLocation": {"latitude": latC, "longitude": lngC},
-           "filters": {
-              "categories": [],
-              "discountForBirthday": false,
-              "certificate": false,
-              "giftCertificate": false,
-              "forMan": false,
-              "forWoman": false,
-              "forBoy": false,
-              "forGirl": false,
-              "radius": 100000
-            }
-          };
-  isc.RPCManager.sendRequest({
+  var dataPayload = "{\"LeftBottom\": {\"latitude\": " + lat1 + ", \"longitude\": " + lng1 + "}, \"RightTop\": {\"latitude\": " + lat2 + ", \"longitude\": " + lng2 + "}, \"currentLocation\": {\"latitude\": " + latC + ", \"longitude\": " + lngC + "}, \"filters\": {\"categories\": [],\"discountForBirthday\": false,\"certificate\": false,\"giftCertificate\": false,\"forMan\": false,\"forWoman\": false,\"forBoy\": false,\"forGirl\": false,\"radius\": 100000}}";
+
+  var request = isc.RPCRequest.create({
     useSimpleHttp: true,
-   // contentType: "application/json",
+    //contentType: "application/json",
     transport: "xmlHttpRequest",
-   // httpHeaders: {"Content-Type": "application/json"},
+    httpHeaders: {"Content-Type": "application/json"},
     httpMethod: "POST",
-    actionURL: "http://192.168.31.62:5000/api/Catalog/MapItems",
+    actionURL: "http://localhost:5000/api/Catalog/MapItems", 
     data: dataPayload,
     callback: function(RPCResponse) {
-        var resp = parseJSON(RPCResponse.data);
-        var results = [];
-        for (var i = 0; i < resp.response.GeoObjectCollection.featureMember.length; i++) {
-          // var coordsAdr = resp.response.GeoObjectCollection.featureMember[i].GeoObject.metaDataProperty.GeocoderMetaData.text;
-          // var pos = resp.response.GeoObjectCollection.featureMember[i].GeoObject.Point.pos;
-          // var coords = pos.split(' ');
-          //results.add({lat: coords[1], lng: coords[0], adr: coordsAdr});
-        } 
-        callback(results);
+        try {
+          var resp = parseJSON(RPCResponse.data);
+          callbackOuter(resp.data);
+        } catch (err) {
+        }
+
     }
-  });
+  });  
+//  request.data = dataPayload;
+  
+  isc.RPCManager.sendRequest(request);
 }
 
 

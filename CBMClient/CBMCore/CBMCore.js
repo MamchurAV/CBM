@@ -4911,7 +4911,7 @@ isc.LeafletCanvas.addProperties({
             
             L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token={accessToken}', {
             attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="http://mapbox.com">Mapbox</a>',
-            maxZoom: 18,
+            maxZoom: 21,
             id: 'mapbox.streets',
             accessToken: 'pk.eyJ1IjoiYWxleG1hdiIsImEiOiJjajJkcWNoOGcwMDNpMndudDF0M2xpaHVpIn0.iLB4oEdNFOAZPo_PVrFdfw'
             }).addTo(this.mymap);
@@ -4921,6 +4921,9 @@ isc.LeafletCanvas.addProperties({
             var that = this;
             this.mymap.on('zoomend', function() {
               that.zoomEnd();
+            });  
+            this.mymap.on('moveend', function() {
+              that.moveEnd();
             });  
              
             return this;
@@ -4944,14 +4947,20 @@ isc.LeafletCanvas.addProperties({
                   if (this.marker) {
                     this.marker.remove();
                   }
-                  for (var i = 0; i < val.points.length; i++) {
-                    this.marker = L.marker([val.points[i].lat, val.points[i].lng]).addTo(this.mymap).bindPopup(val.points[i].descr).openPopup();
+                  if (val.points) {
+                    for (var i = 0; i < val.points.length; i++) {
+                      this.marker = L.marker([val.points[i].lat, val.points[i].lng]).addTo(this.mymap).bindPopup(val.points[i].descr).openPopup();
+                    }
                   }
                 } 
               }, 
               
     zoomEnd: function(){
-                if (this.zoomEndProcess) { this.zoomEndProcess(); }
+                if (this.dataRefresh) { this.dataRefresh("zoom"); }
+              },
+                
+    moveEnd: function(){
+                if (this.dataRefresh) { this.dataRefresh("move"); }
               },
                 
    
