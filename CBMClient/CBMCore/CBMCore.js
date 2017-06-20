@@ -3342,32 +3342,31 @@ isc.InnerGrid.addProperties({
           formatCellValue: function (value, record, rowNum, colNum, grid) {
             return getLang(value, tmp_Lang, false);
           },
-          // viewStateChanged: function () {
-            // if (that.parentElement && that.parentElement.parentElement) {
-              // that.parentElement.parentElement.listSettingsChanged = true;
-            // } else {
-              // that.listSettingsChanged = true;
-            // }
-            // return false;
-          // },
           viewStateChanged: function () {
-            // Set changed status in Inner Grid
-            if (that.ID.startsWith("isc_InnerGrid_")){
-              that.listSettingsChanged = true;
+            // Don't take into consideration the first grid state change (caused by previous state restore)
+            if (this.notFirstDataArived) {
+              //Set changed status in Inner Grid
+              if (that.ID.startsWith("isc_InnerGrid_")){
+                that.listSettingsChanged = true;
+              }
+              //TODO VVV NOT USED >>> Set changed status also in Window (as flag for saving included grids)
+              if (that.parentElement && that.parentElement.parentElement) {
+                that.parentElement.parentElement.listSettingsChanged = true;
+              }
             }
-            // TODO VVV NOT USED >>> Set changed status also in Window (as flag for saving included grids)
-            if (that.parentElement && that.parentElement.parentElement) {
-              that.parentElement.parentElement.listSettingsChanged = true;
-            }
+            this.notFirstDataArived = true;
             return false;
           },
           dataArrived: function () {
-            if (that.setListSettings && that.ID.startsWith("isc_InnerGrid_")) {
-              that.setListSettings();
-            } else {
-              if (that.parentElement && that.parentElement.parentElement && that.parentElement.parentElement.setListSettings) {
-                that.parentElement.parentElement.setListSettings();
-              }             
+            // Set grid settings once on first InnerGrid load
+            if (!this.notFirstDataArived) {
+              if (that.setListSettings && that.ID.startsWith("isc_InnerGrid_")) {
+                that.setListSettings();
+              } else {
+                if (that.parentElement && that.parentElement.parentElement && that.parentElement.parentElement.setListSettings) {
+                  that.parentElement.parentElement.setListSettings();
+                }             
+              }
             }
             return true;
           }

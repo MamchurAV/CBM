@@ -118,14 +118,13 @@ isc.BaseWindow.create({
       getAydaMapItems(bounds, 
         function(responce){
           // Clear previous markers 
-          if (changeType === "zoom") {
+  //        if (changeType === "zoom") {
             markerGroup.clearLayers();
-          }
+ //         }
           // Set markers to the map
           for (var i = 0; i < responce.length; i++){
             var p = responce[i];
-            //L.marker([p.point.latitude, p.point.longitude]).addTo(map).bindPopup(p.description).openPopup();
-            L.marker([p.point.latitude, p.point.longitude]).addTo(markerGroup).bindPopup(p.description).openPopup();
+            L.marker([p.point.latitude, p.point.longitude]).addTo(markerGroup).bindPopup(p.description);//.openPopup();
           }
         }
       );
@@ -142,7 +141,7 @@ function getAydaMapItems(bounds, callbackOuter) {
   var lng2 = bounds.getNorthEast().lng;
   var latC = bounds.getCenter().lat;
   var lngC = bounds.getCenter().lng;
-  var dataPayload = "{\"LeftBottom\": {\"latitude\": " + lat1 + ", \"longitude\": " + lng1 + "}, \"RightTop\": {\"latitude\": " + lat2 + ", \"longitude\": " + lng2 + "}, \"currentLocation\": {\"latitude\": " + latC + ", \"longitude\": " + lngC + "}, \"filters\": {\"categories\": [],\"discountForBirthday\": false,\"certificate\": false,\"giftCertificate\": false,\"forMan\": false,\"forWoman\": false,\"forBoy\": false,\"forGirl\": false,\"radius\": 100000}}";
+  var dataPayload = "{\"leftBottom\": {\"latitude\": " + lat1 + ", \"longitude\": " + lng1 + "}, \"rightTop\": {\"latitude\": " + lat2 + ", \"longitude\": " + lng2 + "}, \"nearToLocation\": {\"latitude\": " + latC + ", \"longitude\": " + lngC + "}, \"filters\": {\"categories\": [],\"discountForBirthday\": false,\"certificate\": false,\"giftCertificate\": false,\"forMan\": false,\"forWoman\": false,\"forBoy\": false,\"forGirl\": false,\"radius\": 100000}}";
 
   var request = isc.RPCRequest.create({
     useSimpleHttp: true,
@@ -150,7 +149,7 @@ function getAydaMapItems(bounds, callbackOuter) {
     transport: "xmlHttpRequest",
     httpHeaders: {"Content-Type": "application/json"},
     httpMethod: "POST",
-    actionURL: "http://localhost:5000/api/Catalog/MapItems", 
+    actionURL: "http://192.168.31.62:5000/api/Catalog/MapItems", 
     data: dataPayload,
     callback: function(RPCResponse) {
         try {
