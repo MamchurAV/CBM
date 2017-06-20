@@ -1,37 +1,13 @@
-
 /*
-
-  SmartClient Ajax RIA system
-  Version SNAPSHOT_v11.1d_2017-03-13/LGPL Deployment (2017-03-13)
-
-  Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
-  "SmartClient" is a trademark of Isomorphic Software, Inc.
-
-  LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
-     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
-     without an accompanying Isomorphic Software license file, please
-     contact licensing@isomorphic.com for details. Unauthorized copying and
-     use of this software is a violation of international copyright law.
-
-  DEVELOPMENT ONLY - DO NOT DEPLOY
-     This software is provided for evaluation, training, and development
-     purposes only. It may include supplementary components that are not
-     licensed for deployment. The separate DEPLOY package for this release
-     contains SmartClient components that are licensed for deployment.
-
-  PROPRIETARY & PROTECTED MATERIAL
-     This software contains proprietary materials that are protected by
-     contract and intellectual property law. You are expressly prohibited
-     from attempting to reverse engineer this software or modify this
-     software for human readability.
-
-  CONTACT ISOMORPHIC
-     For more information regarding license rights and restrictions, or to
-     report possible license violations, please contact Isomorphic Software
-     by email (licensing@isomorphic.com) or web (www.isomorphic.com).
-
-*/
+ * Isomorphic SmartClient
+ * Version SNAPSHOT_v11.1d_2017-06-18 (2017-06-18)
+ * Copyright(c) 1998 and beyond Isomorphic Software, Inc. All rights reserved.
+ * "SmartClient" is a trademark of Isomorphic Software, Inc.
+ *
+ * licensing@smartclient.com
+ *
+ * http://smartclient.com/license
+ */
 
 if(window.isc&&window.isc.module_Core&&!window.isc.module_Drawing){isc.module_Drawing=1;isc._moduleStart=isc._Drawing_start=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc._moduleEnd&&(!isc.Log||(isc.Log && isc.Log.logIsDebugEnabled('loadTime')))){isc._pTM={ message:'Drawing load/parse time: ' + (isc._moduleStart-isc._moduleEnd) + 'ms', category:'loadTime'};
 if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
@@ -39,9 +15,9 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
 
-if (window.isc && isc.version != "SNAPSHOT_v11.1d_2017-03-13/LGPL Deployment" && !isc.DevUtil) {
+if (window.isc && isc.version != "SNAPSHOT_v11.1d_2017-06-18/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v11.1d_2017-03-13/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v11.1d_2017-06-18/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -3240,7 +3216,7 @@ rotation: 0,
 //<
 zoomLevel: 1,
 
-//> @attr drawPane.translate (Array[] of int : null : IR)
+//> @attr drawPane.translate (Array of int[] : null : IR)
 // Global translation. This array has two numbers. The first number is the X translation amount
 // in pixels and the second number is the Y translation amount in pixels.
 // @visibility drawing
@@ -6237,7 +6213,7 @@ zoom : function (zoomLevel) {
 //> @method drawPane.setRotation()
 // Sets the +link{DrawPane.rotation,rotation} of the <code>DrawPane</code>.
 //
-// @param degrees (double) the new rotation in degrees. The positive direction corresponds to
+// @param degrees (float) the new rotation in degrees. The positive direction corresponds to
 // clockwise rotation.
 // @visibility drawing
 //<
@@ -7796,13 +7772,13 @@ isc.DrawItem.addProperties({
     //<
     yShearFactor: 0,
 
-    //> @attr drawItem.scale (Array[] of float : null : IRA)
+    //> @attr drawItem.scale (Array of float[] : null : IRA)
     // Array holds 2 values representing scaling along x and y dimensions.
     // @visibility drawing
     //<
     scale: null,
 
-    //> @attr drawItem.translate (Array[] of float : null : IRA)
+    //> @attr drawItem.translate (Array of float[] : null : IRA)
     // Array holds two values representing translation along the x and y dimensions.
     // @visibility drawing
     //<
@@ -8769,7 +8745,7 @@ getCenter : function () {
 // Note that the bounding box of the shape when transformed into the global coordinate system
 // is available from the method +link{getResizeBoundingBox()}.
 //
-// @return (Array[] of double) the x1, y1, x2, y2 coordinates. When the width and height are both positive,
+// @return (Array of double) the x1, y1, x2, y2 coordinates. When the width and height are both positive,
 // point (x1, y1) is the top-left point of the bounding box and point (x2, y2) is the bottom-right
 // point of the bounding box.
 //
@@ -10455,7 +10431,7 @@ _hideKnobs : function (knobType) {
 //> @method drawItem.showKnobs()
 // Shows a set of control knobs for this drawItem. Updates +link{drawItem.knobs} to include the
 // specified knobType, and if necessary draws out the appropriate control knobs.
-// @param knobType (KnobType or Array of KnobType) knobs to show
+// @param knobType (KnobType | Array of KnobType) knobs to show
 // @visibility drawing
 //<
 showKnobs : function (knobType) {
@@ -10586,7 +10562,7 @@ hideAllKnobs : function () {
 //<
 moveKnobPoint:"TL",
 
-//> @attr drawItem.moveKnobOffset (Array[] of int : null : IRWA)
+//> @attr drawItem.moveKnobOffset (Array of int[] : null : IRWA)
 // If this item is showing a <code>"move"</code> +link{drawItem.knobs,control knob}, this attribute
 // allows you to specify an offset in pixels from the +link{drawItem.moveKnobPoint} for the
 // move knob. Offset should be specified as a 2-element array of [left offset, top offset].
@@ -10599,7 +10575,7 @@ moveKnobPoint:"TL",
 
 //> @method drawItem.setMoveKnobOffset() (A)
 // Setter for +link{moveKnobOffset}.
-// @param [newMoveKnobOffset] (Array[] of int) the new move knob offset. This is a 2-element array
+// @param [newMoveKnobOffset] (Array of int[]) the new move knob offset. This is a 2-element array
 // of [left offset, top offset]. If null, then <smartclient><code>[0,0]</code></smartclient>
 // <smartgwt><code>new int[] {0, 0}</code></smartgwt> is assumed.
 // @example drawKnobs
@@ -11581,14 +11557,13 @@ _calculateTitleLabelPositionInfo : function (title, titleLabelProps, drawPane) {
         localToDrawingTransform.transform(center[0], center[1], center);
         dims = info.dims = drawPane.measureLabel(title, titleLabelProps);
 
-        dims.width -= 0.5;
 
         if (info.rotation == isc.DrawItem._titleAutoFitRotation)  {
-            p[0] = center[0] + dims.height / 2; // vertical
-            p[1] = center[1] - dims.width  / 2;
+            p[0] = center[0] +  dims.height       / 2; // vertical
+            p[1] = center[1] - (dims.width - 0.5) / 2;
         } else {
-            p[0] = center[0] - dims.width  / 2; // horizontal
-            p[1] = center[1] - dims.height / 2;
+            p[0] = center[0] - (dims.width - 0.5) / 2; // horizontal
+            p[1] = center[1] -  dims.height       / 2;
         }
 
     }
@@ -12156,7 +12131,7 @@ onDragResizeStop : function (newX, newY, newWidth, newHeight) {},
 
 hideResizeKnobs : function () {
     if (this._resizeKnobs) {
-        this._resizeKnobs.map("destroy");
+        this._resizeKnobs.callMethod("destroy");
         delete this._resizeKnobs;
     }
     if (this.resizeOutline) {
@@ -14868,7 +14843,7 @@ getCenter : function () {
 
 //> @method drawGroup.getBoundingBox()
 // Returns the left, top, (left + width), and (top + height) values
-// @return (Array[] of double) x1, y1, x2, y2 coordinates
+// @return (Array of double) x1, y1, x2, y2 coordinates
 // @visibility drawing
 //<
 getBoundingBox : function (includeStroke, outputBox) {
@@ -15474,7 +15449,7 @@ _saveShape : function () {
 // Returns a bounding box for the <code>DrawLine</code>, taking into account the
 // +link{DrawItem.lineWidth,lineWidth}.
 //
-// @return (Array[] of double) x1, y1, x2, y2 coordinates
+// @return (Array of double) x1, y1, x2, y2 coordinates
 // @visibility drawing
 //<
 getBoundingBox : function (includeStroke, outputBox) {
@@ -16015,7 +15990,7 @@ getCenter : function () {
 
 //> @method drawRect.getBoundingBox()
 // Returns the top, left, top+height, left+width
-// @return (Array[] of double) x1, y1, x2, y2 coordinates
+// @return (Array of double) x1, y1, x2, y2 coordinates
 // @visibility drawing
 //<
 getBoundingBox : function (includeStroke, outputBox) {
@@ -16534,7 +16509,7 @@ getAttributesSVG : function () {
 
 //> @method drawOval.getBoundingBox()
 // Returns the top, left, top+height, left+width
-// @return (Array[] of double) x1, y1, x2, y2 coordinates
+// @return (Array of double) x1, y1, x2, y2 coordinates
 // @visibility drawing
 //<
 getBoundingBox : function (includeStroke, outputBox) {
@@ -16992,7 +16967,7 @@ _isClosed : function () {
 
 //> @method drawSector.getBoundingBox()
 // Returns the centerPoint endPoint
-// @return (Array[] of double) x1, y1, x2, y2 coordinates
+// @return (Array of double) x1, y1, x2, y2 coordinates
 // @visibility drawing
 //<
 getBoundingBox : function (includeStroke, outputBox) {
@@ -18059,7 +18034,7 @@ getCenter : function () {
 
 //> @method drawLabel.getBoundingBox()
 // Returns the top, left, top + textHeight, left + textWidth
-// @return (Array[] of double) x1, y1, x2, y2 coordinates
+// @return (Array of double) x1, y1, x2, y2 coordinates
 // @visibility drawing
 //<
 getBoundingBox : function (includeStroke, outputBox) {
@@ -18839,7 +18814,7 @@ isc.defineClass("DrawImage", "DrawItem").addProperties({
 //> @method drawImage.getBoundingBox()
 // Returns the top, left, top+width, left+height
 //
-// @return (Array[] of double) x1, y1, x2, y2 coordinates
+// @return (Array of double) x1, y1, x2, y2 coordinates
 // @visibility drawing
 //<
 getBoundingBox : function (includeStroke, outputBox) {
@@ -20679,7 +20654,7 @@ setLineWidth : function (width) {
 
 //> @method drawCurve.getBoundingBox()
 // Returns the smallest box containing the entire curve.
-// @return (Array[] of double) x1, y1, x2, y2 coordinates
+// @return (Array of double) x1, y1, x2, y2 coordinates
 // @visibility drawing
 //<
 getBoundingBox : function (includeStroke, outputBox) {
@@ -21710,7 +21685,7 @@ init : function () {
 
 //> @method drawPath.getBoundingBox()
 // Returns the min, max points
-// @return (Array[] of double) x1, y1, x2, y2 coordinates
+// @return (Array of double) x1, y1, x2, y2 coordinates
 // @visibility drawing
 //<
 getBoundingBox : function (includeStroke, outputBox) {
@@ -23526,7 +23501,7 @@ isc.defineClass("DrawLinePath", "DrawPath").addProperties({
 
     //> @method drawLinePath.getBoundingBox()
     // Returns the startPoint, endPoint
-    // @return (Array[] of double) x1, y1, x2, y2 coordinates
+    // @return (Array of double) x1, y1, x2, y2 coordinates
     // @visibility drawing
     //<
     getBoundingBox : function (includeStroke, outputBox) {
@@ -25343,7 +25318,7 @@ height: 400,
 
 redrawOnResize: true,
 
-//> @attr gauge.pivotPointHeight (Number or String : "70%" : IR)
+//> @attr gauge.pivotPointHeight (Number | String : "70%" : IR)
 // Default height of the +link{pivotPoint} if no specific pivotPoint is specified.
 // <P>
 // Can be specified as a numeric pixel value, or a String percentage value.
@@ -26196,7 +26171,7 @@ setBorderWidth : function (width) {
 
 //> @method gauge.setSectors()
 // Sets the sectors for this gauge.
-// @param (Array of GaugeSector) the sectors to show on the gauge.
+// @param sectors (Array of GaugeSector) the sectors to show on the gauge.
 // @visibility drawing
 //<
 setSectors : function (sectors) {
@@ -26431,38 +26406,14 @@ _makePositionedLabel : function (contents, value) {
 }
 });
 isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._debugModules.push('Drawing');isc.checkForDebugAndNonDebugModules();isc._moduleEnd=isc._Drawing_end=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc.Log&&isc.Log.logIsInfoEnabled('loadTime'))isc.Log.logInfo('Drawing module init time: ' + (isc._moduleEnd-isc._moduleStart) + 'ms','loadTime');delete isc.definingFramework;if (isc.Page) isc.Page.handleEvent(null, "moduleLoaded", { moduleName: 'Drawing', loadTime: (isc._moduleEnd-isc._moduleStart)});}else{if(window.isc && isc.Log && isc.Log.logWarn)isc.Log.logWarn("Duplicate load of module 'Drawing'.");}
-
 /*
-
-  SmartClient Ajax RIA system
-  Version SNAPSHOT_v11.1d_2017-03-13/LGPL Deployment (2017-03-13)
-
-  Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
-  "SmartClient" is a trademark of Isomorphic Software, Inc.
-
-  LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
-     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
-     without an accompanying Isomorphic Software license file, please
-     contact licensing@isomorphic.com for details. Unauthorized copying and
-     use of this software is a violation of international copyright law.
-
-  DEVELOPMENT ONLY - DO NOT DEPLOY
-     This software is provided for evaluation, training, and development
-     purposes only. It may include supplementary components that are not
-     licensed for deployment. The separate DEPLOY package for this release
-     contains SmartClient components that are licensed for deployment.
-
-  PROPRIETARY & PROTECTED MATERIAL
-     This software contains proprietary materials that are protected by
-     contract and intellectual property law. You are expressly prohibited
-     from attempting to reverse engineer this software or modify this
-     software for human readability.
-
-  CONTACT ISOMORPHIC
-     For more information regarding license rights and restrictions, or to
-     report possible license violations, please contact Isomorphic Software
-     by email (licensing@isomorphic.com) or web (www.isomorphic.com).
-
-*/
+ * Isomorphic SmartClient
+ * Version SNAPSHOT_v11.1d_2017-06-18 (2017-06-18)
+ * Copyright(c) 1998 and beyond Isomorphic Software, Inc. All rights reserved.
+ * "SmartClient" is a trademark of Isomorphic Software, Inc.
+ *
+ * licensing@smartclient.com
+ *
+ * http://smartclient.com/license
+ */
 

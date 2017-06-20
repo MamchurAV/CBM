@@ -1,37 +1,13 @@
-
 /*
-
-  SmartClient Ajax RIA system
-  Version SNAPSHOT_v11.1d_2017-03-13/LGPL Deployment (2017-03-13)
-
-  Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
-  "SmartClient" is a trademark of Isomorphic Software, Inc.
-
-  LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
-     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
-     without an accompanying Isomorphic Software license file, please
-     contact licensing@isomorphic.com for details. Unauthorized copying and
-     use of this software is a violation of international copyright law.
-
-  DEVELOPMENT ONLY - DO NOT DEPLOY
-     This software is provided for evaluation, training, and development
-     purposes only. It may include supplementary components that are not
-     licensed for deployment. The separate DEPLOY package for this release
-     contains SmartClient components that are licensed for deployment.
-
-  PROPRIETARY & PROTECTED MATERIAL
-     This software contains proprietary materials that are protected by
-     contract and intellectual property law. You are expressly prohibited
-     from attempting to reverse engineer this software or modify this
-     software for human readability.
-
-  CONTACT ISOMORPHIC
-     For more information regarding license rights and restrictions, or to
-     report possible license violations, please contact Isomorphic Software
-     by email (licensing@isomorphic.com) or web (www.isomorphic.com).
-
-*/
+ * Isomorphic SmartClient
+ * Version SNAPSHOT_v11.1d_2017-06-18 (2017-06-18)
+ * Copyright(c) 1998 and beyond Isomorphic Software, Inc. All rights reserved.
+ * "SmartClient" is a trademark of Isomorphic Software, Inc.
+ *
+ * licensing@smartclient.com
+ *
+ * http://smartclient.com/license
+ */
 
 if(window.isc&&window.isc.module_Core&&!window.isc.module_Forms){isc.module_Forms=1;isc._moduleStart=isc._Forms_start=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc._moduleEnd&&(!isc.Log||(isc.Log && isc.Log.logIsDebugEnabled('loadTime')))){isc._pTM={ message:'Forms load/parse time: ' + (isc._moduleStart-isc._moduleEnd) + 'ms', category:'loadTime'};
 if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
@@ -39,9 +15,9 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
 
-if (window.isc && isc.version != "SNAPSHOT_v11.1d_2017-03-13/LGPL Deployment" && !isc.DevUtil) {
+if (window.isc && isc.version != "SNAPSHOT_v11.1d_2017-06-18/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v11.1d_2017-03-13/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v11.1d_2017-06-18/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -624,11 +600,10 @@ invalidateTableResizePolicy : function (items) {
 //
 //        You can use percentages or fixed sizes to go beyond the totalSize
 //
-//        @group    drawing
-//        @param    inputSizes        (array)        array of sizes (see above)
-//        @param    totalSize        (number)    total sizes for the
-//
-//        @return    (number[])                output sizes (all numbers)
+//      @group  drawing
+//      @param  inputSizes  (array)   array of sizes (see above)
+//      @param  totalSize   (number)  total sizes for the
+//      @return             (Array of number)  output sizes (all numbers)
 //<
 stretchResizeList : function (inputSizes, totalSize) {
     var totalPercent = 0,  // amount "%" items amount to
@@ -773,9 +748,31 @@ stretchResizeList : function (inputSizes, totalSize) {
         // get the percent of the total outstanding percent that goes to this item
         var itemPercent = size[2];
         outputSizes[r] = Math.floor(itemPercent * pixelsPerPercent);
+        remainingSpace -= outputSizes[r];
     }
 
-    // XXX do something about "remaining" pixels ???
+
+
+    // assign the remaining space to the last variable-sized item that can accept it
+    if (remainingSpace > 0) {
+        for (var r = inputSizes.length - 1; r >= 0; r--) {
+            size = inputSizes[r];
+            // only variable-sized items are eligible to receive it
+            if (isc.isA.Number(size)) continue;
+            // if this item can take the remaining space, we're done
+            var max = size[1];
+            if (outputSizes[r] + remainingSpace <= max) {
+                outputSizes[r] += remainingSpace;
+                break;
+            }
+        }
+        if (r < 0 && this.logIsInfoEnabled("tablePolicy")) {
+            this.logInfo("stretchResizeList(): unable to assign " + remainingSpace + "px of " +
+                "remaining space to a variable-sized item due to due to specified maximums",
+                "tablePolicy");
+        }
+    }
+
     // return the output sizes array
     return outputSizes;
 }
@@ -1013,6 +1010,7 @@ isc.ButtonTable.addMethods({
 //
 // A ListGrid subclass that manages calendar views.
 //
+// @inheritsFrom ListGrid
 // @treeLocation Client Reference/Forms
 // @visibility external
 //<
@@ -1555,6 +1553,7 @@ isc.DateGrid.addProperties({
 // Simple interactive calendar interface used to pick a date.
 // Used by the +link{class:dateItem} class.
 //
+// @inheritsFrom VLayout
 // @treeLocation Client Reference/Forms
 // @visibility external
 //<
@@ -1689,8 +1688,6 @@ isc.DateChooser.addProperties({
     // @visibility external
     //<
     monthChooserButtonDefaults: {
-        minWidth: 30,
-        width: 30,
         click : function () {
             this.creator.showMonthMenu();
         },
@@ -1705,8 +1702,6 @@ isc.DateChooser.addProperties({
     // @visibility external
     //<
     yearChooserButtonDefaults: {
-        minWidth: 32,
-        width: 32,
         click : function () {
             this.creator.showYearMenu();
         },
@@ -2418,23 +2413,33 @@ isc.DateChooser.addMethods({
                 this.navButtonConstructor);
             }
             if (this.showMonthChooser != false) {
-                var width = this._getMonthChooserButtonWidth();
-                this.addAutoChild("monthChooserButton", {
-                    baseStyle:(this.baseNavButtonStyle || this.baseButtonStyle),
-                    title: this.chosenDate.getShortMonthName(),
-                    width: width,
-                    minWidth: width
-                },
+                var width = this.monthChooserButtonDefaults.width,
+                    minWidth = this.monthChooserButtonDefaults.minWidth,
+                    autoWidth = this._getMonthChooserButtonWidth();
+                this.addAutoChild("monthChooserButton", isc.addProperties({},
+                    this.monthChooserButtonDefaults,
+                    {
+                        baseStyle:(this.baseNavButtonStyle || this.baseButtonStyle),
+                        title: this.chosenDate.getShortMonthName(),
+                        width: width || autoWidth,
+                        minWidth: minWidth || width || autoWidth
+                    },
+                    this.monthChooserButtonProperties),
                 this.navButtonConstructor);
             }
             if (this.showYearChooser != false) {
-                var width = this._getYearChooserButtonWidth();
-                this.addAutoChild("yearChooserButton", {
-                    baseStyle:(this.baseNavButtonStyle || this.baseButtonStyle),
-                    title: this.chosenDate.getFullYear(),
-                    width: width,
-                    minWidth: width
-                },
+                var width = this.yearChooserButtonDefaults.width,
+                    minWidth = this.yearChooserButtonDefaults.minWidth,
+                    autoWidth = this._getYearChooserButtonWidth();
+                this.addAutoChild("yearChooserButton", isc.addProperties({},
+                    this.yearChooserButtonDefaults,
+                    {
+                        baseStyle:(this.baseNavButtonStyle || this.baseButtonStyle),
+                        title: this.chosenDate.getFullYear(),
+                        width: width || autoWidth,
+                        minWidth: minWidth || width || autoWidth
+                    },
+                    this.yearChooserButtonProperties),
                 this.navButtonConstructor);
             }
             if (this.showMonthButtons) {
@@ -2511,6 +2516,8 @@ isc.DateChooser.addMethods({
         return this[property] != false;
     },
     makeButtonLayout : function (props) {
+
+
         this.addAutoChild("buttonLayout", null, this.buttonLayoutConstructor);
 
         for (var i = 0; i < this.buttonLayoutControls.length; i++) {
@@ -2586,14 +2593,13 @@ isc.DateChooser.addMethods({
                 disableWeekends: this.disableWeekends,
                 weekendDays: this.getWeekendDays(),
                 locatorParent: this,
-                width: "100%", height: "*",
+                height: "*",
                 _availableHeight: this.getVisibleHeight() - usedHeight,
                 startDate: this.getData()
             };
             // borderCalendar is only defined in the Tahoe skin
             if (this.borderCalendar != null) {
                 gridProps.border = 0;
-                gridProps.bodyStyleName = "dateChooserFooter";
                 gridProps.showHeaderShadow = false;
                 gridProps.layoutTopMargin = 5;
                 gridProps.height = 191;
@@ -2909,7 +2915,16 @@ isc.DateChooser.addMethods({
         } else if (this.showTimeItem) {
             this.recreateTimeItem(this.chosenTime);
             this.timeLayout.show();
-            if (this.applyButton) this.applyButton.show();
+            if (this.applyButton) {
+                this.applyButton.show();
+                // timeLayoutIsVisibleWidth and timeLayoutIsVisibleMinFieldWidth are defined
+                // in load_skin.js in Tahoe
+                if (this.timeLayoutIsVisibleWidth) {
+                    this.setWidth(this.timeLayoutIsVisibleWidth);
+                    this.buttonLayout.setBorder(0);
+                    if (this.dateGrid) this.dateGrid.setMinFieldWidth(this.timeLayoutIsVisibleMinFieldWidth);
+                }
+            }
         }
 
         this.updateGridData(date);
@@ -3038,7 +3053,7 @@ isc.DateChooser.addMethods({
             // (autoDraw is true, so it is drawn, with visibility hidden at this point)
             var left = this.monthChooserButton.getPageLeft() -
                         ((this.monthMenu.getWidth() - this.monthChooserButton.getWidth()) /2);
-            this.monthMenu.setPageLeft(Math.max(left, 0));
+            this.monthMenu.placeNear(Math.max(left, 0));
         } else {
             // L, T, W, H
             var top = this.getPageTop()+this.navigationLayoutHeight,
@@ -3047,7 +3062,8 @@ isc.DateChooser.addMethods({
                 buttonWidth = this.monthChooserButton.getWidth(),
                 left = this.monthChooserButton.getPageLeft() - ((width - buttonWidth)/2)
             ;
-            this.monthMenu.setPageRect(left, top, width, height);
+            this.monthMenu.resizeTo(width, height);
+            this.monthMenu.placeNear(Math.max(left, 0), top);
         }
 
         // We show the month menu modally.  This means if the user clicks outside it, we
@@ -3166,7 +3182,7 @@ isc.DateChooser.addMethods({
             // (autoDraw is true, so it is drawn, with visibility hidden at this point)
             //this.yearMenu.setPageLeft(this.getPageLeft() + ((this.width - this.yearMenu.width)/2));
             var left = component.getPageLeft() - ((this.yearMenu.getWidth() - component.getWidth()) /2);
-            this.yearMenu.setPageLeft(Math.max(left, 0));
+            this.yearMenu.placeNear(Math.max(left, 0));
 
         } else {
             // L, T, W, H
@@ -3178,7 +3194,8 @@ isc.DateChooser.addMethods({
             ;
 
             this.yearMenu.items = yearItems;
-            this.yearMenu.setPageRect(Math.max(left,0), top, width, height);
+            this.yearMenu.resizeTo(width, height);
+            this.yearMenu.placeNear(Math.max(left, 0), top);
         }
 
         var _fiscal = fiscal;
@@ -3404,7 +3421,7 @@ isc.YearChooser.addMethods({
 
 
 
-//----------  Description  ----------\\
+//----------  Description  ----------
 //> @class Slider
 //    The Slider class implements a GUI slider widget allowing the user to select a numeric
 //  value from within a range by dragging a visual indicator up and down a track.
@@ -3425,12 +3442,12 @@ isc.YearChooser.addMethods({
 //  @example slider
 //<
 
-//----------  Create the class  ----------\\
+//----------  Create the class  ----------
 isc.ClassFactory.defineClass("Slider", isc.Canvas);
 
 
 
-//----------  Define static properties  ----------\\
+//----------  Define static properties  ----------
 isc.Slider.addClassProperties({
     // isc.Slider.DOWN                   down state for the slider thumb
     DOWN:"down",
@@ -3441,7 +3458,7 @@ isc.Slider.addClassProperties({
 });
 
 
-//----------  Define instance properties  ----------\\
+//----------  Define instance properties  ----------
 isc.Slider.addProperties({
 
     //>    @attr    slider.title        (String : "Set Value" : [IRW])
@@ -3812,7 +3829,7 @@ isc.Slider.addProperties({
 
 
 //!>Deferred
-//----------  Define instance methods  ----------\\
+//----------  Define instance methods  ----------
 isc.Slider.addMethods({
 
 
@@ -4151,11 +4168,12 @@ _createValueLabel : function () {
         _constructor: this.vertical ? "HLayout" : "VLayout",
         left:labelLeft,
         top:labelTop,
-        width:labelWidth,
+        // the _valueLabelLayout is 1px wide in horizontal sliders, and it overflows
+        width: this.vertical ? labelWidth : 1,
         height:this.labelHeight,
         align:labelAlign,
         defaultLayoutAlign: "center",
-        observes:[{source:this, message:"valueChanged", action:"this._updateValueLabel();"}]
+        observes:[{source:this, message:"handleValueChanged", action:"this._updateValueLabel();"}]
     });
 
     var label = this.createAutoChild("valueLabel", {
@@ -4408,7 +4426,7 @@ thumbDefaults: {
     handleDragStop : function () {
         this.setState(isc.Slider.UP);
         if (this.creator.valueChangedOnRelease) {
-            this.creator.valueChanged(this.creator.value);
+            this.creator.handleValueChanged(this.creator.value);
         }
     },
 
@@ -4523,7 +4541,7 @@ _thumbMove : function (fromClick) {
 
     // NB: second part of this conditional is required because slider.mouseUp calls slider._thumbMove
     if (this.valueChangedOnDrag || !this.valueIsChanging()) {
-        this.valueChanged(this.value);    // observable method
+        this.handleValueChanged(this.value);    // fires observable valueChanged() method
     }
 
     if (this.sliderTarget) isc.EventHandler.handleEvent(this.sliderTarget, isc.Slider.EVENTNAME, this);
@@ -4566,23 +4584,17 @@ _updateValueLabel : function () {
     if (this.vertical) {
         layout.setTop(parseInt((thumb.getTop() + thumb.getHeight()/2) - layout.getHeight() / 2));
     } else {
-        // Center the layout over the thumb, but avoid it overflowing the slider
 
-        var thumbOffset = this._getThumbPositionFromValue(value);
-        layout.setLeft(Math.ceil((thumbOffset + (thumb.getWidth()/2)) - (layout.getWidth() / 2)));
-
-        //var width = innerLabel.getVisibleWidth(),
-        //    desiredLeft = parseInt((thumb.getLeft() + thumb.getWidth()/2) - width/2);
-
-        //// clamp the innerLabel over the available space.
-        //var availableWidth = this.getInnerContentWidth(false);
-        //if (desiredLeft + width > availableWidth) {
-        //    desiredLeft = availableWidth - width;
-        //    //this.logWarn("width:" + width + ", would overflow so clamping:" + desiredLeft);
-        //}
-        //var leftOrigin = this.getLeftPadding();
-        //if (desiredLeft < leftOrigin) desiredLeft = leftOrigin;
-        //innerLabel.setLeft(desiredLeft);
+        var labelWidth = innerLabel.getVisibleWidth(),
+            thumbOffset = this._getThumbPositionFromValue(value),
+            thumbWidth = thumb.getWidth(),
+            newLeft = Math.floor((thumbOffset + (thumbWidth/2)) - (labelWidth / 2)),
+            thumbRight = thumbOffset + thumbWidth
+        ;
+        if (newLeft + labelWidth >= thumbRight) {
+            newLeft = thumbRight - labelWidth;
+        }
+        layout.setLeft(newLeft);
     }
 },
 
@@ -4653,7 +4665,10 @@ setValue : function (newValue, noAnimation, noValueChange) {
         }
     }
 
-    if (!noValueChange) this.valueChanged(this.value);    // observable method
+    if (!noValueChange) {
+        // fires observable valueChanged() method and updates activeTrack
+        this.handleValueChanged(this.value);
+    }
 
     if (this.sliderTarget) isc.EventHandler.handleEvent(this.sliderTarget, isc.Slider.EVENTNAME, this);
 },
@@ -4687,6 +4702,11 @@ getValue : function () {
 valueChanged : function (value) {
 },
 
+// handleValueChanged updates the UI (activeTrack) and fires the observable valueChanged() method
+handleValueChanged : function (value) {
+    this.valueChanged(value);
+    this.updateActiveTrack();
+},
 
 //> @method slider.valueIsChanging()   ([A])
 // Call this method in your +link{slider.valueChanged()} handler to determine whether the
@@ -4820,7 +4840,7 @@ setMaxValue : function (newValue) {
 //>    @method    slider.setNumValues()   ([])
 // Sets the +link{slider.numValues, number of values} for the slider
 //
-// @param newNumValues (float) the new number of values
+// @param newNumValues (integer) the new number of values
 // <smartgwt><b>Note:</b>Use Doubles rather Floats when manipulating decimal
 // values.  See +link{group:gwtFloatVsDouble} for details</smartgwt>
 // @visibility external
@@ -4881,7 +4901,7 @@ _getThumbThickWidth : function () {
 //> @method slider.setThumbThickWidth()
 // Sets the +link{thumbThickWidth} property of the slider
 //
-// @param newWidth (number) new thumbThickWidth
+// @param newWidth (int) new thumbThickWidth
 // @visibility external
 //<
 setThumbThickWidth : function (newWidth) {
@@ -4896,7 +4916,7 @@ _getThumbThinWidth : function () {
 //> @method slider.setThumbThinWidth()
 // Sets the +link{thumbThinWidth} property of the slider
 //
-// @param newWidth (number) new thumbThinWidth
+// @param newWidth (int) new thumbThinWidth
 // @visibility external
 //<
 setThumbThinWidth : function (newWidth) {
@@ -4907,7 +4927,7 @@ setThumbThinWidth : function (newWidth) {
 //> @method slider.setTrackWidth()
 // Sets the +link{trackWidth} property of the slider
 //
-// @param newWidth (number) new trackWidth
+// @param newWidth (int) new trackWidth
 // @visibility external
 //<
 setTrackWidth : function (newWidth) {
@@ -4940,7 +4960,7 @@ setTrackSrc : function (newSrc) {
 //> @method slider.setTrackCapSize()
 // Sets the +link{trackCapSize} property of the slider
 //
-// @param newSize (number) new trackCapSize
+// @param newSize (int) new trackCapSize
 // @visibility external
 //<
 setTrackCapSize : function (newSize) {
@@ -4951,7 +4971,7 @@ setTrackCapSize : function (newSize) {
 //> @method slider.setTrackImageType()
 // Sets the +link{trackImageType} property of the slider
 //
-// @param newType (string) new trackImageType
+// @param newType (ImageStyle) new trackImageType
 // @visibility external
 //<
 setTrackImageType : function (newType) {
@@ -4995,7 +5015,7 @@ setShowValue : function (showValue) {
 //> @method slider.setLabelWidth()
 // Sets the +link{labelWidth} property of the slider
 //
-// @param labelWidth (number) new label width
+// @param labelWidth (int) new label width
 // @visibility external
 //<
 setLabelWidth : function (labelWidth) {
@@ -5006,7 +5026,7 @@ setLabelWidth : function (labelWidth) {
 //> @method slider.setLabelHeight()
 // Sets the +link{labelHeight} property of the slider
 //
-// @param newHeight (number) new label height
+// @param newHeight (int) new label height
 // @visibility external
 //<
 setLabelHeight : function (newHeight) {
@@ -5017,7 +5037,7 @@ setLabelHeight : function (newHeight) {
 //> @method slider.setLabelSpacing()
 // Sets the +link{labelSpacing} property of the slider
 //
-// @param labelWidth (number) new label spacing
+// @param labelWidth (int) new label spacing
 // @visibility external
 //<
 setLabelSpacing : function (newSpacing) {
@@ -5049,7 +5069,7 @@ setRoundValues : function (roundValues) {
 //> @method slider.setRoundPrecision()
 // Sets the +link{roundPrecision} property of the slider
 //
-// @param roundPrecision (number) new round precision
+// @param roundPrecision (int) new round precision
 // @visibility external
 //<
 setRoundPrecision : function (roundPrecision) {
@@ -5071,7 +5091,7 @@ setFlipValues : function (flipValues) {
 //> @method slider.setStepPercent()
 // Sets the +link{stepPercent} property of the slider
 //
-// @param stepPercent (number) new slider step percent
+// @param stepPercent (float) new slider step percent
 // @visibility external
 //<
 setStepPercent : function (stepPercent) {
@@ -5095,6 +5115,7 @@ isc.Slider.registerStringMethods({
 //> @class RangeSlider
 // A "double slider" allowing the user to select a range via two draggable thumbs.
 //
+// @inheritsFrom Canvas
 //@treeLocation Client Reference/Control
 //
 // @visibility external
@@ -5180,7 +5201,7 @@ isc.RangeSlider.addProperties ({
 //<
     endValue:0,
 
- // @attr rangeSlider.baseStyle (CSSStyleName : "rangeSlider" : IR)
+ //> @attr rangeSlider.baseStyle (CSSStyleName : "rangeSlider" : IR)
  // Base style name for CSS styles applied to the background of the rangeSlider.  The following
  // suffixes are applied for different areas of the slider:
  // <ul>
@@ -6366,8 +6387,41 @@ isc.DynamicForm.addClassProperties({
             }
         }
         return returnVal;
-    }
+    },
 
+    getDefaultOperatorForType : function (type, item, textMatchStyle, field) {
+        var form = item && item.form,
+            typeName = type ? (isc.isA.String(type) ? type : type.name) : "text",
+            operator
+        ;
+        if ((form && (form.valueMap || form.optionDataSource)) ||
+            isc.SimpleType.inheritsFrom(typeName, "enum") ||
+            isc.SimpleType.inheritsFrom(typeName, "boolean") ||
+            isc.SimpleType.inheritsFrom(typeName, "float") ||
+            isc.SimpleType.inheritsFrom(typeName, "integer") ||
+            isc.SimpleType.inheritsFrom(typeName, "time"))
+        {
+            operator = "equals";
+        } else {
+            // Don't pass in a value - this is appropriate for text-based items
+            // we'll override for other items if necessary.
+
+            var defaultOperator = "iContains";
+            if (form) {
+                defaultOperator = form.defaultSearchOperator ||
+                    (form.allowExpressions ? "iContainsPattern" : "iContains");
+                // if the default op isn't valid for the field, use the first valid operator
+                var ds = form.getDataSource() || (form.creator && form.creator.getDataSource()),
+                    theField = field && isc.isA.String(field) ? ds && ds.getField(field) : field,
+                    types = ds && ds.getFieldOperators(theField),
+                    validOp = types && types.contains(defaultOperator)
+                ;
+                if (!validOp && types) defaultOperator = types[0];
+            }
+            operator = isc.DataSource.getCriteriaOperator(null, textMatchStyle, defaultOperator);
+        }
+        return operator;
+    }
 });
 
 
@@ -6759,7 +6813,7 @@ isc.DynamicForm.addProperties({
 
     // ValuesManager
     // ----------------------------------------------------------------------------------------
-    //>@attr dynamicForm.valuesManager  (ValuesManager instance or global ID : null : [IA])
+    //>@attr dynamicForm.valuesManager  (ValuesManager | identifier : null : [IA])
     // If set at init time, this dynamicForm will be created as a member form of the
     // specified valuesManager.  To update the form's valuesManager after init, use the
     // +link{dynamicForm.setValuesManager, form-level setter}, or the
@@ -6774,7 +6828,7 @@ isc.DynamicForm.addProperties({
 
     //>    @method    dynamicForm.setValuesManager()
     // Binds this dynamicForm to a +link{dynamicForm.valuesManager, valuesManager} at runtime.
-    // @param valuesManager (ValuesManager) the ValuesManager that controls this form's values
+    // @param valuesManager (ValuesManager | identifier) the ValuesManager that controls this form's values
     // @group formValuesManager
     // @visibility external
     //<
@@ -6853,7 +6907,7 @@ isc.DynamicForm.addProperties({
     exclusiveTitleSuffix:"",
     exclusiveRightTitleSuffix:"",
 
-    //>    @attr    dynamicForm.titleWidth        (number or "*": 100 : [IRW])
+    //>    @attr    dynamicForm.titleWidth        (number | "*": 100 : [IRW])
     //          The width in pixels allocated to the title of every item in this form.  If you
     //          don't specify explicit +link{attr:dynamicForm.colWidths}, you can set this
     //          value to the string "*" to divide the usable space evenly between titles and
@@ -7275,10 +7329,13 @@ isc.DynamicForm.addProperties({
 
     // Validation
     // --------------------------------------------------------------------------------------------
-    //>    @attr    dynamicForm.errors        (array : null : [IRW])
+    //>    @attr    dynamicForm.errors        (Object : null : [IRW])
     //          A property list of itemName:errorMessage pairs, specifying the set of error messages
     //          displayed with the corresponding form elements. Each errorMessage may be either a
-    //          single string or an array of strings.
+    //          single string or an array of strings, for example:<br><br>
+    //          <code>{fieldName:errors, fieldName:errors}</code><br><br>
+    //          where each <code>errors</code> object will be either an error message string or an array
+    //          of error message strings.
     // @group validation
     //      @visibility external
     //<
@@ -7593,7 +7650,7 @@ isc.DynamicForm.addProperties({
     //<
     cancelParamValue: "cancel",
 
-    //>    @attr    dynamicForm.action        (string : "#" : IRW)
+    //>    @attr    dynamicForm.action        (URL : "#" : IRW)
     // The URL to which the form will submit its values.
     // <p>
     // <b>NOTE:</b> this is used only in the very rare case that a form is used to submit data
@@ -7755,7 +7812,7 @@ isc.DynamicForm.addProperties({
     // @include dataBoundComponent.dataFetchMode
     //<
 
-    //> @attr dynamicForm.dataSource (DataSource or ID : null : IRW)
+    //> @attr dynamicForm.dataSource (DataSource | ID : null : IRW)
     // @include dataBoundComponent.dataSource
     //<
 
@@ -7906,7 +7963,7 @@ initWidget : function () {
 _destroyItems : function (items) {
     if (!items) return;
     if (!isc.isA.FormItem(items[0])) return;
-    items.map("destroy");
+    items.callMethod("destroy");
 
     this.destroyOrphanedItems("containing form destroyed");
 },
@@ -8539,7 +8596,7 @@ createItem : function (item, type) {
 // Marks form to be redrawn.
 //
 //        @group    elements
-//        @param    items   (object[])  list of form items to remove from the form
+//        @param    items   (Array of object[])  list of form items to remove from the form
 //<
 removeItems : function (items) {
     if (items == null) return;
@@ -8798,7 +8855,7 @@ getChildTabPosition : function (child) {
 _canFocus : function (a,b,c,d) {
     // shortcut: allow canFocus:true
     if (this.canFocus == true) return true;
-    var items = this.getItems();
+    var items = this.getItems() || [];
     for (var i = 0; i < items.length; i++) {
         if (!isc.isA.FormItem(items[i])) continue;
         if (items[i]._canFocus()) return true;
@@ -8887,7 +8944,7 @@ _canAnimateClip : function () {
 
 //> @method dynamicForm.setTitleOrientation()
 // Modify this form's +link{titleOrientation} at runtime
-// @param (TitleOrientation) new default item titleOrientation
+// @param orientation (TitleOrientation) new default item titleOrientation
 // @group  formTitles
 // @visibility external
 // @example formLayoutTitles
@@ -9562,7 +9619,7 @@ getData : function () {
 // "record" argument.
 //
 // @param record              (ListGridRecord) DataSource record
-// @param schema              (Canvas or DataSource or ID) schema of the DataSource record, or
+// @param schema              (Canvas | DataSource | ID) schema of the DataSource record, or
 //                            DataBoundComponent already bound to that schema
 // @param [callback]          (DSCallback)  callback to invoke on completion
 // @param [requestProperties] (DSRequest)   additional properties to set on the DSRequest
@@ -9663,7 +9720,7 @@ getData : function () {
 //   <code>operator</code> to be generated for individual fields' criterion clauses.
 //
 // @group criteriaEditing
-// @return (Criteria or AdvancedCriteria) a +link{Criteria} object, or +link{AdvancedCriteria}
+// @return (Criteria | AdvancedCriteria) a +link{Criteria} object, or +link{AdvancedCriteria}
 //
 // @visibility external
 //<
@@ -9672,7 +9729,7 @@ getData : function () {
 _hasAdvancedCriteria : function (omitHiddenCriteria) {
     if (this.operator != "and" || this.allowExpressions) return true;
     if (!omitHiddenCriteria && this._extraAdvancedCriteria != null) return true;
-    return this.getItems().map("hasAdvancedCriteria").contains(true);
+    return this.getItems().callMethod("hasAdvancedCriteria").contains(true);
 },
 
 getExtraAdvancedCriteria : function () {
@@ -10208,7 +10265,7 @@ getValuesAsAdvancedCriteria : function (textMatchStyle, returnNulls) {
 // FormItems that also have a +link{formItem.ID} may be accessed directly as a global variable
 // <code>window[itemID]</code> or just <code>itemID</code>
 //
-// @param itemName (string or int) name of the item you're looking for
+// @param itemName (string | int) name of the item you're looking for
 //
 // @return (FormItem) FormItem object or null if not found
 // @see getItem()
@@ -10226,11 +10283,13 @@ getItem : function (itemName, isFieldName) {
     if (item != null) return item;
 
     // handle being passed a dataPath
-    var targetDataPath = isc.DynamicForm._trimDataPath(itemName, this);
-    for (var i = 0; i < this.items.length; i++) {
-        var path = this.items[i].dataPath;
-        path = isc.DynamicForm._trimDataPath(path, this);
-        if (path == targetDataPath) return this.items[i];
+    if (isc.isA.String(itemName)) {
+        var targetDataPath = isc.DynamicForm._trimDataPath(itemName, this);
+        for (var i = 0; i < this.items.length; i++) {
+            var path = this.items[i].dataPath;
+            path = isc.DynamicForm._trimDataPath(path, this);
+            if (path == targetDataPath) return this.items[i];
+        }
     }
 
     // If we couldn't find an item with the same name - check that we weren't passed
@@ -10246,7 +10305,7 @@ getItem : function (itemName, isFieldName) {
 //>    @method    dynamicForm.getField()   ([])
 // Synonym for dynamicForm.getItem()
 //
-// @param itemName (string) name of the item you're looking for
+// @param itemName (FieldName) name of the item you're looking for
 //
 // @return (FormItem) FormItem object or null if not found
 // @see getItem()
@@ -10741,7 +10800,7 @@ _sectionCollapsing : function (section) {
 // Returns any errors that are currently visible to the user for this form, without performing
 // validation.
 //
-// @return (object) Errors are returned as an object of the format<br>
+// @return (Object) Errors are returned as an object of the format<br>
 // <code>{fieldName:errors, fieldName:errors}</code><br>
 // where each <code>errors</code> object will be either an error message string or an array
 // of error message strings.
@@ -11507,7 +11566,7 @@ _itemsCleared : function () {
 
 destroyOrphanedItems : function (reason) {
     if (this._orphanedItems != null) {
-        this._orphanedItems.map("destroy", [reason]);
+        this._orphanedItems.callMethod("destroy", [reason]);
         delete this._orphanedItems;
     }
 },
@@ -12545,7 +12604,9 @@ getCellStartHTML : function (item, error) {
         item.cssText,
         (this.form ? this.form.getID() : this.getID()),
         item.getItemID(),
-        item.getFormCellID()
+        item.getFormCellID(),
+        item._cellNoWrap()
+
     );
 },
 
@@ -14634,6 +14695,19 @@ _allowNativeTextSelection : function (event) {
         if (rv != null) return rv;
     }
     return this.Super("_allowNativeTextSelection", arguments);
+},
+
+_allowNativeDrag : function (event) {
+
+    if (event == null) event = isc.EH.lastEvent;
+    var itemInfo = this._getEventTargetItemInfo(event);
+
+    // For now always allow text selection of form items' cells.
+    if (itemInfo.item) {
+        var rv = itemInfo.item._allowNativeDrag(event, itemInfo);
+        if (rv != null) return rv;
+    }
+    return this.Super("_allowNativeDrag", arguments);
 },
 
 // Override prepareForDragging
@@ -17160,9 +17234,11 @@ isc.FormItem.addClassMethods({
     // and call the appropriate focus/blur handler method on that item.
     _nativeFocusHandler : function () {
         if (!window.isc || !isc.DynamicForm) return;
-        if (isc.EH.useFocusInEvents && isc.EH.synchronousFocusNotifications) {
-            return;
-        }
+
+        var useFocusInEvents = (isc.EH.useFocusInEvents &&
+                                isc.EH.synchronousFocusNotifications);
+        if (useFocusInEvents) return isc.FormItem.__nativeAsyncFocusHandler(this);
+
 
         isc.EH._setThread("IFCS");
 
@@ -17178,6 +17254,25 @@ isc.FormItem.addClassMethods({
         }
         isc.EH._clearThread();
         return result;
+    },
+
+    // If we're using 'onfocusin' to give us synchronous focus notification in IE,
+    // the native 'onfocus' notification also fires [asynchronously].
+    // We capture this too to handle any cases where native behaviors that we
+    // might need to be aware of occur asynchronously on focus
+
+    __nativeAsyncFocusHandler : function (element) {
+        var useFocusInEvents = (isc.EH.useFocusInEvents &&
+                                isc.EH.synchronousFocusNotifications);
+        if (useFocusInEvents) {
+            var itemInfo = isc.DynamicForm._getItemInfoFromElement(element),
+            item = itemInfo.item;
+            if (item) {
+                item._handleAsyncFocusNotification();
+            }
+            return;
+        }
+
     },
     __nativeFocusHandler : function (element) {
 
@@ -17246,25 +17341,25 @@ isc.FormItem.addClassMethods({
 
     // handler for native oncut / onpaste events
 
-    _nativeCut : function () {
+    _nativeCut : function (nativeEvent) {
         if (!window.isc) return;
         var element = this,
             itemInfo = isc.DynamicForm._getItemInfoFromElement(element),
             item = itemInfo.item;
 
         if (item && item.hasFocus) {
-            return item._nativeCutPaste(element, item, true);
+            return item._nativeCutPaste(element, item, true, nativeEvent);
         }
 
     },
-    _nativePaste : function () {
+    _nativePaste : function (nativeEvent) {
         if (!window.isc) return;
         var element = this,
             itemInfo = isc.DynamicForm._getItemInfoFromElement(element),
             item = itemInfo.item;
 
         if (item && item.hasFocus) {
-            return item._nativeCutPaste(element, item, false);
+            return item._nativeCutPaste(element, item, false, nativeEvent);
         }
 
     },
@@ -17441,6 +17536,17 @@ isc.FormItem.addProperties({
     // Basics
     // ---------------------------------------------------------------------------------------
 
+    //> @type FormItemClassName
+    // Name of a SmartClient Class that subclasses +link{FormItem}.  Some values with this type:
+    // <ul><li>+link{TextItem,"TextItem"}
+    // <li>+link{SliderItem,"SliderItem"},
+    // <li>+link{CanvasItem,"CanvasItem"}
+    // </ul>
+    //
+    // @baseType string
+    // @visibility external
+    //<
+
     //> @type FormItemType
     // DynamicForms automatically choose the FormItem type for a field based on the
     // <code>type</code> property of the field.  The table below describes the default FormItem
@@ -17585,13 +17691,11 @@ isc.FormItem.addProperties({
         return !!isc.DynamicForm._instancePrototype.clipStaticValue;
     },
 
-    //> @attr formItem.name (identifier : null : IR)
-    // Name for this form field.
+    //> @attr formItem.name (FieldName : null : IR)
+    // Name for this form field. Must be unique within the form as well as a valid JavaScript
+    // identifier - see +link{FieldName} for details and how to check for validity.
     // <P>
-    // The FormItem's name determines the name of the property it edits within the form. Must be
-    // unique within the form as well as a valid JavaScript identifier, as specified by ECMA-262
-    // Section 7.6 (the <smartclient>+link{String.isValidID()}</smartclient><smartgwt>StringUtil.isValidID()</smartgwt>
-    // function can be used to test whether a name is a valid JavaScript identifier).
+    // The FormItem's name determines the name of the property it edits within the form.
     // <P>
     // Note that an item must have a valid name or +link{formItem.dataPath, dataPath} in order
     // for its value to be validated and/or saved.
@@ -17609,7 +17713,7 @@ isc.FormItem.addProperties({
     // @visibility external
     //<
 
-    //> @attr formItem.title             (String : null : IRW)
+    //> @attr formItem.title             (HTMLString : null : IRW)
     // User visible title for this form item.
     //
     // @group basics
@@ -17699,7 +17803,7 @@ isc.FormItem.addProperties({
     // ValueMap
     // -----------------------------------------------------------------------------------------
 
-    //> @attr formItem.valueMap (Array or Object: null : IRW)
+    //> @attr formItem.valueMap (Array | Object: null : IRW)
     // In a form, valueMaps are used for FormItem types that allow the user to pick from a
     // limited set of values, such as a SelectItem.  The valueMap can be either an Array of
     // legal values or an Object where each property maps a stored value to a user-displayable
@@ -18315,7 +18419,7 @@ isc.FormItem.addProperties({
     // RelationItem
     // ---------------------------------------------------------------------------------------
 
-    //> @attr formItem.dataSource (DataSource or String : null : [IRWA])
+    //> @attr formItem.dataSource (DataSource | String : null : [IRWA])
     //
     // If this FormItem represents a foreignKey relationship into the dataSource of the form
     // containing this item, specify it here.
@@ -18379,6 +18483,10 @@ isc.FormItem.addProperties({
     //> @attr formItem.pickerIconSrc (SCImgURL : "" : IRWA)
     // If +link{showPickerIcon,showPickerIcon} is true for this item, this property governs the
     // +link{FormItemIcon.src,src} of the picker icon image to be displayed.
+    // <P>
+    // +link{group:skinning,Spriting} can be used for this image, by setting this property to
+    // a +link{type:SCSpriteConfig} formatted string.
+    //
     // @group pickerIcon
     // @visibility external
     //<
@@ -19261,6 +19369,10 @@ isc.FormItem.addProperties({
     // "_Disabled" to get a disabled state image for the icon.
     // If <code>icon.showOver</code> is true, this url will be modified by adding "_Over" to get
     // an over state image for the icon.
+    // <P>
+    // +link{group:skinning,Spriting} can be used for this image, by setting this property to
+    // a +link{type:SCSpriteConfig} formatted string.
+    //
     //  @group  formIcons
     //  @visibility external
     //<
@@ -19586,6 +19698,9 @@ isc.FormItem.addProperties({
         // For an +link{FormItemIcon.inline,inline} <code>FormItemIcon</code>,
         // +link{FormItemIcon.text,text} may be specified to show a string of HTML instead of
         // an image.
+        // <P>
+        // +link{group:skinning,Spriting} can be used for this image, by setting this property to
+        // a +link{type:SCSpriteConfig} formatted string.
         //
         // @group formIcons
         // @see attr:formItem.defaultIconSrc
@@ -20190,6 +20305,7 @@ isc.FormItem.addProperties({
     // So for example if the cellStyle for some form item is set to "formCell" and showFocused
     // is true, when the form item receives focus, the form item's cell will have the "formCellFocused"
     // style applied to it.
+    // @baseType string
     // @visibility external
     // @group formItemStyling
     //<
@@ -21843,7 +21959,7 @@ isc.FormItem.addMethods({
     //    Takes an icon definition object, and returns the height for that icon in px.
     //        @group    sizing
     //      @param  icon (object)   icon definition object for this item.
-    //        @return    (number)    height of the form item icon in px
+    //        @return    (int)    height of the form item icon in px
     //      @visibility external
     //<
     getIconHeight : function (icon) {
@@ -21989,7 +22105,7 @@ isc.FormItem.addMethods({
     //    Takes an icon definition object, and returns the width for that icon in px.
     //        @group    sizing
     //      @param  icon (object)   icon definition object for this item.
-    //        @return    (number)    width of the form item icon in px
+    //        @return    (int)    width of the form item icon in px
     //      @visibility external
     //<
     getIconWidth : function (icon) {
@@ -22192,6 +22308,12 @@ isc.FormItem.addMethods({
     _isPrinting : function () {
         return this.containerWidget && this.containerWidget.isPrinting;
     },
+
+    // Should we write 'nowrap' into the cell containing this item
+    _cellNoWrap : function () {
+        return false;
+    },
+
     //> @method formItem.getStandaloneItemHTML()   (A)
     // This method returns the HTML for any form item not being written into a standard
     // DynamicForm's table. It allows other widgets to embed form items in their HTML without
@@ -22545,7 +22667,6 @@ isc.FormItem.addMethods({
     _$FormItemStyling:"FormItemStyling",
     updateState : function () {
         if (!this.isDrawn()) return;
-
         // elements to style:
         // - cell
 
@@ -22820,9 +22941,28 @@ isc.FormItem.addMethods({
 
             if (!cacheObject) {
                 cacheObject = {};
-                cacheObject.Over = isc.Img.urlForState(icon, false, false, this._$Over);
-                cacheObject.Down = isc.Img.urlForState(icon, false, false, this._$Down);
-                cacheObject.Disabled = isc.Img.urlForState(icon, false, false, this._$Disabled);
+
+                var spriteConfig = isc.Canvas._getSpriteConfig(icon);
+                if (spriteConfig) {
+                    cacheObject.Over = isc.addProperties({},spriteConfig);
+                    cacheObject.Down = isc.addProperties({},spriteConfig);
+                    cacheObject.Disabled = isc.addProperties({},spriteConfig);
+                    if (spriteConfig.src) {
+                        cacheObject.Over.src = isc.Img.urlForState(cacheObject.Over.src, false, false, this._$Over);
+                        cacheObject.Down.src = isc.Img.urlForState(cacheObject.Over.src, false, false, this._$Down);
+                        cacheObject.Disabled.src = isc.Img.urlForState(cacheObject.Over.src, false, false, this._$Disabled);
+                    }
+                    if (spriteConfig.cssClass) {
+                        cacheObject.Over.cssClass += this._$Over;
+                        cacheObject.Down.cssClass += this._$Down;
+                        cacheObject.Disabled.cssClass += this._$Disabled;
+                    }
+
+                } else {
+                    cacheObject.Over = isc.Img.urlForState(icon, false, false, this._$Over);
+                    cacheObject.Down = isc.Img.urlForState(icon, false, false, this._$Down);
+                    cacheObject.Disabled = isc.Img.urlForState(icon, false, false, this._$Disabled);
+                }
 
                 isc.CheckboxItem._valueIconStateCache[icon] = cacheObject;
             }
@@ -22928,13 +23068,8 @@ isc.FormItem.addMethods({
             valueIconLeftPadding = isRTL ? this.valueIconRightPadding : this.valueIconLeftPadding,
             valueIconRightPadding = isRTL ? this.valueIconLeftPadding : this.valueIconRightPadding;
 
-        var extraExtraStuff;
-        if (valueIconStyle != null) {
-            extraExtraStuff = "class='" + String.asAttValue(valueIconStyle) + "'";
-        }
 
-
-        return isc.Canvas._getValueIconHTML(valueIcon, imgDir, valueIconWidth, valueIconHeight,
+        return isc.Canvas._getValueIconHTML(valueIcon, imgDir, valueIconStyle, valueIconWidth, valueIconHeight,
                                             valueIconLeftPadding, valueIconRightPadding,
                                             this._getDOMID(this._$valueIcon),
                                             // Pass the containerWidget as the instance to make
@@ -22943,8 +23078,7 @@ isc.FormItem.addMethods({
                                             // with `background-image' CSS. This is needed because
                                             // browsers typically do not print background images
                                             // by default.
-                                            this.containerWidget,
-                                            extraExtraStuff);
+                                            this.containerWidget);
     },
 
     // method to get a pointer to the valueIcon img element
@@ -24580,6 +24714,14 @@ isc.FormItem.addMethods({
         }
         if (shouldRefocus) {
             this.containerWidget.notifyAncestorsReflowComplete();
+
+
+            if (isc.EH.useFocusInEvents &&
+                isc.EH.synchronousFocusNotifications)
+            {
+                this.containerWidget.notifyAncestorsAboutToReflow();
+                this._notifyAncestorsReflowCompleteOnAsyncFocus = true;
+            }
         }
 
     },
@@ -24993,7 +25135,6 @@ isc.FormItem.addMethods({
     _iconsTableEnd:"</table>",
     getIconsHTML : function (includePicker, icons, extraCSSText) {
         if (!this.showIcons) return isc.emptyString;
-
         var hasFocus = this._hasRedrawFocus(true),
             showPickerIcon = includePicker && this._pickerIconVisible()
         ;
@@ -25154,14 +25295,38 @@ isc.FormItem.addMethods({
         var src = icon.src || this.defaultIconSrc;
         if (src == isc.Canvas._$blank) return isc.Canvas._blankImgURL;
 
-        var state = (this.showDisabled && (disabled || this.iconIsDisabled(icon)))
-                            ? isc.StatefulCanvas.STATE_DISABLED
+        disabled = this.showDisabled && (disabled || this.iconIsDisabled(icon));
+
+        var state = disabled ? isc.StatefulCanvas.STATE_DISABLED
                             : over ? isc.StatefulCanvas.STATE_OVER : null,
             pieceName = (icon.showRTL && this.isRTL() ? this._$rtl : null),
             customState = icon.customState;
 
-        src = isc.Img.urlForState(src, false, focused, state, pieceName, customState);
-        return src;
+        // handle being passed a sprite configuration string
+        // In this case update both the URL and the css class
+        var spriteConfig = isc.Canvas._getSpriteConfig(src);
+        if (spriteConfig != null) {
+            if (spriteConfig.src != null) {
+                spriteConfig.src = isc.Img.urlForState(spriteConfig.src,
+                                        false, focused, state, pieceName, customState);
+            }
+            if (spriteConfig.cssClass != null) {
+                if (disabled) {
+                    spriteConfig.cssClass += isc.StatefulCanvas.STATE_DISABLED;
+                } else {
+                    if (focused) spriteConfig.cssClass += isc.StatefulCanvas.FOCUSED;
+                    if (over) spriteConfig.cssClass += isc.StatefulCanvas.STATE_OVER;
+                }
+                if (pieceName != null) spriteConfig.cssClass += pieceName
+                if (customState != null) spriteConfig.cssClass += customState;
+            }
+            return spriteConfig;
+
+        // Normal image URL
+        }  else {
+            src = isc.Img.urlForState(src, false, focused, state, pieceName, customState);
+            return src;
+        }
     },
 
     _$RTL: "RTL",
@@ -25923,7 +26088,7 @@ isc.FormItem.addMethods({
     // @visibility external
     //<
     enableIcon : function (icon) {
-        this.setIconDisabled(icon, true);
+        this.setIconDisabled(icon, false);
     },
 
     //> @method formItem.disableIcon()
@@ -25936,7 +26101,7 @@ isc.FormItem.addMethods({
     // @visibility external
     //<
     disableIcon : function (icon) {
-        this.setIconDisabled(icon, false);
+        this.setIconDisabled(icon, true);
     },
 
     _setIconVisibilityRequiresRedraw : function (icon, isShow) {
@@ -25948,7 +26113,7 @@ isc.FormItem.addMethods({
 
     //> @method  formItem.showIcon()
     // This method will show some icon in this item's +link{formItem.icons} array, if it is not
-    // already visible. Note that once this method has been called, andy previously specified
+    // already visible. Note that once this method has been called, any previously specified
     // +link{formItemIcon.showIf} will be discarded.
     // <P>
     // Note that if the form item's showIcons property is set to false, no icons will be displayed
@@ -25973,7 +26138,6 @@ isc.FormItem.addMethods({
 
         // Override 'showIf' to return true. The icon is 'permanently' shown
         icon.showIf = this._$true;
-
         if (!wasVisible && this._shouldShowIcon(icon)) {
             var hasFocus = this._hasRedrawFocus(true),
                 showFocus = hasFocus && this._iconShouldShowFocused(icon, true);
@@ -26237,7 +26401,13 @@ isc.FormItem.addMethods({
             }
 
             // We can skip already showing or already hidden icons.
-            if (isShow == wasVisible) continue;
+            if (isShow == wasVisible) {
+                // Ensure focused state is applied if necessary
+                if (wasVisible) {
+                     this._updateIconForFocus(icon, hasFocus);
+                }
+                continue;
+            }
 
             var requiresRedraw = this._setIconVisibilityRequiresRedraw(icon, isShow);
             if (requiresRedraw) {
@@ -26355,8 +26525,7 @@ isc.FormItem.addMethods({
             var iconImg = this._getIconImgElement(icon);
             if (iconImg != null) {
                 var src = this.getIconURL(icon, over, null, focused);
-                isc.Canvas._setImageURL(iconImg, src);
-                if (styleName != null) iconImg.className = styleName;
+                isc.Canvas._updateImage(iconImg, src,null,null,styleName);
             }
         }
     },
@@ -26536,7 +26705,7 @@ isc.FormItem.addMethods({
 
 
 
-    //> @method    formItem.redraw()  (I)
+    //> @method    formItem.redraw()
     // Redraw this form item.
     // <p>
     // Depending on the item and the +link{containerWidget} it's embedded in, this may redraw
@@ -26602,7 +26771,7 @@ isc.FormItem.addMethods({
 
     },
 
-    //> @method    formItem.show()  (I)
+    //> @method    formItem.show()
     // Show this form item.
     // <p>
     // This will cause the form to redraw.  If this item had an item.showIf expression, it will
@@ -26624,7 +26793,7 @@ isc.FormItem.addMethods({
         this.itemVisibilityChanged(true);
     },
 
-    //> @method    formItem.hide()  (I)
+    //> @method    formItem.hide()
     // Hide this form item.
     // <BR><BR>
     // This will cause the form to redraw.  If this item had an item.showIf expression, it will
@@ -26917,7 +27086,7 @@ isc.FormItem.addMethods({
     //>    @method    formItem.getDisplayValue()
     // Returns this item's value with any valueMap applied to it - the value as currently
     // displayed to the user.
-    // @param [value] optional stored value to be mapped to a display value.  Default is to
+    // @param [value] (any) optional stored value to be mapped to a display value.  Default is to
     //                use the form's current value
     // @return (any) value displayed to the user
     // @group valueMap
@@ -26947,7 +27116,6 @@ isc.FormItem.addMethods({
                     return this.mapValueToDisplay(value);
                 }
             }
-
             if (value != null) {
                 var displayValue = [];
                 for (var i = 0, len = value.length; i < len; i++) {
@@ -27112,7 +27280,6 @@ isc.FormItem.addMethods({
 
                 displayValues[i] = displayValue;
             }
-
             if (!recursed) displayValue = this._finishMapMultipleValueToDisplay(displayValues, value);
             else displayValue = displayValues.join(this.multipleValueSeparator);
         } else {
@@ -27552,7 +27719,7 @@ isc.FormItem.addMethods({
         return false;
     },
 
-    _parseDisplayValue : function (value) {
+    _parseDisplayValue : function (value, forceParse) {
         var applyStaticTypeFormat = this.shouldApplyStaticTypeFormat();
         if (!applyStaticTypeFormat) {
             if (this.parseEditorValue != null) {
@@ -27560,8 +27727,10 @@ isc.FormItem.addMethods({
             } else if (this._simpleType && this._simpleType.parseInput) {
                 var form = this.form,
                     record = form ? form.values : {};
-                // fire it in the scope of the simpleType
-                value = this._simpleType.parseInput(value, this, form, record);
+                if (forceParse || !this._shouldAllowExpressions()) {
+                    // fire it in the scope of the simpleType
+                    value = this._simpleType.parseInput(value, this, form, record);
+                }
             }
             // Handle parsing values to Dates for fields of type "date"
             // This is rarely going to be required but would handle something special like
@@ -27705,7 +27874,7 @@ isc.FormItem.addMethods({
     //>    @method    formItem.setValueMap()    (A)
     // Set the valueMap for this item.
     // @group    valueMap
-    // @param    valueMap (Array or Object) new valueMap
+    // @param    valueMap (Array | Object) new valueMap
     // @see attr:valueMap
     // @visibility external
     //<
@@ -27747,7 +27916,7 @@ isc.FormItem.addMethods({
     // Set the options for this item (a select or a radioGroup, etc.).  Synonymous with
     // setValueMap().
     //        @group    valueMap
-    //        @param    valueMap (Array or Object) new valueMap
+    //        @param    valueMap (Array | Object) new valueMap
     //<
     setOptions : function (valueMap) {
         return this.setValueMap(valueMap);
@@ -27774,7 +27943,7 @@ isc.FormItem.addMethods({
     // Default implementation does nothing -- override in a subclass to actually manipulate the
     // form.
     //        @group    valueMap
-    //        @param    valueMap (Array or Object) new valueMap
+    //        @param    valueMap (Array | Object) new valueMap
     //<
     setElementValueMap : function (valueMap) {
         // no default implementation
@@ -27910,7 +28079,8 @@ isc.FormItem.addMethods({
     //  +link{formItem.optionDataSource}, this method will return the title field for
     //  the <code>optionDataSource</code>.</li></ul>
     //
-    // @return (String) display field name, or null if there is no separate display field to use.
+    // @return (FieldName) display field name, or null if there is no separate display field to
+    //                     use.
     // @visibility external
     //<
     getDisplayFieldName : function () {
@@ -28491,7 +28661,6 @@ isc.FormItem.addMethods({
     _checkForTargetFieldValue : function (newValue, targetField, fetchingMissingValues,
                                             suppressLoadingDisplay)
     {
-
         // Flag to indicate we're currently getting this missing value from the server
         // so we don't kick off another fetch for the same value.
         // This will be cleared when we get the target field value back
@@ -28566,7 +28735,6 @@ isc.FormItem.addMethods({
     // If we fetched a display value, fold this new value into our valueMap, and if necessary
     // refresh to display it.
     fetchMissingValueReply : function (response, data, request) {
-
         // If we fetched all the values in the data-set, use array.find to find the appropriate
         // one
         var clientContext = response.internalClientContext,
@@ -28611,7 +28779,6 @@ isc.FormItem.addMethods({
         }
 
         if (!isc.isAn.Array(newValue)) newValue = [newValue];
-
         var filteredData;
         if (!filterLocally) {
             filteredData = [];
@@ -28624,7 +28791,6 @@ isc.FormItem.addMethods({
             if (!fetchingMissingValues || !newValue || !newValue[i]) {
                 this.logWarn("fetchMissingValueReply returned unexpected data: " + this.echo(clientContext));
             }
-
             delete fetchingMissingValues[newValue[i]];
 
             var record = data ? data.find(targetField, newValue[i]) : null;
@@ -28807,7 +28973,6 @@ isc.FormItem.addMethods({
 
 
     _fetchMissingValueInProgress : function (checkDisplayFieldValues, keyValue) {
-
         var targetObject = checkDisplayFieldValues
                 ? this._fetchingMissingDisplayFieldValues : this._fetchingMissingValueFieldValues;
 
@@ -28864,7 +29029,16 @@ isc.FormItem.addMethods({
         // if the field was set to read-only during Loading message, make it editable now
 
         var value = this.getValue();
-        if (!this._fetchMissingValueInProgress(true, value)) {
+        var fetchStillInProgress;
+        if (this.multiple && isc.isAn.Array(value)) {
+            for (var i = 0; i < value.length; i++) {
+                fetchStillInProgress = fetchStillInProgress ||
+                                        this._fetchMissingValueInProgress(true, value[i]);
+            }
+        } else {
+            fetchStillInProgress = this._fetchMissingValueInProgress(true, value);
+        }
+        if (!fetchStillInProgress) {
             this.logDebug("clearLoadingDisplayValue() - " +
                           "no outstanding fetch for display value, so clearing loading marker",
                           "loadingDisplayValue");
@@ -29513,16 +29687,21 @@ isc.FormItem.addMethods({
 
             // If the image is already written out, just update its src and style
             if (valueIconHandle != null) {
+                var spriteConfig = isc.Canvas._getSpriteConfig(src);
+
                 if (this.imageURLSuffix != null && src != isc.Canvas._$blank) {
-                    src += this.imageURLSuffix;
+                    if (spriteConfig) {
+                        if (spriteConfig.src && spriteConfig.src != isc.Canvas._$blank) {
+                            spriteConfig.src += this.imageURLSuffix;
+                        }
+                    } else {
+                        src += this.imageURLSuffix;
+                    }
                 }
 
                 var imgDir = this.imageURLPrefix || this.baseURL || this.imgDir;
 
-                isc.Canvas._setImageURL(valueIconHandle, src, imgDir);
-
-                var iconStyle = this._getValueIconStyle(value);
-                valueIconHandle.className = (iconStyle == null ? isc.emptyString : iconStyle);
+                isc.Canvas._updateImage(valueIconHandle, src, imgDir, this._getValueIconStyle(value));
 
             // In this case the valueIcon has never been written out.
             // Positioning of the valueIcon will vary by form item.
@@ -29851,6 +30030,7 @@ isc.FormItem.addMethods({
         if (this._remappedDisplayValueUnchanged(newValue)) return;
 
         // unmap the value if necessary
+
         newValue = this.mapDisplayToValue(newValue);
         return this.storeValue(newValue);
     },
@@ -30345,7 +30525,7 @@ isc.FormItem.addMethods({
     //> @method formItem.getCriteriaFieldName()
     // Returns the name of the field to use in a Criteria object for this item
     //
-    // @return (String)    the name of the field to use in a Criteria object for this item
+    // @return (FieldName) the name of the field to use in a Criteria object for this item
     // @group criteriaEditing
     //<
     // The main current use for this method is when filtering a field that has a displayField,
@@ -30492,6 +30672,11 @@ isc.FormItem.addMethods({
                 if (this.form) {
                     defaultOperator = this.form.defaultSearchOperator ||
                         (this.form.allowExpressions ? "iContainsPattern" : "iContains");
+                    var ds = this.form.getDataSource(),
+                        types = ds && ds.getFieldOperators(this.name),
+                        validOp = types && types.contains(defaultOperator)
+                    ;
+                    if (!validOp && types) defaultOperator = types[0];
                 }
                 operator = isc.DataSource.getCriteriaOperator(null, textMatchStyle, defaultOperator);
             }
@@ -30623,7 +30808,14 @@ isc.FormItem.addMethods({
 
         var value = this.getCriteriaValue(useUnconvertedStringValue);
 
-        if (op.valueType != "none" && !includeEmptyValues && (value == null || isc.is.emptyString(value))) return;
+        if (op.valueType == "criteria" && isc.isA.String(value)) {
+            // if the operator is logical, like "or", parse the value
+            return this.parseValueExpressions(value, fieldName, op);
+        }
+
+        if (op.valueType != "none" && !includeEmptyValues && (value == null || isc.is.emptyString(value))) {
+            return;
+        }
         // multi-selects are returned as an array.
         if (isc.isAn.Array(value)) {
              // If nothing is selected, or if blank is selected, no criteria
@@ -30660,16 +30852,20 @@ isc.FormItem.addMethods({
             value = criterion ? criterion.value : null
         ;
 
+        var isAdvanced=isc.DS.isAdvancedCriteria(criterion);
         if (allowEx) {
+            var op = isc.DS._operators[criterion.operator];
             var grid = this.form && this.form.grid;
-            if (grid && grid.shouldAllowFilterOperators && !grid.shouldAllowFilterOperators()) {
+            if (isAdvanced || op.valueType == "valueRange" ||
+                    grid && grid.shouldAllowFilterOperators && !grid.shouldAllowFilterOperators())
+            {
                 // if operatorIcons are showing, we don't want to add the expression to the
                 // value, because it's already been applied to the operatorIcon
                 value = this.buildValueExpressions(criterion);
             }
         } else {
             if (this.multiple) {
-                var isAdvanced = isc.DS.isAdvancedCriteria(criterion);
+                //var isAdvanced = isc.DS.isAdvancedCriteria(criterion);
                 if (isAdvanced && criterion.operator == "or") {
                     // if the passed advancedCriteria is a flat list of ORs with the same
                     // operator and field (this one), build an array of values from them and
@@ -31514,8 +31710,12 @@ isc.FormItem.addMethods({
         // No op if we're not drawn or getSelectionRange() is unsupported
         if (!this.isDrawn() || !this._canSetSelectionRange()) return;
 
-        // applies only to text items (and subclasses)
-        if (!isc.isA.TextItem(this) && !isc.isA.TextAreaItem(this)) return;
+        // applies only to text items (and subclasses (but not UploadItems))
+        if ((!isc.isA.TextItem(this) && !isc.isA.TextAreaItem(this))
+                    || isc.isAn.UploadItem(this))
+        {
+            return;
+        }
 
         // If the field is empty we can skip remembering the insertion point!
         var elementValue = this.getElementValue();
@@ -32188,11 +32388,18 @@ isc.FormItem.addMethods({
         var returnValue;
         if (this.mouseDown) returnValue = this._fireStandardHandler("mouseDown");
 
-        var value = this._value;
+        var value = this._value,
+            displayValue = this.getDisplayValue()
+        ;
         if (itemInfo && itemInfo.overElement &&
-            !this.hasFocus && returnValue != false &&
-            this._shouldSelectOnClick() && this._canSetSelectionRange()
-            && value != null && value !== isc.emptyString)
+            !this.hasFocus &&
+            returnValue != false &&
+            this._shouldSelectOnClick() && this._canSetSelectionRange() &&
+            // if the stored "value" is empty but the there's a displayValue, whether the
+            // emptyDisplayValue or a user-entered value, it still needs selecting on click
+            ((value != null && value !== isc.emptyString) ||
+                (displayValue != null && displayValue !== isc.emptyString)
+            ))
         {
             this.setSelectionRange(0,0);
             this._selectValueOnMouseUp = true;
@@ -32720,7 +32927,7 @@ isc.FormItem.addMethods({
     },
     //> @method formItem.setTabIndex()
     // Setter for +link{formItem.tabIndex}.
-    // @param (Integer) new tabIndex for the item
+    // @param tabIndex (Integer) new tabIndex for the item
     // @visibility external
     //<
     setTabIndex : function (tabIndex) {
@@ -33173,7 +33380,7 @@ isc.FormItem.addMethods({
     //        @group eventHandling, focus
     // @visibility external
     //<
-    blurItem : function () {
+    blurItem : function (isRedraw) {
         if (!this.isVisible() || !(this.hasFocus || isc.EH._lastFocusTarget == this)) return;
 
         // Call 'blur()' on whatever element has been recorded as having native focus.
@@ -33291,8 +33498,15 @@ isc.FormItem.addMethods({
         this._currentFocusElement = element;
 
         var result = this.form.elementFocus(element, itemID);
-
         return result;
+    },
+
+
+    _handleAsyncFocusNotification : function () {
+        if (this._notifyAncestorsReflowCompleteOnAsyncFocus) {
+            delete this._notifyAncestorsReflowCompleteOnAsyncFocus;
+            this.containerWidget.notifyAncestorsReflowComplete();
+        }
     },
 
     _nativeElementBlur : function (element, itemID) {
@@ -33335,15 +33549,16 @@ isc.FormItem.addMethods({
 
         if (!suppressHandlers) this._setIconVisibilityForFocus(true);
 
+
         // if formatOnBlur is true, update the element value to get rid
         // of the static formatter
         if (this.formatOnBlur) {
             var displayValue = this.getDisplayValue();
             this._setElementValue(displayValue, this._value);
         }
-
         // Update the className of our various bits of HTML to show focused state
         if (this.showFocused) this.updateState();
+
         // If we're showing a valueIcon, put it into 'over' state if necessary
 
         if (this.showValueIconFocused && this.showValueIconOver && this._iconState == null) {
@@ -33374,16 +33589,6 @@ isc.FormItem.addMethods({
         }
 
         return true;
-    },
-
-    updateIconsForFocus : function (icons, hasFocus) {
-        if (icons == null) return;
-        // force hasFocus to a boolean
-        hasFocus = !!hasFocus;
-        if (!isc.isAn.Array(icons)) icons = [icons];
-        for (var i = 0 ; i < icons.length; i++) {
-            this._updateIconForFocus(icons[i], hasFocus);
-        }
     },
 
     _updateIconForFocus : function (icon, hasFocus) {
@@ -33694,8 +33899,11 @@ isc.FormItem.addMethods({
     _$img:"img",
     _allowNativeTextSelection : function (event, itemInfo) {
         if (itemInfo.overTitle) return;
-        // Suppress native dragging of icons
-        if (itemInfo.overIcon) return false;
+        // Allow mouseDown on icon to return true natively. This ensures
+        // focus can go to the icon as expected.
+        if (itemInfo.overIcon) {
+            return true;
+        }
         // Note that imgOnly icons and valueIcons won't set the "overIcon" attribute.
         // Explicitly check for the user attempting to select or drag an IMG tag
         if (event == null) event = isc.EH.lastEvent;
@@ -33708,7 +33916,15 @@ isc.FormItem.addMethods({
 
         return this.canSelectText != false;
     },
+    _allowNativeDrag : function (event, itemInfo) {
+        // Suppress native dragging of icon images
+        if (itemInfo.overIcon) {
+            return false;
+        }
+        // Otherwise same as allowNativeTextSelection
+        return this._allowNativeTextSelection(event, itemInfo);
 
+    },
     //> @attr formItem.canSelectText (boolean : true : IRW)
     // For items showing a text value, should the user be able to select the text in this item?
     // @visibility external
@@ -33857,19 +34073,23 @@ isc.FormItem.addMethods({
     __handleInput : function () {
         // If managing character input, changeOnKeypress is handled there.
         if (!this._manageCharacterInput()) {
+            // If this 'input' event follows a cut/paste event, set the public
+            // _isCutEvent/_isPasteEvent flags so dev code can make use of this information
+            if (this._unhandledCutEvent) {
+                this.logDebug("Native input event from cut", "cutpaste");
+                this._isCutEvent = true;
+            }
+            delete this._unhandledCutEvent;
+            if (this._unhandledPasteEvent) {
+                this.logDebug("Native input event from paste", "cutpaste");
+                this._isPasteEvent = true;
+            }
+            delete this._unhandledPasteEvent;
+            if (this._isPasteEvent) {
+                this.fireTransformPaste()
+            }
+
             if (this.changeOnKeypress) {
-                // If this 'input' event follows a cut/paste event, set the public
-                // _isCutEvent/_isPasteEvent flags so dev code can make use of this information
-                if (this._unhandledCutEvent) {
-                    this.logDebug("Native input event from cut", "cutpaste");
-                    this._isCutEvent = true;
-                }
-                delete this._unhandledCutEvent;
-                if (this._unhandledPasteEvent) {
-                    this.logDebug("Native input event from paste", "cutpaste");
-                    this._isPasteEvent = true;
-                }
-                delete this._unhandledPasteEvent;
 
                 if (isc.Log.supportsOnError) {
                     this.updateValue();
@@ -33880,15 +34100,92 @@ isc.FormItem.addMethods({
                         isc.Log._reportJSError(e);
                     }
                 }
-                // clear cut/paste flags if set.
-                delete this._isPasteEvent;
-                delete this._isCutEvent;
             } else {
                 var elementValue = this.getElementValue();
                 this._minimalUpdateValue(elementValue);
             }
+            // clear cut/paste flags if set.
+            delete this._isPasteEvent;
+            delete this._isCutEvent;
+
         }
     },
+
+    fireTransformPaste : function () {
+        // shortcut - if transformPastedValue is unset we don't need to do a
+        // transformation
+        if (!this.transformPastedValue) return;
+
+        var pastedValue = this._getPastedValue();
+        if (pastedValue == null) return;
+
+
+        var elementValue = this.getElementValue() || "";
+        // After a paste the selection typically sits right after the pasted value
+        var selectionStart = this.getSelectionRange()[0];
+
+        var pasteIndex = this._pasteSelectionStart,
+            supportsMultiline = this.supportsMultilineEntry;
+
+        // We want to replace the value between the original selection start and the current
+        // cursor position with the (transformed) pasted text.
+        // Sanity check that pasteIndex / selectionIndex are valid.
+
+        if (pasteIndex == null || pasteIndex == -1 || selectionStart <= pasteIndex) {
+            this.logWarn("Paste event occurred, but unable to determine " +
+                "pasted text position in element value. Skipping transformPastedValue()",
+                "cutpaste");
+
+            return;
+        }
+
+        if (!supportsMultiline) {
+
+            // If a multi line value was pasted into a single line item log a debug-level
+            // notification. This doesn't typically actually matter but may be of interest.
+            var crIndex = pastedValue.indexOf("\r"),
+                lbIndex = pastedValue.indexOf("\n"),
+                newlineIndex = crIndex >= 0 ? Math.min(crIndex, lbIndex) : lbIndex;
+
+            if (newlineIndex >= 0) {
+                this.logDebug("Multi-line paste into single-line item detected.", "cutpaste");
+            }
+        }
+
+        var transformedValue = this.transformPastedValue(this, this.form, pastedValue);
+        if (transformedValue != null && transformedValue != pastedValue) {
+            // If a dev returns a multi-line value, let them know we can't predict the
+            // outcome!
+            if (!supportsMultiline &&
+                (transformedValue.contains("\n") || transformedValue.contains("\r")))
+            {
+                this.logWarn("transformPastedValue() returned multi-line value. " +
+                    "This is not supported for this item type. Value may be natively truncated or modified.",
+                    "cutpaste");
+            }
+            var postCursorText =  elementValue.substring(selectionStart);
+
+            this.setElementValue(elementValue.substring(0,pasteIndex)
+                                + transformedValue + postCursorText);
+
+            var finalEV = this.getElementValue(),
+                newCursorPosition = finalEV.lastIndexOf(postCursorText);
+            if (newCursorPosition != -1) {
+                this.setSelectionRange(newCursorPosition, newCursorPosition);
+            }
+        }
+    },
+
+    // Set to true for TextAreas
+    supportsMultilineEntry:false,
+
+    // This method returns the clipboard data value when the native pasteEvent ran.
+
+    //_fixMaskAfterCutPaste
+    _getPastedValue : function () {
+        return this._pastedValue
+    },
+
     // Called when changeOnKeypress is false to minimally handle an 'input' event (i.e. no
     // change event is fired, but this gives us a chance to apply some behaviors that are
     // otherwise only done in the full updateValue() path).
@@ -33916,14 +34213,38 @@ isc.FormItem.addMethods({
     // Fires before the value is pasted into the form item, so returning false would cancel the
     // paste. (We don't offer this option).
 
-    _nativeCutPaste : function (element, item, isCut) {
+    _nativeCutPaste : function (element, item, isCut, nativeEvent) {
         this.logDebug("Native " + (isCut ? "oncut" : "onpaste") + " event received", "cutpaste");
-        if (!this.changeOnKeypress) return;
 
+        // remember the pasted value. We'll use this in downstream code to perform
+        // transformPastedValue
+        if (!isCut) {
+
+            var clipboardData = nativeEvent ?
+                                    nativeEvent.clipboardData || window.clipboardData
+                                            : window.clipboardData;
+            if (clipboardData && clipboardData.getData) {
+                this._pastedValue = clipboardData.getData(isc.Browser.isIE ? 'Text' : 'text/plain');
+                this.logDebug("Native Paste event - got pasted value from clipboard data:"
+                    + this._pastedValue, "cutpaste");
+
+                // Also remember the current cursor position (or selection start)
+                // This will simplify allowing the user to transform the pasted value
+                // and reinserting the new value at the right spot.
+                var selectionRange = this.getSelectionRange();
+                if (selectionRange != null) {
+                    this._pasteSelectionStart = selectionRange[0];
+                }
+            }
+        }
 
         if (!this._willHandleInput()) {
 
-            this._queueForUpdate(isCut, !isCut);
+            if (this.changeOnKeypress) {
+                this._queueForUpdate(isCut, !isCut);
+            } else {
+                this._queueForMinimalUpdate(isCut, !isCut);
+            }
         } else {
             // Set a flag indicating that we received a cut event.
             // The public change-handling flow will be fired in a separate thread from the
@@ -34235,6 +34556,10 @@ isc.FormItem.addMethods({
         delete this._unhandledCutEvent;
         if (this._unhandledPasteEvent) this._isPasteEvent = true;
         delete this._unhandledPasteEvent;
+        if (this._isPasteEvent) {
+            this.fireTransformPaste()
+        }
+
 
         this.updateValue();
         this._clearPreChangeSelection();
@@ -34246,10 +34571,10 @@ isc.FormItem.addMethods({
 
     // Similar logic for changeOnKeypress:false items
     _$delayedMinimalUpdate:"_delayedMinimalUpdate",
-    _queueForMinimalUpdate : function () {
+    _queueForMinimalUpdate : function (isCut, isPaste) {
         if (this._pendingUpdate != null) {
             isc.Timer.clearTimeout(this._pendingUpdate);
-            this._delayedUpdate();
+            this._delayedUpdate(isCut,isPaste);
         }
         if (!this._pendingMinimalUpdate) {
             this.rememberSelectionForUpdate();
@@ -34257,11 +34582,33 @@ isc.FormItem.addMethods({
                 isc.Timer.setTimeout({target:this, methodName:this._$delayedMinimalUpdate},
                                                    0);
         }
+
+        // Set the cut/paste events so we can make this information available to the
+        // devs when the delayed minimal update event actually fires.
+        if (isCut) this._unhandledCutEvent = true;
+        if (isPaste) this._unhandledPasteEvent = true;
+
     },
     _delayedMinimalUpdate : function () {
         delete this._pendingMinimalUpdate;
+
+        // Fire the paste transform logic here if necessary
+
+        if (this._unhandledCutEvent) this._isCutEvent = true;
+        delete this._unhandledCutEvent;
+        if (this._unhandledPasteEvent) this._isPasteEvent = true;
+        delete this._unhandledPasteEvent;
+        if (this._isPasteEvent) {
+            this.fireTransformPaste()
+        }
+
         this._minimalUpdateValue(this.getElementValue());
         this._clearPreChangeSelection();
+
+        // clear cut/paste flags if set.
+        delete this._isPasteEvent;
+        delete this._isCutEvent;
+
     },
 
 
@@ -34370,7 +34717,7 @@ isc.FormItem.addMethods({
     //>@method formItem.getLeft()
     // Returns the left coordinate of this form item in pixels. Note that this method
     // is only reliable after the item has been drawn.
-    // @return (integer) left coordinate within the form in pixels\
+    // @return (int) left coordinate within the form in pixels\
     // @group positioning,sizing
     // @visibility external
     //<
@@ -34497,7 +34844,7 @@ isc.FormItem.addMethods({
     //>@method formItem.getTop()
     // Returns the top coordinate of the form item in pixels. Note that this method is only
     // reliable after the item has been drawn out.
-    // @return (integer) top position in pixels
+    // @return (int) top position in pixels
     // @group positioning,sizing
     // @visibility external
     //<
@@ -34854,10 +35201,10 @@ isc.FormItem.addMethods({
     parseValueExpressions : function (value, fieldName, operator) {
         var type = this.getType(),
             typeInheritsFromTime = isc.SimpleType.inheritsFrom(type, "time"),
-            isValidLogicType = (isc.SimpleType.inheritsFrom(type, "integer") ||
-                isc.SimpleType.inheritsFrom(type, "float") ||
-                isc.SimpleType.inheritsFrom(type, "date") ||
-                typeInheritsFromTime
+            typeIsNumeric = (isc.SimpleType.inheritsFrom(type, "integer") ||
+                isc.SimpleType.inheritsFrom(type, "float")),
+            isValidLogicType = (isc.SimpleType.inheritsFrom(type, "date") ||
+                typeInheritsFromTime || typeIsNumeric
             ),
             opIndex = isc.DynamicForm.getOperatorIndex(),
             validOps = isc.getKeys(opIndex),
@@ -34900,7 +35247,11 @@ isc.FormItem.addMethods({
                 var field = ds ? ds.getField(fieldName) : null;
 
                 if (field) {
-                    if (isc.SimpleType.inheritsFrom(field.type, "date")) {
+                    if (typeIsNumeric) {
+
+                        valueParts[0] = this._parseDisplayValue(valueParts[0], true);
+                        valueParts[1] = this._parseDisplayValue(valueParts[1], true);
+                    } else if (isc.SimpleType.inheritsFrom(field.type, "date")) {
                         valueParts[0] = new Date(Date.parse(valueParts[0]));
                         valueParts[0].logicalDate = true;
                         valueParts[1] = new Date(Date.parse(valueParts[1]));
@@ -34931,8 +35282,8 @@ isc.FormItem.addMethods({
             var valuePart = valueParts[i],
                 subCrit = { fieldName: fieldName }
                 field = ds ? ds.getField(fieldName) : null,
-                isDateField = (field ? field && isc.SimpleType.inheritsFrom(field.type, "date") : false),
-                isTimeField = (field ? field && isc.SimpleType.inheritsFrom(field.type, "time") : false),
+                isDateField = (field ? field.type && isc.SimpleType.inheritsFrom(field.type, "date") : false),
+                isTimeField = (field ? field.type && isc.SimpleType.inheritsFrom(field.type, "time") : false),
                 valueHasExpression = false
             ;
 
@@ -35053,6 +35404,8 @@ isc.FormItem.addMethods({
                         }
 
                         valuePart = isc.Time.parseInput(valuePart, false, false, false, baseDatetime);
+                    } else {
+                        valuePart = this._parseDisplayValue(valuePart, true);
                     }
 
                     subCrit.operator = op.ID;
@@ -35097,13 +35450,16 @@ isc.FormItem.addMethods({
             if (!valueHasExpression) {
                 // this was a straight expression like "10"
                 subCrit.operator = defOpName;
-                subCrit.value = valuePart;
+                subCrit.value = this._parseDisplayValue(valuePart, true);
             }
             if (subCrit.operator) result.criteria.add(subCrit);
         }
-//        this.logWarn("Parsed expression:" + value + " to criterion:" + this.echo(result));
         if (result.criteria.length == 1) result = result.criteria[0];
         if (result.criteria && result.criteria.length == 0) result = null;
+        // if there's a criteria array but no constructor, mark the result as AdvancedCriteria
+        // so the criteria round-trips properly
+        if (result.criteria && !result._constructor) result._constructor = "AdvancedCriteria";
+//        this.logWarn("Parsed expression:" + value + " to criterion:" + this.echo(result));
 
         return result;
     },
@@ -35196,6 +35552,8 @@ isc.FormItem.addMethods({
 
         var conjunctiveOffset=0;
 
+        var betweenOps = ["between", "iBetween", "betweenInclusive", "iBetweenInclusive"];
+
         for (var i=0; i < crit.criteria.length; i++) {
             var subCrit = crit.criteria[i],
                 subOp = subCrit.operator,
@@ -35231,9 +35589,9 @@ isc.FormItem.addMethods({
                     if (values[values.length-1] != wildCard) values.add(wildCard);
                     values.add(subCrit.value);
                 }
-            } else if (subOp.ID == defOpName) {
+            } else if (subOp.ID == defOpName && !betweenOps.contains(subOp.ID)) {
                 values.add(this._formatCriterionValue(subCrit.value));
-            } else if (subOp.ID == "betweenInclusive" || subOp.ID == "iBetweenInclusive") {
+            } else if (betweenOps.contains(subOp.ID)) {
                 if (crit.criteria.length > 1) conjunctives.addAt(subOp.symbol, conjunctiveOffset);
                 else conjunctives[conjunctiveOffset] = subOp.symbol
                 // make sure the ... conjunctive is in the correct place
@@ -35617,6 +35975,7 @@ isc.FormItem.registerStringMethods({
     // @return  (any) The desired new value for the form item
     // @visibility external
     //<
+
     transformInput : "form,item,value,oldValue",
 
 
@@ -35710,6 +36069,25 @@ isc.FormItem.registerStringMethods({
     // @visibility external
     //<
     keyUp : "item,form,keyName",
+
+    //> @method formItem.transformPastedValue()
+    // Notification fired in response to a clipboard "paste" event on freeform text
+    // items, giving developers an opportunity to reformat the pasted text. The
+    // <code>pastedValue</code> argument contains the text pasted from the clipboard.
+    // This method should return the text value to actually insert into the input element.
+    //
+    // @param item (FormItem) Item into which the user pasted a value
+    // @param form (DynamicForm) Pointer to the item's form
+    // @param pastedValue (String) Pasted text value
+    // @return (String) Reformatted version of the pasted text.
+    //
+    // @group eventHandling
+    // @visibility internal
+    //<
+    // Exposed on TextItem and TextAreaItem.
+
+    transformPastedValue : "item,form,pastedValue",
+
 
     //> @method formItem.getValueIcon()
     // Except when +link{group:printing,printing} and +link{FormItem.getPrintValueIcon(),getPrintValueIcon()}
@@ -36059,7 +36437,7 @@ isc.FormItemFactory.addClassMethods({
 // @visibility external
 //<
 
-//> @attr validator.dependentFields (Array[] of String : null : IRA)
+//> @attr validator.dependentFields (Array of String[] : null : IRA)
 // User-defined list of fields on which this validator depends. Primarily used for validators
 // of type "custom" but can also be used to supplement +link{validator.applyWhen} criteria.
 // @serverDS allowed
@@ -36083,11 +36461,11 @@ isc.FormItemFactory.addClassMethods({
 // Note that, if a field is declared with a builtin +link{type:FieldType}, the value passed in
 // will already have been converted to the specified type, if possible.
 //
-// @param item (DataSourceField or FormItem) FormItem or DataSourceField on which this
-//                                           validator was declared.  NOTE: FormItem will not
-//                                           be available during a save performed without a
-//                                           form (eg programmatic save) or if the field
-//                                           is not available in the form.
+// @param item (DataSourceField | FormItem) FormItem or DataSourceField on which this
+//                                          validator was declared.  NOTE: FormItem will not
+//                                          be available during a save performed without a
+//                                          form (eg programmatic save) or if the field
+//                                          is not available in the form.
 // @param validator (Validator) Validator declaration from eg
 //                              +link{DataSourceField.validators}.
 // @param value     (any)       value to validate
@@ -36314,6 +36692,14 @@ isc.FormItemFactory.addClassMethods({
 // @visibility external
 //<
 
+//> @attr validator.operationId (String : null : IR)
+// Applies only to the "isUnique" validator; allows you to name a specific
+// +link{dataSource.operationBindings,operation} for the uniqueness check.
+//
+// @serverDS only
+// @visibility external
+//<
+
 
 
 //> @object validatorDefinition
@@ -36380,11 +36766,11 @@ isc.FormItemFactory.addClassMethods({
 // Note that, if a field is declared with a builtin +link{type:FieldType}, the value passed in
 // will already have been converted to the specified type, if possible.
 //
-// @param item (DataSourceField or FormItem) FormItem or DataSourceField on which this
-//                                           validator was declared.  NOTE: FormItem will not
-//                                           be available during a save performed without a
-//                                           form (eg programmatic save) or if the field
-//                                           is not available in the form.
+// @param item (DataSourceField | FormItem) FormItem or DataSourceField on which this
+//                                          validator was declared.  NOTE: FormItem will not
+//                                          be available during a save performed without a
+//                                          form (eg programmatic save) or if the field
+//                                          is not available in the form.
 // @param validator (Validator) Validator declaration from eg
 //                              +link{DataSourceField.validators}.
 // @param value     (any)       value to validate
@@ -36405,11 +36791,11 @@ isc.FormItemFactory.addClassMethods({
 //
 // @param result    (boolean)   The result of the validator. The value will be null if
 //                              the validator was skipped because of conditional criteria.
-// @param item (DataSourceField or FormItem) FormItem or DataSourceField on which this
-//                                           validator was declared.  NOTE: FormItem will not
-//                                           be available during a save performed without a
-//                                           form (eg programmatic save) or if the field
-//                                           is not available in the form.
+// @param item (DataSourceField | FormItem) FormItem or DataSourceField on which this
+//                                          validator was declared.  NOTE: FormItem will not
+//                                          be available during a save performed without a
+//                                          form (eg programmatic save) or if the field
+//                                          is not available in the form.
 // @param validator (Validator) Validator declaration from eg
 //                              +link{DataSourceField.validators}.
 // @param record (Record) Record that was validated
@@ -36627,7 +37013,9 @@ isc.FormItemFactory.addClassMethods({
 // context of those extra criteria, allowing you to check, for example, whether an employee
 // number is unique for the department and location found on the record being validated.
 // By default the uniqueness check is not case sensitive but this can be controlled through
-// the +link{attr:Validator.caseSensitive,caseSensitive} attribute.
+// the +link{attr:Validator.caseSensitive,caseSensitive} attribute.  You can specify the
+// +link{dataSource.operationBindings,operation} to use for the uniqueness check with the
+// +link{attr:Validator.operationId,operationId} attribute.
 // <p>
 // Validators of this type have +link{attr:ValidatorDefinition.requiresServer,requiresServer}
 // set to <code>true</code> and do not run on the client.
@@ -40086,6 +40474,17 @@ _applyHandlersToElement : function () {
     this._setUpIconEventHandlers();
 },
 
+drawing : function (visibilityChanged) {
+    this.Super("drawing", arguments);
+
+    var items = this.items;
+    if (!items) return;
+    for (var i = 0; i < items.length; i++) {
+        if (items[i].visible != false) items[i].drawing(visibilityChanged);
+    }
+
+},
+
 
 // Notify sub items that they've been drawn/cleared at the appropriate times.
 drawn : function () {
@@ -40095,6 +40494,23 @@ drawn : function () {
         if (items[i].visible != false) items[i].drawn();
     }
     return this.Super("drawn", arguments);
+},
+
+redrawing : function () {
+    this.Super("redrawing", arguments);
+
+    var items = this.items;
+    if (!items) return;
+    for (var i = 0; i < items.length; i++) {
+        var item = items[i];
+        if (item.visible != false) {
+            if (!item.isDrawn()) item.drawing();
+            else item.redrawing();
+        } else {
+            if (item.isDrawn()) item.clearing;
+        }
+    }
+
 },
 
 redrawn : function () {
@@ -40113,6 +40529,16 @@ redrawn : function () {
     // our items array (and therefore from the DOM).
     this.notifyRemovedItems();
     return this.Super("redrawn", arguments);
+},
+
+clearing : function (itemVisibilityChanged) {
+    this.Super("clearing", arguments);
+    var items = this.items;
+    if (!items) return;
+    for (var i = 0; i < items.length; i++) {
+        if (items[i].isDrawn()) items[i].clearing(itemVisibilityChanged);
+    }
+
 },
 
 cleared : function () {
@@ -40680,6 +41106,7 @@ _canEditChanged : function (canEdit, willRedraw) {
 // If you cannot easily detect changes to values in your Canvas, a workaround is to call
 // <code>storeValue</code> right before the form saves.
 //
+// @inheritsFrom FormItem
 // @treeLocation Client Reference/Forms/Form Items
 // @visibility external
 //<
@@ -41785,7 +42212,6 @@ isc.CanvasItem.addMethods({
                       "canvasItemSizing");
 
         if (!canvas.isDrawn()) return;
-
         // redraw to change size
         this.redraw();
     },
@@ -41858,8 +42284,11 @@ isc.CanvasItem.addMethods({
 
 
 
-    blurItem : function () {
-        if (this.canvas) this.canvas.blur();
+    blurItem : function (isRedraw) {
+        // suppress blur/refocus on redraw
+
+
+        if (!isRedraw && this.canvas) this.canvas.blur();
         return this.Super("blurItem", arguments);
     },
 
@@ -42794,6 +43223,8 @@ isc.TextItem.addMethods({
                 }
                 return;
             }
+
+
 
 
 
@@ -43886,6 +44317,12 @@ isc.TextItem.addMethods({
             this._keyPressRegExp = new RegExp (this.keyPressFilter);
         }
     },
+
+    // Document the transformPastedValue API here (actually implemented at the FormItem level)
+    //> @method TextItem.transformPastedValue()
+    // @include FormItem.transformPastedValue()
+    // @visibility external
+    //<
 
     // Disallow bubbling of edit / navigation keys
     stopNavKeyPressBubbling:true,
@@ -45197,6 +45634,7 @@ isc.ButtonItem.addMethods({
         if (this.titleStyle) dynamicButtonProperties.titleStyle = this.titleStyle;
         if (this.baseStyle) dynamicButtonProperties.baseStyle = this.baseStyle;
         if (this.autoFit != null) dynamicButtonProperties.autoFit = this.autoFit;
+        if (this.showFocusedAsOver != null) dynamicButtonProperties.showFocusedAsOver = this.showFocusedAsOver;
 
         // Use 'addAutoChild' - this will handle applying the various levels of defaults
         // Note: also assign this.button to enable AutoTest getAutoChildLocator() to find this child
@@ -45270,6 +45708,7 @@ isc.ClassFactory.defineInterface("PickList");
 // +link{interface:PickList} to display
 // a list of selectable options.  Can be subclassed, customized and assigned to FormItems
 // via the +link{comboBoxItem.pickListConstructor, pickListConstructor} attribute.
+// @inheritsFrom ScrollingMenu
 // @treeLocation Client Reference/Forms/Form Items
 // @visibility external
 //<
@@ -45644,7 +46083,10 @@ isc.PickListMenu.addMethods({
 
                 formItem.setValue(value);
             } else {
-                if (isc.PickList.emptyStoredValue && value == isc.PickList.emptyStoredValue) value = null;
+                if (isc.PickList.emptyStoredValue && value == isc.PickList.emptyStoredValue) {
+                    formItem.pickList.deselectAllRecords();
+                    value = null;
+                }
                 formItem.pickValue(value);
             }
         }
@@ -47145,6 +47587,13 @@ isc.PickList.addInterfaceMethods({
             dataChanged : function (operationType,originalRecord,rowNum,updateData,filterChanged,dataFromCache) {
                 this.Super("dataChanged", arguments);
                 if (operationType == "remove" && originalRecord && this.formItem) this.formItem.handleDataRemoved(originalRecord);
+            },
+
+            fireSelectionUpdated : function () {
+
+                if (!this._suppressSelectionUpdatedEvent) {
+                    this.Super("fireSelectionUpdated", arguments);
+                }
             }
         });
         if (this.multiple && this.multipleAppearance == "picklist"
@@ -47911,6 +48360,9 @@ isc.PickList.addInterfaceMethods({
 
     selectDefaultItem : function () {
         if (this.pickList == null) return false;
+        // since we're about to clobber the selection with the current value, deselect any
+        // current selection
+        this.pickList.deselectAllRecords();
         // Select the value currently displayed in the form item
         return this.selectItemFromValue(this.getValue());
     },
@@ -47934,6 +48386,11 @@ isc.PickList.addInterfaceMethods({
                         isc.SimpleType.inheritsFrom(type, "float"),
             comparator = basicType ? null : this.compareValues
         ;
+
+        if (this.pickList.allowMultiSelect) {
+            var origSupressSelectionUpdatedEvent = this.pickList._suppressSelectionUpdatedEvent;
+            this.pickList._suppressSelectionUpdatedEvent = true;
+        }
 
         for (var i = 0; i < value.length; i++) {
             var currVal = value[i],
@@ -47979,6 +48436,10 @@ isc.PickList.addInterfaceMethods({
         if (!specialValueSelected && this.selection != null) {
             this.separateValuesList.deselectAllRecords();
         }
+        if (this.pickList.allowMultiSelect) {
+            this.pickList._suppressSelectionUpdatedEvent = origSupressSelectionUpdatedEvent;
+        }
+
         // Return a boolean to indicate whether we successfully found and selected all records
         return allValuesFound;
     },
@@ -48023,7 +48484,11 @@ isc.PickList.addInterfaceMethods({
 
             this._updatePickListForFilterComplete(response,data,request);
 
+            this.pickList._suppressSelectionUpdatedEvent = true;
+
             this._updateValueForFilterComplete(response,data,request);
+
+            this.pickList._suppressSelectionUpdatedEvent = false;
 
             this._processingFilterComplete = false;
 
@@ -50602,7 +51067,9 @@ isc.SelectItem.addMethods({
         var interfaceShowPickList = isc.PickList.getPrototype().showPickList;
         interfaceShowPickList.apply(this, arguments);
         if (this.pickList) {
+            this.pickList._suppressSelectionUpdatedEvent = true;
             this.pickList.deselectAllRecords();
+            this.pickList._suppressSelectionUpdatedEvent = false;
             // if either a value was passed in or this.defaultToFirstOption: true, select now
             if (this.getValue() != null) this.selectItemFromValue(this.getValue());
         }
@@ -51155,7 +51622,7 @@ isc.SelectItem.addMethods({
         if (this.isSelectOther &&
             (newValue == this.separatorValue || newValue == this.otherValue))
         {
-            this._setElementValue(this.getDisplayValue(newValue), newValue);
+            this._setElementValue(this.mapValueToDisplay(newValue), newValue);
             // keep a pointer around to tell us which value the user selected.
 
             this._selectOtherValue = newValue;
@@ -51177,7 +51644,7 @@ isc.SelectItem.addMethods({
         if (this.isVisible() && this.containerWidget.isDrawn()) {
 
             if (value == null) value = null;
-            this._setElementValue(this.getDisplayValue(value), value);
+            this._setElementValue(this.mapValueToDisplay(value), value);
         }
         this._markValueAsDirty();
     },
@@ -52078,7 +52545,7 @@ isc.SelectItem.addMethods({
             // Even if the value is unchanged, its display value is likely to be different, so
             // do a setElementValue.
 
-            this._setElementValue(this.getDisplayValue(value), value);
+            this._setElementValue(this.mapValueToDisplay(value), value);
         }
         if (reShowPickList) this.showPicker();
     },
@@ -52297,6 +52764,7 @@ isc.defineClass("CheckboxItem", "CycleItem");
 //> @class  BooleanItem
 //
 // Boolean form item, implemented with customizable checkbox images
+// @inheritsFrom CycleItem
 // @visibility external
 //<
 // Alias for smartgwt
@@ -52432,13 +52900,13 @@ isc.CheckboxItem.addProperties({
     // state (<code>"Over"</code>, <code>"Down"</code> and <code>"Disabled"</code>) will be
     // added to this name as the user interacts with the checkbox, as well as the image extension
     // <P>
-    // The special value "blank" means that no image will be shown. Typically "blank" is used
-    // with a custom +link{CheckboxItem.booleanBaseStyle,booleanBaseStyle} to implement spriting
-    // of the checkbox.
+    // The special value "blank" means that no image will be shown.
     // <P>
-    // When +link{group:skinning,spriting} is enabled, this property will not
-    // be used to locate an image, instead, the image is drawn via CSS based on the
-    // +link{CheckboxItem.booleanBaseStyle} property.
+    // +link{group:skinning,Spriting} can be used for this image, by setting this property to
+    // a +link{type:SCSpriteConfig} formatted string. Alternatively developers can
+    // omit this property and instead use CSS directly in the
+    // +link{CheckboxItem.booleanBaseStyle} property to provide a "checked" appearance.
+    //
     // @group appearance
     // @see CheckboxItem.printCheckedImage
     // @visibility external
@@ -52448,13 +52916,13 @@ isc.CheckboxItem.addProperties({
     //> @attr   CheckboxItem.uncheckedImage   (SCImgURL : "[SKIN]/DynamicForm/unchecked.gif" : IRW)
     // URL for the image to display when this checkbox is not selected, or unchecked.
     // <P>
-    // The special value "blank" means that no image will be shown. Typically "blank" is used
-    // with a custom +link{CheckboxItem.booleanBaseStyle,booleanBaseStyle} to implement spriting
-    // of the checkbox.
+    // The special value "blank" means that no image will be shown.
     // <P>
-    // When +link{group:skinning,spriting} is enabled, this property will not
-    // be used to locate an image, instead, the image is drawn via CSS based on the
-    // +link{CheckboxItem.booleanBaseStyle} property.
+    // +link{group:skinning,Spriting} can be used for this image, by setting this property to
+    // a +link{type:SCSpriteConfig} formatted string. Alternatively developers can
+    // omit this property and instead use CSS directly in the
+    // +link{CheckboxItem.booleanBaseStyle} property to provide an "unchecked" appearance.
+    //
     // @group appearance
     // @see CheckboxItem.printUncheckedImage
     // @visibility external
@@ -52464,17 +52932,18 @@ isc.CheckboxItem.addProperties({
     //> @attr   CheckboxItem.partialSelectedImage   (SCImgURL : "[SKIN]/DynamicForm/partialcheck.gif" : IRW)
     // URL for the image to display when this checkbox is partially selected.
     // <P>
-    // The special value "blank" means that no image will be shown. Typically "blank" is used
-    // with a custom +link{CheckboxItem.booleanBaseStyle,booleanBaseStyle} to implement spriting
-    // of the checkbox.
+    // The special value "blank" means that no image will be shown.
     // <P>
-    // When +link{group:skinning,spriting} is enabled, this property will not
-    // be used to locate an image, instead, the image is drawn via CSS based on the
-    // +link{CheckboxItem.booleanBaseStyle} property.
+    // +link{group:skinning,Spriting} can be used for this image, by setting this property to
+    // a +link{type:SCSpriteConfig} formatted string. Alternatively developers can
+    // omit this property and instead use CSS directly in the
+    // +link{CheckboxItem.booleanBaseStyle} property to provide a "partially checked" appearance.
+    //
     // @group appearance
     // @see CheckboxItem.printPartialSelectedImage
     // @visibility external
     //<
+
     partialSelectedImage:"[SKINIMG]/DynamicForm/partialcheck.gif",
 
     //> @attr checkboxItem.printCheckedImage (SCImgURL : null : IRW)
@@ -52518,13 +52987,12 @@ isc.CheckboxItem.addProperties({
     // the +link{checkboxItem.uncheckedImage} will be used for null values rather than this
     // image.
     // <P>
-    // The special value "blank" means that no image will be shown. Typically "blank" is used
-    // with a custom +link{CheckboxItem.booleanBaseStyle,booleanBaseStyle} to implement spriting
-    // of the checkbox.
+    // The special value "blank" means that no image will be shown.
     // <P>
-    // When +link{group:skinning,spriting} is enabled, this property will not
-    // be used to locate an image, instead, the image is drawn via CSS based on the
-    // +link{CheckboxItem.booleanBaseStyle} property.
+    // +link{group:skinning,Spriting} can be used for this image, by setting this property to
+    // a +link{type:SCSpriteConfig} formatted string. Alternatively developers can
+    // omit this property and instead use CSS directly in the
+    // +link{CheckboxItem.booleanBaseStyle} property to provide an "unset" appearance.
     // @group appearance
     // @visibility external
     //<
@@ -54209,6 +54677,10 @@ isc.LinkItem.addProperties({
     // Don't set a height on LinkItems by default
 
     height:null,
+
+    // No visual border around the text-box so let it fit content. This makes vertical
+    // alignment behave intuitively
+    applyHeightToTextBox:false,
 
     // default to canEdit: false - an editable link is a possibility, but it doesn't seem
     // that most users would want/expect this to be the default state
@@ -57032,7 +57504,7 @@ isc.DateItem.addMethods({
             }
             // This will give us a the contents of each selector separated by a space,
             // for example "Jun 25 2009" for MDY dates
-            return this.items.map("getDisplayValue").join(" ");
+            return this.items.callMethod("getDisplayValue").join(" ");
         }
     },
 
@@ -57741,7 +58213,7 @@ isc.DateItem.addMethods({
         // not re-validate on exit.
         // Set the special flag to explicitly force a re-validation on editor exit
 
-        if (this.validateOnExit || this.form.validateOnExit) {
+        if (this.validateOnExit || (this.form && this.form.validateOnExit)) {
             this._forceValidateOnExit = true;
         }
 
@@ -58688,7 +59160,20 @@ isc.TextAreaItem.addMethods({
 
 
             (isc.Browser.isChrome ? "display:block;" : ""),
-             // In Mozilla we must use the 'moz-user-focus' css property to govern
+
+            // We write white-space:nowrap onto the containing cell in order to
+            // have valueIcons appear on the same line as the textarea.
+            // This is inherited by the textarea element by default, essentially breaking
+            // wrapping display.
+            // Handle this by explicitly specifying whitespace on the element:
+            // white-space:pre-wrap: This allows normal wrapping to occur at the edge
+            // of the text-area box. This is appropriate for both wrap "soft" and "hard"
+            // white-space:pre: This suppresses normal wrapping but still allows carriage
+            // returns to force new lines.
+            this.wrap && this.wrap.toUpperCase() == isc.TextAreaItem.OFF ?
+                    "white-space:pre;" : "white-space:pre-wrap;",
+
+           // In Mozilla we must use the 'moz-user-focus' css property to govern
              // whether this element can recieve focus or not.
              (isc.Browser.isMoz ?
                     "-moz-user-focus:" + (this._getElementTabIndex() > 0 ? "normal;"
@@ -58703,6 +59188,13 @@ isc.TextAreaItem.addMethods({
         if (isc.Browser.isIE) return null;
         return this.Super("getStandaloneItemWrapCSS", arguments);
     },
+
+    // Should we write 'nowrap' into the cell containing this item
+
+    _cellNoWrap : function () {
+        return true;
+    },
+
 
     //>    @method    textAreaItem.mapValueToDisplay()    (A)
     //    Map from the internal value for this item to the display value.
@@ -58734,6 +59226,17 @@ isc.TextAreaItem.addMethods({
         if (isc.is.emptyString(value)) value = this.emptyStringValue;
         return value;
     },
+
+
+    // Document the transformPastedValue API here (actually implemented at the FormItem level)
+    //> @method TextAreaItem.transformPastedValue()
+    // @include FormItem.transformPastedValue()
+    // @visibility external
+    //<
+
+    // This is used by the transformPastedValue logic
+    supportsMultilineEntry:true,
+
 
     //> @attr textAreaItem.formatOnBlur (Boolean : false : IRW)
     // With <code>formatOnBlur</code> enabled, this textAreaItem will format its value
@@ -61468,12 +61971,14 @@ isc.ToolbarItem.addMethods({
 // <P>
 // If a form containing an UploadItem is +link{canvas.redraw(),redrawn} (which may
 // happen if other form items are shown or hidden, the form is
-// +link{canvas.redrawOnResize,resized}, or other items show validation errors) then the value
-// in the upload item is lost (because an HTML upload field may not be created with a value).
-// For this reason, if you are building a form that combines an UploadItem with other FormItems
-// that could trigger redraw()s, recommended practice is to place each UploadItem in a distinct
-// DynamicForm instance and create the visual appearance of a single logical form via combining
-// the DynamicForms in a +link{Layout}.
+// +link{canvas.redrawOnResize,resized}, or this or other items show validation errors) then
+// the value in the upload item is lost (because an HTML upload field may not be created with a
+// value).  For this reason, if you are building a form that combines an UploadItem with other
+// FormItems that could trigger redraw()s, recommended practice is to place each UploadItem in
+// a distinct DynamicForm instance and create the visual appearance of a single logical form
+// via combining the DynamicForms in a +link{Layout}.  For the same reason, do not apply
+// +link{class:Validator,validators} to UploadItems: if such a validator fails, it will
+// cause the form to be redrawn and the UploadItem's value to be lost.
 // <P>
 // <B>NOTE: Browser-specific behaviors:</B>
 // <ul>
@@ -63738,7 +64243,7 @@ isc.ComboBoxItem.addMethods({
     // @visibility external
     //<
 
-    //> @attr comboBoxItem.separatorRows (Array[] of ListGridRecord : [{isSeparator:true}] : IR)
+    //> @attr comboBoxItem.separatorRows (Array of ListGridRecord[] : [{isSeparator:true}] : IR)
     // @include PickList.separatorRows
     //<
 
@@ -64602,7 +65107,7 @@ alwaysExitOnTab: true,
 //<
 autoFetchData: false,
 
-//> @attr MultiComboBoxItem.valueMap (Array or Object : null : IRW)
+//> @attr MultiComboBoxItem.valueMap (Array | Object : null : IRW)
 // The <code>valueMap</code> of the combo box.
 // @see FormItem.valueMap
 // @visibility external
@@ -64738,6 +65243,11 @@ comboFormDefaults: {
 // on the current +link{MultiComboBoxItem.layoutStyle,layout style}.
 // @visibility external
 //<
+valueLayoutDefaults: {
+
+    tileMargin: 0,
+    layoutMargin: 0
+},
 
 //> @attr multiComboBoxItem.button (MultiAutoChild IButton : null : RA)
 // An +link{AutoChild} attribute used to create the buttons in the MultiComboBoxItem.
@@ -65284,7 +65794,7 @@ _finishedHidingButton : function (buttonsLayout, button) {
 _$finishedHidingButtons: "_finishedHidingButtons",
 _finishedHidingButtons : function (buttonsLayout, buttons) {
     buttonsLayout.removeMembers(buttons, true);
-    buttons.map("destroy");
+    buttons.callMethod("destroy");
 },
 
 // Clears the _buttonsLayout and sets the value of the MultiComboBoxItem to an empty array.
@@ -65320,7 +65830,7 @@ _removeAllButtons : function () {
         }
 
         layout.removeMembers(buttons, true);
-        buttons.map("destroy");
+        buttons.callMethod("destroy");
     }
 
     // Clear out the FormItem's displayField cache.
@@ -65667,21 +66177,19 @@ handleEditorExit : function() {
 },
 
 _setAutoFitButtons : function (autoFitButtons) {
-    var i = (this.layoutStyle == isc.MultiComboBoxItem.FLOW ||
-             (!this.useInsertionOrder &&
-              (this.layoutStyle == isc.MultiComboBoxItem.HORIZONTAL ||
-               this.layoutStyle == isc.MultiComboBoxItem.VERTICAL_REVERSE)) ? 0 : 1),
-        numButtons = this._buttonValues.length,
-        imax = i + numButtons,
-        width100 = this.canvas.getWidth();
+    var buttonsLayout = this._buttonsLayout;
+    if (!buttonsLayout) return;
 
-    for (; i < imax; ++i) {
-        var button = this._buttonsLayout.getMember(i);
-
-        if (!autoFitButtons) {
-            button.setWidth(width100);
+    var nMembers = buttonsLayout.getMembersLength(),
+        width100 = this.canvas.getWidth()
+    ;
+    // adjust buttons in layout, skipping any DynamicForm
+    for (var i = 0; i < nMembers; i++) {
+        var button = buttonsLayout.getMember(i);
+        if (isc.isA.StatefulCanvas(button)) {
+            if (!autoFitButtons) button.setWidth(width100);
+            button.setAutoFit(autoFitButtons);
         }
-        button.setAutoFit(autoFitButtons);
     }
 },
 
@@ -66078,8 +66586,6 @@ _createFlowLayout : function () {
         canFocus: false,
         canHover: true,
         tiles: [],
-        tileMargin: 0,
-        layoutMargin: 0,
         height: 1,
 
         animateTileChange: false,
@@ -66087,9 +66593,7 @@ _createFlowLayout : function () {
         // A "visible" overflow expands the layout size instead of introducing scrollbars.
         overflow: "visible",
 
-        // isc.FlowLayout is missing member functions that are available in other layouts:
-        // getMember(), getMemberNumber(), getMembers(), addMember(), removeMember(), and
-        // reorderMember(), so implement them here.
+
 
         getMember : function (position) {
             return this.getTile(position);
@@ -66118,6 +66622,10 @@ _createFlowLayout : function () {
             return tiles;
         },
 
+        getMembersLength : function (memberNum) {
+            return this.getLength();
+        },
+
         addMember : function (newMember, position) {
             this.addTile(newMember, position);
 
@@ -66142,7 +66650,7 @@ _createFlowLayout : function () {
             this.fireCallback(callback);
         },
         hideMembers : function (members, callback) {
-            members.map("hide");
+            members.callMethod("hide");
             this.fireCallback(callback);
         },
 
@@ -67192,7 +67700,7 @@ if (isc.ListGrid) {
 isc.ClassFactory.defineClass("MultiFileItem", "RelationItem");
 isc.MultiFileItem.addProperties({
 
-    //> @attr multiFileItem.dataSource (DataSource or ID : null : IR)
+    //> @attr multiFileItem.dataSource (DataSource | ID : null : IR)
     // DataSource where files are stored.
     // <P>
     // This DataSource is expected to have a field of type "binary" as well as a primaryKey and
@@ -67485,6 +67993,7 @@ destroy : function () {
 // The MultiFilePicker is a pop-up picker used by the +link{MultiFileItem} to allow the user to
 // enter several files for upload.
 //
+// @inheritsFrom VStack
 // @group upload
 // @treeLocation Client Reference/Forms/Form Items/MultiFileItem
 // @visibility external
@@ -67496,6 +68005,14 @@ isc.defineClass("MultiFilePicker", "VStack").addProperties({
     height: 1,
 
     layoutMargin:10,
+
+    //> @attr multiFilePicker.showInWindow  (boolean : false : [IR])
+    //
+    // If set true, the picker will be displayed inside a Window.
+    //
+    // @visibility external
+    //<
+    showInWindow: false,
 
     styleName: "windowBackground",
 
@@ -67533,7 +68050,24 @@ isc.defineClass("MultiFilePicker", "VStack").addProperties({
     cancelButtonName: "Cancel",
 
     showUploadRemoveButton: true,
-    uploadWithoutPK: false
+    uploadWithoutPK: false,
+
+    //> @attr multiFilePicker.title (String : "Add files" : IRW)
+    // Title for the Window implemented as a container for this picker in some skins.
+    // @group basics
+    // @visibility external
+    //<
+    title: "Add files",
+
+    dialogWrapperProperties: {
+        _constructor: "Window",
+        showHeader: true,
+        showMinimizeButton: false,
+        showCloseButton: false,
+        autoSize: true,
+        headerProperties: { margin: -2 },
+        bodyProperties: { layoutMargin: 10, margin: -2 }
+    }
 });
 
 //!>Deferred
@@ -67726,7 +68260,7 @@ removeUploadField : function (form, reAddToMin) {
 
 // get all the forms in the editor
 getForms : function () {
-    return this.uploadLayout.getMembers().map("getMember", this.showUploadRemoveButton ? 1 : 0);
+    return this.uploadLayout.getMembers().callMethod("getMember", this.showUploadRemoveButton ? 1 : 0);
 },
 
 // observable
@@ -67738,6 +68272,14 @@ show : function () {
     var forms = this.getForms();
     if (forms) forms.setProperty("newlyAdded", false);
     this.Super("show", arguments);
+
+    if (this.showInWindow && !this.dialogWrapper) {
+        this.setLayoutMargin(0);
+        this.addAutoChild("dialogWrapper", { title: this.title });
+        this.dialogWrapper.addItem(this.uploadLayout);
+        this.dialogWrapper.addItem(this.addAnotherFileButton);
+        this.dialogWrapper.addItem(this.toolbar);
+    }
 },
 
 hide : function () {
@@ -69061,6 +69603,13 @@ isc.SliderItem.addProperties({
     // right on the SliderItem
     // ---------------------------------------------------------------------------------------
 
+    //>    @attr sliderItem.width (number : 150 : IRW)
+    // Default width of this item.
+    // @group appearance
+    // @visibility external
+    //<
+    width:150,
+
     //> @attr sliderItem.vertical (Boolean : false : IR)
     // @include slider.vertical
     //<
@@ -69185,7 +69734,8 @@ isc.SliderItem.addMethods({
             roundValues: this.roundValues,
             roundPrecision: this.roundPrecision,
             tabIndex: this.getGlobalTabIndex(),
-            valueStyle: this.valueStyle
+            valueStyle: this.valueStyle,
+            width: this.width
         }, this.sliderConstructor, this.container);
 
         if (slider != null) {
@@ -69325,6 +69875,7 @@ isc.SliderItem.addMethods({
 //>    @class    ColorItem
 // Form item for selecting a color via a pop-up +link{ColorPicker}.
 //
+// @inheritsFrom TextItem
 // @treeLocation Client Reference/Forms/Form Items
 // @visibility external
 //<
@@ -69361,7 +69912,6 @@ isc.ColorItem.addProperties({
         }
     },
 
-
     //>    @attr    colorItem.showPickerIcon    (Boolean : true : IRW)
     // Should the pick button icon be shown for choosing colors from a ColorPicker
     // @visibility external
@@ -69388,6 +69938,9 @@ isc.ColorItem.addProperties({
     // @visibility external
     //<
     pickerIconHeight:18,
+
+    // separate the colored square icon from the dataElement a bit
+    pickerIconHSpace: 2,
 
     //> @attr colorItem.pickerIconSrc (SCImgURL : "[SKIN]/DynamicForm/ColorPicker_icon.png" : IRW)
     // @include FormItem.pickerIconSrc
@@ -69469,6 +70022,7 @@ isc.ColorItem.addMethods({
             if (this.showEmptyPickerIcon) {
                 this.setIconCustomState(pickerIcon, isEmpty ? this._$empty : null);
             }
+            this.updateState();
         }
     },
 
@@ -69564,6 +70118,7 @@ isc.ColorItem.addMethods({
             if (this.showEmptyPickerIcon) {
                 this.setIconCustomState(pickerIcon, isEmpty ? this._$empty : null);
             }
+            this.updateState();
         }
         return value;
     }
@@ -70698,7 +71253,7 @@ isc.PickTreeItem.addMethods({
 
     //> @method pickTreeItem.setEmptyDisplayValue()
     // Setter for +link{pickTreeItem.emptyDisplayValue}.
-    // @param emptyDisplayValue (string)
+    // @param emptyDisplayValue (HTMLString)
     // @group display_values
     // @visibility external
     //<
@@ -70716,6 +71271,7 @@ isc.PickTreeItem.addMethods({
 // Subclass of +link{PickTreeItem} which shows an +link{IMenuButton} rather than a
 // simple +link{MenuButton} as it's main button.
 //
+// @inheritsFrom PickTreeItem
 // @treeLocation Client Reference/Forms/Form Items
 // @visibility external
 //<
@@ -71609,7 +72165,7 @@ isc.ValuesManager.addClassMethods({
 
 isc.ValuesManager.addProperties({
 
-    //> @attr valuesManager.dataSource  (DataSource | String : null : [IRWA])
+    //> @attr valuesManager.dataSource  (DataSource | identifier : null : [IRWA])
     // Specifies a dataSource for this valuesManager.  This dataSource will then be used for
     // validation and client-server flow methods.  Can be specified as a dataSource object or
     // an identifier for the dataSource.<br>
@@ -71968,7 +72524,7 @@ isc.ValuesManager.addMethods({
         }
     },
 
-    //> @method ValuesManager.synchronizeMembers()
+    //> @method valuesManager.synchronizeMembers()
     // Update all of this ValuesManager's members to reflect the current values held by the
     // ValuesManager.  It is not normally necessary to manually synchronize members, but you
     // will need to do so if you switch off +link{autoSynchronize,automatic synchronization}.
@@ -71980,16 +72536,14 @@ isc.ValuesManager.addMethods({
     // (ie, refreshing just those members that have a particular selectionComponent)
     synchronizeMembers : function (selComp) {
         if (!this.members) return;
-        this._synchronizingMembers = true;
         for (var i = 0; i < this.members.length; i++) {
             if (!selComp || this.members[i].selectionComponent == selComp) {
-                this._setMemberValues(this.members[i]);
+                this.synchronizeMember(this.members[i]);
             }
         }
-        delete this._synchronizingMembers;
     },
 
-    //> @method ValuesManager.synchronizeMembersOnDataPath()
+    //> @method valuesManager.synchronizeMembersOnDataPath()
     // Update just those of this ValuesManager's members that have the parameter
     // +link{canvas.dataPath,dataPath}, to reflect the current values held by the
     // ValuesManager. Note, it is not normally necessary to manually synchronize members
@@ -72000,16 +72554,14 @@ isc.ValuesManager.addMethods({
     //<
     synchronizeMembersOnDataPath : function (dataPath) {
         if (!this.members) return;
-        this._synchronizingMembers = true;
         for (var i = 0; i < this.members.length; i++) {
             if (this.members[i].dataPath == dataPath) {
-                this._setMemberValues(this.members[i]);
+                this.synchronizeMember(this.members[i]);
             }
         }
-        delete this._synchronizingMembers;
     },
 
-    //> @method ValuesManager.synchronizeMember()
+    //> @method valuesManager.synchronizeMember()
     // Update the parameter ValuesManager member to reflect the current values held by the
     // ValuesManager. Note, it is not normally necessary to manually synchronize members
     // @param member (Canvas)   Member component to synchronize
@@ -72017,7 +72569,8 @@ isc.ValuesManager.addMethods({
     // @see valuesManager.synchronizeMembersOnDataPath()
     // @visibility external
     //<
-    synchronizeMember : function (member) {
+
+    synchronizeMember : function (member, pickupValues) {
         if (!member) return;
         if (!this.members || !this.members.contains(member)) {
             this.logWarn("synchronizeMember called with component ID " + member.ID +
@@ -72025,9 +72578,23 @@ isc.ValuesManager.addMethods({
              return;
         }
         this._synchronizingMembers = true;
-        this._setMemberValues(member);
+        this._setMemberValues(member, pickupValues);
         delete this._synchronizingMembers;
+        if (this.memberSynchronized && isc.isA.Function(this.memberSynchronized)) {
+            this.memberSynchronized(member);
+        }
     },
+
+    //> @method valuesManager.memberSynchronized()
+    // Fires after a member component's values have been synchronized from the ValuesManager's
+    // values, upon completion of the +link{synchronizeMember()} call.
+    // <smartclient>No default implementation.</smartclient>
+    // @param member (Canvas)   Member component that has just completed synchronization
+    // @see valuesManager.synchronizeMember()
+    // @see valuesManager.synchronizeMembers()
+    // @see valuesManager.synchronizeMembersOnDataPath()
+    // @visibility external
+    //<
 
     _combineDataPaths : function (baseDP, fieldDP) {
         if (isc.isAn.Object(fieldDP)) {
@@ -72076,7 +72643,7 @@ isc.ValuesManager.addMethods({
     // Specifies a dataSource for this valuesManager.  This dataSource will then be used for
     // validation and client-server flow methods.
     // @visibility external
-    // @param dataSource (string | DataSource)  Datasource object or identifier to bind to.
+    // @param dataSource (DataSource | identifier)  Datasource object or identifier to bind to.
     //<
     setDataSource : function (dataSource, fields) {
         // we don't use 'fields'
@@ -72205,7 +72772,7 @@ isc.ValuesManager.addMethods({
 
     //>@method  ValuesManager.getMembers()
     //  Retrieves an array of pointers to all the members for this valuesManager.
-    // @return (array)   array of member forms
+    // @return (Array of DynamicForm)   array of member forms
     // @visibility external
     // @group members
     //<
@@ -73362,7 +73929,7 @@ isc.ValuesManager.addMethods({
                 // setMemberValues will update the members' items to display the values passed in
                 // Note that for DynamicForms, it also explicitly calls 'clearValue()' on items
                 // for which we have no member - this re-evaluates default values
-                this._setMemberValues(this.members[i]);
+                this.synchronizeMember(this.members[i]);
             }
         }
         // remember values for resetting
@@ -73445,7 +74012,7 @@ isc.ValuesManager.addMethods({
     //   <code>operator</code> to be generated for individual fields' criterion clauses.
     //
     // @group criteriaEditing
-    // @return (Criteria or AdvancedCriteria) a +link{Criteria} object, or +link{AdvancedCriteria}
+    // @return (Criteria | AdvancedCriteria) a +link{Criteria} object, or +link{AdvancedCriteria}
     //
     // @visibility external
     //<
@@ -73745,7 +74312,14 @@ isc.ValuesManager.addMethods({
                          " - this should be a Canvas instance");
             return;
         }
-        if (member.valuesManager != null) member.valuesManager.removeMember(member);
+
+        // remove member from its existing valuesManager
+
+        if (isc.isA.ValuesManager(member.valuesManager)) {
+            member.valuesManager.removeMember(member);
+        } else if (member.valuesManager != null) {
+            member.valuesManager = null;
+        }
 
         if (this.members == null) this.members = [];
 
@@ -73903,12 +74477,12 @@ isc.ValuesManager.addMethods({
             member.setDataSource(dataSource, fields);
         }
 
-        // call _setMemberValues() to update the member data with values defined on this
-        // VM.
+        // Update the member data with values defined on this VM.
+        //
         // Pass in the 'pickupValues' parameter - on initial add, we want to pick up any
         // values present in the form for which we don't already have values
         // (and warn / replace where there are collisions)
-        this._setMemberValues(member, true);
+        this.synchronizeMember(member, true);
 
         // set a flag so we know if this was auto-attached as part of setDataPath()
         // This allows us to respect explicitly specified valuesManager if the dataPath changes
@@ -74210,7 +74784,7 @@ isc.ValuesManager.addMethods({
         }
 
         if (this.members) this.members.remove(member);
-        delete member.valuesManager;
+        member.valuesManager = null;
     },
 
     //> @method valuesManager.removeMembers()
@@ -74618,7 +75192,7 @@ isc.MultiView.addProperties({
     },
 
 
-    //> @attr multiView.dataSource  (DataSource or ID : null : IRW)
+    //> @attr multiView.dataSource  (DataSource | ID : null : IRW)
     // @include dataBoundComponent.dataSource
     // @visibility multiview
     //<
@@ -75041,6 +75615,7 @@ isc.MultiView.registerStringMethods({
 // mode to complex by interacting with the widget.  In general, the widget provides
 // very similar functionality to the color picker dialogs found in graphics packages
 // and other desktop software.
+// @inheritsFrom Window
 // @treeLocation Client Reference/Forms
 // @visibility external
 //<
@@ -75127,7 +75702,7 @@ autoDraw: false,
 showMinimizeButton: false,
 closeClick: function () { this.hide(); },
 
-layoutMargin: 2,
+//layoutMargin: 2,
 
 //> @attr colorPicker.okButton (AutoChild IButton : null : R)
 // "OK" button for the ColorPicker
@@ -75209,7 +75784,6 @@ showModeToggleButton: true,
 //      @visibility external
 //<
 modeToggleButtonConstructor: "IButton",
-
 modeToggleButtonDefaults: {
     width: 80,
     autoParent: "buttonLayout",
@@ -75221,8 +75795,151 @@ modeToggleButtonDefaults: {
 showButtonLayout: true,
 buttonLayoutConstructor: "HLayout",
 buttonLayoutDefaults: {
-    autoParent: "contentLayout",
+    width: "*",
     defaultLayoutAlign: "center"
+},
+
+// this is an VLayout that contains the contentLayout and the buttonLayout
+// buttonLayout
+bodyLayoutConstructor: "VLayout",
+bodyLayoutDefaults: {
+    autoDraw: false,
+    width: "100%",
+    height: "100%"
+},
+
+// this is the main "body" of the chooser - it contains the basicLabel and innerContentLayout
+contentLayoutConstructor: "VLayout",
+contentLayoutDefaults: {
+    autoDraw: false,
+    resized : function () {
+        if (this.creator.buttonLayout) this.creator.buttonLayout.setWidth(this.getVisibleWidth());
+    }
+},
+
+// this layout fills the window width and all the height that isn't taken by the basicLabel or
+// bottom buttonLayout
+innerContentLayoutConstructor: "HLayout",
+innerContentLayoutDefaults: {
+    autoDraw: false,
+    align: "center",
+    membersMargin: 5
+},
+
+// this label sets immediately below the window header in the advanced view and reads "Basic Colors"
+leftLayoutConstructor: "VLayout",
+leftLayoutDefaults: {
+    membersMargin: 10
+},
+
+// this label sets immediately below the window header in the advanced view and reads "Basic Colors"
+basicLabelConstructor: "Label",
+basicLabelDefaults: {
+    autoDraw: false,
+    margin: 0,
+    paddingTop: 5,
+    paddingBottom: 5,
+    width: "100%", height: 15,
+    wrap: false
+},
+
+// this layout contains the three DFs that contains RGB, HSL and HTML edit fields
+formLayoutConstructor: "VLayout",
+formLayoutDefaults: {
+    autoDraw: false,
+    membersMargin: 4
+},
+
+// this form contains items for editing the RGB values
+rgbFormConstructor: "DynamicForm",
+rgbFormDefaults: {
+    autoDraw: false,
+    cellPadding:1,
+    width:65,
+    colWidths: [60, "*"]
+},
+
+// this form contains items for editing the HSL values
+hslFormConstructor: "DynamicForm",
+hslFormDefaults: {
+    autoDraw: false,
+    cellPadding:1,
+    width:65,
+    colWidths: [60, "*"]
+},
+
+// this form contains an item for editing the HTML value
+htmlFormConstructor: "DynamicForm",
+htmlFormDefaults: {
+    autoDraw: false,
+    cellPadding:1,
+    width:65
+},
+
+// the crosshair Img
+crossHairDefaults: {
+    _constructor: "Img",
+    autoDraw: false,
+    imageWidth: 16, imageHeight: 16,
+    width: 16, height: 16, imageType: "normal",
+    canDrag: true,
+    canDrop: true,
+    dragAppearance: "target",
+    picker: this,
+    dragMove: function () {
+        this.picker._dragging = true;
+        this.picker._crosshairMoved(
+            this.parentElement.getOffsetX(),
+            this.parentElement.getOffsetY());
+    }
+},
+
+// the box below the swatch, showing the current color
+colorBoxDefaults: {
+    _constructor: "Canvas",
+    autoDraw: false,
+    width: "100%",
+    height: 30
+},
+
+// the box expressing opacity, overlaid on the colorBox (below the swatch, showing the current color)
+opacityBoxDefaults: {
+    _constructor: "Canvas",
+    autoDraw: false,
+    width: 60, height: 30,
+    overflow: "hidden",
+    // use the same style as the palette-squares, for the borders
+    styleName: "colorChooserCell"
+},
+
+// the box expressing opacity, overlaid on the colorBox (below the swatch, showing the current color)
+luminosityStackDefaults: {
+    _constructor: "VStack",
+    autoDraw: false,
+    extraSpace: 5,
+    overflow: "hidden",
+    // use the same style as the palette-squares, for the borders
+    styleName: "colorChooserCell"
+},
+
+opacitySliderDefaults : {
+    _constructor: "Slider",
+    autoDraw: false,
+    vertical: false,
+    minValue: 0,
+    maxValue: 100,
+    numValues: 100,
+    length: 100,
+    height: 12,
+    width: 100,
+    showTitle: false,
+    showValue: false,
+    labelWidth: 10,
+    showRange: false,
+    value: 100,
+    dragStart : function () { return isc.EH.STOP_BUBBLING; },
+    dragMove : function () { return isc.EH.STOP_BUBBLING; },
+    dragStop : function () { return isc.EH.STOP_BUBBLING; }
 },
 
 //> @attr colorPicker.defaultColor (text : #808080 : IR)
@@ -75244,7 +75961,7 @@ colorButtonSize: 20,
 //<
 colorButtonBaseStyle : "colorChooserCell",
 
-//> @attr colorPicker.colorArray (String[] : [...] : IR)
+//> @attr colorPicker.colorArray (Array of String[] : [...] : IR)
 // Array of 40 HTML color strings, used to render the basic color selection boxes.
 // @visibility external
 //<
@@ -75312,6 +76029,7 @@ basicColorRowLayoutDefaults: {
 },
 
 basicColorSwatchDefaults: {
+    autoDraw: false,
     _constructor: "StatefulCanvas",
     overflow: "hidden",
     title: "",
@@ -75331,6 +76049,7 @@ basicColorSwatchDefaults: {
 showLuminositySlider: false,
 luminositySliderConstructor: "Slider",
 luminositySliderDefaults: {
+    autoDraw: true,
     minValue: 0,
     maxValue: 240,
     numValues: 240,
@@ -75413,12 +76132,12 @@ lessButtonTitle: "<< Less",
 //<
 moreButtonTitle: "More >>",
 
-//> @attr colorPicker.basicColorLabel (HTMLString : "Basic Colors:" : IR)
+//> @attr colorPicker.basicColorLabel (HTMLString : "Basic Colors :" : IR)
 // The label shown above the basic color blocks.
 // @group i18nMessages
 // @visibility external
 //<
-basicColorLabel: "Basic Colors:",
+basicColorLabel: "Basic Colors :",
 
 //> @attr colorPicker.selectedColorLabel (HTMLString : "Selected Color" : IR)
 // The label shown next to the selected color box.
@@ -75642,6 +76361,8 @@ redraw : function () {
 // we don't load one
 selectTitle: "Select a Color",
 initWidget : function () {
+    this.Super("initWidget", arguments);
+
     this.title = this.selectTitle;
 
     this._currentPickMode = this.defaultPickMode;
@@ -75671,22 +76392,20 @@ initWidget : function () {
         this.basicColorLayout.addMember(wk);
     }
 
-    this.leftHandLayout = isc.VLayout.create({ autoDraw:false, membersMargin: 5 });
+    this.leftLayout = this.createAutoChild("leftLayout");
 
-    this.leftHandLayout.addMember(this.basicColorLayout);
+    this.leftLayout.addMember(this.basicColorLayout);
 
-    this.innerContentLayout = isc.HLayout.create({
-         autoDraw:false,
-         align: "center",
-         membersMargin: 5,
-         members: [this.leftHandLayout]
-    });
+    this.innerContentLayout = this.createAutoChild("innerContentLayout");
+    this.innerContentLayout.addMembers([this.leftLayout]);
 
-    this.contentLayout = isc.VLayout.create({
-        autoDraw:false,
-        members: [ this.innerContentLayout ]
-    });
-    this.addItem(this.contentLayout);
+    this.contentLayout = this.createAutoChild("contentLayout");
+    this.contentLayout.addMembers([ this.innerContentLayout ]);
+    //this.addItem(this.contentLayout);
+
+    this.bodyLayout = this.createAutoChild("bodyLayout");
+    this.bodyLayout.addMember(this.contentLayout);
+    //this.body.addMember(this.contentLayout);
 
     // Store the original value of showOkButton so we can set that value when in complex mode.
     this._showOkButtonInComplexMode = this.showOkButton;
@@ -75705,17 +76424,28 @@ initWidget : function () {
     this.addAutoChild("modeToggleButton", {
         title: (this._currentPickMode == "simple" && this.allowComplexMode ? this.moreButtonTitle : this.lessButtonTitle)
     });
+    //this.contentLayout.addMember(this.buttonLayout);
 
     if (this._currentPickMode != "simple") {
         this.createComplexElements();
         this.addComplexElements();
     }
 
+    this.bodyLayout.addMember(this.buttonLayout);
+
+    //this.body.addMember(this.contentLayout);
+
+    this.addItem(this.bodyLayout);
+
     this.setHtmlColor(this.defaultColor);
     this._setLumVals();
     this.setOpacity(this.defaultOpacity);
 
-    this.Super("initWidget", arguments);
+},
+
+draw : function () {
+    this.Super("draw", arguments);
+    if (this.buttonLayout) this.buttonLayout.setWidth(this.body.getVisibleWidth());
 },
 
 createComplexElements : function () {
@@ -75724,114 +76454,103 @@ createComplexElements : function () {
         return;
     }
 
-    this._rgbForm = isc.DynamicForm.create({
-        autoDraw: false,
-        cellPadding:1,
-        width:65,
+    this.rgbForm = this.createAutoChild("rgbForm", { picker: this,
         fields: [
-            {name: "pickerRedVal", title:this.redFieldTitle, type: "text",
-             width: 50, defaultValue: this._pickedRed,
-             prompt: this.redFieldPrompt,
-             picker: this,
-             changed: function (form,item,value) { this.picker.setRed(value); } },
-
-            {name: "pickerGrnVal", title:this.greenFieldTitle, type: "text",
-             width: 50, defaultValue: this._pickedGrn,
-             prompt: this.greenFieldPrompt,
-             picker: this,
-             changed: function (form,item,value) { this.picker.setGreen(value); } },
-
-            {name: "pickerBluVal", title:this.blueFieldTitle, type: "text",
-             width: 50, defaultValue: this._pickedBlu,
-             prompt: this.blueFieldPrompt,
-             picker: this,
-             changed: function (form,item,value) { this.picker.setBlue(value); } },
-
-            {name: "pickerHtmlVal", title:this.htmlFieldTitle, type: "text",
-             width: 85, defaultValue: this._pickedHtml,
-             prompt: this.htmlFieldPrompt,
-             picker: this,
-             changed: function (form,item,value) { this.picker.setHtmlColor(value); } }
+            {
+                name: "pickerRedVal", title:this.redFieldTitle, type: "text",
+                width: 50, defaultValue: this._pickedRed,
+                prompt: this.redFieldPrompt,
+                picker: this,
+                changed: function (form,item,value) { this.picker.setRed(value); }
+            },
+            {
+                name: "pickerGrnVal", title:this.greenFieldTitle, type: "text",
+                width: 50, defaultValue: this._pickedGrn,
+                prompt: this.greenFieldPrompt,
+                picker: this,
+                changed: function (form,item,value) { this.picker.setGreen(value); }
+            },
+            {
+                name: "pickerBluVal", title:this.blueFieldTitle, type: "text",
+                width: 50, defaultValue: this._pickedBlu,
+                prompt: this.blueFieldPrompt,
+                picker: this,
+                changed: function (form,item,value) { this.picker.setBlue(value); }
+            }
         ]
-
+    });
+    this.hslForm = this.createAutoChild("hslForm", { picker: this,
+        fields: [
+            {
+                name: "pickerHueVal", title:this.hueFieldTitle, type: "text",
+                width: 49, defaultValue: this._pickedHue,
+                prompt: this.hueFieldPrompt,
+                picker: this,
+                changed: function (form,item,value) { this.picker.setHue(value); }
+            },
+            {
+                name: "pickerSatVal", title:this.satFieldTitle, type: "text",
+                width: 49, defaultValue: this._pickedSat,
+                prompt: this.satFieldPrompt,
+                picker: this,
+                changed: function (form,item,value) { this.picker.setSaturation(value); }
+            },
+            {
+                name: "pickerLumVal", title:this.lumFieldTitle, type: "text",
+                width: 49, defaultValue: this._pickedLum,
+                prompt: this.lumFieldPrompt,
+                picker: this,
+                changed: function (form,item,value) { this.picker.setLuminosity(value); }
+            }
+        ]
     });
 
-    this._hslForm = isc.DynamicForm.create({
-        autoDraw: false,
-        cellPadding:1,
-        width:65,
+    this.htmlForm = this.createAutoChild("htmlForm", { picker: this,
         fields: [
-            {name: "pickerHueVal", title:this.hueFieldTitle, type: "text",
-             width: 50, defaultValue: this._pickedHue,
-             prompt: this.hueFieldPrompt,
-             picker: this,
-             changed: function (form,item,value) { this.picker.setHue(value); } },
-
-            {name: "pickerSatVal", title:this.satFieldTitle, type: "text",
-             width: 50, defaultValue: this._pickedSat,
-             prompt: this.satFieldPrompt,
-             picker: this,
-             changed: function (form,item,value) { this.picker.setSaturation(value); } },
-
-            {name: "pickerLumVal", title:this.lumFieldTitle, type: "text",
-             width: 50, defaultValue: this._pickedLum,
-             prompt: this.lumFieldPrompt,
-             picker: this,
-             changed: function (form,item,value) { this.picker.setLuminosity(value); } }
+            {
+                name: "pickerHtmlVal", title:this.htmlFieldTitle, type: "text",
+                width: 90, defaultValue: this._pickedHtml,
+                prompt: this.htmlFieldPrompt,
+                picker: this,
+                changed: function (form,item,value) { this.picker.setHtmlColor(value); }
+            }
         ]
-
     });
 
-    this._crossHair = isc.Img.create({
-        autoDraw: false,
-        imageWidth: 16, imageHeight: 16, src: this.crosshairImageURL,
-        width: 16, height: 16, imageType: "normal",
-        canDrag: true,
-        canDrop: true,
-        dragAppearance: "target",
+    this.crossHair = this.createAutoChild("crossHair", {
         picker: this,
-        dragMove: function () {
-            this.picker._dragging = true;
-            this.picker._crosshairMoved(
-                this.parentElement.getOffsetX(),
-                this.parentElement.getOffsetY());
-        }
+        src: this.crosshairImageURL
     });
 
-    this._colorBox = isc.Canvas.create({
-        autoDraw: false,
-        width: "100%",
-        height: 30,
+    this.colorBox = this.createAutoChild("colorBox", {
+        picker: this,
         backgroundColor: this.getHtmlColor()
     });
 
-    this._opacityBox = isc.Canvas.create({
-        autoDraw: false,
-        width: 55, height: 30,
-        overflow: "hidden",
-        border: "1px black solid",
+    this.opacityBox = this.createAutoChild("opacityBox", {
+        picker: this,
         contents: this.opacityText,
         children: [
-            this._colorBox
+            this.colorBox
         ]
     });
 
-    this._lumVals = isc.VStack.create({
-        lumWidth: 15, height: this.swatchHeight,
-        //margin: 5,
-        border: "1px solid black",
+    this.luminosityStack = this.createAutoChild("luminosityStack", {
         picker: this,
+        height: this.swatchHeight+2,
+        width: this.lumWidth,
         click: function () {
             // we need to subtract 2 to isc.EH.getY() to obtain a more accurate result to set it to the
             // luminosity Slider (border x 2)
             var finalValue = this.picker.luminositySlider._getValueFromCoords(true, [isc.EH.getX(), isc.EH.getY()-2], true);
             this.picker.luminositySlider.setValue(finalValue);
-        },
-        extraSpace: 5
+        }
     });
 
-    for (var i = 0; i < this.swatchHeight/this.lumStep; i++) {
-        this._lumVals.addMember(isc.Canvas.create({
+    var count = Math.ceil(this.swatchHeight/this.lumStep)
+    for (var i = 0; i < count; i++) {
+        this.luminosityStack.addMember(isc.Canvas.create({
+            autoDraw: false,
             width: this.lumWidth, height: this.lumStep,
             margin: 0, padding: 0, overflow: "hidden"
         }));
@@ -75841,39 +76560,21 @@ createComplexElements : function () {
 
     if (this.supportsTransparency) {
 
-        this._opacitySlider = isc.Slider.create({
-            autoDraw: false,
-            vertical: false,
-            minValue: 0,
-            maxValue: 100,
-            numValues: 100,
-            length: 90,
-            height: 12,
-            width: 100,
-            thumbThickWidth: 15,
-            thumbThinWidth: 10,
-            showTitle: false,
-            showValue: false,
-            showRange: false,
-            value: 100,
-            dragStart : function () { return isc.EH.STOP_BUBBLING; },
-            dragMove : function () { return isc.EH.STOP_BUBBLING; },
-            dragStop : function () { return isc.EH.STOP_BUBBLING; }
+        this.opacitySlider = this.createAutoChild("opacitySlider", {
+            picker: this
         });
-        this._opacityLayout = isc.HLayout.create({
-                                autoDraw: false,
-                                //layoutLeftMargin: 5,
-                                //layoutRightMargin: 5,
-                                membersMargin: 5,
-                                members: [
-                                    isc.Label.create({
-                                        autoDraw: false,
-                                        contents: this.opacitySliderLabel,
-                                        width: this.swatchWidth - 105, height: 10}),
 
-                                    this._opacitySlider
-                                ]
-                            });
+        this._opacityLayout = isc.HLayout.create({
+            membersMargin: 5,
+            members: [
+                isc.Label.create({
+                    autoDraw: false,
+                    contents: this.opacitySliderLabel,
+                    width: this.swatchWidth - 105, height: 10}),
+
+                this.opacitySlider
+            ]
+        });
     }
 
     this._rightHandLayout = isc.VLayout.create({
@@ -75894,14 +76595,14 @@ createComplexElements : function () {
                         width: this.swatchWidth+2, height: this.swatchHeight+2,
                         src: this.swatchImageURL,
                         overflow: "hidden",
-                        border: "1px black solid",
+                        styleName: "colorChooserCell",
                         picker: this,
                         click: function () {
                             this.picker._crosshairMoved(this.getOffsetX(), this.getOffsetY());
                         },
 
                         children: [
-                            this._crossHair
+                            this.crossHair
                         ]
                     })
                 ]
@@ -75916,7 +76617,7 @@ createComplexElements : function () {
                         contents: this.selectedColorLabel,
                         width: this.swatchWidth - 63, height: 15
                     }),
-                    this._opacityBox
+                    this.opacityBox
                  ]
             })
         ]
@@ -75928,14 +76629,13 @@ createComplexElements : function () {
         width: 1,
         overflow: "visible",
         members: [
-            this._lumVals,
+            this.luminosityStack,
             this.luminositySlider
         ]
     });
 
-
     if (this.luminositySlider) this.observe(this.luminositySlider, "valueChanged", "observer.luminositySliderChanged()");
-    if (this._opacitySlider) this.observe(this._opacitySlider, "valueChanged", "observer._opSliderChanged()");
+    if (this.opacitySlider) this.observe(this.opacitySlider, "valueChanged", "observer._opSliderChanged()");
 
 },
 
@@ -75947,13 +76647,13 @@ initComplexElements : function () {
     // run through setHtmlColor to update the RGB and HTML forms
     if (this._pickedHtml) this.setHtmlColor(this._pickedHtml);
 
-    this._colorBox.setBackgroundColor(
+    this.colorBox.setBackgroundColor(
         isc.ColorUtils.hslToHtml( this._pickedHue,
                                   this._pickedSat,
                                   this._pickedLum ) );
     if (this.supportsTransparency) {
-        this._colorBox.setOpacity(this._pickedOpacity);
-        this._opacitySlider.setValue(this._pickedOpacity);
+        this.colorBox.setOpacity(this._pickedOpacity);
+        this.opacitySlider.setValue(this._pickedOpacity);
     }
 },
 
@@ -75967,26 +76667,30 @@ addComplexElements : function () {
     this.setAutoChild("okButton", {title: this.okButtonTitle});
     this.buttonLayout.setMembers([this.okButton, this.cancelButton, this.modeToggleButton]);
 
-    this.basicLabel = isc.Label.create({
-            autoDraw: false,
-            margin: 0,
-            paddingTop: 5,
-            paddingBottom: 5,
-            contents: this.basicColorLabel,
-            width: "100%", height: 15
-        });
+    if (!this.basicLabel) {
+        this.basicLabel = this.createAutoChild("basicLabel", { contents: this.basicColorLabel });
+    }
 
-    this.formLayout = isc.HLayout.create({
+    if (!this._formContainer) {
+        this._formContainer = isc.HLayout.create({
             autoDraw: false,
+            membersMargin: 4,
             members: [
-                this._rgbForm,
-                this._hslForm
+                this.rgbForm,
+                this.hslForm
             ]
-    });
+        });
+    }
 
-    //this.leftHandLayout.addMember(this.basicLabel, 0);
+
+    if (!this.formLayout) {
+        this.formLayout = this.createAutoChild("formLayout");
+        this.formLayout.addMembers([ this._formContainer, this.htmlForm ]);
+    }
+
+    //this.leftLayout.addMember(this.basicLabel, 0);
     this.contentLayout.addMember(this.basicLabel, 0);
-    this.leftHandLayout.addMember(this.formLayout);
+    this.leftLayout.addMember(this.formLayout);
 
     if (this.supportsTransparency) {
         this._rightHandLayout.addMember(this._opacityLayout);
@@ -76012,7 +76716,8 @@ removeComplexElements : function () {
     this.setAutoChild("okButton");
 
     if (this.formLayout) {
-        this.leftHandLayout.removeMembers([this.basicLabel, this.formLayout]);
+        this.contentLayout.removeMembers([this.basicLabel]);
+        this.leftLayout.removeMembers([this.formLayout]);
         this.innerContentLayout.removeMembers([this._rightHandLayout, this._rightEdgeLayout]);
     }
 
@@ -76133,7 +76838,7 @@ setRed : function (val) {
     else this._pickedRed = val/1;
 
     if (this._currentPickMode == 'complex') {
-        this._rgbForm.setValue("pickerRedVal", this._pickedRed);
+        this.rgbForm.setValue("pickerRedVal", this._pickedRed);
     }
     if (this._updateColor === true)
         this._changeColor('rgb');
@@ -76152,7 +76857,7 @@ setGreen : function (val) {
     else this._pickedGrn = val/1;
 
     if (this._currentPickMode == 'complex') {
-        this._rgbForm.setValue("pickerGrnVal", this._pickedGrn);
+        this.rgbForm.setValue("pickerGrnVal", this._pickedGrn);
     }
     if (this._updateColor === true)
         this._changeColor('rgb');
@@ -76170,7 +76875,7 @@ setBlue : function (val) {
     else this._pickedBlu = val/1;
 
     if (this._currentPickMode == 'complex') {
-        this._rgbForm.setValue("pickerBluVal", this._pickedBlu);
+        this.rgbForm.setValue("pickerBluVal", this._pickedBlu);
     }
     if (this._updateColor === true)
         this._changeColor('rgb');
@@ -76188,7 +76893,7 @@ setHue : function (val) {
     else this._pickedHue = val/1;
 
     if (this._currentPickMode == 'complex') {
-        this._hslForm.setValue("pickerHueVal", this._pickedHue);
+        this.hslForm.setValue("pickerHueVal", this._pickedHue);
     }
     if (this._updateColor === true)
         this._changeColor('hsl');
@@ -76206,7 +76911,7 @@ setSaturation : function (val) {
     else this._pickedSat = val/1;
 
     if (this._currentPickMode == 'complex') {
-        this._hslForm.setValue("pickerSatVal", this._pickedSat);
+        this.hslForm.setValue("pickerSatVal", this._pickedSat);
     }
     if (this._updateColor === true) {
         this._changeColor('hsl');
@@ -76235,7 +76940,7 @@ setLuminosity : function (val, dontPersist) {
     this._persistLum = !dontPersist;
 
     if (this._currentPickMode == 'complex') {
-        this._hslForm.setValue("pickerLumVal", this._pickedLum);
+        this.hslForm.setValue("pickerLumVal", this._pickedLum);
     }
     if (this._updateColor === true)
         this._changeColor('hsl');
@@ -76253,7 +76958,7 @@ setHtmlColor : function (val) {
     if (isc.ColorUtils.encodingIsValid(val) === true) {
         this._pickedHtml = val.toUpperCase();
         if (this._currentPickMode == 'complex') {
-            this._rgbForm.setValue("pickerHtmlVal", this._pickedHtml);
+            this.htmlForm.setValue("pickerHtmlVal", this._pickedHtml);
         }
         if (this._updateColor === true)
             this._changeColor('html');
@@ -76350,13 +77055,13 @@ _changeColor : function (src) {
     if (this._currentPickMode == 'complex') {
         if (!this.luminositySlider) this.luminositySlider = this.createAutoChild("luminositySlider", { length: this.swatchHeight });
         this.luminositySlider.setValue(this._pickedLum);
-        this._hslForm.setValue("pickerLumVal", this._pickedLum);
+        this.hslForm.setValue("pickerLumVal", this._pickedLum);
     }
 
     // Now set the color box - use HSL, though we could use either as they
     // are now the same...
     if (this._currentPickMode == 'complex') {
-        this._colorBox.setBackgroundColor(
+        this.colorBox.setBackgroundColor(
                             isc.ColorUtils.hslToHtml( this._pickedHue,
                                                       this._pickedSat,
                                                       this._pickedLum ) );
@@ -76370,13 +77075,13 @@ _changeColor : function (src) {
 
     // Set the opacity
     if (this._currentPickMode == 'complex' && this.supportsTransparency) {
-        this._colorBox.setOpacity(this._pickedOpacity);
-        if (this._opacitySlider != null) {
-            var slider = this._opacitySlider,
+        this.colorBox.setOpacity(this._pickedOpacity);
+        if (this.opacitySlider != null) {
+            var slider = this.opacitySlider,
                 sliderVal = slider.getValue(),
                 newSliderVal = this._pickedOpacity;
             if (newSliderVal === null) newSliderVal = 100;
-            if (sliderVal != newSliderVal) this._opacitySlider.setValue(this._pickedOpacity);
+            if (sliderVal != newSliderVal) this.opacitySlider.setValue(this._pickedOpacity);
         }
     }
 
@@ -76425,8 +77130,8 @@ _positionCrossHair : function (hue, sat) {
     ph = parseInt(ph) - 8;
     ps = parseInt(ps) - 8;
 
-    this._crossHair.setLeft(ph);
-    this._crossHair.setTop(ps);
+    this.crossHair.setLeft(ph);
+    this.crossHair.setTop(ps);
 
 },
 
@@ -76451,7 +77156,7 @@ _setLumVals : function () {
     }
 
     for (var i = 0; i < this.swatchHeight/this.lumStep; i++) {
-        this._lumVals.members[i].setBackgroundColor(
+        this.luminosityStack.members[i].setBackgroundColor(
                         isc.ColorUtils.hslToHtml(
                                this._pickedHue,
                                this._pickedSat,
@@ -76469,7 +77174,7 @@ luminositySliderChanged : function () {
 },
 
 _opSliderChanged : function () {
-    this.setOpacity(this._opacitySlider.getValue());
+    this.setOpacity(this.opacitySlider.getValue());
 },
 
 //> @method colorPicker.setCurrentPickMode()
@@ -76493,13 +77198,15 @@ setCurrentPickMode : function (pickMode) {
         }
     } else {
         this._currentPickMode = "complex";
-        if (! this._rightHandLayout) {
+        if (!this._rightHandLayout) {
             this.createComplexElements();
         }
         this.addComplexElements();
         this.modeToggleButton.setTitle(this.lessButtonTitle);
     }
     this.modeToggleButton.setState("");
+
+    this.reflow();
 
     // Check that remains onscreen when redrawn
     this.markForRedraw();
@@ -78914,7 +79621,7 @@ isc.RelativeDateItem.addProperties({
     //<
     yearsFromNowTitle: "N years from now",
 
-    //> @attr relativeDateItem.defaultValue (Date or RelativeDateString or TimeUnit : "$today" : IR)
+    //> @attr relativeDateItem.defaultValue (Date | RelativeDateString | TimeUnit : "$today" : IR)
     // Default value to show.  Can be a concrete Date, a +link{RelativeDateString} that matches
     // one of the +link{relativeDateItem.presetOptions}, or one of the available
     // +link{relativeDateItem.timeUnitOptions, time units}.  If setting a +link{type:TimeUnit},
@@ -79098,9 +79805,11 @@ isc.RelativeDateItem.addProperties({
         showFocused: false,
         showFocusedWithItem: false,
         neverDisable: true,
-        width: 16, height: 16,
         src:"[SKIN]/DynamicForm/DatePicker_icon.gif"
     },
+
+    pickerIconWidth:16,
+    pickerIconHeight:16,
 
     iconVAlign: "center",
 
@@ -79419,7 +80128,9 @@ isc.RelativeDateItem.addMethods({
                 },
                 iconVAlign: "center",
                 icons: [
-                    isc.addProperties({ prompt: this.pickerIconPrompt },
+                    isc.addProperties({ prompt: this.pickerIconPrompt,
+                        width:this.pickerIconWidth, height:this.pickerIconHeight
+                     },
                         this.pickerIconDefaults, this.pickerIconProperties,
                         {
                             click : function () {
@@ -79659,8 +80370,10 @@ isc.RelativeDateItem.addMethods({
                 quantity = parts ? parts.countValue : null;
                 key = period ? period.toLowerCase()+"_"+suffix : null;
 
-
-                if (key && this.valueField.valueMap[key]) {
+                // there's no UI support fro editing a qualifier (a contained relative-string
+                // in square brackets), so apply the relative date and discard the relative
+                // string
+                if (!parts.qualifier && key && this.valueField.valueMap[key]) {
                     this.valueField.setValue(key);
                     this.quantityField.setValue(quantity);
                     isRelativeDate = true;
@@ -79669,6 +80382,9 @@ isc.RelativeDateItem.addMethods({
                     // just resolve to an absolute date and store that value
                     isRelativeDate = false;
                     this.valueField.setValue(this.formatDate(absoluteDate));
+                    // overwrite the passed value (string) with the absolute date - that will
+                    // be stored and the relative string discarded
+                    value = absoluteDate;
                 }
             }
         }
@@ -80336,12 +81052,12 @@ shouldSaveValue:true,
 // @visibility external
 //<
 
-//> @attr dateRange.start (RelativeDate or Date : null : IR)
+//> @attr dateRange.start (RelativeDate | Date : null : IR)
 // The start of this DateRange.
 // @visibility external
 //<
 
-//> @attr dateRange.end (RelativeDate or Date : null : IR)
+//> @attr dateRange.end (RelativeDate | Date : null : IR)
 // The end of this DateRange.
 // @visibility external
 //<
@@ -80399,7 +81115,7 @@ allowRelativeDates: false,
 // @visibility internal
 //<
 
-//> @attr dateRangeItem.fromDate (Date or RelativeDateString or TimeUnit : today : IRW)
+//> @attr dateRangeItem.fromDate (Date | RelativeDateString | TimeUnit : today : IRW)
 // Initial value for the "from" date.
 // @setter setFromDate
 // @visibility external
@@ -80408,7 +81124,7 @@ allowRelativeDates: false,
 
 //> @method dateRangeItem.setFromDate()
 // Sets the +link{fromDate} for this DateRangeItem.
-// @param fromDate (Date) the date from which this item should start it's range
+// @param fromDate (Date | RelativeDateString | TimeUnit) the date from which this item should start it's range
 // @visibility external
 //<
 setFromDate : function (fromDate) {
@@ -80416,7 +81132,7 @@ setFromDate : function (fromDate) {
     if (this.fromField) this.fromField.setValue(this.fromDate);
 },
 
-//> @attr dateRangeItem.toDate (Date or RelativeDateString or TimeUnit : today : IRW)
+//> @attr dateRangeItem.toDate (Date | RelativeDateString | TimeUnit : today : IRW)
 // Initial value for the "to" date.
 // @setter setToDate
 // @visibility external
@@ -80425,7 +81141,7 @@ setFromDate : function (fromDate) {
 
 //> @method dateRangeItem.setToDate()
 // Sets the +link{toDate} for this DateRangeItem.
-// @param fromDate (Date) the date at which this item should end it's range
+// @param fromDate (Date | RelativeDateString | TimeUnit) the date at which this item should end it's range
 // @visibility external
 //<
 setToDate : function (toDate) {
@@ -80988,6 +81704,7 @@ if (isc.Window) {
 //> @class DateRangeDialog
 // Simple modal dialog for collecting a date range from the end user.
 //
+// @inheritsFrom Window
 // @treeLocation Client Reference/Forms
 // @visibility external
 //<
@@ -81250,6 +81967,7 @@ isc.DateRangeDialog.addMethods({
 // display of the current selected date range with an icon to launch a +link{DateRangeDialog}
 // to edit the range.
 //
+// @inheritsFrom StaticTextItem
 // @visibility external
 //<
 isc.defineClass("MiniDateRangeItem", "StaticTextItem");
@@ -81264,6 +81982,7 @@ controlStyle:"textItem",
 clipValue: true,
 applyHeightToTextBox:true,
 wrap: false,
+valign: "middle",
 iconVAlign: "middle",
 height: 20,
 width: 100,
@@ -81379,14 +82098,14 @@ allowRelativeDates: true,
 // @visibility external
 //<
 
-//> @attr miniDateRangeItem.fromDate (Date or RelativeDateString or TimeUnit : today : IRW)
+//> @attr miniDateRangeItem.fromDate (Date | RelativeDateString | TimeUnit : today : IRW)
 // Initial value for the "from" date.
 // @setter setFromDate
 // @visibility external
 //<
 //fromDate: "$today",
 
-//> @attr miniDateRangeItem.toDate (Date or RelativeDateString or TimeUnit : today : IRW)
+//> @attr miniDateRangeItem.toDate (Date | RelativeDateString | TimeUnit : today : IRW)
 // Initial value for the "to" date.
 // @setter setFromDate
 // @visibility external
@@ -81435,9 +82154,16 @@ isc.MiniDateRangeItem.addMethods({
         if (this.defaultValue) {
             this.setValue(this.defaultValue);
         }
+
+        // remove the isDate validator - it's already been applied to the child items and this
+        // item produces a DateRange object, not a Date, so date validation here is invalid
+        if (this.validators) this.validators.remove(this.validators.find("type", "isDate"));
     },
 
-
+    validate : function () {
+        // when validate is directly called, pass it through to the rangeItem
+        return this.rangeItem.validateRange();
+    },
 
     //> @attr miniDateRangeItem.autoValidate (Boolean : true : IRW)
     // If this attribute is set to true, the pop up date range dialog will automatically
@@ -82619,7 +83345,7 @@ isc.PresetCriteriaItem.addMethods({
     //> @method presetCriteriaItem.getCriterion()
     // Get the criterion based on the value selected by the user.
     //
-    // @return (Criterion or AdvancedCriteria) the criteria for the selected option
+    // @return (Criterion | AdvancedCriteria) the criteria for the selected option
     //
     // @visibility external
     //<
@@ -82735,6 +83461,7 @@ isc.PresetCriteriaItem.addMethods({
 // custom operator and set +link{operator.editorType} to use it with the FilterBuilder.
 // <P>
 // See the +explorerExample{dateRangeFilterPresets,Date Range (Presets)} example for sample code.
+// @inheritsFrom PresetCriteriaItem
 // @visibility external
 //<
 isc.defineClass("PresetDateRangeItem", "PresetCriteriaItem");
@@ -82759,7 +83486,7 @@ isc.PresetDateRangeItem.addProperties({
     //> @method presetDateRangeItem.getCriterion()
     // Get the criterion based on the value selected by the user.
     //
-    // @return (Criterion or AdvancedCriteria) the criteria for the selected option
+    // @return (Criterion | AdvancedCriteria) the criteria for the selected option
     //
     // @visibility external
     //<
@@ -82773,38 +83500,14 @@ isc.PresetDateRangeItem.addProperties({
 
 }
 isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._debugModules.push('Forms');isc.checkForDebugAndNonDebugModules();isc._moduleEnd=isc._Forms_end=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc.Log&&isc.Log.logIsInfoEnabled('loadTime'))isc.Log.logInfo('Forms module init time: ' + (isc._moduleEnd-isc._moduleStart) + 'ms','loadTime');delete isc.definingFramework;if (isc.Page) isc.Page.handleEvent(null, "moduleLoaded", { moduleName: 'Forms', loadTime: (isc._moduleEnd-isc._moduleStart)});}else{if(window.isc && isc.Log && isc.Log.logWarn)isc.Log.logWarn("Duplicate load of module 'Forms'.");}
-
 /*
-
-  SmartClient Ajax RIA system
-  Version SNAPSHOT_v11.1d_2017-03-13/LGPL Deployment (2017-03-13)
-
-  Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
-  "SmartClient" is a trademark of Isomorphic Software, Inc.
-
-  LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
-     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
-     without an accompanying Isomorphic Software license file, please
-     contact licensing@isomorphic.com for details. Unauthorized copying and
-     use of this software is a violation of international copyright law.
-
-  DEVELOPMENT ONLY - DO NOT DEPLOY
-     This software is provided for evaluation, training, and development
-     purposes only. It may include supplementary components that are not
-     licensed for deployment. The separate DEPLOY package for this release
-     contains SmartClient components that are licensed for deployment.
-
-  PROPRIETARY & PROTECTED MATERIAL
-     This software contains proprietary materials that are protected by
-     contract and intellectual property law. You are expressly prohibited
-     from attempting to reverse engineer this software or modify this
-     software for human readability.
-
-  CONTACT ISOMORPHIC
-     For more information regarding license rights and restrictions, or to
-     report possible license violations, please contact Isomorphic Software
-     by email (licensing@isomorphic.com) or web (www.isomorphic.com).
-
-*/
+ * Isomorphic SmartClient
+ * Version SNAPSHOT_v11.1d_2017-06-18 (2017-06-18)
+ * Copyright(c) 1998 and beyond Isomorphic Software, Inc. All rights reserved.
+ * "SmartClient" is a trademark of Isomorphic Software, Inc.
+ *
+ * licensing@smartclient.com
+ *
+ * http://smartclient.com/license
+ */
 

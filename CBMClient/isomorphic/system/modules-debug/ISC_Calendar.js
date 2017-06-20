@@ -1,37 +1,13 @@
-
 /*
-
-  SmartClient Ajax RIA system
-  Version SNAPSHOT_v11.1d_2017-03-13/LGPL Deployment (2017-03-13)
-
-  Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
-  "SmartClient" is a trademark of Isomorphic Software, Inc.
-
-  LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
-     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
-     without an accompanying Isomorphic Software license file, please
-     contact licensing@isomorphic.com for details. Unauthorized copying and
-     use of this software is a violation of international copyright law.
-
-  DEVELOPMENT ONLY - DO NOT DEPLOY
-     This software is provided for evaluation, training, and development
-     purposes only. It may include supplementary components that are not
-     licensed for deployment. The separate DEPLOY package for this release
-     contains SmartClient components that are licensed for deployment.
-
-  PROPRIETARY & PROTECTED MATERIAL
-     This software contains proprietary materials that are protected by
-     contract and intellectual property law. You are expressly prohibited
-     from attempting to reverse engineer this software or modify this
-     software for human readability.
-
-  CONTACT ISOMORPHIC
-     For more information regarding license rights and restrictions, or to
-     report possible license violations, please contact Isomorphic Software
-     by email (licensing@isomorphic.com) or web (www.isomorphic.com).
-
-*/
+ * Isomorphic SmartClient
+ * Version SNAPSHOT_v11.1d_2017-06-18 (2017-06-18)
+ * Copyright(c) 1998 and beyond Isomorphic Software, Inc. All rights reserved.
+ * "SmartClient" is a trademark of Isomorphic Software, Inc.
+ *
+ * licensing@smartclient.com
+ *
+ * http://smartclient.com/license
+ */
 
 if(window.isc&&window.isc.module_Core&&!window.isc.module_Calendar){isc.module_Calendar=1;isc._moduleStart=isc._Calendar_start=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc._moduleEnd&&(!isc.Log||(isc.Log && isc.Log.logIsDebugEnabled('loadTime')))){isc._pTM={ message:'Calendar load/parse time: ' + (isc._moduleStart-isc._moduleEnd) + 'ms', category:'loadTime'};
 if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
@@ -39,9 +15,9 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
 
-if (window.isc && isc.version != "SNAPSHOT_v11.1d_2017-03-13/LGPL Deployment" && !isc.DevUtil) {
+if (window.isc && isc.version != "SNAPSHOT_v11.1d_2017-06-18/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v11.1d_2017-03-13/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v11.1d_2017-06-18/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -83,6 +59,9 @@ isc.CalendarView.addProperties({
 
 
     canFreezeFields: false,
+
+    // switch off alternateFieldStyles
+    alternateFieldStyles: false,
 
     initWidget : function () {
         // initialize a cache to store some frequently used props that only change with a rebuild
@@ -1765,9 +1744,13 @@ isc.CalendarView.addProperties({
 
     resized : function (deltaX, deltaY, reason ) {
         this.Super('resized', arguments);
-        //isc.logWarn(this.viewName + " resized:" + [this.isDrawn(), this.calendar.hasData()]);
-        if (deltaX > (this.getScrollbarSize() + 1) && this.renderEventsOnDemand && this.isDrawn() && this.calendar.hasData()) {
+
+        if (this.renderEventsOnDemand && !this._updatingRecordComponents && this.isDrawn()) {
             this.refreshVisibleEvents(null, null, "resized");
+            this.logInfo("Calendar " + this.viewName + " view resized - reason is '" +
+                (reason || "no reason") + " -- w/h is " + this.body.getVisibleWidth() + "/" +
+                this.body.getVisibleHeight(), "calendar"
+            );
         }
     },
 
@@ -2445,7 +2428,8 @@ isc.CalendarView.addProperties({
                 eHrs = 24;
             }
 
-            eTop = startDate.getHours() * (rowSize * rowsPerHour);
+            // use getRowTop() to get the top of the row containing the start time
+            eTop = this.getRowTop(startDate.getHours() * rowsPerHour);
 
             // each (rowSize * 2) represents one hour, so we're doing (hour diff) * (1 hour height)
             eHeight = (eHrs - startDate.getHours()) * (rowSize * rowsPerHour);
@@ -3735,6 +3719,9 @@ isc.DaySchedule.addProperties({
     labelColumnPosition: "left",
     labelColumnBaseStyle: "labelColumn",
 
+    // leave the scrollbar gap to prevent ongoing resizes
+    //leaveScrollbarGap: true,
+
     // show cell-level rollover
     showRollOver: true,
     useCellRollOvers: true,
@@ -3802,7 +3789,6 @@ isc.DaySchedule.addProperties({
                 autoFitWidth: true,
                 minWidth: this.labelColumnWidth,
                 width: this.labelColumnWidth,
-                autoFitWidth: true,
                 name: "label",
                 frozen: true,
                 isLabelField: true,
@@ -3871,11 +3857,11 @@ isc.DaySchedule.addProperties({
         } else {
             var scaffoldingStartDate = cal.chosenDate;
             fields[0].frozen = true;
-            fields.add({name: "day1", align: "center", date: cal.chosenDate});
+            fields.add({name: "day1", align: "center", date: cal.chosenDate, width: "*", autoFitWidth: false});
             if (this.isWeekView()) {
                 var numDays = 8;
                 for (var i = 2; i < numDays; i++) {
-                    fields.add({name: "day" + i, align: "center" } );
+                    fields.add({name: "day" + i, align: "center", width: "*", autoFitWidth: false } );
                 }
                 this.setShowHeader(true);
 
@@ -7837,6 +7823,11 @@ getMinutePixels : function (minutes, rowSize, view) {
 // @visibility calendar
 //<
 scrollToTime : function (time, view) {
+    if (!this.isDrawn()) {
+        // store the requested scroll-time - scroll to it at the end of draw()
+        this._pendingScrollToTime = time;
+        return;
+    }
     view = view || this.getSelectedView();
     time = isc.Time.parseInput(time);
     if (isc.isA.Date(time)) {
@@ -8896,7 +8887,7 @@ getPeriodEndDate : function (view) {
 // Data & Fetching
 // ---------------------------------------------------------------------------------------
 
-//> @attr calendar.data (Array[] of CalendarEvent : null : IRW)
+//> @attr calendar.data (Array of CalendarEvent[] : null : IRW)
 // A List of CalendarEvent objects, specifying the data to be used to populate the
 // calendar.
 // <p>
@@ -8911,7 +8902,7 @@ getPeriodEndDate : function (view) {
 // @visibility calendar
 //<
 
-//> @attr calendar.dataSource (DataSource or ID : null : IRW)
+//> @attr calendar.dataSource (DataSource | ID : null : IRW)
 // @include dataBoundComponent.dataSource
 //<
 
@@ -10435,7 +10426,7 @@ getDefaultData : function () { return []; },
 // Initialize the data object with the given array. Observes methods of the data object
 // so that when the data changes, the calendar will redraw automatically.
 //
-// @param newData (List of CalendarEvent) data to show in the list
+// @param newData (Array of CalendarEvent[]) data to show in the list
 //
 // @group data
 // @visibility calendar
@@ -11040,7 +11031,7 @@ getDateEditingStyle : function () {
 // particular +link{Lane}.
 //
 // @param laneName        (Lane) the Lane in which to add this event
-// @param startDate       (Date or Object) start date of event, or CalendarEvent Object
+// @param startDate       (Date | Object) start date of event, or CalendarEvent Object
 // @param [endDate]       (Date) end date of event
 // @param [name]          (String) name of event
 // @param [description]   (String) description of event
@@ -11081,7 +11072,7 @@ createEventObject : function (sourceEvent, start, end, lane, sublane, name, desc
 //> @method calendar.addEvent()
 // Create a new event in this calendar instance.
 //
-// @param startDate       (Date or CalendarEvent) start date of event, or CalendarEvent Object
+// @param startDate       (Date | CalendarEvent) start date of event, or CalendarEvent Object
 // @param [endDate]       (Date) end date of event
 // @param [name]          (String) name of event
 // @param [description]   (String) description of event
@@ -12743,20 +12734,17 @@ setChosenDate : function (newDate, fromTimelineView) {
         if (this.monthView) this.monthView.selectChosenDateCells();
     }
 
-    // check if the week needs redrawn
-    var startDate = new Date(oldDisplayDate.getFullYear(), oldDisplayDate.getMonth(),
-                             oldDisplayDate.getDate() - oldDisplayDate.getDay()),
-        endDate = new Date(oldDisplayDate.getFullYear(), oldDisplayDate.getMonth(),
-                           oldDisplayDate.getDate() + 6)
-    ;
-    var chosenTime = displayDate.getTime();
-    if (chosenTime < startDate.getTime() || chosenTime > endDate.getTime()) {
-        if (this.weekView) {
+    // refresh the weekView if necessary
+    if (this.weekView) {
+        if (displayDate.getWeek(this.firstDayOfWeek) != this.weekView.startDate.getWeek(this.firstDayOfWeek)) {
             this._setWeekTitles();
             if (this.weekViewSelected()) this.weekView._refreshEvents();
             else this.weekView._needsRefresh = true;
         }
     }
+
+    var chosenTime = displayDate.getTime();
+
     // check for day redraw
     if (chosenTime != oldDisplayDate.getTime()) {
         if (this.dayView) {
@@ -12993,8 +12981,7 @@ previous : function () {
             }
         }
     } else if (this.weekViewSelected()) {
-        newDate = isc.DateUtil.createDatetime(this.year, this.month,
-                                              this.chosenDate.getDate() - 7);
+        newDate = isc.DateUtil.dateAdd(isc.DateUtil.getStartOf(this.chosenDate, "w"), "w", 1, -1)
     } else if (this.monthViewSelected()) {
         newDate = isc.DateUtil.createDatetime(this.year, this.month - 1, 1);
     } else if (this.timelineViewSelected()) {
@@ -13038,6 +13025,13 @@ draw : function (a, b, c, d) {
     }
 
     delete this._calendarDrawing;
+
+    if (this._pendingScrollToTime) {
+        // flag set up when scrollToTime() is called before draw()
+        var time = this._pendingScrollToTime;
+        delete this._pendingScrollToTime;
+        this.scrollToTime(time);
+    }
 },
 
 _getTabs : function () {
@@ -13310,9 +13304,9 @@ createChildren : function () {
             click: function () {
 
                 var cal = this.creator;
-                cal.dateChooser.placeNextTo(this, "bottom", true);
                 if (!cal.dateChooser.isDrawn()) cal.dateChooser.draw();
                 else cal.dateChooser.redraw();
+                cal.dateChooser.placeNear(this.getPageLeft(), this.getPageTop() + this.getHeight());
                 cal.dateChooser.show();
             }
         } );
@@ -13367,6 +13361,10 @@ createChildren : function () {
             this.focus();
         }
     } );
+
+    // add the dateChooser as a child of the Calendar, so that it shows at the correct offset
+    // in the FE
+    this.addChild(this.dateChooser);
 
     // layout for date chooser and main calendar view
     if (!this.children) this.children = [];
@@ -14492,17 +14490,30 @@ _showEventDialog : function (event, isNewEvent) {
     }
 
 
-    dialog.keepInParentRect = true;
-    if (dialog.parentWidget) dialog.deparent();
 
     // use the cellPageRect of the appropriate cell
     var cellPageRect = view.body.getCellPageRect(rowNum, colNum);
-    dialog.placeNear(cellPageRect[0], cellPageRect[1]);
-    dialog.show();
+    var dTop = cellPageRect[1];
 
-    // bringToFront() needs to be put on a timer, else it fails to actually bring the
-    // eventDialog to the front
-    isc.Timer.setTimeout(this.ID + ".eventDialog.bringToFront()");
+    // deparent the dialog if it's been added as a child
+    if (dialog.parentWidget) dialog.deparent();
+
+    // draw the dialog off-screen and measure it
+    dialog.moveTo(0, -9999);
+    dialog.draw();
+    var dHeight = dialog.getVisibleHeight();
+
+    // ensure the dialog won't render off the bottom of the Calendar
+    var thisHeight = this.getPageTop() + this.getHeight();
+    if (dTop + dHeight >= thisHeight) {
+        dTop = thisHeight - (dHeight + 2);
+    }
+
+    dialog.placeNear(cellPageRect[0], dTop);
+    dialog.show();
+    dialog.bringToFront();
+
+    return;
 },
 
 visibilityChanged : function (isVisible) {
@@ -15741,6 +15752,7 @@ _getAsDisplayDate : function (date) {
 // Subclass of Window used to display events within a +link{Calendar}.  Customize via
 // +link{calendar.eventWindow}.
 //
+// @inheritsFrom Window
 // @treeLocation  Client Reference/Calendar
 // @visibility external
 // @deprecated in favor of +link{class:EventCanvas}
@@ -16384,6 +16396,7 @@ isc.Calendar.registerStringMethods({
 // The component's close and context buttons, and any necessary resizers, are
 // shown on +link{eventCanvas.showRolloverControls, rollover}.
 //
+// @inheritsFrom VLayout
 // @treeLocation  Client Reference/Calendar
 // @visibility external
 //<
@@ -17560,6 +17573,7 @@ isc.EventCanvas.addProperties({
 // Default styling is specified at the +link{calendar.zoneStyleName, calendar level}
 // and can be overridden for +link{calendarEvent.styleName, individual zones}.
 //
+// @inheritsFrom EventCanvas
 // @treeLocation  Client Reference/Calendar
 // @visibility external
 //<
@@ -17629,6 +17643,7 @@ isc.ZoneCanvas.addProperties({
 // Default styling is specified at the +link{calendar.indicatorStyleName, calendar level}
 // and can be overridden for +link{calendarEvent.styleName, individual indicators}.
 //
+// @inheritsFrom EventCanvas
 // @treeLocation  Client Reference/Calendar
 // @visibility external
 //<
@@ -17704,6 +17719,7 @@ isc.AutoTest.customizeCalendar();
 // Note that the +link{group:loadingOptionalModules, Calendar module} must be loaded to make
 // use of the Timeline class.
 //
+// @inheritsFrom Calendar
 // @treeLocation  Client Reference/Calendar
 // @visibility external
 //<
@@ -17724,38 +17740,14 @@ eventDragGap: 0
 
 });
 isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._debugModules.push('Calendar');isc.checkForDebugAndNonDebugModules();isc._moduleEnd=isc._Calendar_end=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc.Log&&isc.Log.logIsInfoEnabled('loadTime'))isc.Log.logInfo('Calendar module init time: ' + (isc._moduleEnd-isc._moduleStart) + 'ms','loadTime');delete isc.definingFramework;if (isc.Page) isc.Page.handleEvent(null, "moduleLoaded", { moduleName: 'Calendar', loadTime: (isc._moduleEnd-isc._moduleStart)});}else{if(window.isc && isc.Log && isc.Log.logWarn)isc.Log.logWarn("Duplicate load of module 'Calendar'.");}
-
 /*
-
-  SmartClient Ajax RIA system
-  Version SNAPSHOT_v11.1d_2017-03-13/LGPL Deployment (2017-03-13)
-
-  Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
-  "SmartClient" is a trademark of Isomorphic Software, Inc.
-
-  LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
-     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
-     without an accompanying Isomorphic Software license file, please
-     contact licensing@isomorphic.com for details. Unauthorized copying and
-     use of this software is a violation of international copyright law.
-
-  DEVELOPMENT ONLY - DO NOT DEPLOY
-     This software is provided for evaluation, training, and development
-     purposes only. It may include supplementary components that are not
-     licensed for deployment. The separate DEPLOY package for this release
-     contains SmartClient components that are licensed for deployment.
-
-  PROPRIETARY & PROTECTED MATERIAL
-     This software contains proprietary materials that are protected by
-     contract and intellectual property law. You are expressly prohibited
-     from attempting to reverse engineer this software or modify this
-     software for human readability.
-
-  CONTACT ISOMORPHIC
-     For more information regarding license rights and restrictions, or to
-     report possible license violations, please contact Isomorphic Software
-     by email (licensing@isomorphic.com) or web (www.isomorphic.com).
-
-*/
+ * Isomorphic SmartClient
+ * Version SNAPSHOT_v11.1d_2017-06-18 (2017-06-18)
+ * Copyright(c) 1998 and beyond Isomorphic Software, Inc. All rights reserved.
+ * "SmartClient" is a trademark of Isomorphic Software, Inc.
+ *
+ * licensing@smartclient.com
+ *
+ * http://smartclient.com/license
+ */
 
