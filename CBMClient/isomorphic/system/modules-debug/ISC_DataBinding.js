@@ -1,6 +1,6 @@
 /*
  * Isomorphic SmartClient
- * Version SNAPSHOT_v11.1d_2017-06-18 (2017-06-18)
+ * Version SNAPSHOT_v11.1d_2017-06-25 (2017-06-25)
  * Copyright(c) 1998 and beyond Isomorphic Software, Inc. All rights reserved.
  * "SmartClient" is a trademark of Isomorphic Software, Inc.
  *
@@ -15,9 +15,9 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
 
-if (window.isc && isc.version != "SNAPSHOT_v11.1d_2017-06-18/LGPL Deployment" && !isc.DevUtil) {
+if (window.isc && isc.version != "SNAPSHOT_v11.1d_2017-06-25/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v11.1d_2017-06-18/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v11.1d_2017-06-25/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -8529,6 +8529,9 @@ isc.DataSource.addClassMethods({
             this.logWarn("DataSource(s) already loaded: " + dsID.join(",") +
                 "\nUse forceReload to reload such DataSources");
             if (callback) this.fireCallback(callback, ["dsID"], [_dsID]);
+
+
+            if (singleName) delete callbacks[singleName];
         }
     },
 
@@ -16562,11 +16565,13 @@ isc.DataSource.addMethods({
             if (isc.isAn.Array(updateData)) {
                 updateData.forEach(function (record) {
                     dsRequest.data = record;
-                    this.getClientOnlyResponse(dsRequest);
+                    // pass the third param, which causes data to be affected
+                    this.getClientOnlyResponse(dsRequest, null, true);
                 }, this);
             } else {
                 dsRequest.data = updateData;
-                this.getClientOnlyResponse(dsRequest);
+                // pass the third param, which causes data to be affected
+                this.getClientOnlyResponse(dsRequest, null, true);
             }
         }
     },
@@ -17366,7 +17371,8 @@ isc.DataSource.addMethods({
         {
             this._asyncGetClientOnlyResponse(dsRequest, serverData, callback);
         } else {
-            var dsResponse = this.getClientOnlyResponse(dsRequest, serverData);
+            // pass the third param, which causes data to be affected
+            var dsResponse = this.getClientOnlyResponse(dsRequest, serverData, true);
             callback.call(this, dsResponse);
         }
     },
@@ -17383,7 +17389,9 @@ isc.DataSource.addMethods({
         if (!(operationType == "fetch" || operationType == "select" || operationType == "filter")) {
             // The synchronous version of getClientOnlyResponse() should be sufficient for handling
             // the other operation types (remove, delete, add, insert, replace, update, and validate).
-            callback.apply(this, [this.getClientOnlyResponse(request, serverData)]);
+            // pass the third param to ensure that getClientOnlyResponse() updates the underlying
+            // serverData (usually this.cacheData)
+            callback.apply(this, [this.getClientOnlyResponse(request, serverData, true)]);
             return;
         }
 
@@ -28911,7 +28919,7 @@ rawData=rpcResponse.results;
     // @return (DSResponse)
     // @visibility external
     //<
-    getClientOnlyResponse : function (request, serverData) {
+    getClientOnlyResponse : function (request, serverData, updateCacheData) {
         //!OBFUSCATEOK
         // initialize the spoofed dataset
         serverData = serverData || this.testData;
@@ -29002,7 +29010,7 @@ rawData=rpcResponse.results;
                                         "record"
                         response.status = -1;
                     } else {
-                        serverData.removeAt(serverRecordIndex);
+                        if (updateCacheData) serverData.removeAt(serverRecordIndex);
                         response.data = isc.addProperties({}, request.data);
                     }
                 }
@@ -29028,9 +29036,9 @@ rawData=rpcResponse.results;
                                         isc.echoAll(serverRecord)+"<br><br>"+this.getStackTrace();
                     response.status = -1;
                 } else {
-                    // make both the saved data and returned data a distinct copy
-                    // from the passed data
-                    serverData.add(serverRecord);
+                    // only update serverData (this.cacheData, usually) if the special param
+                    // was passed (which it is, when called by processResponse())
+                    if (updateCacheData) serverData.add(serverRecord);
                     response.data = isc.addProperties({}, serverRecord);
                 }
                 break;
@@ -29054,6 +29062,8 @@ rawData=rpcResponse.results;
                         response.status = -1;
                     } else {
                         var serverRecord = serverData[serverRecordIndex];
+                        // if updateCacheData isn't true, work with a copy of the record
+                        if (!updateCacheData) serverRecord = isc.addProperties({}, serverRecord);
                         // update the server record in place
                         for (var key in request.data) {
 
@@ -31497,9 +31507,7 @@ isc.DataSource.addClassMethods({
 
         for (var propertyName in dsField) {
             // validators should be combined, not overridden
-            if (propertyName == "validators" && localField.validators != null &&
-                dsField.validators != localField.validators)
-            {
+            if (propertyName == "validators" && dsField.validators != localField.validators) {
                 // If the parent field is using the shared, default validator set and
                 // the child field is not of the same base SimpleType as the parent
                 // field, do not inherit the validators.  This prevents us inheriting
@@ -31525,6 +31533,12 @@ isc.DataSource.addClassMethods({
 
                     if (dsValidator._typeValidator) continue;
                     //this.logWarn("comparing validators in field: " + field.name);
+
+                    // Create localField.validators here if it does not exist, because it is
+                    // only here that we know for sure that we are going to copy over at least
+                    // one DS validator
+                    if (localField.validators == null) localField.validators = [];
+
                     // This check is required as if 'combineFieldData' gets called more than once
                     // on the same field object (or on 2 field objects pointing to the same
                     // validators array), we can end up with duplicate validator objects.
@@ -31895,7 +31909,7 @@ isc.DataSource.addClassMethods({
             settings.exportSpanTitleSeparator = props.exportSpanTitleSeparator;
         }
 
-        if (!settings.exportFieldTitles && ds) {
+        if (!settings.exportFieldTitles && ds && ds.clientOnly) {
             var wkFields = settings.exportFields || ds.getFieldNames();
             var exportFieldTitles = {};
             for (var i = 0; i < wkFields.length; i++) {
@@ -32679,11 +32693,12 @@ isc.DataSource.addMethods({
 
         var field = this.getField(criterion.fieldName);
         var fieldValue = isc.DataSource.getPathValue(record, criterion.fieldName, field, "filter");
-        var isDateField = field && (isc.SimpleType.inheritsFrom(field.type, "date") ||
-                          isc.SimpleType.inheritsFrom(field.type, "datetime"));
+        var isDateField = field && isc.SimpleType.inheritsFrom(field.type, "date");
+        var isEnumField = field && isc.SimpleType.inheritsFrom(field.type, "enum");
 
-        // special case: "iEquals"/"iNotEqual" operators must behave as "equals"/"notEqual" for date and time fields
-        if (isDateField || (field && isc.SimpleType.inheritsFrom(field.type, "time"))) {
+        // special case: "iEquals"/"iNotEqual" operators must behave as "equals"/"notEqual" for
+        // date and time fields and enums
+        if (isEnumField || isDateField || (field && isc.SimpleType.inheritsFrom(field.type, "time"))) {
             if (op.ID == "iEquals") {
                 op = this.getSearchOperator("equals");
             } else if (op.ID == "iNotEqual") {
@@ -57110,9 +57125,9 @@ isc.DetailViewer.addMethods({
 // MockDataSources are produced by the Reify Mockup Importer when starting from mockup formats
 // that use the mock data format.  The docs for the
 // +link{group:balsamiqImport,Reify Mockup Importer} explain various steps for converting a
-// <code>MockupDataSource</code> to a real DataSource.
+// <code>MockDataSource</code> to a real DataSource.
 // <p>
-// <code>MockupDataSource</code> is primarily intended as a temporary form of DataSource used
+// <code>MockDataSource</code> is primarily intended as a temporary form of DataSource used
 // during the process of converting a mockup into a real application.  Generally, if creating a
 // client-only DataSource in <smartclient>JavaScript</smartclient> <smartgwt>Java</smartgwt>,
 // there is no reason to use the mock data format, as the mock data is not especially readable
@@ -80776,7 +80791,7 @@ isc.RestDataSource.addProperties({
         return this.testFileName != null;
     },
 
-    getClientOnlyResponse : function (request, serverData) {
+    getClientOnlyResponse : function (request, serverData, updateCacheData) {
         if (request._unserializedData) request.data = request._unserializedData;
         var resp = this.Super("getClientOnlyResponse", arguments);
         if (!isc.isAn.Array(resp.data)) resp.data = [resp.data];
@@ -93590,7 +93605,7 @@ deriveFields : function (ds) {
 isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._debugModules.push('DataBinding');isc.checkForDebugAndNonDebugModules();isc._moduleEnd=isc._DataBinding_end=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc.Log&&isc.Log.logIsInfoEnabled('loadTime'))isc.Log.logInfo('DataBinding module init time: ' + (isc._moduleEnd-isc._moduleStart) + 'ms','loadTime');delete isc.definingFramework;if (isc.Page) isc.Page.handleEvent(null, "moduleLoaded", { moduleName: 'DataBinding', loadTime: (isc._moduleEnd-isc._moduleStart)});}else{if(window.isc && isc.Log && isc.Log.logWarn)isc.Log.logWarn("Duplicate load of module 'DataBinding'.");}
 /*
  * Isomorphic SmartClient
- * Version SNAPSHOT_v11.1d_2017-06-18 (2017-06-18)
+ * Version SNAPSHOT_v11.1d_2017-06-25 (2017-06-25)
  * Copyright(c) 1998 and beyond Isomorphic Software, Inc. All rights reserved.
  * "SmartClient" is a trademark of Isomorphic Software, Inc.
  *
