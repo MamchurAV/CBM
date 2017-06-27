@@ -1,6 +1,6 @@
 /*
  * Isomorphic SmartClient
- * Version SNAPSHOT_v11.1d_2017-06-18 (2017-06-18)
+ * Version SNAPSHOT_v11.1d_2017-06-25 (2017-06-25)
  * Copyright(c) 1998 and beyond Isomorphic Software, Inc. All rights reserved.
  * "SmartClient" is a trademark of Isomorphic Software, Inc.
  *
@@ -68,9 +68,9 @@ isc._start = new Date().getTime();
 
 // versioning - values of the form ${value} are replaced with user-provided values at build time.
 // Valid values are: version, date, project (not currently used)
-isc.version = "SNAPSHOT_v11.1d_2017-06-18/LGPL Deployment";
-isc.versionNumber = "SNAPSHOT_v11.1d_2017-06-18";
-isc.buildDate = "2017-06-18";
+isc.version = "SNAPSHOT_v11.1d_2017-06-25/LGPL Deployment";
+isc.versionNumber = "SNAPSHOT_v11.1d_2017-06-25";
+isc.buildDate = "2017-06-25";
 isc.expirationDate = "";
 
 isc.scVersion = "11.1d";
@@ -2628,14 +2628,11 @@ addHistoryEntry : function (historyId, title, data) {
     }
     this.historyState.stack[this.historyState.stack.length] = historyId;
     this.historyState.data[historyId] = data;
-    //>DEBUG
-    this.logDebug("historyState[historyId]: " + (isc.echoAll ? isc.echoAll(this.historyState.data[historyId]) : String(this.historyState.data[historyId])));
-    //<DEBUG
 
     this._saveHistoryState();
 
     if (this.usePushState) {
-        window.history.pushState(historyId, '', this._addHistory(location.href, historyId));
+        window.history.pushState({historyId: historyId}, '', this._addHistory(location.href, historyId));
     } else {
         if (isc.Browser.isIE) {
             if (historyId != null && document.getElementById(historyId) != null) {
@@ -2785,7 +2782,10 @@ _init : function () {
     if (this.usePushState) {
         this._initialURL = location.href;
         window.onpopstate = function (event) {
-            isc.History._fireHistoryCallback(event.state);
+            // we get an onpopstate with a null state on a hash fragment change - ignore here
+            // and handle below with onhashchange
+            if (!event.state) return;
+            isc.History._fireHistoryCallback(event.state.historyId);
         }
         if (this.pushStateMode == "hashFragment") {
             // also support firing callbacks on location.hash changes in this mode
@@ -3094,7 +3094,7 @@ isc.History._init();
 isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._debugModules.push('History');isc.checkForDebugAndNonDebugModules();isc._moduleEnd=isc._History_end=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc.Log&&isc.Log.logIsInfoEnabled('loadTime'))isc.Log.logInfo('History module init time: ' + (isc._moduleEnd-isc._moduleStart) + 'ms','loadTime');delete isc.definingFramework;if (isc.Page) isc.Page.handleEvent(null, "moduleLoaded", { moduleName: 'History', loadTime: (isc._moduleEnd-isc._moduleStart)});}else{if(window.isc && isc.Log && isc.Log.logWarn)isc.Log.logWarn("Duplicate load of module 'History'.");}
 /*
  * Isomorphic SmartClient
- * Version SNAPSHOT_v11.1d_2017-06-18 (2017-06-18)
+ * Version SNAPSHOT_v11.1d_2017-06-25 (2017-06-25)
  * Copyright(c) 1998 and beyond Isomorphic Software, Inc. All rights reserved.
  * "SmartClient" is a trademark of Isomorphic Software, Inc.
  *

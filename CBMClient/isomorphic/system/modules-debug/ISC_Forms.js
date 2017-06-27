@@ -1,6 +1,6 @@
 /*
  * Isomorphic SmartClient
- * Version SNAPSHOT_v11.1d_2017-06-18 (2017-06-18)
+ * Version SNAPSHOT_v11.1d_2017-06-25 (2017-06-25)
  * Copyright(c) 1998 and beyond Isomorphic Software, Inc. All rights reserved.
  * "SmartClient" is a trademark of Isomorphic Software, Inc.
  *
@@ -15,9 +15,9 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
 
-if (window.isc && isc.version != "SNAPSHOT_v11.1d_2017-06-18/LGPL Deployment" && !isc.DevUtil) {
+if (window.isc && isc.version != "SNAPSHOT_v11.1d_2017-06-25/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v11.1d_2017-06-18/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v11.1d_2017-06-25/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -6391,33 +6391,32 @@ isc.DynamicForm.addClassProperties({
 
     getDefaultOperatorForType : function (type, item, textMatchStyle, field) {
         var form = item && item.form,
-            typeName = type ? (isc.isA.String(type) ? type : type.name) : "text",
+            typeName = type == null ? "text" : isc.isA.String(type) ? type : type.name,
             operator
         ;
-        if ((form && (form.valueMap || form.optionDataSource)) ||
+        if ((item && (item.valueMap || item.optionDataSource)) ||
             isc.SimpleType.inheritsFrom(typeName, "enum") ||
             isc.SimpleType.inheritsFrom(typeName, "boolean") ||
             isc.SimpleType.inheritsFrom(typeName, "float") ||
             isc.SimpleType.inheritsFrom(typeName, "integer") ||
+            isc.SimpleType.inheritsFrom(typeName, "date") ||
             isc.SimpleType.inheritsFrom(typeName, "time"))
         {
             operator = "equals";
         } else {
-            // Don't pass in a value - this is appropriate for text-based items
-            // we'll override for other items if necessary.
-
             var defaultOperator = "iContains";
             if (form) {
                 defaultOperator = form.defaultSearchOperator ||
                     (form.allowExpressions ? "iContainsPattern" : "iContains");
                 // if the default op isn't valid for the field, use the first valid operator
-                var ds = form.getDataSource() || (form.creator && form.creator.getDataSource()),
+                var ds = form.getDataSource(),
                     theField = field && isc.isA.String(field) ? ds && ds.getField(field) : field,
                     types = ds && ds.getFieldOperators(theField),
                     validOp = types && types.contains(defaultOperator)
                 ;
                 if (!validOp && types) defaultOperator = types[0];
             }
+
             operator = isc.DataSource.getCriteriaOperator(null, textMatchStyle, defaultOperator);
         }
         return operator;
@@ -8674,6 +8673,7 @@ removeItems : function (items) {
         // don't leave a pointer to a destroyed focus item.
         if (this._focusItem == item) {
             delete this._focusItem;
+            delete this._focusItemIcon;
             if (this.hasStableLocalID()) this.provideRuleContext(this.getLocalId() + ".focusField", null, this);
         }
 
@@ -14274,6 +14274,11 @@ setRequiredIf : function () {
 },
 
 
+//special handling of focus is required when a click mask is hidden
+_restoreFocusForClickMaskHide : function () {
+
+    this.setFocus(true, true);
+},
 
 //>    @method    dynamicForm.setFocusItem()    (A)
 //  Internal method used to track which form item last had focus.
@@ -14286,11 +14291,13 @@ setRequiredIf : function () {
 //
 //        @group eventHandling, focus
 //        @param    item (formItem)    item to focus in
+//      @param  [itemIcon] (String) item icon name to focus in
 //<
-setFocusItem :  function (item) {
+setFocusItem :  function (item, itemIcon) {
     // normalize the item passed in
     item = this.getItem(item);
     this._focusItem = item;
+    this._focusItemIcon = itemIcon;
     if (this.hasStableLocalID()) {
         var path = this.getLocalId() + ".focusField",
             value = item && this.isFocused() ? item.name : null,
@@ -14358,6 +14365,10 @@ getFocusSubItem : function () {
     return this._focusItem;
 },
 
+getFocusItemIcon : function () {
+    return this._focusItemIcon;
+},
+
 // Override _readyToFocus() -- if this DF is not drawn, it may still be appropriate to give it
 // focus as it's items may be written into a container widget.
 _readyToSetFocus : function () {
@@ -14370,7 +14381,7 @@ _readyToSetFocus : function () {
 // Override 'setFocus()' to update item focus.
 
 
-setFocus : function (hasFocus) {
+setFocus : function (hasFocus, canTargetIcon) {
     if (!this._readyToSetFocus()) return;
     var visible = this.isVisible();
     if (hasFocus) {
@@ -14391,6 +14402,7 @@ setFocus : function (hasFocus) {
                 }
             }
         }
+        var itemIcon = (canTargetIcon && item ? this.getFocusItemIcon() : null);
 
         // If we got a click on the form item background don't force focus into the current focus
         // item.
@@ -14399,7 +14411,7 @@ setFocus : function (hasFocus) {
         if (item != null && !(event.target == this && event.eventType == isc.EH.MOUSE_DOWN)) {
             // No need to call Super because focusing in the item will trigger the
             // elementFocus() method which updates this.hasFocus, etc.
-            return this.focusInItem(item);
+            return this.focusInItem(item, itemIcon);
         }
     }
     this.Super("setFocus", arguments);
@@ -14478,7 +14490,7 @@ _canFocusInItem : function (item, tabStop) {
 // @param    itemName     (number|itemName|formItem)    Item (or reference to) item to focus in.
 // @visibility external
 //<
-focusInItem : function (itemName) {
+focusInItem : function (itemName, itemIcon) {
     // normalize the item in case it's a number or a string
     if (itemName != null) {
         var item = this.getItem(itemName);
@@ -14494,10 +14506,11 @@ focusInItem : function (itemName) {
     // if the item can accept focus
     if (item._canFocus()) {
         // focus in it
-        item.focusInItem();
+        if (!itemIcon) item.focusInItem();
+        if (itemIcon && item.focusInIcon) item.focusInIcon(itemIcon);
         // elementFocus will fire 'setFocusItem()' in any case, but do this here as well to
         // avoid problems with elementFocus being fired asynchronously
-        this.setFocusItem(item);
+        this.setFocusItem(item, itemIcon);
         if (this._setValuesPending) {
             var theForm = this;
             isc.Page.setEvent("idle",
@@ -14514,6 +14527,7 @@ focusInItem : function (itemName) {
 // blur the element
 clearFocusItem : function () {
     delete this._focusItem;
+    delete this._focusItemIcon;
     if (this.hasStableLocalID()) this.provideRuleContext(this.getLocalId() + ".focusField", null, this);
 },
 
@@ -15389,9 +15403,12 @@ elementFocus : function (element, itemID) {
         isc.EventHandler.focusInCanvas(this,null,item);
     }
 
+    var focusItemInfo = isc.DynamicForm._getItemInfoFromElement(element, this);
+    var itemIcon = focusItemInfo.overIcon;
+
     // call setFocusItem on the inner-most item that was focused
 
-    this.setFocusItem(item);
+    this.setFocusItem(item, itemIcon);
 
     // bubble the "elementFocus" event up through the event handler(s) for the element
     var result = true,
@@ -83502,7 +83519,7 @@ isc.PresetDateRangeItem.addProperties({
 isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._debugModules.push('Forms');isc.checkForDebugAndNonDebugModules();isc._moduleEnd=isc._Forms_end=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc.Log&&isc.Log.logIsInfoEnabled('loadTime'))isc.Log.logInfo('Forms module init time: ' + (isc._moduleEnd-isc._moduleStart) + 'ms','loadTime');delete isc.definingFramework;if (isc.Page) isc.Page.handleEvent(null, "moduleLoaded", { moduleName: 'Forms', loadTime: (isc._moduleEnd-isc._moduleStart)});}else{if(window.isc && isc.Log && isc.Log.logWarn)isc.Log.logWarn("Duplicate load of module 'Forms'.");}
 /*
  * Isomorphic SmartClient
- * Version SNAPSHOT_v11.1d_2017-06-18 (2017-06-18)
+ * Version SNAPSHOT_v11.1d_2017-06-25 (2017-06-25)
  * Copyright(c) 1998 and beyond Isomorphic Software, Inc. All rights reserved.
  * "SmartClient" is a trademark of Isomorphic Software, Inc.
  *
