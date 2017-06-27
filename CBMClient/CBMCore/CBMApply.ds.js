@@ -143,26 +143,40 @@ function getAydaMapItems(bounds, callbackOuter) {
   var lngC = bounds.getCenter().lng;
   var dataPayload = "{\"leftBottom\": {\"latitude\": " + lat1 + ", \"longitude\": " + lng1 + "}, \"rightTop\": {\"latitude\": " + lat2 + ", \"longitude\": " + lng2 + "}, \"nearToLocation\": {\"latitude\": " + latC + ", \"longitude\": " + lngC + "}, \"filters\": {\"categories\": [],\"discountForBirthday\": false,\"certificate\": false,\"giftCertificate\": false,\"forMan\": false,\"forWoman\": false,\"forBoy\": false,\"forGirl\": false,\"radius\": 100000}}";
 
-  var request = isc.RPCRequest.create({
-    useSimpleHttp: true,
-    //contentType: "application/json",
-    transport: "xmlHttpRequest",
-    httpHeaders: {"Content-Type": "application/json"},
-    httpMethod: "POST",
-    actionURL: "http://192.168.31.62:5000/api/Catalog/MapItems", 
-    data: dataPayload,
-    callback: function(RPCResponse) {
-        try {
-          var resp = parseJSON(RPCResponse.data);
-          callbackOuter(resp.data);
-        } catch (err) {
-        }
+  // var request = isc.RPCRequest.create({
+    // useSimpleHttp: true,
+    // transport: "xmlHttpRequest",
+    // httpHeaders: {"Content-Type": "application/json"},
+    // httpMethod: "POST",
+    // actionURL: "http://192.168.31.62:5000/api/Catalog/MapItems", 
+    // data: dataPayload,
+    // callback: function(RPCResponse) {
+        // try {
+          // var resp = parseJSON(RPCResponse.data);
+          // callbackOuter(resp.data);
+        // } catch (err) {
+        // }
 
-    }
-  });  
-//  request.data = dataPayload;
+    // }
+  // });  
+  // isc.RPCManager.sendRequest(request);
   
-  isc.RPCManager.sendRequest(request);
+  isc.RPCManager.send(
+      dataPayload,
+      function(RPCResponse) {
+          try {
+            var resp = parseJSON(RPCResponse.data);
+            callbackOuter(resp.data);
+          } catch (err) {
+          }
+      },
+      {useSimpleHttp: true,
+      transport: "xmlHttpRequest",
+      httpHeaders: {"Content-Type": "application/json"},
+      httpMethod: "POST",
+      actionURL: "http://192.168.31.62:5000/api/Catalog/MapItems"}  
+  );
+  
 }
 
 
