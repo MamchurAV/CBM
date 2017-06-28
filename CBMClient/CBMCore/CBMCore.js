@@ -1218,12 +1218,13 @@ isc.DataSource.create({
       part: "main",
       canEdit: false,
       hidden: true
-    }, {
-      name: "Concept",
-      type: "text",
-      canEdit: false,
-      hidden: true
-    },
+    }, 
+    // {
+      // name: "Concept",
+      // type: "text",
+      // canEdit: false,
+      // hidden: true
+    // },
     // --- Non-persisted technological properties ---
     {
       // --- Internal information-persistence-related state ---

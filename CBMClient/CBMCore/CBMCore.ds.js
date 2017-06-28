@@ -246,6 +246,11 @@ isc.CBMDataSource.create({
     defaultValue: false,
     hidden: true
   }, {
+    name: "Concept",
+    type: "text",
+    defaultValue: "Concept",
+    hidden: true
+  }, {
     name: "SysCode",
     type: "text",
     title: "System Code",
@@ -559,6 +564,11 @@ isc.CBMDataSource.create({
     defaultValue: false,
     hidden: true
   }, {
+    name: "Concept",
+    type: "text",
+    defaultValue: "PrgFunction",
+    hidden: true
+  }, {
     name: "SysCode",
     type: "text",
     title: "Function name",
@@ -606,6 +616,11 @@ isc.CBMDataSource.create({
     name: "Del",
     type: "boolean",
     defaultValue: false,
+    hidden: true
+  }, {
+    name: "Concept",
+    type: "text",
+    defaultValue: "PrgVersion",
     hidden: true
   }, {
     name: "SysCode",
@@ -660,6 +675,11 @@ isc.CBMDataSource.create({
     name: "Del",
     type: "boolean",
     defaultValue: false,
+    hidden: true
+  }, {
+    name: "Concept",
+    type: "text",
+    defaultValue: "DBStorage",
     hidden: true
   }, {
     name: "SysCode",
@@ -747,6 +767,11 @@ isc.CBMDataSource.create({
     name: "Del",
     type: "boolean",
     defaultValue: false,
+    hidden: true
+  }, {
+    name: "Concept",
+    type: "text",
+    defaultValue: "Relation",
     hidden: true
   }, {
     name: "Odr",
@@ -1206,6 +1231,11 @@ isc.CBMDataSource.create({
     defaultValue: false,
     hidden: true
   }, {
+    name: "Concept",
+    type: "text",
+    defaultValue: "PrgView",
+    hidden: true
+  }, {
     name: "SysCode",
     type: "text",
     title: "Code Sys",
@@ -1399,6 +1429,11 @@ isc.CBMDataSource.create({
     defaultValue: false,
     hidden: true
   }, {
+    name: "Concept",
+    type: "text",
+    defaultValue: "PrgViewField",
+    hidden: true
+  }, {
     name: "Odr",
     type: "integer",
     title: "Sequence in UI",
@@ -1560,6 +1595,11 @@ isc.CBMDataSource.create({
     type: "boolean",
     hidden: true
   }, {
+    name: "Concept",
+    type: "text",
+    defaultValue: "PrgMenu",
+    hidden: true
+  }, {
     name: "SysCode",
     type: "text",
     title: "Code Sys",
@@ -1596,6 +1636,11 @@ isc.CBMDataSource.create({
   infoField: "SysCode",
   isHierarchy: true,
   fields: [{
+    name: "Concept",
+    type: "text",
+    defaultValue: "PrgMenuItem",
+    hidden: true
+  }, {
     name: "Odr",
     type: "integer",
     title: "Order",
@@ -1688,6 +1733,11 @@ isc.CBMDataSource.create({
   ID: "PrgComponent",
   titleField: "SysCode",
   fields: [{
+    name: "Concept",
+    type: "text",
+    defaultValue: "PrgComponent",
+    hidden: true
+  }, {
     name: "SysCode",
     type: "text",
     title: "Code Sys",
