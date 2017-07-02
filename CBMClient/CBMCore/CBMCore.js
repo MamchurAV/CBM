@@ -3490,12 +3490,8 @@ isc.InnerGrid.addProperties({
           //        this.selection.deselectAll();
           // If ds is superclass - ask first, and create selected class (ds) instance.
           var dsRecord = conceptRS.find("SysCode", (this.dataSource.ID ? this.dataSource.ID : this.dataSource));
-          var isSuper = dsRecord["Abstract"];
+          var isSuper = (conceptRS.findAll("BaseConcept", dsRecord.ID).length > 0);
           if (isSuper && !viewRecord["StrictConcept"]) {
-            //          var cretin = parseJSON("{ \"Abstract\" : \"false\", \"Primitive\" : \"false\" }");
-            //         var cretin = parseJSON("{ \"Primitive\" : \"false\", \"HierCode\" : \""
-            //            + dsRecord.HierCode
-            //            + "\" }");
             var cretin = {
               _constructor: "AdvancedCriteria",
               operator: "and",
@@ -3514,7 +3510,7 @@ isc.InnerGrid.addProperties({
               ]
             }
 
-            var that = this; //<<<<<<<<<<<<<<just defined!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!<<<<<<<<<<<<<<<
+            var that = this;
             var newChild = function (record) {
               var dsNew = isc.DataSource.getDataSource(record[0].SysCode);
               if (dsNew == null) {

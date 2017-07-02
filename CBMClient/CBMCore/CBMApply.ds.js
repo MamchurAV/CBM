@@ -175,6 +175,7 @@ function getAydaMapItems(bounds, callbackOuter) {
       httpHeaders: {"Content-Type": "application/json"},
       httpMethod: "POST",
       actionURL: "http://192.168.31.62:5000/api/Catalog/MapItems"}  
+//      actionURL: "http://localhost:5000/api/Catalog/MapItems"}  
   );
   
 }
