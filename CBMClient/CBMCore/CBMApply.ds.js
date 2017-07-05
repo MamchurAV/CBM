@@ -1,4 +1,14 @@
-﻿function createPayload(dstRec, srcRec, callback) {
+﻿///////////////////////////////////////////////////////////////////////////////
+////////////////////////////// Ayda tools /////////////////////////////////////
+
+//var AYDA_WS_URL = "http://localhost:5000/api/";
+var AYDA_WS_URL = "http://192.168.31.62:5000/api/";
+
+
+///////////////////////////////////////////////////////////////////////////////
+/////////////////////////// Ayda - Feed facilities ////////////////////////////
+
+function createPayload(dstRec, srcRec, callback) {
   // Not finished!!! Async flow and quorters escaping...
     var org = isc.DataSource.get('Organization').getCacheData().find({ID: srcRec.Organization});
     dstRec.Payload = '{\
@@ -94,6 +104,19 @@
   }
 }
 
+function callVkPublish(entertainmentID) {
+  isc.RPCManager.sendRequest({
+        data: null,
+        useSimpleHttp: true,
+        contentType: "text/xml",
+        transport: "xmlHttpRequest",
+        httpMethod: "POST",
+        actionURL: AYDA_WS_URL + "Social/VkPublish/" + entertainmentID
+   });
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/////////////////////////// Ayda - Map facilities /////////////////////////////
 isc.BaseWindow.create({
   ID: "AydaMapWindow", 
   title: "Map window",
@@ -148,7 +171,7 @@ function getAydaMapItems(bounds, callbackOuter) {
     // transport: "xmlHttpRequest",
     // httpHeaders: {"Content-Type": "application/json"},
     // httpMethod: "POST",
-    // actionURL: "http://192.168.31.62:5000/api/Catalog/MapItems", 
+    // actionURL: AYDA_WS_URL + "Catalog/MapItems", 
     // data: dataPayload,
     // callback: function(RPCResponse) {
         // try {
@@ -174,8 +197,7 @@ function getAydaMapItems(bounds, callbackOuter) {
       transport: "xmlHttpRequest",
       httpHeaders: {"Content-Type": "application/json"},
       httpMethod: "POST",
-      actionURL: "http://192.168.31.62:5000/api/Catalog/MapItems"}  
-//      actionURL: "http://localhost:5000/api/Catalog/MapItems"}  
+      actionURL: AYDA_WS_URL + "Map/MapItems"}  
   );
   
 }
