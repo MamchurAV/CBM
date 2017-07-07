@@ -168,7 +168,7 @@
         <joinSuffix type="string" xmlAttribute="true"/>
         
         <allowClientRequestedSummaries type="boolean" />
-        <defaultValue type="string" xmlAttribute="true"/>
+        <defaultValue type="any" xmlAttribute="true"/> 
         <group type="string" xmlAttribute="true"/>
         <!-- for types -->
         <ID type="string" xmlAttribute="true"/>

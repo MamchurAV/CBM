@@ -1,37 +1,13 @@
-
 /*
-
-  SmartClient Ajax RIA system
-  Version SNAPSHOT_v11.1d_2017-03-13/LGPL Development Only (2017-03-13)
-
-  Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
-  "SmartClient" is a trademark of Isomorphic Software, Inc.
-
-  LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
-     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
-     without an accompanying Isomorphic Software license file, please
-     contact licensing@isomorphic.com for details. Unauthorized copying and
-     use of this software is a violation of international copyright law.
-
-  DEVELOPMENT ONLY - DO NOT DEPLOY
-     This software is provided for evaluation, training, and development
-     purposes only. It may include supplementary components that are not
-     licensed for deployment. The separate DEPLOY package for this release
-     contains SmartClient components that are licensed for deployment.
-
-  PROPRIETARY & PROTECTED MATERIAL
-     This software contains proprietary materials that are protected by
-     contract and intellectual property law. You are expressly prohibited
-     from attempting to reverse engineer this software or modify this
-     software for human readability.
-
-  CONTACT ISOMORPHIC
-     For more information regarding license rights and restrictions, or to
-     report possible license violations, please contact Isomorphic Software
-     by email (licensing@isomorphic.com) or web (www.isomorphic.com).
-
-*/
+ * Isomorphic SmartClient
+ * Version SNAPSHOT_v11.1d_2017-06-25 (2017-06-25)
+ * Copyright(c) 1998 and beyond Isomorphic Software, Inc. All rights reserved.
+ * "SmartClient" is a trademark of Isomorphic Software, Inc.
+ *
+ * licensing@smartclient.com
+ *
+ * http://smartclient.com/license
+ */
 
 if(window.isc&&window.isc.module_Core&&!window.isc.module_SyntaxHiliter){isc.module_SyntaxHiliter=1;isc._moduleStart=isc._SyntaxHiliter_start=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc._moduleEnd&&(!isc.Log||(isc.Log&&isc.Log.logIsDebugEnabled('loadTime')))){isc._pTM={message:'SyntaxHiliter load/parse time: '+(isc._moduleStart-isc._moduleEnd)+'ms',category:'loadTime'};if(isc.Log&&isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;else isc._preLog=[isc._pTM]}isc.definingFramework=true;isc.defineClass("SyntaxHiliter").addProperties({spanStart:"<span style='",spanStartClose:"'>",spanEnd:"</span>",defaultStyle:"hiliter_default"});isc.A=isc.SyntaxHiliter.getPrototype();isc.B=isc._allFuncs;isc.C=isc.B._maxIndex;isc.D=isc._funcClasses;isc.D[isc.C]=isc.A.Class;isc.B.push(isc.A.init=function isc_SyntaxHiliter_init(){this.fixedSpanLengths=this.spanStart.length+this.spanStartClose.length+this.spanEnd.length;this.spanEndLength=this.spanEnd.length},isc.A.hilite=function isc_SyntaxHiliter_hilite(_1,_2,_3,_4){var _5=this.regexps;if(!_5)return _1;var _6=[_1];for(var _7=0;_7<_5.length;_7++){var _8=_5[_7];var _9=_8.regexp;var _10=_8.cssStyles;if(!isc.isAn.Array(_10))_10=[_10];var _11=0;while(_11<_6.length){var _12=_6[_11];if(_12==null){_22+=this.fixedSpanLengths+_6[_11+2].length+_6[_11+4].length;_11+=6;continue}
 var _13=_9.exec(_12);if(_13==null){_11++;_22+=_12.length;continue}

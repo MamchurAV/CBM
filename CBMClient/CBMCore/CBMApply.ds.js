@@ -1,4 +1,14 @@
-﻿function createPayload(dstRec, srcRec, callback) {
+﻿///////////////////////////////////////////////////////////////////////////////
+////////////////////////////// Ayda tools /////////////////////////////////////
+
+//var AYDA_WS_URL = "http://localhost:5000/api/";
+var AYDA_WS_URL = "http://192.168.31.62:5000/api/";
+
+
+///////////////////////////////////////////////////////////////////////////////
+/////////////////////////// Ayda - Feed facilities ////////////////////////////
+
+function createPayload(dstRec, srcRec, callback) {
   // Not finished!!! Async flow and quorters escaping...
     var org = isc.DataSource.get('Organization').getCacheData().find({ID: srcRec.Organization});
     dstRec.Payload = '{\
@@ -93,6 +103,105 @@
     callback(dstRec);
   }
 }
+
+function callVkPublish(entertainmentID) {
+  isc.RPCManager.sendRequest({
+        data: null,
+        useSimpleHttp: true,
+        contentType: "text/xml",
+        transport: "xmlHttpRequest",
+        httpMethod: "POST",
+        actionURL: AYDA_WS_URL + "Social/VkPublish/" + entertainmentID
+   });
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/////////////////////////// Ayda - Map facilities /////////////////////////////
+isc.BaseWindow.create({
+  ID: "AydaMapWindow", 
+  title: "Map window",
+  items: [
+    isc.LeafletCanvas.create()
+  ],
+  
+  draw: function () {
+    this.setPosition();
+    if (!this.readyToDraw()) return this;
+    this.Super("draw", arguments);
+    
+    var map = this.items[0].mymap;
+    var markerGroup = L.layerGroup().addTo(map);
+    
+    // Add to map specific dataRefresh() function
+    //(TODO: - optimize data retrieving and settting for changed visual area only ???(to think!!!))
+    this.items[0].dataRefresh = function(changeType){
+      var bounds = map.getBounds();
+      var zoom = map.getZoom();
+      //Call Ayda service for objectson the map
+      getAydaMapItems(bounds, 
+        function(responce){
+          // Clear previous markers 
+  //        if (changeType === "zoom") {
+            markerGroup.clearLayers();
+ //         }
+          // Set markers to the map
+          for (var i = 0; i < responce.length; i++){
+            var p = responce[i];
+            L.marker([p.point.latitude, p.point.longitude]).addTo(markerGroup).bindPopup(p.description);//.openPopup();
+          }
+        }
+      );
+    }
+    // Initial map settings (maybe removed or adjusted to some universal point)
+    this.items[0].setValue({lat:53.767027, lng:87.109418, zoom:13})
+  }
+});
+
+function getAydaMapItems(bounds, callbackOuter) {
+  var lat1 = bounds.getSouthWest().lat;
+  var lng1 = bounds.getSouthWest().lng;
+  var lat2 = bounds.getNorthEast().lat;
+  var lng2 = bounds.getNorthEast().lng;
+  var latC = bounds.getCenter().lat;
+  var lngC = bounds.getCenter().lng;
+  var dataPayload = "{\"leftBottom\": {\"latitude\": " + lat1 + ", \"longitude\": " + lng1 + "}, \"rightTop\": {\"latitude\": " + lat2 + ", \"longitude\": " + lng2 + "}, \"nearToLocation\": {\"latitude\": " + latC + ", \"longitude\": " + lngC + "}, \"filters\": {\"categories\": [],\"discountForBirthday\": false,\"certificate\": false,\"giftCertificate\": false,\"forMan\": false,\"forWoman\": false,\"forBoy\": false,\"forGirl\": false,\"radius\": 100000}}";
+
+  // var request = isc.RPCRequest.create({
+    // useSimpleHttp: true,
+    // transport: "xmlHttpRequest",
+    // httpHeaders: {"Content-Type": "application/json"},
+    // httpMethod: "POST",
+    // actionURL: AYDA_WS_URL + "Catalog/MapItems", 
+    // data: dataPayload,
+    // callback: function(RPCResponse) {
+        // try {
+          // var resp = parseJSON(RPCResponse.data);
+          // callbackOuter(resp.data);
+        // } catch (err) {
+        // }
+
+    // }
+  // });  
+  // isc.RPCManager.sendRequest(request);
+  
+  isc.RPCManager.send(
+      dataPayload,
+      function(RPCResponse) {
+          try {
+            var resp = parseJSON(RPCResponse.data);
+            callbackOuter(resp.data);
+          } catch (err) {
+          }
+      },
+      {useSimpleHttp: true,
+      transport: "xmlHttpRequest",
+      httpHeaders: {"Content-Type": "application/json"},
+      httpMethod: "POST",
+      actionURL: AYDA_WS_URL + "Map/MapItems"}  
+  );
+  
+}
+
 
 
 isc.CBMDataSource.create({

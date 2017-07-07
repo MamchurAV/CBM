@@ -1,37 +1,13 @@
-
 /*
-
-  SmartClient Ajax RIA system
-  Version SNAPSHOT_v11.1d_2017-03-13/LGPL Development Only (2017-03-13)
-
-  Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
-  "SmartClient" is a trademark of Isomorphic Software, Inc.
-
-  LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
-     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
-     without an accompanying Isomorphic Software license file, please
-     contact licensing@isomorphic.com for details. Unauthorized copying and
-     use of this software is a violation of international copyright law.
-
-  DEVELOPMENT ONLY - DO NOT DEPLOY
-     This software is provided for evaluation, training, and development
-     purposes only. It may include supplementary components that are not
-     licensed for deployment. The separate DEPLOY package for this release
-     contains SmartClient components that are licensed for deployment.
-
-  PROPRIETARY & PROTECTED MATERIAL
-     This software contains proprietary materials that are protected by
-     contract and intellectual property law. You are expressly prohibited
-     from attempting to reverse engineer this software or modify this
-     software for human readability.
-
-  CONTACT ISOMORPHIC
-     For more information regarding license rights and restrictions, or to
-     report possible license violations, please contact Isomorphic Software
-     by email (licensing@isomorphic.com) or web (www.isomorphic.com).
-
-*/
+ * Isomorphic SmartClient
+ * Version SNAPSHOT_v11.1d_2017-06-25 (2017-06-25)
+ * Copyright(c) 1998 and beyond Isomorphic Software, Inc. All rights reserved.
+ * "SmartClient" is a trademark of Isomorphic Software, Inc.
+ *
+ * licensing@smartclient.com
+ *
+ * http://smartclient.com/license
+ */
 
 if(window.isc&&window.isc.module_Core&&!window.isc.module_ChangeLogViewer){isc.module_ChangeLogViewer=1;isc._moduleStart=isc._ChangeLogViewer_start=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc._moduleEnd&&(!isc.Log||(isc.Log&&isc.Log.logIsDebugEnabled('loadTime')))){isc._pTM={message:'ChangeLogViewer load/parse time: '+(isc._moduleStart-isc._moduleEnd)+'ms',category:'loadTime'};if(isc.Log&&isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;else isc._preLog=[isc._pTM]}isc.definingFramework=true;isc.defineClass("ChangeLogViewer",isc.SectionStack);isc.A=isc.ChangeLogViewer.getPrototype();isc.B=isc._allFuncs;isc.C=isc.B._maxIndex;isc.D=isc._funcClasses;isc.D[isc.C]=isc.A.Class;isc.A.visibilityMode="multiple";isc.A.noChangeLogMessage="<h1>Full release notes coming soon</h1>";isc.A.noChangeLogLabelDefaults={_constructor:"Label",width:"100%",height:"100%",align:"center",valign:"top",styleName:"HeaderItem"};isc.A.filterFormProperties={_constructor:"DynamicForm",numCols:1,items:[{name:"filterBox",editorType:"TextItem",showTitle:false,width:"*",showHintInField:true,hint:"Search change notes",changeOnKeypress:false,keyPress:function(){if(isc.EH.getKey()=="Enter"){this.updateValue();this.form.creator.filterGrids()}}},{name:"backCompatOnly",editorType:"CheckboxItem",title:"Limit to changes with back-compat notes",showTitle:false}],itemChanged:function(_1,_2){this.creator.filterGrids()}};isc.A.featureGridDefaults={_constructor:"ListGrid",dataFetchMode:"local",fixedRecordHeights:false,wrapCells:true,groupByField:["category"],groupStartOpen:"all",groupByMaxRecords:20000};isc.A.bugfixGridDefaults={_constructor:"ListGrid",dataFetchMode:"local",groupByField:["change_type","category"],groupStartOpen:"all",groupByMaxRecords:20000,fixedRecordHeights:false,wrapCells:true};isc.B.push(isc.A.getDataURL=function isc_ChangeLogViewer_getDataURL(_1){var _2=this.dataURLs;if(_2==null)return null;if(_1==null){_1=this.currentRelease;if(_1==null){for(var r in _2){_1=r;break}}}
 return _2[_1]},isc.A.setCurrentRelease=function isc_ChangeLogViewer_setCurrentRelease(_1){var _2=this.getDataURL();this.currentRelease=_1;var _3=this.getDataURL();if(_3!=_2){if(this.publicLogEntryDS){this.publicLogEntryDS.dataURL=_3;this.publicLogEntryDS.invalidateCache();if(this.featureGrid)this.featureGrid.invalidateCache();if(this.bugfixGrid)this.bugfixGrid.invalidateCache()}}

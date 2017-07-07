@@ -1218,12 +1218,13 @@ isc.DataSource.create({
       part: "main",
       canEdit: false,
       hidden: true
-    }, {
-      name: "Concept",
-      type: "text",
-      canEdit: false,
-      hidden: true
-    },
+    }, 
+    // {
+      // name: "Concept",
+      // type: "text",
+      // canEdit: false,
+      // hidden: true
+    // },
     // --- Non-persisted technological properties ---
     {
       // --- Internal information-persistence-related state ---
@@ -3342,32 +3343,31 @@ isc.InnerGrid.addProperties({
           formatCellValue: function (value, record, rowNum, colNum, grid) {
             return getLang(value, tmp_Lang, false);
           },
-          // viewStateChanged: function () {
-            // if (that.parentElement && that.parentElement.parentElement) {
-              // that.parentElement.parentElement.listSettingsChanged = true;
-            // } else {
-              // that.listSettingsChanged = true;
-            // }
-            // return false;
-          // },
           viewStateChanged: function () {
-            // Set changed status in Inner Grid
-            if (that.ID.startsWith("isc_InnerGrid_")){
-              that.listSettingsChanged = true;
+            // Don't take into consideration the first grid state change (caused by previous state restore)
+            if (this.notFirstDataArived) {
+              //Set changed status in Inner Grid
+              if (that.ID.startsWith("isc_InnerGrid_")){
+                that.listSettingsChanged = true;
+              }
+              //TODO VVV NOT USED >>> Set changed status also in Window (as flag for saving included grids)
+              if (that.parentElement && that.parentElement.parentElement) {
+                that.parentElement.parentElement.listSettingsChanged = true;
+              }
             }
-            // TODO VVV NOT USED >>> Set changed status also in Window (as flag for saving included grids)
-            if (that.parentElement && that.parentElement.parentElement) {
-              that.parentElement.parentElement.listSettingsChanged = true;
-            }
+            this.notFirstDataArived = true;
             return false;
           },
           dataArrived: function () {
-            if (that.setListSettings && that.ID.startsWith("isc_InnerGrid_")) {
-              that.setListSettings();
-            } else {
-              if (that.parentElement && that.parentElement.parentElement && that.parentElement.parentElement.setListSettings) {
-                that.parentElement.parentElement.setListSettings();
-              }             
+            // Set grid settings once on first InnerGrid load
+            if (!this.notFirstDataArived) {
+              if (that.setListSettings && that.ID.startsWith("isc_InnerGrid_")) {
+                that.setListSettings();
+              } else {
+                if (that.parentElement && that.parentElement.parentElement && that.parentElement.parentElement.setListSettings) {
+                  that.parentElement.parentElement.setListSettings();
+                }             
+              }
             }
             return true;
           }
@@ -3490,12 +3490,8 @@ isc.InnerGrid.addProperties({
           //        this.selection.deselectAll();
           // If ds is superclass - ask first, and create selected class (ds) instance.
           var dsRecord = conceptRS.find("SysCode", (this.dataSource.ID ? this.dataSource.ID : this.dataSource));
-          var isSuper = dsRecord["Abstract"];
+          var isSuper = (conceptRS.findAll("BaseConcept", dsRecord.ID).length > 0);
           if (isSuper && !viewRecord["StrictConcept"]) {
-            //          var cretin = parseJSON("{ \"Abstract\" : \"false\", \"Primitive\" : \"false\" }");
-            //         var cretin = parseJSON("{ \"Primitive\" : \"false\", \"HierCode\" : \""
-            //            + dsRecord.HierCode
-            //            + "\" }");
             var cretin = {
               _constructor: "AdvancedCriteria",
               operator: "and",
@@ -3514,7 +3510,7 @@ isc.InnerGrid.addProperties({
               ]
             }
 
-            var that = this; //<<<<<<<<<<<<<<just defined!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!<<<<<<<<<<<<<<<
+            var that = this;
             var newChild = function (record) {
               var dsNew = isc.DataSource.getDataSource(record[0].SysCode);
               if (dsNew == null) {
@@ -4404,7 +4400,7 @@ isc.BaseWindow.addProperties({
   winPosExists: true,
   contextString: "",
   canFocus: true,
-  //    hiliteHeaderStyle: "WindowHiliteHeader",
+  hiliteHeaderStyle: "WindowHiliteHeader",
   //    showHeaderBackground: false,
   // TODO: Provide Active (focused) window hilightning
   // headerProperties : {canFocus : true, focusChanged : function(hasFocus){
@@ -4437,6 +4433,7 @@ isc.BaseWindow.addProperties({
   // this.redraw();
   // }
   // },
+  
   setPosition: function () {
     this.winPos = windowSettingsRS.find({
       ForUser: curr_User,
@@ -4890,9 +4887,11 @@ isc.AzureUploadControl.addProperties({
 // ----------------- Inner canvas for leaflet control  --------------------
 isc.defineClass("LeafletCanvas", "Canvas");
 isc.LeafletCanvas.addProperties({
+    height: "*",
+    width: "100%", // Using "*" leads to fixed this canvas and window body size of 100px (if placefd i the window directly)
   
     getInnerHTML: function () {
-                      var divHtml = '<div id=leaflet_' + this.ID + ' style="height: auto; min-height: 200px;">Place for Map</div>';
+                      var divHtml = '<div id=leaflet_' + this.ID + ' style="height: auto; min-height: 200px; width: auto;">Place for Map</div>';
                       return divHtml;
                     },
 
@@ -4908,12 +4907,20 @@ isc.LeafletCanvas.addProperties({
             
             L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token={accessToken}', {
             attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="http://mapbox.com">Mapbox</a>',
-            maxZoom: 18,
+            maxZoom: 21,
             id: 'mapbox.streets',
             accessToken: 'pk.eyJ1IjoiYWxleG1hdiIsImEiOiJjajJkcWNoOGcwMDNpMndudDF0M2xpaHVpIn0.iLB4oEdNFOAZPo_PVrFdfw'
             }).addTo(this.mymap);
             
             this.mymap.iscContext = this;
+            
+            var that = this;
+            this.mymap.on('zoomend', function() {
+              that.zoomEnd();
+            });  
+            this.mymap.on('moveend', function() {
+              that.moveEnd();
+            });  
              
             return this;
           },
@@ -4923,9 +4930,36 @@ isc.LeafletCanvas.addProperties({
                 if (this.div && this.div.style) {
                   var haha = this.height;
                   this.div.style.height = haha + "px";
+                  var vava = this.width;
+                  this.div.style.width = vava + "px";
                 }
               },
-                    
+              
+    // Value expected to be supplied in form of object:
+    // { lat:###, lng:###, zoom:###, points:[{lat:###, lng:###, descr:###}]} 
+    setValue: function(val) {
+                if (val){
+                  this.mymap.setView([val.lat, val.lng], val.zoom);
+                  if (this.marker) {
+                    this.marker.remove();
+                  }
+                  if (val.points) {
+                    for (var i = 0; i < val.points.length; i++) {
+                      this.marker = L.marker([val.points[i].lat, val.points[i].lng]).addTo(this.mymap).bindPopup(val.points[i].descr).openPopup();
+                    }
+                  }
+                } 
+              }, 
+              
+    zoomEnd: function(){
+                if (this.dataRefresh) { this.dataRefresh("zoom"); }
+              },
+                
+    moveEnd: function(){
+                if (this.dataRefresh) { this.dataRefresh("move"); }
+              },
+                
+   
     redrawOnResize: false 
 }); 
 
@@ -4938,14 +4972,11 @@ isc.LeafletControl.addProperties({
                   canv.myForm = myForm;
                   return canv;
                 },
-                
+  // Value can be supplied in form of object:
+  // { lat:###, lng:###, zoom:###, points:[{lat:###, lng:###, descr:###}]} 
   setValue: function(val) {
               if (val){
-                this.canvas.mymap.setView([val.lat, val.lng], 16);
-                if (this.canvas.marker) {
-                  this.canvas.marker.remove();
-                }
-                this.canvas.marker = L.marker([val.lat, val.lng]).addTo(this.canvas.mymap).bindPopup(val.adr).openPopup();
+                this.canvas.setValue(val);
               } 
               else if (!this.canvas.marker) { // <<< to prevent second initialization
                 // Attempt to initialize by expected fields

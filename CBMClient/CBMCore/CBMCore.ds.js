@@ -107,6 +107,7 @@ isc.CBMDataSource.create({
   }]
 });
 
+
 // ----- Concept DS ----------------------------
 isc.CBMDataSource.create({
   ID: "Concept",
@@ -126,7 +127,9 @@ isc.CBMDataSource.create({
       icon: isc.Page.getAppImgDir() + "view.png",
       click: function () {
         var ds = this.context.getSelectedRecord()["SysCode"];	
-        createTable(ds);
+        if (ds) {
+          createTable(ds);
+        }
         return false;
       },
     }, {
@@ -243,6 +246,11 @@ isc.CBMDataSource.create({
     defaultValue: false,
     hidden: true
   }, {
+    name: "Concept",
+    type: "text",
+    defaultValue: "Concept",
+    hidden: true
+  }, {
     name: "SysCode",
     type: "text",
     title: "System Code",
@@ -318,8 +326,8 @@ isc.CBMDataSource.create({
     name: "HierCode",
     type: "text",
     title: "Hirarchy Root",
-    length: 2367,
-    hidden: true
+//    hidden: true,
+    length: 2367
   }, {
     name: "Primitive",
     type: "boolean",
@@ -556,6 +564,11 @@ isc.CBMDataSource.create({
     defaultValue: false,
     hidden: true
   }, {
+    name: "Concept",
+    type: "text",
+    defaultValue: "PrgFunction",
+    hidden: true
+  }, {
     name: "SysCode",
     type: "text",
     title: "Function name",
@@ -603,6 +616,11 @@ isc.CBMDataSource.create({
     name: "Del",
     type: "boolean",
     defaultValue: false,
+    hidden: true
+  }, {
+    name: "Concept",
+    type: "text",
+    defaultValue: "PrgVersion",
     hidden: true
   }, {
     name: "SysCode",
@@ -657,6 +675,11 @@ isc.CBMDataSource.create({
     name: "Del",
     type: "boolean",
     defaultValue: false,
+    hidden: true
+  }, {
+    name: "Concept",
+    type: "text",
+    defaultValue: "DBStorage",
     hidden: true
   }, {
     name: "SysCode",
@@ -744,6 +767,11 @@ isc.CBMDataSource.create({
     name: "Del",
     type: "boolean",
     defaultValue: false,
+    hidden: true
+  }, {
+    name: "Concept",
+    type: "text",
+    defaultValue: "Relation",
     hidden: true
   }, {
     name: "Odr",
@@ -1203,6 +1231,11 @@ isc.CBMDataSource.create({
     defaultValue: false,
     hidden: true
   }, {
+    name: "Concept",
+    type: "text",
+    defaultValue: "PrgView",
+    hidden: true
+  }, {
     name: "SysCode",
     type: "text",
     title: "Code Sys",
@@ -1396,6 +1429,11 @@ isc.CBMDataSource.create({
     defaultValue: false,
     hidden: true
   }, {
+    name: "Concept",
+    type: "text",
+    defaultValue: "PrgViewField",
+    hidden: true
+  }, {
     name: "Odr",
     type: "integer",
     title: "Sequence in UI",
@@ -1557,6 +1595,11 @@ isc.CBMDataSource.create({
     type: "boolean",
     hidden: true
   }, {
+    name: "Concept",
+    type: "text",
+    defaultValue: "PrgMenu",
+    hidden: true
+  }, {
     name: "SysCode",
     type: "text",
     title: "Code Sys",
@@ -1593,6 +1636,11 @@ isc.CBMDataSource.create({
   infoField: "SysCode",
   isHierarchy: true,
   fields: [{
+    name: "Concept",
+    type: "text",
+    defaultValue: "PrgMenuItem",
+    hidden: true
+  }, {
     name: "Odr",
     type: "integer",
     title: "Order",
@@ -1685,6 +1733,11 @@ isc.CBMDataSource.create({
   ID: "PrgComponent",
   titleField: "SysCode",
   fields: [{
+    name: "Concept",
+    type: "text",
+    defaultValue: "PrgComponent",
+    hidden: true
+  }, {
     name: "SysCode",
     type: "text",
     title: "Code Sys",

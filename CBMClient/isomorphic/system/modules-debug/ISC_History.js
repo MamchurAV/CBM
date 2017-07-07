@@ -1,42 +1,21 @@
-
 /*
-
-  SmartClient Ajax RIA system
-  Version SNAPSHOT_v11.1d_2017-03-13/LGPL Deployment (2017-03-13)
-
-  Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
-  "SmartClient" is a trademark of Isomorphic Software, Inc.
-
-  LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
-     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
-     without an accompanying Isomorphic Software license file, please
-     contact licensing@isomorphic.com for details. Unauthorized copying and
-     use of this software is a violation of international copyright law.
-
-  DEVELOPMENT ONLY - DO NOT DEPLOY
-     This software is provided for evaluation, training, and development
-     purposes only. It may include supplementary components that are not
-     licensed for deployment. The separate DEPLOY package for this release
-     contains SmartClient components that are licensed for deployment.
-
-  PROPRIETARY & PROTECTED MATERIAL
-     This software contains proprietary materials that are protected by
-     contract and intellectual property law. You are expressly prohibited
-     from attempting to reverse engineer this software or modify this
-     software for human readability.
-
-  CONTACT ISOMORPHIC
-     For more information regarding license rights and restrictions, or to
-     report possible license violations, please contact Isomorphic Software
-     by email (licensing@isomorphic.com) or web (www.isomorphic.com).
-
-*/
+ * Isomorphic SmartClient
+ * Version SNAPSHOT_v11.1d_2017-06-25 (2017-06-25)
+ * Copyright(c) 1998 and beyond Isomorphic Software, Inc. All rights reserved.
+ * "SmartClient" is a trademark of Isomorphic Software, Inc.
+ *
+ * licensing@smartclient.com
+ *
+ * http://smartclient.com/license
+ */
 
 var isc = window.isc ? window.isc : {};if(window.isc&&!window.isc.module_History){isc.module_History=1;isc._moduleStart=isc._History_start=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc._moduleEnd&&(!isc.Log||(isc.Log && isc.Log.logIsDebugEnabled('loadTime')))){isc._pTM={ message:'History load/parse time: ' + (isc._moduleStart-isc._moduleEnd) + 'ms', category:'loadTime'};
 if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
+
+
+if (!window.isc || typeof isc.Packager != "object") {
 
 
 //> @class isc
@@ -89,9 +68,9 @@ isc._start = new Date().getTime();
 
 // versioning - values of the form ${value} are replaced with user-provided values at build time.
 // Valid values are: version, date, project (not currently used)
-isc.version = "SNAPSHOT_v11.1d_2017-03-13/LGPL Deployment";
-isc.versionNumber = "SNAPSHOT_v11.1d_2017-03-13";
-isc.buildDate = "2017-03-13";
+isc.version = "SNAPSHOT_v11.1d_2017-06-25/LGPL Deployment";
+isc.versionNumber = "SNAPSHOT_v11.1d_2017-06-25";
+isc.buildDate = "2017-06-25";
 isc.expirationDate = "";
 
 isc.scVersion = "11.1d";
@@ -264,36 +243,12 @@ if (window.addEventListener) {
 //<Offline
 
 
-if (typeof isc.Packager != "object") {
-
-
-} else {
-
-    // log a message that attempted reload of isc.Packager occurred
-    var priority = 4, // INFO; isc.Log may not be loaded
-        category = "Packager",
-        packageIndex = isc.Packager.packageIndex;
-
-    var packageCount = 0;
-    for (var loadedPackage in packageIndex) {
-        if (packageIndex.hasOwnProperty(loadedPackage)) packageCount++;
-    }
-
-    var message  = "Ignoring attempt to redefine isc.Packager containing " +
-        packageCount + " packages";
-
-
-    if (isc.Log) {
-        isc.Log.logMessage(priority, message, category);
-    } else {
-        if (!isc._preLog) isc._preLog = [];
-        isc._preLog[isc._preLog.length] = {
-            priority : priority, category: category, message: message, timestamp: new Date()
-        };
-    }
 }
 
 
+
+
+if (typeof isc.Browser != "object") {
 
 
 
@@ -2119,6 +2074,8 @@ isc.Browser.useHighPerformanceGridTimings = window.isc_useHighPerformanceGridTim
     isc.Browser.canUseAggressiveGridTimings : window.isc_useHighPerformanceGridTimings && isc.Browser.canUseAggressiveGridTimings;
 
 
+}
+
 
 //--------------------------------------------------------------------------------------------------
 // partial addProperties support
@@ -2406,7 +2363,7 @@ isc.defineStandaloneClass("History", {
 // When the user transitions to the history entry immediately before the first synthetic
 // history entry, the callback is fired with an id of null.
 //
-// @param callback (String or Object) The callback to invoke when the user navigates to a
+// @param callback (String | Object) The callback to invoke when the user navigates to a
 // synthetic history entry.
 // @param requiresData (boolean) If passed, this callback will only be fired if the user is
 // navigating to a history entry that was explicitly generated in this browser session.
@@ -2671,14 +2628,11 @@ addHistoryEntry : function (historyId, title, data) {
     }
     this.historyState.stack[this.historyState.stack.length] = historyId;
     this.historyState.data[historyId] = data;
-    //>DEBUG
-    this.logDebug("historyState[historyId]: " + (isc.echoAll ? isc.echoAll(this.historyState.data[historyId]) : String(this.historyState.data[historyId])));
-    //<DEBUG
 
     this._saveHistoryState();
 
     if (this.usePushState) {
-        window.history.pushState(historyId, '', this._addHistory(location.href, historyId));
+        window.history.pushState({historyId: historyId}, '', this._addHistory(location.href, historyId));
     } else {
         if (isc.Browser.isIE) {
             if (historyId != null && document.getElementById(historyId) != null) {
@@ -2828,7 +2782,10 @@ _init : function () {
     if (this.usePushState) {
         this._initialURL = location.href;
         window.onpopstate = function (event) {
-            isc.History._fireHistoryCallback(event.state);
+            // we get an onpopstate with a null state on a hash fragment change - ignore here
+            // and handle below with onhashchange
+            if (!event.state) return;
+            isc.History._fireHistoryCallback(event.state.historyId);
         }
         if (this.pushStateMode == "hashFragment") {
             // also support firing callbacks on location.hash changes in this mode
@@ -3135,38 +3092,14 @@ _fireHistoryCallback : function (historyId) {
 // mandatory pre-page load init
 isc.History._init();
 isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._debugModules.push('History');isc.checkForDebugAndNonDebugModules();isc._moduleEnd=isc._History_end=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc.Log&&isc.Log.logIsInfoEnabled('loadTime'))isc.Log.logInfo('History module init time: ' + (isc._moduleEnd-isc._moduleStart) + 'ms','loadTime');delete isc.definingFramework;if (isc.Page) isc.Page.handleEvent(null, "moduleLoaded", { moduleName: 'History', loadTime: (isc._moduleEnd-isc._moduleStart)});}else{if(window.isc && isc.Log && isc.Log.logWarn)isc.Log.logWarn("Duplicate load of module 'History'.");}
-
 /*
-
-  SmartClient Ajax RIA system
-  Version SNAPSHOT_v11.1d_2017-03-13/LGPL Deployment (2017-03-13)
-
-  Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
-  "SmartClient" is a trademark of Isomorphic Software, Inc.
-
-  LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
-     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
-     without an accompanying Isomorphic Software license file, please
-     contact licensing@isomorphic.com for details. Unauthorized copying and
-     use of this software is a violation of international copyright law.
-
-  DEVELOPMENT ONLY - DO NOT DEPLOY
-     This software is provided for evaluation, training, and development
-     purposes only. It may include supplementary components that are not
-     licensed for deployment. The separate DEPLOY package for this release
-     contains SmartClient components that are licensed for deployment.
-
-  PROPRIETARY & PROTECTED MATERIAL
-     This software contains proprietary materials that are protected by
-     contract and intellectual property law. You are expressly prohibited
-     from attempting to reverse engineer this software or modify this
-     software for human readability.
-
-  CONTACT ISOMORPHIC
-     For more information regarding license rights and restrictions, or to
-     report possible license violations, please contact Isomorphic Software
-     by email (licensing@isomorphic.com) or web (www.isomorphic.com).
-
-*/
+ * Isomorphic SmartClient
+ * Version SNAPSHOT_v11.1d_2017-06-25 (2017-06-25)
+ * Copyright(c) 1998 and beyond Isomorphic Software, Inc. All rights reserved.
+ * "SmartClient" is a trademark of Isomorphic Software, Inc.
+ *
+ * licensing@smartclient.com
+ *
+ * http://smartclient.com/license
+ */
 

@@ -1,37 +1,13 @@
-
 /*
-
-  SmartClient Ajax RIA system
-  Version SNAPSHOT_v11.1d_2017-03-13/LGPL Development Only (2017-03-13)
-
-  Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
-  "SmartClient" is a trademark of Isomorphic Software, Inc.
-
-  LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
-     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
-     without an accompanying Isomorphic Software license file, please
-     contact licensing@isomorphic.com for details. Unauthorized copying and
-     use of this software is a violation of international copyright law.
-
-  DEVELOPMENT ONLY - DO NOT DEPLOY
-     This software is provided for evaluation, training, and development
-     purposes only. It may include supplementary components that are not
-     licensed for deployment. The separate DEPLOY package for this release
-     contains SmartClient components that are licensed for deployment.
-
-  PROPRIETARY & PROTECTED MATERIAL
-     This software contains proprietary materials that are protected by
-     contract and intellectual property law. You are expressly prohibited
-     from attempting to reverse engineer this software or modify this
-     software for human readability.
-
-  CONTACT ISOMORPHIC
-     For more information regarding license rights and restrictions, or to
-     report possible license violations, please contact Isomorphic Software
-     by email (licensing@isomorphic.com) or web (www.isomorphic.com).
-
-*/
+ * Isomorphic SmartClient
+ * Version SNAPSHOT_v11.1d_2017-06-25 (2017-06-25)
+ * Copyright(c) 1998 and beyond Isomorphic Software, Inc. All rights reserved.
+ * "SmartClient" is a trademark of Isomorphic Software, Inc.
+ *
+ * licensing@smartclient.com
+ *
+ * http://smartclient.com/license
+ */
 
 if(window.isc&&window.isc.module_Core&&!window.isc.module_Solr){isc.module_Solr=1;isc._moduleStart=isc._Solr_start=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc._moduleEnd&&(!isc.Log||(isc.Log&&isc.Log.logIsDebugEnabled('loadTime')))){isc._pTM={message:'Solr load/parse time: '+(isc._moduleStart-isc._moduleEnd)+'ms',category:'loadTime'};if(isc.Log&&isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;else isc._preLog=[isc._pTM]}isc.definingFramework=true;isc.defineClass("SolrDataSource","DataSource");isc.A=isc.SolrDataSource;isc.B=isc._allFuncs;isc.C=isc.B._maxIndex;isc.D=isc._funcClasses;isc.D[isc.C]=isc.A.Class;isc.A.baseURL="/solr";isc.A.pathToSchema="/admin/file";isc.A.pathToCores="/admin/cores";isc.A.fieldTypeConversionMapByType={"tint":"int","tfloat":"float","tlong":"long","tdouble":"double","tdate":"date","currency":"localeCurrency"};isc.A.fieldTypeConversionMapByClass={};isc.A.defaultFieldType="text";isc.B.push(isc.A.loadCores=function isc_c_SolrDataSource_loadCores(_1,_2,_3){if(!_2)_2=this.baseURL;if(!_3)_3={};var _4=_3.params?_3.params:{};_3.params=isc.addProperties({action:"STATUS"},_4);var _5=this;var _6=_2+this.pathToCores;isc.XMLTools.loadXML(_6,function(_10,_11){var _7=isc.XMLTools.toJS(_10);var _8=_7.lst.find("name","status");var _9=_8.lst.getProperty("name");if(_1)_5.fireCallback(_1,"cores",[_9])},_3)},isc.A.loadDS=function isc_c_SolrDataSource_loadDS(_1,_2,_3){var _4=_1.ID;var _5=_1.baseURL;if(!_5)_5=this.baseURL;if(!_3)_3={};var _6=_3.params?_3.params:{};_3.params=isc.addProperties({contentType:"text/xml",charset:"utf-8",file:"schema.xml"},_6);var _7=this;var _8=_1.actionURL||_5+this.pathToSchema;isc.XMLTools.loadXML(_8,function(_20,_21){var _9=isc.XMLTools.toJS(_20);var _10=[];var _11=_9.uniqueKey;var _12=_9.types.fieldType;var _13=_1.fields;var _14=isc.addProperties({},_1);delete _14.fields;for(var i=0;i<_9.fields.field.length;i++){var _16=_9.fields.field[i];if(!_16.name){_7.logWarn("["+_9.name+"] - skipping field def with bad name: "+isc.echoFull(_16));continue}
 var _17=_7.convertSolrField(_16,_12.find("name",_16.type));if(_17==null)continue;if(_11&&_17.name==_11)_17.primaryKey=true;if(_17.multiValued)_17.canSort=false;if(_13){var _18=_13.find("name",_17.name);if(_18)isc.addProperties(_17,_18)}
@@ -42,7 +18,7 @@ _3[this.queryParam]=_5.join(" AND ")}
 if(_1.startRow!=null)_3[this.startRowParam]=_1.startRow;if(_1.endRow!=null)_3[this.numRowsParam]=_1.endRow-_1.startRow;if(_1.sortBy){var _8="";for(var i=0;i<_1.sortBy.length;i++){var _10=_1.sortBy[i];var _11="asc";if(_10.startsWith("-")){_11="desc";_10=_10.substring(1)}
 _8+=_10+" "+_11;if(i+1<_1.sortBy.length)_8+=","}
 _3[this.sortParam]=_8}
-if(_1.outputs){var _12=this.getPrimaryKeyFieldName(),_13=_1.outputs;if(isc.isA.String(_13)){_13=_13.split(",").map("trim")}
+if(_1.outputs){var _12=this.getPrimaryKeyFieldName(),_13=_1.outputs;if(isc.isA.String(_13)){_13=_13.split(",").callMethod("trim")}
 if(isc.isAn.Array(_13)){if(!_13.contains(_12))_13.add(_12);_1.outputs=_13.join(",")}
 _3[this.outputsParam]=_1.outputs}
 if(_1.facets){_3[this.enableFacetsParam]=true;_3[this.facetFieldParam]=_1.facets}

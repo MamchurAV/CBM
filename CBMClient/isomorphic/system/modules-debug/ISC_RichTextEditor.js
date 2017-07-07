@@ -1,37 +1,13 @@
-
 /*
-
-  SmartClient Ajax RIA system
-  Version SNAPSHOT_v11.1d_2017-03-13/LGPL Deployment (2017-03-13)
-
-  Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
-  "SmartClient" is a trademark of Isomorphic Software, Inc.
-
-  LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
-     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
-     without an accompanying Isomorphic Software license file, please
-     contact licensing@isomorphic.com for details. Unauthorized copying and
-     use of this software is a violation of international copyright law.
-
-  DEVELOPMENT ONLY - DO NOT DEPLOY
-     This software is provided for evaluation, training, and development
-     purposes only. It may include supplementary components that are not
-     licensed for deployment. The separate DEPLOY package for this release
-     contains SmartClient components that are licensed for deployment.
-
-  PROPRIETARY & PROTECTED MATERIAL
-     This software contains proprietary materials that are protected by
-     contract and intellectual property law. You are expressly prohibited
-     from attempting to reverse engineer this software or modify this
-     software for human readability.
-
-  CONTACT ISOMORPHIC
-     For more information regarding license rights and restrictions, or to
-     report possible license violations, please contact Isomorphic Software
-     by email (licensing@isomorphic.com) or web (www.isomorphic.com).
-
-*/
+ * Isomorphic SmartClient
+ * Version SNAPSHOT_v11.1d_2017-06-25 (2017-06-25)
+ * Copyright(c) 1998 and beyond Isomorphic Software, Inc. All rights reserved.
+ * "SmartClient" is a trademark of Isomorphic Software, Inc.
+ *
+ * licensing@smartclient.com
+ *
+ * http://smartclient.com/license
+ */
 
 if(window.isc&&window.isc.module_Core&&!window.isc.module_RichTextEditor){isc.module_RichTextEditor=1;isc._moduleStart=isc._RichTextEditor_start=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc._moduleEnd&&(!isc.Log||(isc.Log && isc.Log.logIsDebugEnabled('loadTime')))){isc._pTM={ message:'RichTextEditor load/parse time: ' + (isc._moduleStart-isc._moduleEnd) + 'ms', category:'loadTime'};
 if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
@@ -39,9 +15,9 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
 
-if (window.isc && isc.version != "SNAPSHOT_v11.1d_2017-03-13/LGPL Deployment" && !isc.DevUtil) {
+if (window.isc && isc.version != "SNAPSHOT_v11.1d_2017-06-25/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v11.1d_2017-03-13/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v11.1d_2017-06-25/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -156,6 +132,7 @@ isc.ListPropertiesSampleTile.addMethods({
 // Pane containing controls for editing the style of HTML lists in a +link{RichTextEditor}.
 // <p>
 // Cannot be directly used; shown in documentation only for skinning purposes.
+// @inheritsFrom Layout
 // @treeLocation Client Reference/Foundation/RichTextEditor
 // @visibility external
 //<
@@ -618,6 +595,7 @@ isc.ListPropertiesPane.registerStringMethods({
 // +link{ListPropertiesPane}.
 // <p>
 // Cannot be directly used; shown in documentation only for skinning purposes.
+// @inheritsFrom Window
 // @treeLocation Client Reference/Foundation/RichTextEditor
 // @visibility external
 //<
@@ -761,6 +739,7 @@ isc.ListPropertiesDialog.registerStringMethods({
 //
 // Canvas to be used for Rich Text Editing
 //
+// @inheritsFrom Canvas
 // @treeLocation Client Reference/Foundation/RichTextEditor
 // @visibility external
 //<
@@ -3077,6 +3056,7 @@ isc.RichTextCanvas.registerStringMethods({
 // value created on the client, we recommend values be sanitized on the server before
 // storing and displaying to other users.
 //
+// @inheritsFrom VLayout
 // @treeLocation Client Reference/Foundation
 // @visibility external
 // @example RichTextEditor
@@ -3560,6 +3540,7 @@ isc.RichTextEditor.addProperties({
     //<
     linkPrompt: "Edit Hyperlink",
     linkDefaults: {
+        showButtonTitle: false,
         icon: "[SKIN]/RichTextEditor/link_new.png",
         click : "this.creator.createLink()"
     },
@@ -4363,38 +4344,14 @@ isc.RichTextItem.addMethods({
     }
 });
 isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._debugModules.push('RichTextEditor');isc.checkForDebugAndNonDebugModules();isc._moduleEnd=isc._RichTextEditor_end=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc.Log&&isc.Log.logIsInfoEnabled('loadTime'))isc.Log.logInfo('RichTextEditor module init time: ' + (isc._moduleEnd-isc._moduleStart) + 'ms','loadTime');delete isc.definingFramework;if (isc.Page) isc.Page.handleEvent(null, "moduleLoaded", { moduleName: 'RichTextEditor', loadTime: (isc._moduleEnd-isc._moduleStart)});}else{if(window.isc && isc.Log && isc.Log.logWarn)isc.Log.logWarn("Duplicate load of module 'RichTextEditor'.");}
-
 /*
-
-  SmartClient Ajax RIA system
-  Version SNAPSHOT_v11.1d_2017-03-13/LGPL Deployment (2017-03-13)
-
-  Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
-  "SmartClient" is a trademark of Isomorphic Software, Inc.
-
-  LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
-     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
-     without an accompanying Isomorphic Software license file, please
-     contact licensing@isomorphic.com for details. Unauthorized copying and
-     use of this software is a violation of international copyright law.
-
-  DEVELOPMENT ONLY - DO NOT DEPLOY
-     This software is provided for evaluation, training, and development
-     purposes only. It may include supplementary components that are not
-     licensed for deployment. The separate DEPLOY package for this release
-     contains SmartClient components that are licensed for deployment.
-
-  PROPRIETARY & PROTECTED MATERIAL
-     This software contains proprietary materials that are protected by
-     contract and intellectual property law. You are expressly prohibited
-     from attempting to reverse engineer this software or modify this
-     software for human readability.
-
-  CONTACT ISOMORPHIC
-     For more information regarding license rights and restrictions, or to
-     report possible license violations, please contact Isomorphic Software
-     by email (licensing@isomorphic.com) or web (www.isomorphic.com).
-
-*/
+ * Isomorphic SmartClient
+ * Version SNAPSHOT_v11.1d_2017-06-25 (2017-06-25)
+ * Copyright(c) 1998 and beyond Isomorphic Software, Inc. All rights reserved.
+ * "SmartClient" is a trademark of Isomorphic Software, Inc.
+ *
+ * licensing@smartclient.com
+ *
+ * http://smartclient.com/license
+ */
 

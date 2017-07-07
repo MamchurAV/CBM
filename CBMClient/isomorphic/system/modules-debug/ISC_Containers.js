@@ -1,37 +1,13 @@
-
 /*
-
-  SmartClient Ajax RIA system
-  Version SNAPSHOT_v11.1d_2017-03-13/LGPL Deployment (2017-03-13)
-
-  Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
-  "SmartClient" is a trademark of Isomorphic Software, Inc.
-
-  LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
-     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
-     without an accompanying Isomorphic Software license file, please
-     contact licensing@isomorphic.com for details. Unauthorized copying and
-     use of this software is a violation of international copyright law.
-
-  DEVELOPMENT ONLY - DO NOT DEPLOY
-     This software is provided for evaluation, training, and development
-     purposes only. It may include supplementary components that are not
-     licensed for deployment. The separate DEPLOY package for this release
-     contains SmartClient components that are licensed for deployment.
-
-  PROPRIETARY & PROTECTED MATERIAL
-     This software contains proprietary materials that are protected by
-     contract and intellectual property law. You are expressly prohibited
-     from attempting to reverse engineer this software or modify this
-     software for human readability.
-
-  CONTACT ISOMORPHIC
-     For more information regarding license rights and restrictions, or to
-     report possible license violations, please contact Isomorphic Software
-     by email (licensing@isomorphic.com) or web (www.isomorphic.com).
-
-*/
+ * Isomorphic SmartClient
+ * Version SNAPSHOT_v11.1d_2017-06-25 (2017-06-25)
+ * Copyright(c) 1998 and beyond Isomorphic Software, Inc. All rights reserved.
+ * "SmartClient" is a trademark of Isomorphic Software, Inc.
+ *
+ * licensing@smartclient.com
+ *
+ * http://smartclient.com/license
+ */
 
 if(window.isc&&window.isc.module_Core&&!window.isc.module_Containers){isc.module_Containers=1;isc._moduleStart=isc._Containers_start=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc._moduleEnd&&(!isc.Log||(isc.Log && isc.Log.logIsDebugEnabled('loadTime')))){isc._pTM={ message:'Containers load/parse time: ' + (isc._moduleStart-isc._moduleEnd) + 'ms', category:'loadTime'};
 if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
@@ -39,9 +15,9 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
 
-if (window.isc && isc.version != "SNAPSHOT_v11.1d_2017-03-13/LGPL Deployment" && !isc.DevUtil) {
+if (window.isc && isc.version != "SNAPSHOT_v11.1d_2017-06-25/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v11.1d_2017-03-13/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v11.1d_2017-06-25/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -57,6 +33,7 @@ if (window.isc && isc.version != "SNAPSHOT_v11.1d_2017-03-13/LGPL Deployment" &&
 //>    @class    ImgTab
 // Specialized StretchImgButton used by TabSet/TabBar for tabs
 //
+// @inheritsFrom StretchImgButton
 // @treeLocation Client Reference/Foundation
 // @visibility external
 //<
@@ -192,6 +169,7 @@ isc.ImgTab.addProperties({
 // Shows a set of Tabs.  TabBars are automatically created by TabSets and shouldn't be used
 // directly.  The TabBar is documented for skinning purposes.
 //
+// @inheritsFrom Toolbar
 // @treeLocation Client Reference/Layout/TabSet
 // @visibility external
 //<
@@ -484,6 +462,10 @@ initWidget : function () {
     var tabDefaults = this.tabDefaults;
     if (tabDefaults == null) tabDefaults = this.tabDefaults = {};
 
+    tabDefaults.focusChanged = function (hasFocus) {
+        this.parentElement.tabFocusChanged(this, hasFocus);
+    }
+
     // tabs are created as "buttons" by Toolbar superclass code; to have tabDefaults applied to
     // each button, assign to buttonDefaults.
     // NOTE: if we add properties directly to the buttonDefaults object, we'll side effect all
@@ -543,6 +525,11 @@ initWidget : function () {
     var perSideStyleProperty = this.tabBarPosition + "StyleName";
     if (this[perSideStyleProperty]) this.setStyleName(this[perSideStyleProperty]);
 
+    if (this.tabProperties != null) {
+        var props = this.buttonProperties || {};
+        this.buttonProperties = isc.addProperties(props, this.tabProperties);
+    }
+
     this.Super(this._$initWidget);
 
     if (this._baseLine == null) this.makeBaseLine();
@@ -567,6 +554,23 @@ tabIconClick : function (tab) {
     var ts = this.parentElement;
     return ts._tabIconClick(tab);
 
+},
+
+// reset any native scroll that occurred on focus if the tabs are taller than
+// the available space
+tabFocusChanged : function (tab, hasFocus) {
+    if (this.tabBarPosition == isc.Canvas.TOP) {
+        this.scrollToTop();
+    }
+    if (this.tabBarPosition == isc.Canvas.BOTTOM) {
+        this.scrollToBottom();
+    }
+    if (this.tabBarPosition == isc.Canvas.LEFT) {
+        this.scrollToLeft();
+    }
+    if (this.tabBarPosition == isc.Canvas.RIGHT) {
+        this.scrollToRight();
+    }
 },
 
 
@@ -608,6 +612,16 @@ makeButton : function (properties, a,b,c,d) {
     properties.locatorParent = this.parentElement;
 
     if (properties._autoAssignedID) delete properties.ID;
+
+
+    if (properties.canAdaptWidth && isc.Canvas._isStretchSize(properties.width)) {
+        properties.overflow = isc.Canvas.HIDDEN;
+        properties.autoFit = false;
+    }
+
+    // An empty title should not result in an extra spacing that is
+    // applied when there is an actual title.
+    if (properties.title != null && properties.title == "") properties.title = null;
 
     return this.invokeSuper("TabBar", "makeButton", properties, a,b,c,d);
 },
@@ -837,6 +851,7 @@ layoutChildren : function (a,b,c,d) {
 // @param tab (tab)  tab that has been selected.
 //<
 buttonSelected : function (tab) {
+
     this.ignoreMemberZIndex(tab);
 
     // bring tab and label to front.
@@ -943,7 +958,7 @@ _completeScroll : function (scrolledToTab) {
 // If a tab is not currently visible for this tab-bar, scroll it into view.
 // Can specify where you want the tab to appear.
 // edge it was clipped on.
-// @param   tab (number or ImgTab)  tab to scroll into view (or index of tab to scroll into view)
+// @param   tab (number | ImgTab)  tab to scroll into view (or index of tab to scroll into view)
 // @param   [start] (boolean) Should the tab be scrolled to the start or end of the viewport?
 //                          If not specified the tab will be scrolled to whichever end it is
 //                          currently clipped by.
@@ -1208,7 +1223,7 @@ isc.Window.addProperties({
         return this.canDragReposition;
     },
 
-    //>    @attr    window.keepInParentRect        (boolean or rect: null : IRWA)
+    //>    @attr    window.keepInParentRect        (boolean | rect: null : IRWA)
     // If +link{window.canDragReposition} or +link{window.canDragResize} is true, should the
     // windows size and position be constrained such that it remains within the viewport of
     // its parent element (or for top level windows, within the viewport of the browser window)?
@@ -1859,8 +1874,10 @@ isc.Window.addProperties({
     // --------------------------------------------------------------------------------------------
 
     //>    @attr    window.canFocusInHeaderButtons (Boolean : false : [IRWA])
-    //      If true, the user can give the header buttons keyboard focus (by clicking on
-    //      them and including them in the tabOrder)
+    //
+    //  If true, the user can give the header buttons focus (see +link{window.minimizeButton},
+    //  +link{window.maximizeButton}, +link{window.restoreButton} and +link{window.closeButton}).
+    //
     //  @visibility external
     //  @group    focus, header
     //<
@@ -2753,9 +2770,16 @@ setShowHeaderIcon : function (show) {
 },
 
 
+// Use dynamicDefaults to suppress focus on header buttons if appropriate
 
+_headerButtonComponents:{
+    "maximizeButton":true,
+    "minimizeButton":true,
+    "restoreButton":true,
+    "closeButton":true
+},
 getDynamicDefaults : function (childName) {
-    if (isc.endsWith(childName, isc.Button.Class)) {
+    if (this._headerButtonComponents[childName]) {
         return { canFocus : this.canFocusInHeaderButtons };
     }
 },
@@ -2785,12 +2809,17 @@ headerLabelLayoutDefaults: {
             if (this.getInnerContentWidth() < creator._measuredHeaderLabelWidth) {
                 // Specify a reason of "overflow" so that Layout.childResized() does not set
                 // the headerLabel's _userWidth to "100%".
+                if (headerLabel._origUserWidth == null) {
+                    headerLabel._origUserWidth = headerLabel._userWidth || 1;
+                }
                 headerLabel.resizeTo("100%", null, null, null, "overflow");
                 headerLabel.setOverflow(isc.Canvas.HIDDEN);
 
             // Otherwise, switch back to the _userWidth or auto-fitting the width.
             } else {
-                headerLabel.resizeTo(headerLabel._userWidth != null ? headerLabel._userWidth : 1,
+                var userWidth = headerLabel._origUserWidth;
+                if (userWidth == null) userWidth = headerLabel._userWidth;
+                headerLabel.resizeTo(userWidth || 1,
                                      null, null, null, "overflow");
                 headerLabel.setOverflow(isc.Canvas.VISIBLE);
             }
@@ -2953,7 +2982,7 @@ setTitle : function (newTitle) {
 //>    @method    dialog.setButtons()
 // Set the buttons for the toolbar displayed in this dialog.
 // Synonym for +link{dialog.setToolbarButtons()}
-// @param    newButtons    (array of Buttons: null) buttons for the toolbar
+// @param    newButtons    (Array of Button | Array of Button Properties: null) buttons for the toolbar
 // @visibility external
 //<
 
@@ -2965,7 +2994,7 @@ setButtons : function (newButtons) {
 //>    @method    dialog.setToolbarButtons()
 // Set the +link{dialog.toolbarButtons} for this dialog.
 // Synonym for +link{dialog.setButtons()}.
-// @param    newButtons    (array of Buttons: null) buttons for the toolbar
+// @param    newButtons    (Array of Button | Array of Button Properties: null) buttons for the toolbar
 // @visibility external
 //<
 setToolbarButtons : function (newButtons) {
@@ -4333,8 +4362,8 @@ animateMinimizeStep : function (ratio, ID, earlyFinish, restore, maximize) {
 
     // Call resizeBy directly so we can pass in a special extra param to let it know we're
     // doing an animateMinimize (so don't loop back to 'finish' this animation)
-    this.resizeBy((targetWidth - this.getWidth()), (targetHeight - this.getHeight()),
-                  null, null, true);
+    this.resizeBy(targetWidth - this.getWidth(), targetHeight - this.getHeight(),
+                  null, null, this._$animatingMinimize);
 
     if (ratio == 1) {
 
@@ -4679,6 +4708,8 @@ completeMaximize : function (animated) {
     if (this.maximizeButton) this.maximizeButton.enable();
 },
 
+_$animatingMinimize: "animatingMinimize",
+
 //>Animation
 // We must override methods that would cut a minimize / maximize animation short
 // This includes:
@@ -4688,20 +4719,19 @@ completeMaximize : function (animated) {
 // - clear() [later in this file]
 // - resizeBy() and resizeTo()
 
-resizeTo : function (width, height, animatingRect, suppressHandleUpdate, animatingMinimize) {
-
-    if (!animatingMinimize && this._animatingMinimize) {
+resizeTo : function (width, height, animatingRect, suppressHandleUpdate, reason) {
+    if (reason != this._$animatingMinimize && this._animatingMinimize) {
         isc.Animation.finishAnimation(this._animatingMinimize);
     }
-    return this.invokeSuper(isc.Window, "resizeTo",
-                        width, height, animatingRect, suppressHandleUpdate, animatingMinimize);
+    return this.invokeSuper(isc.Window, "resizeTo", width, height, animatingRect,
+                            suppressHandleUpdate, reason);
 },
-resizeBy : function (deltaX, deltaY, animatingRect, suppressHandleUpdate, animatingMinimize) {
-    if (!animatingMinimize && this._animatingMinimize) {
+resizeBy : function (deltaX, deltaY, animatingRect, suppressHandleUpdate, reason) {
+    if (reason != this._$animatingMinimize && this._animatingMinimize) {
         isc.Animation.finishAnimation(this._animatingMinimize);
     }
-    return this.invokeSuper(isc.Window, "resizeBy",
-                        deltaX, deltaY, animatingRect, suppressHandleUpdate, animatingMinimize);
+    return this.invokeSuper(isc.Window, "resizeBy", deltaX, deltaY, animatingRect,
+                            suppressHandleUpdate, reason);
 },
 //<Animation
 
@@ -5031,6 +5061,7 @@ isc.WindowResizer.addMethods({
 
 //> @class Portlet
 // Custom subclass of Window configured to be embedded within a PortalLayout.
+// @inheritsFrom Window
 // @visibility external
 // @treeLocation Client Reference/Layout/PortalLayout
 //<
@@ -5101,7 +5132,7 @@ isc.defineClass("Portlet", "Window").addProperties({
         if (this.portalRow) this.portalRow.reflow("Portlet minWidth changed");
     },
 
-    //>@attr portlet.height (Number or String : null : IRW)
+    //>@attr portlet.height (Number | String : null : IRW)
     //
     // If you initialize the height of a Portlet, then that height will be used as the
     // Portlet's +link{rowHeight,rowHeight} (if no rowHeight is set).
@@ -5120,13 +5151,13 @@ isc.defineClass("Portlet", "Window").addProperties({
     // the Portlet's height, use +link{setRowHeight()} instead.
     //
     // @group sizing
-    // @param height (number) new height
+    // @param height (Number) new height
     // @see setRowHeight()
     // @see rowHeight
     // @visibility external
     //<
 
-    //>@attr portlet.rowHeight (Number or String : null : IRW)
+    //>@attr portlet.rowHeight (Number | String : null : IRW)
     // If you set the rowHeight of a Portlet before adding it to a +link{PortalLayout}, then
     // the height will be used when creating the new row. If adding the Portlet
     // to an existing row (or dragging it there), the Portlet's rowHeight will be used if
@@ -5154,7 +5185,7 @@ isc.defineClass("Portlet", "Window").addProperties({
     //>@method portlet.setRowHeight()
     // Sets the height of the Portlet's row (and, thus, indirectly sets the Portlet's own height).
     // Use this instead of using +link{setHeight()} directly.
-    // @param height (number) new height
+    // @param height (Number) new height
     // @group sizing
     // @visibility external
     //<
@@ -5840,7 +5871,7 @@ isc.defineClass("PortalRow", "Layout").addProperties({
             this.minimize();
         } else {
             this.setMinHeight(
-                this.members.map("getMinHeight").max() +
+                this.members.callMethod("getMinHeight").max() +
                 this._getBreadthMargin() +
                 this.getVMarginBorder()
             );
@@ -5857,7 +5888,7 @@ isc.defineClass("PortalRow", "Layout").addProperties({
         this._restoreUserHeight = this._userHeight;
 
         this.setHeight(
-            this.members.map("getHeight").max() +
+            this.members.callMethod("getHeight").max() +
             this._getBreadthMargin() +
             this.getVMarginBorder()
         );
@@ -6683,6 +6714,7 @@ isc.defineClass("PortalColumn", "Layout").addProperties({
 // into other columns, or dragged next to other Portlets to sit next to them horizontally
 // within a column.
 //
+// @inheritsFrom Layout
 // @visibility external
 // @treeLocation Client Reference/Layout
 //<
@@ -6981,7 +7013,7 @@ isc.defineClass("PortalLayout", "Layout").addProperties({
 
     //> @method portalLayout.getNumColumns()
     // Returns the current number of columns displayed in this PortalLayout.
-    // @return numColumns (Integer)
+    // @return numColumns (int)
     // @visibility external
     //<
     // Overridden to return this.getMembers.length. Will have been set up at initialization time.
@@ -7654,7 +7686,7 @@ isc.defineClass("PortalLayout", "Layout").addProperties({
     // automatically stretch and shrink to accomodate the width of
     // +link{Portlet,Portlets}.
     // @param colNumber (Integer) Which column's width to set.
-    // @param width (Number or String) How wide to make the column
+    // @param width (Number | String) How wide to make the column
     // @see Canvas.setWidth()
     // @visibility external
     //<
@@ -7891,7 +7923,7 @@ isc.defineClass("PortalLayout", "Layout").addProperties({
         var newSizes = this.Super("applyStretchResizePolicy", arguments);
         if (modifyInPlace) newSizes = sizes;
 
-        var desiredWidths = this.getPortalColumns().map("_getDesiredWidth");
+        var desiredWidths = this.getPortalColumns().callMethod("_getDesiredWidth");
         var extraWidth = 0;
 
         if (this.canStretchColumnWidths) {
@@ -8410,7 +8442,7 @@ isc.Dialog.addProperties({
     // @visibility external
     //<
 
-    //> @attr Dialog.buttons (Array of Button or Button Properties : null : IR)
+    //> @attr Dialog.buttons (Array of Button | Array of Button Properties : null : IR)
     // Array of Buttons to show in the +link{showToolbar,toolbar}, if shown.
     // <P>
     // The set of buttons to use is typically set by calling one of the shortcuts such as
@@ -8458,7 +8490,7 @@ isc.Dialog.addProperties({
     // @visibility external
     //<
 
-    //> @attr Dialog.toolbarButtons (Array of Button or Button Properties : null : IR)
+    //> @attr Dialog.toolbarButtons (Array of Button | Array of Button Properties : null : IR)
     // This is a synonym for +link{Dialog.buttons}
     //
     // @visibility external
@@ -9570,6 +9602,7 @@ isc.addGlobal("dismissCurrentDialog", function () {
 // dialogCallback once the authentication process completes.
 //
 // @see classMethod:isc.showLoginDialog
+// @inheritsFrom Window
 // @treeLocation Client Reference/Control
 // @group Prompting
 // @visibility external
@@ -10062,6 +10095,7 @@ isc.confirmSave = function (message, callback, properties) {
 // recent) to smallest (least recent) and, within each year, by monthNumber from smallest
 // (January) to largest (December).
 //
+// @inheritsFrom Layout
 // @treeLocation Client Reference/Data Binding
 // @visibility external
 //<
@@ -10312,7 +10346,7 @@ isc.MultiSortPanel.addProperties({
                     item.grid.creator.fireChangeEvent();
                 }
             },
-            { name: "direction",  title: " ", type: "select", width: 100,
+            { name: "direction",  title: " ", type: "select", width: 110,
                 showDefaultContextMenu: false,
                 defaultToFirstOption: true,
                 changed: "item.grid.creator.fireChangeEvent()"
@@ -10690,6 +10724,7 @@ isc.MultiSortPanel.addMethods({
 // <P>
 // See +link{MultiSortDialog.askForSort()}, +link{dataBoundComponent.askForSort()}
 //
+// @inheritsFrom Window
 // @treeLocation Client Reference/Data Binding
 // @visibility external
 //<
@@ -11249,7 +11284,7 @@ isc.TabSet.addProperties({
     // @visibility external
     //<
 
-    //> @attr tab.pane (ID or Canvas: null : IRW)
+    //> @attr tab.pane (ID | Canvas: null : IRW)
     //
     // Specifies the pane associated with this tab.  You have two options for the value of
     // the pane attribute:
@@ -11301,6 +11336,15 @@ isc.TabSet.addProperties({
     // automatically size to make room for the full title, but if you want to e.g. specify a
     // uniform width for all tabs in a TabSet, this property enables you to do so.
     //
+    // @visibility external
+    //<
+
+    //> @attr tab.canAdaptWidth (Boolean : false : IR)
+    // If enabled, the tab will collapse to show just its icon when showing the title would
+    // cause overflow of a containing +link{TabBar}.
+    //
+    // @see Button.canAdaptWidth
+    // @see Canvas.canAdaptWidth
     // @visibility external
     //<
 
@@ -11466,14 +11510,34 @@ isc.TabSet.addProperties({
     //useSimpleTabs:false,
 
     //> @attr tabSet.simpleTabBaseStyle (CSSStyleName : "tabButton" : [IRW])
-    //  If this.useSimpleTabs is true, simpleTabBaseClass will be the base style used to
-    //  determine the css style to apply to the tabs.<br>
-    //  This property will be suffixed with the side on which the tab-bar will appear, followed
-    //  by with the tab's state (selected, over, etc), resolving to a className like
-    //  "tabButtonTopOver"
+    // If +link{useSimpleTabs} is true, <code>simpleTabBaseStyle</code> will be the base style
+    // used to determine the css style to apply to the tabs.<P>
+    // This property will be suffixed with the side on which the tab-bar will appear, followed
+    // by with the tab's state (selected, over, etc), resolving to a className like
+    // "tabButtonTopOver".
+    // @see Button.baseStyle
+    // @see simpleTabIconOnlyBaseStyle
     // @visibility external
     //<
     simpleTabBaseStyle:"tabButton",
+
+    //> @attr tabSet.simpleTabIconOnlyBaseStyle (CSSStyleName : varies : [IRW])
+    // If +link{useSimpleTabs} is true, <code>simpleTabIconOnlyBaseStyle</code> will be the
+    // base style used to determine the css style to apply to the tabs if
+    // +link{tab.canAdaptWidth} is set and the title is not being shown.
+    // <P>
+    // This property will be suffixed with the side on which the tab-bar will appear, followed
+    // by with the tab's state (selected, over, etc), resolving to a className like
+    // "iconOnlyTabButtonTopOver".
+    // <P>
+    // Note that this property is only defined for certain skins, where it's needed.  If not
+    // defined, +link{simpleTabBaseStyle} will serve as base style whether or not the title is
+    // hidden.
+    // @see Button.baseStyle
+    // @see Button.iconOnlyBaseStyle
+    // @see simpleTabBaseStyle
+    // @visibility external
+    //<
 
     // TabBar placement and sizing
     // ---------------------------------------------------------------------------------------
@@ -11513,7 +11577,7 @@ isc.TabSet.addProperties({
 
     // ---------------------------------------------------------------------------------------
 
-    //>    @attr    tabSet.selectedTab        (number : 0 : IRW)
+    //>    @attr    tabSet.selectedTab        (Tab | int : 0 : IRW)
     // Specifies the index of the initially selected tab.
     // @group tabBar
     // @visibility external
@@ -12407,6 +12471,7 @@ isc.TabSet.addProperties({
 //> @class SimpleTabButton
 // Simple subclass of +link{Button} used for tabs in a +link{TabSet} if +link{tabSet.useSimpleTabs}
 // is true. See also +link{tabSet.simpleTabButtonConstructor}.
+// @inheritsFrom Button
 // @treeLocation Client Reference/Layout/TabSet
 // @visibility external
 //<
@@ -12529,11 +12594,17 @@ initWidget : function () {
     if (this.useSimpleTabs) {
         // also update the styling
         this.tabBarDefaults.buttonConstructor = this.simpleTabButtonConstructor;
-        // eg base + "Right" (derived from "right")
-        this.dynamicTabProperties.baseStyle = this.simpleTabBaseStyle +
-                pos.substring(0,1).toUpperCase() + pos.substring(1);
 
-        this.dynamicTabProperties.ariaRole = "tab";
+        var props = this.dynamicTabProperties,
+            iconOnly = this.simpleTabIconOnlyBaseStyle,
+            capPos = pos.substring(0,1).toUpperCase() + pos.substring(1)
+        ;
+
+        // eg base + "Right" (derived from "right")
+        props.baseStyle = this.simpleTabBaseStyle + capPos;
+        if (iconOnly) props.iconOnlyBaseStyle = iconOnly + capPos;
+
+        props.ariaRole = "tab";
     }
 
     // defaultTabWidth / Height only apply on the "length" axis of tabs
@@ -13171,7 +13242,7 @@ addTab : function (tab, position) {
 
 //>    @method    tabSet.addTabs()    (A)
 // Add one or more tabs
-// @param    tabs      (Tab or Array of Tab)   new tab or tabs
+// @param    tabs      (Tab | Array of Tab)   new tab or tabs
 // @param    position (number)  position where tab should be added (or array of positions)
 // @see TabSet.addTab
 // @visibility external
@@ -13918,7 +13989,7 @@ getTabPickerSrc : function () {
 // If passed a canvas, it will be returned intact.<br>
 // Will also map the special strings <code>"tabPicker"</code> and <code>"tabScroller"</code> to
 // standard tab picker and scroller controls.
-// @param control (string or canvas)    Control from +link{tabSet.tabBarControls} array.
+// @param control (string | canvas)    Control from +link{tabSet.tabBarControls} array.
 // @return (canvas) Control widget to include in the control layout for this tabset
 // @group tabBarControls
 //<
@@ -13954,6 +14025,7 @@ getControl : function (control) {
                               height:vertical ? sbsize - this.scrollerForwardVMarginSize : null}, this.scrollerBackImg),
                        {height:vertical ? 8 : null,
                         width:vertical ? null : 10,
+                        name: "emptyButton",
                         src:isc.Canvas._blankImgURL},
                        isc.addProperties({name:this.getScrollerForwardImgName(),
                               width:vertical ? null : sbsize - this.scrollerBackHMarginSize,
@@ -14321,8 +14393,7 @@ _tabSelected : function (tab) {
             if (this.fireCallback(
 
                     currentTabObject.tabDeselected,
-                    "tabSet,tabNum, tabPane, ID, tab, newTab, name",
-
+                    "tabSet,tabNum,tabPane,ID,tab,newTab,name",
                     [   this,
                         // deselected tab details
                         this.selectedTab, currentTabObject.pane, currentTabObject.ID,
@@ -14392,8 +14463,8 @@ _tabSelected : function (tab) {
         if (tabObject.tabSelected != null) {
             this.fireCallback(
                 tabObject.tabSelected,
-                "tabSet,tabNum,tabPane,ID,tab",
-                [this,tabNum,tabObject.pane,tabObject.ID,tabObject]
+                "tabSet,tabNum,tabPane,ID,tab,name",
+                [this, tabNum, tabObject.pane, tabObject.ID, tabObject, tabObject.name]
             );
 
             // If this tab is no longer marked as selected, tabSelected() may have shown a
@@ -14467,8 +14538,20 @@ _tabSelected : function (tab) {
 // @visibility external
 //<
 getSelectedTab : function () {
-    if (this.selectedTab >= this.tabs.length) return this.moreTab;
-    return this.tabs[this.selectedTab];
+    if (isc.isA.Object(this.selectedTab)) {
+        for (var i = 0; i < this.tabs.length; i++) {
+            if ((this.selectedTab.ID != null && this.selectedTab.ID == this.tabs[i].ID) ||
+                (this.selectedTab.name != null && this.selectedTab.name == this.tabs[i].name))
+            {
+                return this.tabs[i];
+            }
+        }
+        this.logWarn("There is no a tab that matches the currently selected tab");
+        return this.tabs[0];
+    } else {
+        if (this.selectedTab >= this.tabs.length) return this.moreTab;
+        return this.tabs[this.selectedTab];
+    }
 },
 
 //>    @method    tabSet.getSelectedTabNumber() ([A])
@@ -14911,38 +14994,14 @@ isc.defineClass("PaneContainer", "VLayout").addMethods({
 // rather than shared across tabs
 isc.TabSet.registerDupProperties("tabs", ["pane"]);
 isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._debugModules.push('Containers');isc.checkForDebugAndNonDebugModules();isc._moduleEnd=isc._Containers_end=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc.Log&&isc.Log.logIsInfoEnabled('loadTime'))isc.Log.logInfo('Containers module init time: ' + (isc._moduleEnd-isc._moduleStart) + 'ms','loadTime');delete isc.definingFramework;if (isc.Page) isc.Page.handleEvent(null, "moduleLoaded", { moduleName: 'Containers', loadTime: (isc._moduleEnd-isc._moduleStart)});}else{if(window.isc && isc.Log && isc.Log.logWarn)isc.Log.logWarn("Duplicate load of module 'Containers'.");}
-
 /*
-
-  SmartClient Ajax RIA system
-  Version SNAPSHOT_v11.1d_2017-03-13/LGPL Deployment (2017-03-13)
-
-  Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
-  "SmartClient" is a trademark of Isomorphic Software, Inc.
-
-  LICENSE NOTICE
-     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
-     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
-     without an accompanying Isomorphic Software license file, please
-     contact licensing@isomorphic.com for details. Unauthorized copying and
-     use of this software is a violation of international copyright law.
-
-  DEVELOPMENT ONLY - DO NOT DEPLOY
-     This software is provided for evaluation, training, and development
-     purposes only. It may include supplementary components that are not
-     licensed for deployment. The separate DEPLOY package for this release
-     contains SmartClient components that are licensed for deployment.
-
-  PROPRIETARY & PROTECTED MATERIAL
-     This software contains proprietary materials that are protected by
-     contract and intellectual property law. You are expressly prohibited
-     from attempting to reverse engineer this software or modify this
-     software for human readability.
-
-  CONTACT ISOMORPHIC
-     For more information regarding license rights and restrictions, or to
-     report possible license violations, please contact Isomorphic Software
-     by email (licensing@isomorphic.com) or web (www.isomorphic.com).
-
-*/
+ * Isomorphic SmartClient
+ * Version SNAPSHOT_v11.1d_2017-06-25 (2017-06-25)
+ * Copyright(c) 1998 and beyond Isomorphic Software, Inc. All rights reserved.
+ * "SmartClient" is a trademark of Isomorphic Software, Inc.
+ *
+ * licensing@smartclient.com
+ *
+ * http://smartclient.com/license
+ */
 
