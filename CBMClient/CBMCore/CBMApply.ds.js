@@ -203,8 +203,9 @@ function getAydaMapItems(bounds, callbackOuter) {
 }
 
 /////////////////////////////////////////////////////////////
-// Additionally sends uploaded video to Ayda queue to comress it
-isc.ClassFactory.defineClass("AydaAzureUploadVideoControl", isc.AzureUploadControl);
+// Additionally sends uploaded video to Ayda queue to comress it //
+// Tested? but NOT USED TILL FILES UPLOAD WILL NOT BE INCLUDED TO MAIN RECORD SAVE TRANSACTION //
+/*isc.ClassFactory.defineClass("AydaAzureUploadVideoControl", isc.AzureUploadControl);
 isc.AydaAzureUploadVideoControl.addProperties({
   createCanvas: function (formParent) {
       var canv = isc.AzureUploadCanvas.create(); 
@@ -258,10 +259,10 @@ isc.AydaAzureUploadVideoControl.addProperties({
       return canv;
     }
 });
-
+*/
 
 ////////////////////////// DataSources /////////////////////////
-/*isc.CBMDataSource.create({
+isc.CBMDataSource.create({
     ID: "MediaInfoItem",
     title: "Медиа-информация",
     titleField: "Description",
@@ -413,19 +414,19 @@ isc.AydaAzureUploadVideoControl.addProperties({
     }],
     // --- Functions ---
     onSave: function (record) {
-      if (record.Video) {
-        isc.RPCManager.sendRequest({
-          data: null,
-          useSimpleHttp: true,
-          contentType: "text/xml",
-          transport: "xmlHttpRequest",
-          httpMethod: "POST",
-          actionURL: AYDA_WS_URL + "Image/CompressVideo/?URL=" + record.Video
-          });
-      }
+        if (record.Video) {
+          isc.RPCManager.sendRequest({
+              data: null,
+              useSimpleHttp: true,
+              contentType: "text/xml",
+              transport: "xmlHttpRequest",
+              httpMethod: "GET",
+              actionURL: AYDA_WS_URL + "Media/CompressVideo/?URL=" + record.Video
+              });
+        }
     }
 });
-*/
+
 
 
 isc.CBMDataSource.create({
