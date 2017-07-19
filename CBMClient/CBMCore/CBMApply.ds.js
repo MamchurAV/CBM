@@ -302,8 +302,8 @@ isc.CBMDataSource.create({
         showTitle: true,
         length: 1000,
         inList: true,
-        colSpan: 1,
-        rowSpan: 3,
+        colSpan: 3,
+        rowSpan: 1,
         align: "left",
         copyValue: true,
         emptyDisplayValue: "",
@@ -408,6 +408,16 @@ isc.CBMDataSource.create({
         align: "left",
         copyValue: true,
         editorType: "AzureUploadControl",
+        emptyDisplayValue: "",
+        type: "text"
+    }, {
+        name: "CompressedVideo",
+        kind: "Value",
+        title: "Видео (low resolution)",
+        inList: true,
+        colSpan: 1,
+        rowSpan: 1,
+        align: "left",
         emptyDisplayValue: "",
         type: "text"
     }],
