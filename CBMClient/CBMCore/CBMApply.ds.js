@@ -1,6 +1,5 @@
 ﻿///////////////////////////////////////////////////////////////////////////////
 ////////////////////////////// Ayda tools /////////////////////////////////////
-
 //var AYDA_WS_URL = "http://localhost:5000/api/";
 //var AYDA_WS_URL = "http://192.168.31.62:5000/api/";
 var AYDA_WS_URL = "http://ayda.eastus.cloudapp.azure.com/api/";
@@ -421,7 +420,7 @@ isc.CBMDataSource.create({
               contentType: "text/xml",
               transport: "xmlHttpRequest",
               httpMethod: "GET",
-              actionURL: AYDA_WS_URL + "Media/CompressVideo/?URL=" + record.Video
+              actionURL: AYDA_WS_URL + "Media/CompressVideo/?URL=" + record.Video + "&Item=" + record.ID
               });
         }
     }
