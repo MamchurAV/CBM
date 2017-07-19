@@ -200,9 +200,232 @@ function getAydaMapItems(bounds, callbackOuter) {
       httpMethod: "POST",
       actionURL: AYDA_WS_URL + "Map/MapItems"}  
   );
-  
 }
 
+/////////////////////////////////////////////////////////////
+// Additionally sends uploaded video to Ayda queue to comress it
+isc.ClassFactory.defineClass("AydaAzureUploadVideoControl", isc.AzureUploadControl);
+isc.AydaAzureUploadVideoControl.addProperties({
+  createCanvas: function (formParent) {
+      var canv = isc.AzureUploadCanvas.create(); 
+      canv.draw = function () {
+        if (!this.readyToDraw()) return this;
+        this.Super("draw", arguments);
+        
+        this.div = document.getElementById("uploader_" + this.ID);
+        this.azureUploader = new qq.azure.FineUploader({
+            element: this.div,
+            request: {
+                endpoint: AZURE_BLOB_URL
+            },
+            signature: {
+                endpoint: '/Upload'
+            },
+            retry: {
+                enableAuto: true
+            },
+            validation: {
+                itemLimit: 1,
+                sizeLimit: 16384000000 // 16Gb
+            },
+            multiple: false,
+            chunking: {
+                partSize: 50000000, // 50Mb
+                minFileSize: 204800001 // 200Mb
+            },
+            callbacks: {
+              onComplete: function(id, name, responseJSON, xhr) {
+                var newName = xhr.responseURL.substring(0, xhr.responseURL.indexOf("?"));
+                this.iscContext.canvasItem.storeValue(newName);
+                // Additional code:
+                isc.RPCManager.sendRequest({
+                    data: null,
+                    useSimpleHttp: true,
+                    contentType: "text/xml",
+                    transport: "xmlHttpRequest",
+                    httpMethod: "GET",
+                    actionURL: AYDA_WS_URL + "Media/CompressVideo/?URL=" + newName
+                    });
+              }
+            }
+        });
+        // Some artificial context establishing for callbacks (so that it seems buggy in usual resolving techniques) 
+        this.azureUploader.iscContext = this;
+         
+        return this;
+      };
+      
+      return canv;
+    }
+});
+
+
+////////////////////////// DataSources /////////////////////////
+/*isc.CBMDataSource.create({
+    ID: "MediaInfoItem",
+    title: "Медиа-информация",
+    titleField: "Description",
+    infoField: "Description",
+    fields: [{
+        name: "Concept",
+        type: "text",
+        hidden: true
+    }, {
+        name: "ID",
+        kind: "Value",
+        title: "ID",
+        showTitle: false,
+        hidden: true,
+        required: true,
+        canEdit: false,
+        colSpan: 1,
+        rowSpan: 1,
+        align: "left",
+        emptyDisplayValue: "",
+        type: "text"
+    }, {
+        name: "Odr",
+        kind: "Value",
+        title: "Порядок",
+        showTitle: true,
+        inList: true,
+        colSpan: 1,
+        rowSpan: 1,
+        align: "left",
+        copyValue: true,
+        emptyDisplayValue: "",
+        type: "localeInt"
+    }, {
+        name: "Description",
+        kind: "Value",
+        title: "Наименование",
+        showTitle: true,
+        length: 1000,
+        inList: true,
+        colSpan: 1,
+        rowSpan: 3,
+        align: "left",
+        copyValue: true,
+        emptyDisplayValue: "",
+        type: "text"
+    }, {
+        name: "MediaRole",
+        kind: "Link",
+        title: "Роль медиа-материала",
+        showTitle: true,
+        inList: true,
+        colSpan: 1,
+        rowSpan: 1,
+        align: "left",
+        copyValue: true,
+        emptyDisplayValue: "",
+        type: "MediaItemRole",
+        editorType: "LinkControl",
+        optionDataSource: "MediaItemRole",
+        valueField: "ID",
+        displayField: "Description",
+        pickListWidth: 400
+    }, {
+        name: "Type",
+        kind: "Value",
+        title: "Тип / Категория",
+        showTitle: true,
+        defaultValue: "N'Основное'",
+        valueMap: ["Основное", "Дополнительное"],
+        inList: true,
+        colSpan: 1,
+        rowSpan: 1,
+        align: "left",
+        copyValue: true,
+        editorType: "select",
+        emptyDisplayValue: "",
+        type: "text"
+    }, {
+        name: "ContactLink",
+        kind: "Value",
+        title: "Контактная информация",
+        showTitle: true,
+        length: 255,
+        inList: true,
+        colSpan: 1,
+        rowSpan: 1,
+        align: "left",
+        copyValue: true,
+        emptyDisplayValue: "",
+        type: "text"
+    }, {
+        name: "Entertainment",
+        kind: "Link",
+        title: "Предложение",
+        showTitle: false,
+        hidden: true,
+        canEdit: false,
+        colSpan: 1,
+        rowSpan: 1,
+        align: "left",
+        copyValue: true,
+        emptyDisplayValue: "",
+        type: "Entertainment",
+        editorType: "LinkControl",
+        optionDataSource: "Entertainment",
+        valueField: "ID",
+        displayField: "Description",
+        pickListWidth: 400
+    }, {
+        name: "CreateTime",
+        kind: "Value",
+        title: "Время создания",
+        showTitle: false,
+        hidden: true,
+        canEdit: false,
+        colSpan: 1,
+        rowSpan: 1,
+        align: "left",
+        copyValue: true,
+        emptyDisplayValue: "",
+        type: "datetime"
+    }, {
+        name: "Image",
+        kind: "Value",
+        title: "Картинка",
+        showTitle: true,
+        inList: true,
+        colSpan: 1,
+        rowSpan: 1,
+        align: "left",
+        copyValue: true,
+        editorType: "AzureUploadControl",
+        emptyDisplayValue: "",
+        type: "text"
+    }, {
+        name: "Video",
+        kind: "Value",
+        title: "Видео",
+        showTitle: true,
+        inList: true,
+        colSpan: 1,
+        rowSpan: 1,
+        align: "left",
+        copyValue: true,
+        editorType: "AzureUploadControl",
+        emptyDisplayValue: "",
+        type: "text"
+    }],
+    // --- Functions ---
+    onSave: function (record) {
+      if (record.Video) {
+        isc.RPCManager.sendRequest({
+          data: null,
+          useSimpleHttp: true,
+          contentType: "text/xml",
+          transport: "xmlHttpRequest",
+          httpMethod: "POST",
+          actionURL: AYDA_WS_URL + "Image/CompressVideo/?URL=" + record.Video
+          });
+      }
+    }
+});
+*/
 
 
 isc.CBMDataSource.create({
