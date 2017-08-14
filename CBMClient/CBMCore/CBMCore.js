@@ -20,12 +20,6 @@ var parseJSON = function (data) {
   return out;
 };
 
-// ------- JS text beautifier ------------
-function beautifyJS(str) {
-  // TODO * * * TODO :-)
-  return str;
-};
-
 // ----------------- Additions to standard Array ---------------------------------
 // ---- To clear it ------------------------------------------
 Array.prototype.popAll = function () {
@@ -244,7 +238,7 @@ function generateDStext(forView, futherActions) {
     resultDS += "isHierarchy: " + conceptRec.IsHierarchy + ", ";
   }
   if (conceptRec.MenuAdditions && conceptRec.MenuAdditions !== "null") {
-    resultDS += "MenuAdditions: \"" + conceptRec.MenuAdditions + "\", ";
+    resultDS += "MenuAdditions: " + conceptRec.MenuAdditions + ", ";
   }
   if (conceptRec.CreateFromMethods && conceptRec.CreateFromMethods !== "null") {
     resultDS += "CreateFromMethods: " + conceptRec.CreateFromMethods + ", ";
@@ -3117,7 +3111,7 @@ function deleteSelectedRecords(innerGrid, mode) {
       if (ok) {
         var n = innerGrid.grid.getSelectedRecords().length;
         for (var i = 0; i < n; i++) {
-          var record = innerGrid.grid.getSelectedRecords()[0];
+          var record = innerGrid.grid.getSelectedRecords()[i];
           if(!record.Concept) {
             record.Concept = gridDS;
           }

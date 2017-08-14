@@ -317,7 +317,7 @@ isc.CBMDataSource.create({
     name: "HierCode",
     type: "text",
     title: "Hirarchy Root",
-    hidden: true,
+ //   hidden: true,
     length: 2367
   }, {
     name: "Primitive",

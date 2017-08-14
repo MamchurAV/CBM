@@ -34,7 +34,7 @@ var loadStaticDataSources = function () {
 // --- Create dynamically from Metadata apply (non-system) Data Sources ---
 //     May be done with appropriate localization
 // Called to run asyncroniously
-
+// TODO - Switch from this to [re]generate CBM apply DataSources as static resources
 var createDataSources = function () {
   var views = viewRS.getAllVisibleRows();
   if (!views || views == null) return;

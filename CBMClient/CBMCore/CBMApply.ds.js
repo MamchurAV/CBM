@@ -1,12 +1,7 @@
 ﻿///////////////////////////////////////////////////////////////////////////////
-////////////////////////////// Ayda tools /////////////////////////////////////
-//var AYDA_WS_URL = "http://localhost:5000/api/";
-//var AYDA_WS_URL = "http://192.168.31.62:5000/api/";
-var AYDA_WS_URL = "http://ayda.eastus.cloudapp.azure.com/api/";
-
-
+////////////////////////////// Ayda - related /////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
-/////////////////////////// Ayda - Feed facilities ////////////////////////////
+////////////////////////// Ayda - Feed facilities /////////////////////////////
 
 function createPayload(dstRec, srcRec, callback) {
   // Not finished!!! Async flow and quorters escaping...
@@ -45,7 +40,7 @@ function createPayload(dstRec, srcRec, callback) {
   
   var mediaFiles =  '"coverInfo": [\
       {\
-        "image": "http://aydadev.blob.core.windows.net/media/80deaa53-64e8-4e51-90df-d260183ebf94.jpg",\
+        "image": "http://ayda.blob.core.windows.net/media/80deaa53-64e8-4e51-90df-d260183ebf94.jpg",\
         "video": null,\
         "description": "1",\
         "type": "Основное",\
@@ -104,16 +99,35 @@ function createPayload(dstRec, srcRec, callback) {
   }
 }
 
-function callVkPublish(entertainmentID) {
-  isc.RPCManager.sendRequest({
-        data: null,
-        useSimpleHttp: true,
-        contentType: "text/xml",
-        transport: "xmlHttpRequest",
-        httpMethod: "POST",
-        actionURL: AYDA_WS_URL + "Social/VkPublish/" + entertainmentID
-   });
-}
+// function rpcFeedVkPublish(entertainmentID) {
+  // // isc.RPCManager.sendRequest({
+        // // data: null,
+        // // useSimpleHttp: true,
+        // // contentType: "text/xml",
+        // // transport: "xmlHttpRequest",
+        // // httpMethod: "POST",
+        // // actionURL: AYDA_WS_URL + "Social/VkPublish/" + entertainmentID
+  // isc.RPCManager.sendRequest({
+        // data: {"PublishId":null, "SourceId":entertainmentID, "PublisherCode":"Ayda.Feed", "StartDate":null, "ExpireTime":null, "IsTest": false },
+        // useSimpleHttp: true,
+        // contentType: "text/xml",
+        // transport: "xmlHttpRequest",
+        // httpMethod: "POST",
+        // actionURL: AYDA_WS_URL + "Social/VkPublish"
+   // });
+// }
+
+// function rpcPublish(id, source, publisherCode, startDate, expireTime, isTest) {
+  // //var publisherCode = publisher.SysCode;
+  // isc.RPCManager.sendRequest({
+        // data: {"PublishId":id, "SourceId":source, "PublisherCode":publisherCode, "StartDate":startDate, "ExpireTime":expireTime, "IsTest": isTest },
+        // useSimpleHttp: true,
+        // contentType: "text/xml",
+        // transport: "xmlHttpRequest",
+        // httpMethod: "POST",
+        // actionURL: AYDA_WS_URL + "Social/VkPublish"
+   // });
+// }
 
 ///////////////////////////////////////////////////////////////////////////////
 /////////////////////////// Ayda - Map facilities /////////////////////////////
@@ -330,7 +344,7 @@ isc.CBMDataSource.create({
         kind: "Value",
         title: "Тип / Категория",
         showTitle: true,
-        defaultValue: "N'Основное'",
+        defaultValue: "Основное",
         valueMap: ["Основное", "Дополнительное"],
         inList: true,
         colSpan: 1,
@@ -354,7 +368,7 @@ isc.CBMDataSource.create({
         emptyDisplayValue: "",
         type: "text"
     }, {
-        name: "Entertainment",
+        name: "Something",
         kind: "Link",
         title: "Предложение",
         showTitle: false,
@@ -365,9 +379,9 @@ isc.CBMDataSource.create({
         align: "left",
         copyValue: true,
         emptyDisplayValue: "",
-        type: "Entertainment",
+        type: "Something",
         editorType: "LinkControl",
-        optionDataSource: "Entertainment",
+        optionDataSource: "Something",
         valueField: "ID",
         displayField: "Description",
         pickListWidth: 400
@@ -423,7 +437,7 @@ isc.CBMDataSource.create({
     }],
     // --- Functions ---
     onSave: function (record) {
-        if (record.Video) {
+        if (record.Video && !record.CompressedVideo) {
           isc.RPCManager.sendRequest({
               data: null,
               useSimpleHttp: true,
