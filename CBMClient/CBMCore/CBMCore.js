@@ -586,7 +586,11 @@ function generateDStext(forView, futherActions) {
             resultDS += "},";
           }
           resultDS = resultDS.slice(0, resultDS.length - 1);
-          resultDS += "]})";
+           resultDS += "] ";
+          // --------- Functions processing ----------
+          // TODO      ^^^^^^^^^^^^^^^^^^^^
+          
+          resultDS += "})";
 
           // --- Callback for program flow after DS creation
           if (futherActions && futherActions != null) {
