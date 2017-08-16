@@ -503,7 +503,7 @@ function generateDStext(forView, futherActions) {
                       resultDS += "optionDataSource: \"" + type + "\", ";
                     }
                     if (currentRelation.LinkFilter && currentRelation.LinkFilter !== "null") {
-                      resultDS += "optionCriteria: \"" + currentRelation.LinkFilter + "\", ";
+                      resultDS += "optionCriteria: " + currentRelation.LinkFilter + ", ";
                     }
                     if (viewFields[i].ValueField && viewFields[i].ValueField !== "null") {
                       resultDS += "valueField: \"" + viewFields[i].ValueField + "\", ";
