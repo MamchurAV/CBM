@@ -364,6 +364,10 @@ function generateDStext(forView, futherActions) {
             if (viewFields[i].RowSpan && viewFields[i].RowSpan !== "null") {
               resultDS += "rowSpan: " + viewFields[i].RowSpan + ", ";
             }
+            if (viewFields[i].Hint && viewFields[i].Hint !== "null") {
+              resultDS += "prompt: \"" + viewFields[i].Hint + "\", ";
+            }
+            
             //TODO ? Maybe move items below to kind-specific places?
             resultDS += "align: \"left\", ";
             // resultDS += "vAlign: \"center\", ";
