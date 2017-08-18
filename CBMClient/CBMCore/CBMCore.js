@@ -365,7 +365,7 @@ function generateDStext(forView, futherActions) {
               resultDS += "rowSpan: " + viewFields[i].RowSpan + ", ";
             }
             if (viewFields[i].Hint && viewFields[i].Hint !== "null") {
-              resultDS += "prompt: \"" + viewFields[i].Hint + "\", ";
+              resultDS += "prompt: \"" + getLang(viewFields[i].Hint, tmp_Lang, false) + "\", ";
             }
             
             //TODO ? Maybe move items below to kind-specific places?
