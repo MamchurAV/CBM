@@ -203,7 +203,7 @@ function generateDStext(forView, futherActions) {
     return;
   }
 
-// --- Creation of head part of DS ---
+  // --- Creation of head part of DS ---
   resultDS = "isc.CBMDataSource.create({ID: \"" + forView + "\",";
 
   if (conceptRec.DataBaseStore && conceptRec.DataBaseStore !== "null") {
@@ -590,16 +590,37 @@ function generateDStext(forView, futherActions) {
             resultDS += "},";
           }
           resultDS = resultDS.slice(0, resultDS.length - 1);
-           resultDS += "] ";
+           resultDS += "]";
           // --------- Functions processing ----------
-          // TODO      ^^^^^^^^^^^^^^^^^^^^
-          
-          resultDS += "})";
+          isc.DataSource.get("PrgFunction").fetchData(
+			{ForConcept: conceptRec.ID}, 
+			function (responce, data) {
+				if (data.length > 0) {
+					resultDS += ", ";
+					for (var i = 0; i < data.length; i++) {
+						resultDS += data[i].CodeBlock;
+						if (i < data.length - 1) {
+							resultDS += ", ";
+						}
+					}
+				}  
 
-          // --- Callback for program flow after DS creation
-          if (futherActions && futherActions != null) {
-            futherActions(resultDS);
-          }
+				resultDS += "})";
+
+				// --- Callback for program flow after DS creation
+				if (futherActions && futherActions != null) {
+					futherActions(resultDS);
+				}
+			}
+          );
+          
+          /// VVV TO callback
+          //resultDS += "})";
+
+          //// --- Callback for program flow after DS creation
+          //if (futherActions && futherActions != null) {
+            //futherActions(resultDS);
+          //}
     }
   );
 });
@@ -2277,6 +2298,7 @@ var CBMobject = {
 
       if (real) {
         this.ds.addData(this.getPersistent());
+        addDataToCache(this);
       } else {
         addDataToCache(this);
       }
