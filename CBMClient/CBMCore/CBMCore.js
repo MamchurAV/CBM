@@ -654,7 +654,7 @@ function createDS(forView, callback) {
 // --- Function that tests DS existence and links to first-level actuality, and if absent - creates it.
 function testCreateDS(forView, callback) {
   var ds = isc.DataSource.getDataSource(forView); 
-  if (ds) {
+  if (ds && ds.isA("isc.CBMDataSource")) {
     // Guarantie existence of linked DataSources (for one level in-depth)
     if(!ds.hasResolvedLinks) {
       ds.resolveLinks(callback);
