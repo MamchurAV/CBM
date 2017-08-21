@@ -2015,7 +2015,7 @@ isc.CBMDataSource.addProperties({
 
           var that = this;
           if (context.dependent) {
-            record.store();
+        ////// Was ucommented for edited Relatoins refresh was rerecord.store();
             TransactionManager.add(record, record.currentTransaction);
             isc.DataSource.get(this.dataSource).onSave(record);
             that.destroyLater(that, 200);
@@ -2298,7 +2298,7 @@ var CBMobject = {
 
       if (real) {
         this.ds.addData(this.getPersistent());
-        addDataToCache(this);
+///////was good for relations refresh        addDataToCache(this);
       } else {
         addDataToCache(this);
       }
