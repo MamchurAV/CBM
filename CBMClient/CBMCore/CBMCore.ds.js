@@ -1492,7 +1492,8 @@ isc.CBMDataSource.create({
     title: "ToolTip message",
     titleOrientation: "top",
     colSpan: 2,
-    length: 1000
+    length: 1000,
+    inList: true
   },
     // Below are the fields that describe properties of complicated relation controls
     {
