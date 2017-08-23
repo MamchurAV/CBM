@@ -150,7 +150,7 @@ var loadCommonData = function () {
                       });
                       // Create all dynamic (metadata-based) DS-es on start,
                       // so that it's no profit to spend time during work.
-                      createDataSources();
+                      setTimeout(createDataSources(), 0);
                     });
                 });
             });

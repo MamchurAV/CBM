@@ -603,37 +603,29 @@ function generateDStext(forView, futherActions) {
            resultDS += "]";
           // --------- Functions processing ----------
           isc.DataSource.get("PrgFunction").fetchData(
-			{ForConcept: conceptRec.ID}, 
-			function (responce, data) {
-				if (data.length > 0) {
-					resultDS += ", ";
-					for (var i = 0; i < data.length; i++) {
-						resultDS += data[i].CodeBlock;
-						if (i < data.length - 1) {
-							resultDS += ", ";
-						}
-					}
-				}  
+              {ForConcept: conceptRec.ID}, 
+              function (responce, data) {
+                if (data.length > 0) {
+                  resultDS += ", ";
+                  for (var i = 0; i < data.length; i++) {
+                    resultDS += data[i].CodeBlock;
+                    if (i < data.length - 1) {
+                      resultDS += ", ";
+                    }
+                  }
+                }  
 
-				resultDS += "})";
+                resultDS += "})";
 
-				// --- Callback for program flow after DS creation
-				if (futherActions && futherActions != null) {
-					futherActions(resultDS);
-				}
-			}
+                // --- Callback for program flow after DS creation
+                if (futherActions && futherActions != null) {
+                  futherActions(resultDS);
+                }
+              }
           );
-          
-          /// VVV TO callback
-          //resultDS += "})";
-
-          //// --- Callback for program flow after DS creation
-          //if (futherActions && futherActions != null) {
-            //futherActions(resultDS);
-          //}
-    }
-  );
-});
+        }
+    );
+  });
 }
 
 
@@ -2025,7 +2017,7 @@ isc.CBMDataSource.addProperties({
 
           var that = this;
           if (context.dependent) {
-        ////// Was ucommented for edited Relatoins refresh was rerecord.store();
+            record.store();
             TransactionManager.add(record, record.currentTransaction);
             isc.DataSource.get(this.dataSource).onSave(record);
             that.destroyLater(that, 200);
@@ -2035,24 +2027,24 @@ isc.CBMDataSource.addProperties({
               TransactionManager.add(record, record.currentTransaction, true);
               isc.DataSource.get(this.dataSource).onSave(record);
                
-              record.store();
+ ////// Was ucommented for edited Relatoins refresh   record.store();
               // if(context.parentElement.parentElement.canvasItem
                  // && context.parentElement.parentElement.canvasItem.needRefresh) {
                 // context.parentElement.parentElement.canvasItem.showValue("", null, 
                 // context.parentElement.parentElement.parentElement, 
                 // context.parentElement.parentElement.canvasItem);
             }
-          }
             TransactionManager.commit(record.currentTransaction);
             delete record.currentTransaction;
             that.destroyLater(that, 200);
           }
-                         
+                          
           if(context.parentElement.parentElement.canvasItem
              && context.parentElement.parentElement.canvasItem.needRefresh) {
             context.parentElement.parentElement.canvasItem.showValue("", null, 
             context.parentElement.parentElement.parentElement, 
             context.parentElement.parentElement.canvasItem);
+          }
 
           return false;
         }
@@ -2502,8 +2494,10 @@ function createFrom(srcRecords, resultClass, initFunc, context) {
         // mainObjID and mainConcept exists, Sync record to context placement
         initFunc(record, srcRecords[iteration], mainObjID, mainConcept);
         if (context) {
-          record =  record.getPersistent();
-          setTimeout(context.addData(record), 0);
+          //////BETTER record.store();
+          //////BETTER context.data.add(record);
+            record =  record.getPersistent();       // <<< To change to BETTER 
+            setTimeout(context.addData(record), 0); // <<< To change to BETTER
         }
       } else {
         // No mainObjID and mainConcept exists, Async to context placement
@@ -2519,6 +2513,8 @@ function createFrom(srcRecords, resultClass, initFunc, context) {
     iteration++;
     if (iteration < srcRecords.getLength()) {
       newRecord();
+    } else {
+/////BETTER      context.dataChanged();
     }
   };
 //TODO: provide transaction context for createInstance() calls
