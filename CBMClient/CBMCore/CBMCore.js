@@ -259,6 +259,9 @@ function generateDStext(forView, futherActions) {
   if (viewRec.ChildExpansionMode && viewRec.ChildExpansionMode !== "null") {
     resultDS += "childExpansionMode: \"" + viewRec.ChildExpansionMode + "\", ";
   }
+  if (viewRec.MainTabName && viewRec.MainTabName !== "null") {
+    resultDS += "mainTabName: \"" + getLang(viewRec.MainTabName, tmp_Lang, false) + "\", ";
+  }
 
   // ---------- DS Fields creation ----------
   resultDS += "fields: [";
@@ -1738,7 +1741,7 @@ isc.CBMDataSource.addProperties({
     });
 
     var atrNames = this.getFieldNames(false);
-    var mainUIPath = isc.CBMStrings.FormWindow_MainTab;
+    var mainUIPath = this.mainTabName ? this.mainTabName : isc.CBMStrings.FormWindow_MainTab;
     var UIPaths = [mainUIPath];
     var forms = [];
     var items = [[]];

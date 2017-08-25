@@ -1249,6 +1249,11 @@ isc.CBMDataSource.create({
     valueMap: [null, "related", "detailField", "details", "detailRelated", "editor"],
     editorType: "select"
   }, {
+    name: "MainTabName",
+    type: "multiLangText",
+    title: "Name for main (first) tab",
+    Prompt: "Optional substitution for localized config-based tab title"
+  }, {
     name: "Fields",
     type: "PrgViewField",
     copyLinked: true,
