@@ -247,12 +247,6 @@ function generateDStext(forView, futherActions) {
   if (conceptRec.IsHierarchy === true) {
     resultDS += "isHierarchy: " + conceptRec.IsHierarchy + ", ";
   }
-  if (conceptRec.MenuAdditions && conceptRec.MenuAdditions !== "null") {
-    resultDS += "MenuAdditions: " + conceptRec.MenuAdditions + ", ";
-  }
-  if (conceptRec.CreateFromMethods && conceptRec.CreateFromMethods !== "null") {
-    resultDS += "CreateFromMethods: " + conceptRec.CreateFromMethods + ", ";
-  }
   if (viewRec.CanExpandRecords && viewRec.CanExpandRecords === true) {
     resultDS += "canExpandRecords: true, ";
   }
@@ -295,7 +289,7 @@ function generateDStext(forView, futherActions) {
           for (var i = 0; i < viewFieldsCount; i++) {
             var currentRelation = relations.find("ID", viewFields[i].ForRelation);
             
-            // ------ Some soecial cases -------
+            // ------ Some special cases -------
             // No relation - means view only element - processed below
             if (!currentRelation) {
               resultDS += "{name: \"" + viewFields[i].SysCode + "\", editorType: \"" + viewFields[i].ControlType + "\"}, ";
@@ -352,7 +346,12 @@ function generateDStext(forView, futherActions) {
             }
             if ((!currentRelation.DBColumn || currentRelation.DBColumn === "null" || currentRelation.DBColumn === null || currentRelation.DBColumn === "undefined") && kind !== "CollectionControl") {
               resultDS += "canSave: false, ";
+              // only if canSave === false - editable === true needs explicit presentation
+              if (viewFields[i].Editable === true) {
+                resultDS += "canEdit: true, ";
+              }
             }
+            // Only editable === false needs explicit presentation (except case when canSave === false)
             if (viewFields[i].Editable === false) {
               resultDS += "canEdit: false, ";
             }
@@ -395,10 +394,6 @@ function generateDStext(forView, futherActions) {
             if (currentRelation.MainPartID && currentRelation.MainPartID !== "null" && currentRelation.MainPartID !== null) {
               resultDS += "mainPartID: \"" + currentRelation.MainPartID + "\", ";
             }
-            // TODO ??? Seams must be dropped - no usage in that facion...
-            // if (currentRelation.ExprFunctions && currentRelation.ExprFunctions !== "null" && currentRelation.ExprFunctions !== null) {
-              // resultDS += currentRelation.ExprFunctions + ", ";
-            // }
             
             var relatedConceptRec = conceptRS.find("ID", currentRelation.RelatedConcept);
             var backLinkRelationRec = relationRS.find("ID", currentRelation.BackLinkRelation);
@@ -595,6 +590,12 @@ function generateDStext(forView, futherActions) {
                     }
                     resultDS += "titleOrientation: \"top\"";
                   }
+                  else {
+                    resultDS += "type: \"" + type + "\" ";
+                  }
+              }
+              if (currentRelation.ExprFunctions && currentRelation.ExprFunctions !== "null" && currentRelation.ExprFunctions !== null) {
+                resultDS += ", " + currentRelation.ExprFunctions;
               }
             }
             resultDS += "},";
@@ -602,6 +603,14 @@ function generateDStext(forView, futherActions) {
           resultDS = resultDS.slice(0, resultDS.length - 1);
            resultDS += "]";
           // --------- Functions processing ----------
+          // --- Standard functions blocks ---
+          if (conceptRec.MenuAdditions && conceptRec.MenuAdditions !== "null") {
+            resultDS += ", MenuAdditions: " + conceptRec.MenuAdditions;
+          }
+          if (conceptRec.CreateFromMethods && conceptRec.CreateFromMethods !== "null") {
+            resultDS += ", CreateFromMethods: " + conceptRec.CreateFromMethods;
+          }
+          // --- Any functions ---
           isc.DataSource.get("PrgFunction").fetchData(
               {ForConcept: conceptRec.ID}, 
               function (responce, data) {
@@ -1692,7 +1701,7 @@ isc.CBMDataSource.addProperties({
   onFetch: function (record) {
   },
 
-  onSave: function (record) {
+  onSave: function (record, context) {
   },
 
   onDelete: function (record) {
@@ -2019,13 +2028,13 @@ isc.CBMDataSource.addProperties({
           if (context.dependent) {
             record.store();
             TransactionManager.add(record, record.currentTransaction);
-            isc.DataSource.get(this.dataSource).onSave(record);
+            isc.DataSource.get(this.dataSource).onSave(record, context);
             that.destroyLater(that, 200);
           } else {
             if (!topCancel) {
               // Independent record must be the first in transaction(see true param) 
               TransactionManager.add(record, record.currentTransaction, true);
-              isc.DataSource.get(this.dataSource).onSave(record);
+              isc.DataSource.get(this.dataSource).onSave(record, context);
                
  ////// Was ucommented for edited Relatoins refresh   record.store();
               // if(context.parentElement.parentElement.canvasItem

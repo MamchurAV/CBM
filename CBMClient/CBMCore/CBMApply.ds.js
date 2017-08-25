@@ -275,7 +275,7 @@ isc.AydaAzureUploadVideoControl.addProperties({
 */
 
 ////////////////////////// DataSources /////////////////////////
-isc.CBMDataSource.create({
+/*isc.CBMDataSource.create({
     ID: "MediaInfoItem",
     title: "Медиа-информация",
     titleField: "Description",
@@ -449,7 +449,7 @@ isc.CBMDataSource.create({
         }
     }
 });
-
+*/
 
 
 isc.CBMDataSource.create({

@@ -42,11 +42,19 @@ var createDataSources = function () {
   var recursiveDS = function () {
     i += 1;
     if (i + 1 < views.length) {
-      testCreateDS(views[i].SysCode, recursiveDS);
+      setTimeout(testCreateDS(views[i].SysCode, recursiveDS), 100);
     }
   }
   recursiveDS();
 };
+/*
+var createDataSources = function () {
+  var views = viewRS.getAllVisibleRows();
+  if (!views || views == null) return;
+  for (var i = 0; i < views.length; i++) {
+    setTimeout(testCreateDS(views[i].SysCode), 100);
+  }
+};*/
 
 
 // ------  --------------
@@ -150,7 +158,8 @@ var loadCommonData = function () {
                       });
                       // Create all dynamic (metadata-based) DS-es on start,
                       // so that it's no profit to spend time during work.
-                      setTimeout(createDataSources(), 0);
+                      // TODO - switch to semi-static DS generation. Till now - let it be lazy.
+                      setTimeout(createDataSources());  //commented for lazy generation 
                     });
                 });
             });
@@ -427,7 +436,7 @@ isc.TreeGrid.create({
   dataSource: "PrgMenuItem",
   nodeClick: function (viewer, node, recordNum) {
     if (node.SysCode) {
-      if (isc.DataSource.get(node.SysCode)) {
+      if (node.SysCode.indexOf('.') === -1) {
         createTable(node.SysCode);
       } else {
         eval(node.SysCode);
