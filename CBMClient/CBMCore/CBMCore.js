@@ -1738,7 +1738,8 @@ isc.CBMDataSource.addProperties({
     });
 
     var atrNames = this.getFieldNames(false);
-    var UIPaths = ["Main"];
+    var mainUIPath = isc.CBMStrings.FormWindow_MainTab;
+    var UIPaths = [mainUIPath];
     var forms = [];
     var items = [[]];
     var n = atrNames.length;
@@ -1749,13 +1750,13 @@ isc.CBMDataSource.addProperties({
         var that = this;
         
         // this.createField = function(){
-        var currRoot = "Main";
+        var currRoot = mainUIPath;
         if (!that.getField(atrNames[i])) {
-          currRoot = "Main";
+          currRoot = mainUIPath;
         } else {
           currRoot = that.getField(atrNames[i]).UIPath;
           if(!currRoot || typeof(currRoot) === "undefined" || currRoot === null || typeof(currRoot) === "null") {
-            currRoot = "Main";
+            currRoot = mainUIPath;
           }
         }
         
