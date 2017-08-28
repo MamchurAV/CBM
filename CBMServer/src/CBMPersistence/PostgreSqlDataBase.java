@@ -18,6 +18,7 @@ import CBMMeta.SelectTemplate;
 import CBMServer.CBMStart;
 import CBMServer.DSRequest;
 import CBMServer.DSResponce;
+import CBMUtils.StringHelper;
 
 
 
@@ -164,11 +165,13 @@ public class PostgreSqlDataBase implements I_DataBase {
 		}
 		
 		// --- After(!) user-defined sort - add MetaModel defined default order ---
-		if (selTempl.orderby != null)
+		if (orderPart.equals("") && !StringHelper.IsNullOrWhiteSpace(selTempl.orderby))
 		{
 			orderPart += selTempl.orderby; // MetaModel defined <inTempl.orderby> MUST ends with ID.
+		} else {
+			orderPart += "Id";	
 		}
-		sql += orderPart.equals("") ? "" : " order by " + orderPart;
+		sql += " order by " + orderPart;
 
 		// --- Paging pre-request ---
 		if (dsRequest!= null && dsRequest.endRow != 0) {

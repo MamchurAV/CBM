@@ -1703,8 +1703,13 @@ isc.CBMDataSource.addProperties({
 
   onFetch: function (record) {
   },
-
-  onSave: function (record, context) {
+  
+  // onSave while CBMObject saved (no matter of content, but 
+  onSave: function (record, form, context) {
+  },
+  
+  // onSave for special case - while object is saved from UI edit session 
+  onFormSave: function (record, form, context) {
   },
 
   onDelete: function (record) {
@@ -1997,6 +2002,9 @@ isc.CBMDataSource.addProperties({
 
       save: function (topCancel) {
         if (this.valuesManager.validate(true)) {
+          
+          isc.DataSource.get(this.dataSource).onFormSave(this.valuesManager.getValues(), this, context);
+          
           var values = this.valuesManager.getValues();
           // Construct CBMobject to gather edited values back from ValuesManager before save
           // TODO not new! Edit existing record?
@@ -2031,14 +2039,14 @@ isc.CBMDataSource.addProperties({
           var that = this;
           if (context.dependent) {
             record.store();
+// TODO Move to CBMObject save (later)           isc.DataSource.get(this.dataSource).onSave(record, this, context);
             TransactionManager.add(record, record.currentTransaction);
-            isc.DataSource.get(this.dataSource).onSave(record, context);
             that.destroyLater(that, 200);
           } else {
             if (!topCancel) {
               // Independent record must be the first in transaction(see true param) 
+// TODO Move to CBMObject save (later)              isc.DataSource.get(this.dataSource).onSave(record, this, context);
               TransactionManager.add(record, record.currentTransaction, true);
-              isc.DataSource.get(this.dataSource).onSave(record, context);
                
  ////// Was ucommented for edited Relatoins refresh   record.store();
               // if(context.parentElement.parentElement.canvasItem
@@ -2295,6 +2303,7 @@ var CBMobject = {
 
   // ----------------- Complete record save to persistent storage -------------------------
   save: function (real, context, contextField, callback) {
+    var that = this;
     if (!this.ds) {
       this.ds = isc.DataSource.get(this.Concept);
     }
@@ -2312,8 +2321,14 @@ var CBMobject = {
       }
 
       if (real) {
-        this.ds.addData(this.getPersistent());
-///////was good for relations refresh        addDataToCache(this);
+        this.ds.addData(this.getPersistent(),
+                  function(){
+                    if (that.ds.getCacheData() && !that.ds.getCacheData().find({ID:that.ID})) {
+                      addDataToCache(that); 
+                    }
+                  }
+                );
+//        addDataToCache(this); // <<< uncommented - was good for relations refresh
       } else {
         addDataToCache(this);
       }

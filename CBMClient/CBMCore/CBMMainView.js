@@ -42,7 +42,7 @@ var createDataSources = function () {
   var recursiveDS = function () {
     i += 1;
     if (i + 1 < views.length) {
-      setTimeout(testCreateDS(views[i].SysCode, recursiveDS), 100);
+      setTimeout(testCreateDS(views[i].SysCode, recursiveDS), 0);
     }
   }
   recursiveDS();

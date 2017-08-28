@@ -160,7 +160,7 @@ public class MSSqlDataBase implements I_DataBase {
 		}
 		
 		// --- After(!) user-defined sort - add MetaModel defined default order ---
-		if (!StringHelper.IsNullOrWhiteSpace(selTempl.orderby))
+		if (orderPart.equals("") && !StringHelper.IsNullOrWhiteSpace(selTempl.orderby))
 		{
 			orderPart += selTempl.orderby; // MetaModel defined <inTempl.orderby> MUST ends with ID.
 		} else {
