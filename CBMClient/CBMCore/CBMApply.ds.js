@@ -215,6 +215,72 @@ function getAydaMapItems(bounds, callbackOuter) {
   );
 }
 
+
+function createPublishings(form, item) {
+  var src = form.valuesManager.getValues();
+  var ds = isc.DataSource.get("PublishingProcessData");
+  
+  var pbFeed = ds.createInstance();
+  pbFeed.Source = src.ID;
+  pbFeed.Publisher = "7D243024-5D60-461C-A12A-8EC49A14CAE9";
+  pbFeed.Location = src.Location;
+  pbFeed.IsTest = src.IsTest;
+  pbFeed.StartDate = new Date();
+  pbFeed.ExpireTime = ds.onNew(pbFeed, form);
+  form.items[7].innerGrid.grid.addData(pbFeed);
+  
+  var pbVk = ds.createInstance();
+  pbVk.Source = src.ID;
+  pbVk.Publisher = "51FAFF5E-192B-4C0F-B5CE-097897FD2FFC";
+  pbVk.Location = src.Location;
+  pbVk.IsTest = src.IsTest;
+  pbVk.StartDate = new Date();
+  pbVk.ExpireTime = ds.onNew(pbVk, form);
+  form.items[7].innerGrid.grid.addData(pbVk);
+  
+  var pbFb = ds.createInstance();
+  pbFb.Source = src.ID;
+  pbFb.Publisher = "7D272443-7AB9-485C-AADB-C03E9CDC2DB2";
+  pbFb.Location = src.Location;
+  pbFb.IsTest = src.IsTest;
+  pbFb.StartDate = new Date();
+  pbFb.ExpireTime = ds.onNew(pbFb, form);
+  form.items[7].innerGrid.grid.addData(pbFb);
+  
+  return false;
+}
+
+function runPublishings(form, item) {
+  var srcRecords = form.items[7].innerGrid.grid.getData();
+  for (var i = 0;  i < srcRecords.length;i++) {
+    var rec = srcRecords[i];
+    if (rec.FactEnqueueDate) { continue; }
+    isc.DataSource.get("Publisher").fetchData(
+        {ID: rec.Publisher},
+        sendToPublishingQueue(dsResponce, data, dsRequest) );
+  }
+
+  return false;
+}
+
+function sendToPublishingQueue(dsResponce, data, dsRequest) {
+  if (! rec.PublicationAddress) rec.PublicationAddress = '';
+  var locationId = "null";
+  if (rec.Location) {
+    locationId = "\"" + rec.Location + "\"";
+  }
+  var payload = "{\"PublishingId\":\"" + rec.ID + "\", \"SourceId\":\"" + rec.Source + "\", \"PublisherCode\": \"" + data[0].SysCode + "\", \"LocationId\": " + locationId + ", \"PublicationAddress\": \"" + rec.PublicationAddress + "\", \"StartDate\": \"" + rec.StartDate.toISOString() + "\", \"ExpireTimeTics\": " + rec.ExpireTime + ", \"IsTest\": " + rec.IsTest + "}";
+  isc.RPCManager.sendRequest({
+        data: payload,
+        useSimpleHttp: true,
+        contentType: "application/json",
+        transport: "xmlHttpRequest",
+        httpMethod: "POST",
+// PRESERVE TEMP              actionURL: AYDA_WS_URL + "Publishing/Publish"
+   });
+}
+
+
 /////////////////////////////////////////////////////////////
 // Additionally sends uploaded video to Ayda queue to comress it //
 // Tested? but NOT USED TILL FILES UPLOAD WILL NOT BE INCLUDED TO MAIN RECORD SAVE TRANSACTION //

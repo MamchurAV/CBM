@@ -537,6 +537,9 @@ function generateDStext(forView, futherActions) {
                     }
                   } 
                   else if (kind === "BackLink" || kind === "BackAggregate") {
+                    if (!backLinkRelationRec){
+                      throw new Error("backLinkRelation not actual for field <" + fldTitle + "> of <" + forView + "> concept in generateDStext().");
+                    }
                     resultDS += "type: \"custom\", "; //<<< ???
   //                  resultDS += "type: \"" + backLinkRelationRec.SysCode + "\", ";
                     resultDS += "canSave: true, ";
@@ -955,7 +958,6 @@ function getRelationsForViewConcept(forView, callback) {
   var conceptRec = conceptDS.getCacheData().find(filter);
   var conceptName = conceptRec.SysCode;
   
-
   if (viewRec) {
     getRelationsForConcept(viewRec.ForConcept, 
         function (rel) {
@@ -966,6 +968,24 @@ function getRelationsForViewConcept(forView, callback) {
         }
     );
   }
+
+  // if (viewRec) {
+    // getRelationsForConcept(viewRec.ForConcept, 
+        // function (rel) {
+          // testCreateDS(conceptName, 
+            // function(ds){
+              // if (!ds){
+                // throw new Error("Undefined DS <" + conceptName + "> for PrgView <" + forView + "> in getRelationsForViewConcept()." );
+              // }
+              // ds.relations = rel;
+              // if (callback) {
+                // callback(rel); 
+              // }
+            // }
+          // );
+        // }
+    // );
+  // }
 }
 
 
@@ -4935,9 +4955,30 @@ isc.AzureUploadControl.addProperties({
   shouldSaveValue: true, 
   createCanvas: function (formParent) {
                   var canv = isc.AzureUploadCanvas.create(); 
-                  return canv;
-                }
+                   return canv;
+                }/*,
+  initWidget: function(){
+    that = this;
+          var controlLayout = isc.VLayout.create({
+        width: "99%",
+        height: "99%",
+        // width: "*", height: "*", <- Leads to permanent small grid even in List form
+        members: [
+          isc.HLayout.create({
+            width: "100%",
+            height: "10",
+            layoutMargin: 0
+          }),
+          that.canvas
+        ]
+      });
+
+    this.addChild(controlLayout);
+  }*/
+  
 });
+
+
 
 
 // ===================== Geospatial section ==============================
