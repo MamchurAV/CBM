@@ -1450,7 +1450,7 @@ isc.CBMDataSource.addProperties({
                           {
                             that.hasResolvedLinks = true;
                             if (callback){
-                              callback();
+                              callback(that);
                             }
                           } else {
                             recursiveResolveLinks(callback);
@@ -1467,7 +1467,7 @@ isc.CBMDataSource.addProperties({
                 if (i == dataCount - 1) {
                   that.hasResolvedLinks = true;
                   if (callback){
-                    callback();
+                    callback(that);
                   }
                 } else {
                   recursiveResolveLinks(callback);

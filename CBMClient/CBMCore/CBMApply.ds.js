@@ -251,14 +251,19 @@ function createPublishings(form, item) {
 }
 
 function runPublishings(form, item) {
-  var srcRecords = form.items[7].innerGrid.grid.getData();
-  for (var i = 0;  i < srcRecords.length;i++) {
-    var rec = srcRecords[i];
-    if (rec.FactEnqueueDate) { continue; }
-    isc.DataSource.get("Publisher").fetchData(
-        {ID: rec.Publisher},
-        sendToPublishingQueue(dsResponce, data, dsRequest) );
-  }
+  var srcRecords = form.items[7].innerGrid.grid.getData().localData;
+  // for (var i = 0;  i < srcRecords.length;i++) {
+    // var rec = srcRecords[i];
+    // if (rec.FactEnqueueDate) { continue; }
+    // isc.DataSource.get("Publisher").fetchData(
+        // {ID: rec.Publisher},
+        // sendToPublishingQueue(dsResponce, data, dsRequest) );
+  // }
+  var rec = srcrecords.find({Publisher: "7D243024-5D60-461C-A12A-8EC49A14CAE9"});
+  if (rec.factenqueuedate) { continue; }
+  isc.datasource.get("publisher").fetchdata(
+      {id: rec.Publisher},
+      sendToPublishingQueue(dsResponce, data, dsRequest) );
 
   return false;
 }
