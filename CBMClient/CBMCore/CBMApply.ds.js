@@ -218,70 +218,101 @@ function getAydaMapItems(bounds, callbackOuter) {
 
 function createPublishings(form, item) {
   var src = form.valuesManager.getValues();
-  var ds = isc.DataSource.get("PublishingProcessData");
-  
-  var pbFeed = ds.createInstance();
-  pbFeed.Source = src.ID;
-  pbFeed.Publisher = "7D243024-5D60-461C-A12A-8EC49A14CAE9";
-  pbFeed.Location = src.Location;
-  pbFeed.IsTest = src.IsTest;
-  pbFeed.StartDate = new Date();
-  pbFeed.ExpireTime = ds.onNew(pbFeed, form);
-  form.items[7].innerGrid.grid.addData(pbFeed);
-  
-  var pbVk = ds.createInstance();
-  pbVk.Source = src.ID;
-  pbVk.Publisher = "51FAFF5E-192B-4C0F-B5CE-097897FD2FFC";
-  pbVk.Location = src.Location;
-  pbVk.IsTest = src.IsTest;
-  pbVk.StartDate = new Date();
-  pbVk.ExpireTime = ds.onNew(pbVk, form);
-  form.items[7].innerGrid.grid.addData(pbVk);
-  
-  var pbFb = ds.createInstance();
-  pbFb.Source = src.ID;
-  pbFb.Publisher = "7D272443-7AB9-485C-AADB-C03E9CDC2DB2";
-  pbFb.Location = src.Location;
-  pbFb.IsTest = src.IsTest;
-  pbFb.StartDate = new Date();
-  pbFb.ExpireTime = ds.onNew(pbFb, form);
-  form.items[7].innerGrid.grid.addData(pbFb);
-  
+  testCreateDS("PublishingProcessData", 
+      function (ds) {
+        testCreateDS("Publisher", 
+            function(dsPublisher){
+              dsPublisher.fetchData(null, 
+                  function(dsResponce, data, dsRequest) {
+                    
+                    var publisher = data.find({SysCode:"Ayda.Feed"});
+                    var publication = ds.createInstance();
+                    publication.Source = src.ID;
+                    publication.Publisher = publisher.ID;
+                    publication.Location = src.Location;
+                    publication.IsTest = src.IsTest;
+                    publication.StartDate = src.StartDate;
+                    publication.ExpireTime = ds.onNew(publication, form);
+                    form.items[7].innerGrid.grid.addData(publication);
+                    
+                    publisher = data.find({SysCode:"vk"});
+                    publication = ds.createInstance();
+                    publication.Source = src.ID;
+                    publication.Publisher = publisher.ID;
+                    publication.Location = src.Location;
+                    publication.IsTest = src.IsTest;
+                    publication.StartDate =  new Date(src.StartDate.getTime() + 5*60000);
+   
+                    publication.ExpireTime = ds.onNew(publication, form);
+                    form.items[7].innerGrid.grid.addData(publication);
+                    
+                    publisher = data.find({SysCode:"Fb"});
+                    publication = ds.createInstance();
+                    publication.Source = src.ID;
+                    publication.Publisher = publisher.ID;
+                    publication.Location = src.Location;
+                    publication.IsTest = src.IsTest;
+                    publication.StartDate = new Date(src.StartDate.getTime() + 5*60000);
+                    publication.ExpireTime = ds.onNew(publication, form);
+                    form.items[7].innerGrid.grid.addData(publication);
+                  }  
+              );
+            }
+        );
+      }
+  );
   return false;
 }
 
 function runPublishings(form, item) {
-  var srcRecords = form.items[7].innerGrid.grid.getData().localData;
-  // for (var i = 0;  i < srcRecords.length;i++) {
-    // var rec = srcRecords[i];
-    // if (rec.FactEnqueueDate) { continue; }
-    // isc.DataSource.get("Publisher").fetchData(
-        // {ID: rec.Publisher},
-        // sendToPublishingQueue(dsResponce, data, dsRequest) );
-  // }
-  var rec = srcrecords.find({Publisher: "7D243024-5D60-461C-A12A-8EC49A14CAE9"});
-  if (rec.factenqueuedate) { continue; }
-  isc.datasource.get("publisher").fetchdata(
-      {id: rec.Publisher},
-      sendToPublishingQueue(dsResponce, data, dsRequest) );
-
+  var srcRecords = form.items[7].innerGrid.grid.getData().localData.findAll({"FactEnqueueDate": undefined});
+  if (!srcRecords){ return false; }
+  
+  testCreateDS("Publisher", 
+      function(dsPublisher){
+        dsPublisher.fetchData(null, 
+            function(dsResponce, data, dsRequest) {
+              
+              var publisher = data.find({SysCode: "Ayda.Feed"});
+              var rec = srcRecords.find({Publisher: publisher.ID});
+              sendToPublishingQueue(rec, publisher.SysCode, 
+                  function(response, rawData, request){
+                    setTimeout( function(){
+                        var publisher = data.find({SysCode: "vk"});
+                        var rec = srcRecords.find({Publisher: publisher.ID});
+                        sendToPublishingQueue(rec, publisher.SysCode,
+                            function(response, rawData, request){
+                              var publisher = data.find({SysCode: "Fb"});
+                              var rec = srcRecords.find({Publisher: publisher.ID});
+                              sendToPublishingQueue(rec, publisher.SysCode);
+                            }
+                        );
+                      }, 60000);
+                  }
+              );
+            }
+        );
+      }
+  );
+  
   return false;
 }
 
-function sendToPublishingQueue(dsResponce, data, dsRequest) {
-  if (! rec.PublicationAddress) rec.PublicationAddress = '';
+function sendToPublishingQueue(rec, publisher, callback) {
+  if (!rec.PublicationAddress) rec.PublicationAddress = '';
   var locationId = "null";
   if (rec.Location) {
     locationId = "\"" + rec.Location + "\"";
   }
-  var payload = "{\"PublishingId\":\"" + rec.ID + "\", \"SourceId\":\"" + rec.Source + "\", \"PublisherCode\": \"" + data[0].SysCode + "\", \"LocationId\": " + locationId + ", \"PublicationAddress\": \"" + rec.PublicationAddress + "\", \"StartDate\": \"" + rec.StartDate.toISOString() + "\", \"ExpireTimeTics\": " + rec.ExpireTime + ", \"IsTest\": " + rec.IsTest + "}";
+  var payload = "{\"PublishingId\":\"" + rec.ID + "\", \"SourceId\":\"" + rec.Source + "\", \"PublisherCode\": \"" + publisher + "\", \"LocationId\": " + locationId + ", \"PublicationAddress\": \"" + rec.PublicationAddress + "\", \"StartDate\": \"" + rec.StartDate.toISOString() + "\", \"ExpireTimeTics\": " + rec.ExpireTime + ", \"IsTest\": " + rec.IsTest + "}";
   isc.RPCManager.sendRequest({
         data: payload,
         useSimpleHttp: true,
         contentType: "application/json",
         transport: "xmlHttpRequest",
         httpMethod: "POST",
-// PRESERVE TEMP              actionURL: AYDA_WS_URL + "Publishing/Publish"
+        actionURL: AYDA_WS_URL + "Publishing/Publish",
+        callback: callback
    });
 }
 
