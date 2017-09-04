@@ -676,7 +676,7 @@ function testCreateDS(forView, callback) {
     if(!ds.hasResolvedLinks) {
       ds.resolveLinks(callback);
     } else if (callback && callback != null) {
-      callback(null);
+      callback(ds);
     }
   } else {
     createDS(forView, callback);
@@ -699,6 +699,9 @@ function getRelation(concept, relation) {
 // --- Universal helper-like function that return object _and/or_ set as parameter for callback - by ID ---
 function getObject(concept, idParam, callback, context) {
   var ds = isc.DataSource.getDataSource(concept);
+  if (!ds) { 
+    return null;
+  }
   var obj;
   if (ds.getCacheData()) {
     obj = ds.getCacheData().find({ID: idParam});
