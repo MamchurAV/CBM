@@ -22,36 +22,25 @@ import java.util.EnumSet;
 import org.restlet.Request;
 import org.restlet.resource.Delete;
 
-public class FilesUploadService extends ServerResource {
+// TODO: Investigate why deletion not called by client (FineUploader)
+public class DeleteAzureBlobService extends ServerResource {
 	private Request request;
 	
-	public FilesUploadService() {
+	public DeleteAzureBlobService() {
 		request = Request.getCurrent();
 	}
 
 	@Get("json")
-	public String doGet() {
+	public String doDelete() {
 		// TODO put some logic to distinguish <Common case> vs <Azure storage>...
         String blobUri = getQueryValue("bloburi");
-        String mehod = request.getMethod().toString();
-		
-		// Azure storage used:
-		return AzureHelper.GetSAS(blobUri, mehod);
+        String deletionConfirmation = getQueryValue("_method");
+        
+        if (deletionConfirmation.equals("DELETE")){
+			// Azure storage used:
+			return AzureHelper.DeleteBlob(blobUri);
+        }
+        
+        return "{\"success\": false, \"info\": \"Deletion not fulfilled\"}";
 	}
-	
-	@Post("json")
-	public String doPost() {
-		return "Not ready yet... (Post)";
-	}
-	
-	@Put("json")
-	public String doPut() {
-		return "Not ready yet... (Put)";
-	}
-
-	@Delete("json")
-	public String doDelete() {
-		return "Not ready yet... (Delete)";
-	}
-	
 }

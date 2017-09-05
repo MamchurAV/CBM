@@ -64,8 +64,11 @@ public class CBMRestlet extends Application {
         router.attach("/CBMClient", new Directory(getContext(), ROOT_URI));
         // Route for main Data proceeding requests 
         router.attach("/DataService", CBMServer.DataAccessService.class); 
-        // Route for files Upload functionality 
-        router.attach("/Upload", CBMServer.FilesUploadService.class); 
+        // Route for blobs upload to Azure functionality 
+        router.attach("/UploadAzureBlob", CBMServer.UploadAzureBlobService.class); 
+        // Route for uploaded to Azure blobs deletion functionality 
+        // TODO: Investigate why DeleteAzureBlob not called by client (FineUploader)
+        router.attach("/DeleteAzureBlob", CBMServer.DeleteAzureBlobService.class); 
         
         // Route for static resources (as JS files, ets.)
         // (Keep this the last)

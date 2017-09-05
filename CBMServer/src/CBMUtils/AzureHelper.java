@@ -21,7 +21,7 @@ public class AzureHelper {
 		    + "AccountName=" + CBMStart.getParam("AzureAccountName")
 		    + "AccountKey=" + CBMStart.getParam("AzureAccountKey");
 	
-	public static String GetSAS(String blobUri, String mehod){
+	public static String GetSAS(String blobUri){
 
 		String result = null;
 		
@@ -62,4 +62,37 @@ public class AzureHelper {
 		return result;  	
 	}
 	
+	
+	public static String DeleteBlob(String blobUri){
+
+    	try {
+    	    // Retrieve storage account from connection-string.
+    	    CloudStorageAccount storageAccount = CloudStorageAccount.parse(storageConnectionString);
+
+    	    // Create the blob client.
+    	    CloudBlobClient blobClient = storageAccount.createCloudBlobClient();
+
+    	    // Retrieve reference to container.
+    	    CloudBlobContainer container = blobClient.getContainerReference(CBMStart.getParam("AzureContainer"));
+    	    
+    	    // Retrieve Blob handle.
+    	    String fileName = blobUri.substring(blobUri.lastIndexOf("//") + 2);
+    	    CloudBlockBlob blob = container.getBlockBlobReference(fileName);
+
+    	    // Delete the blob.
+    	    boolean out = blob.deleteIfExists();
+    	    
+    	    if (out) {
+    	    	return "{\"success\": true, \"info\": " + blobUri + " deleted\"}";  
+    	    } else {
+    	    	return "{\"success\": false, \"info\": " + blobUri + " was not deleted\"}";  
+    	    }
+     	} catch (Exception e) {
+    	    // Output the stack trace.
+    	    e.printStackTrace();
+    	    return "{\"success\": false, \"info\": \"Deletion of " + blobUri + " failed\"}";  
+    	} 
+	
+	}
+
 }

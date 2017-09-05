@@ -4923,7 +4923,7 @@ isc.AzureUploadCanvas.addProperties({
                     endpoint: AZURE_BLOB_URL
                 },
                 signature: {
-                    endpoint: '/Upload' // < Method of CBM server to obtain Azure SAS 
+                    endpoint: '/UploadAzureBlob' // < Method of CBM server to obtain Azure SAS 
                 },
                 retry: {
                     enableAuto: true
@@ -4937,30 +4937,39 @@ isc.AzureUploadCanvas.addProperties({
                     partSize: 50000000, // 50Mb
                     minFileSize: 204800001 // 200Mb
                 },
-                callbacks: {
-                    onComplete: function(id, name, responseJSON, xhr) {
-                      var newName = xhr.responseURL.substring(0, xhr.responseURL.indexOf("?"));
-                      this.iscContext.canvasItem.storeValue(newName);
-                    }
+                deleteFile: {
+                  // TODO: Investigate why /DeleteAzureBlob not routed by FineUploader 
+                  //      - request goes as GET and to /UploadAzureBlob  :-(
+                  enabled: true,
+                  forceConfirm: true,
+                  endpoint: '/DeleteAzureBlob'
                 },
                 sesion: {
                   endpoint: null
                 },
-                deleteFile: {
-                  endpoint: null
+                callbacks: {
+                    onComplete: function(id, name, responseJSON, xhr) {
+                      var newName = xhr.responseURL.substring(0, xhr.responseURL.indexOf("?"));
+                      this.iscContext.canvasItem.storeValue(newName);
+                    },
+                    onDeleteComplete: function(id, name, responseJSON, xhr) {
+                      this.iscContext.canvasItem.storeValue(null);
+                    },
                 }
             });
-            // Some artificial context establishing for callbacks (so that it seems buggy in usual resolving techniques) 
+            // Some CBM-specific context establishing for callbacks (so that it seems buggy in usual resolving techniques) 
             this.azureUploader.iscContext = this;
             
             // Erlier uploaded files presentation
             var name = this.canvasItem.getValue();
             if (name) {
-              var UUIDprev = name.slice(name.lastIndexOf("/") + 1);
-              var blobName = UUIDprev;
-              var UUID = UUIDprev.slice(0, UUIDprev.lastIndexOf("."));
-              this.azureUploader.addInitialFiles([{"name": blobName, "UUID": UUID, "blobName": blobName, "thumbnailUrl": name}]);
-//              this.azureUploader.drawThumbnail(name, this.div, 40, true);
+              var blobName = name.slice(name.lastIndexOf("/") + 1);
+              var UUID = blobName.slice(0, blobName.lastIndexOf("."));
+              this.azureUploader.addInitialFiles([{"name": name, 
+                                                   "UUID": UUID, 
+                                                   "blobName": blobName, 
+                                                   "thumbnailUrl": name, 
+                                                   "deleteFileEndpoint": "/DeleteAzureBlob"}]);
             }
              
             return this;
