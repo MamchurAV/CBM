@@ -547,6 +547,7 @@ isc.DataSource.create({
 // --- Functions (methods) and even functional blocks for Conjcept
 isc.CBMDataSource.create({
   ID: "PrgFunction",
+  cacheAllData: true, // <<<<
   titleField: "SysCode",
   infoField: "Description",
   fields: [{

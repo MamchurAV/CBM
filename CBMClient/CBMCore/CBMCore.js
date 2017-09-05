@@ -4923,7 +4923,7 @@ isc.AzureUploadCanvas.addProperties({
                     endpoint: AZURE_BLOB_URL
                 },
                 signature: {
-                    endpoint: '/Upload'
+                    endpoint: '/Upload' // < Method of CBM server to obtain Azure SAS 
                 },
                 retry: {
                     enableAuto: true
@@ -4942,10 +4942,26 @@ isc.AzureUploadCanvas.addProperties({
                       var newName = xhr.responseURL.substring(0, xhr.responseURL.indexOf("?"));
                       this.iscContext.canvasItem.storeValue(newName);
                     }
-                  }
+                },
+                sesion: {
+                  endpoint: null
+                },
+                deleteFile: {
+                  endpoint: null
+                }
             });
             // Some artificial context establishing for callbacks (so that it seems buggy in usual resolving techniques) 
             this.azureUploader.iscContext = this;
+            
+            // Erlier uploaded files presentation
+            var name = this.canvasItem.getValue();
+            if (name) {
+              var UUIDprev = name.slice(name.lastIndexOf("/") + 1);
+              var blobName = UUIDprev;
+              var UUID = UUIDprev.slice(0, UUIDprev.lastIndexOf("."));
+              this.azureUploader.addInitialFiles([{"name": blobName, "UUID": UUID, "blobName": blobName, "thumbnailUrl": name}]);
+//              this.azureUploader.drawThumbnail(name, this.div, 40, true);
+            }
              
             return this;
        },
@@ -4958,27 +4974,8 @@ isc.AzureUploadControl.addProperties({
   shouldSaveValue: true, 
   createCanvas: function (formParent) {
                   var canv = isc.AzureUploadCanvas.create(); 
-                   return canv;
-                }/*,
-  initWidget: function(){
-    that = this;
-          var controlLayout = isc.VLayout.create({
-        width: "99%",
-        height: "99%",
-        // width: "*", height: "*", <- Leads to permanent small grid even in List form
-        members: [
-          isc.HLayout.create({
-            width: "100%",
-            height: "10",
-            layoutMargin: 0
-          }),
-          that.canvas
-        ]
-      });
-
-    this.addChild(controlLayout);
-  }*/
-  
+                  return canv;
+                }
 });
 
 
