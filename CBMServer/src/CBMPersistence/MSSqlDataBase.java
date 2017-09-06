@@ -146,15 +146,18 @@ public class MSSqlDataBase implements I_DataBase {
 		{
 			for (int i = 0; i < dsRequest.sortBy.size(); i++)
 			{
-				String col = selTempl.columns.get(dsRequest.sortBy.get(i));
+				String odrCol = dsRequest.sortBy.get(i);
+				String desc = "";
+				if (odrCol.startsWith("-"))
+				{
+					desc = " desc";
+					odrCol = odrCol.substring(1);
+				}
+
+				String col = selTempl.columns.get(odrCol);
 				if (col != null)
 				{	
-					String odr = col;
-					if (odr.startsWith("-"))
-					{
-						odr = odr.substring(1) + " desc";
-					}
-					orderPart += odr + ", ";
+					orderPart += col + desc + ", ";
 				}
 			}
 		}
@@ -204,7 +207,7 @@ public class MSSqlDataBase implements I_DataBase {
 			sql += pagePart;
 		}
 		
-		// ------------ Execute Select
+		// ----- Execute Select -----
 		try{
 //			dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
 			DataSource dataSource = ConnectionPool.getDataSource();
