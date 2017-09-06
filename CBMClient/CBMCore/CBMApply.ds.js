@@ -268,7 +268,23 @@ function runPublishings(form, item) {
   var srcRecords = form.items[7].innerGrid.grid.getData().localData.findAll({"FactEnqueueDate": undefined});
   if (!srcRecords){ return false; }
   
-  testCreateDS("Publisher", 
+  var mainObject = createFromRecord(form.valuesManager.getValues());
+  
+  // Test if mainObject is new, and if so 
+  //  - save it inside testMainRecordSaved() after confirmation, 
+  //    and continue with publishings (by supplied callback)
+  if (!mainObject.testMainRecordSaved("  Подумайте, готова ли она к публикации? Всё ли заполнено?", 
+                                      form.valuesManager,
+                                      continuePublishing, srcRecords)) {
+    // If mainObject not new - continue with publishings too
+    continuePublishing(srcRecords);
+  }
+  
+  return false;
+}
+
+function continuePublishing(srcRecords){
+    testCreateDS("Publisher", 
       function(dsPublisher){
         dsPublisher.fetchData(null, 
             function(dsResponce, data, dsRequest) {
@@ -294,8 +310,6 @@ function runPublishings(form, item) {
         );
       }
   );
-  
-  return false;
 }
 
 function sendToPublishingQueue(rec, publisher, callback) {
@@ -315,6 +329,7 @@ function sendToPublishingQueue(rec, publisher, callback) {
         callback: callback
    });
 }
+
 
 
 /////////////////////////////////////////////////////////////
@@ -377,183 +392,8 @@ isc.AydaAzureUploadVideoControl.addProperties({
 */
 
 ////////////////////////// DataSources /////////////////////////
-/*isc.CBMDataSource.create({
-    ID: "MediaInfoItem",
-    title: "Медиа-информация",
-    titleField: "Description",
-    infoField: "Description",
-    fields: [{
-        name: "Concept",
-        type: "text",
-        hidden: true
-    }, {
-        name: "ID",
-        kind: "Value",
-        title: "ID",
-        showTitle: false,
-        hidden: true,
-        required: true,
-        canEdit: false,
-        colSpan: 1,
-        rowSpan: 1,
-        align: "left",
-        emptyDisplayValue: "",
-        type: "text"
-    }, {
-        name: "Odr",
-        kind: "Value",
-        title: "Порядок",
-        showTitle: true,
-        inList: true,
-        colSpan: 1,
-        rowSpan: 1,
-        align: "left",
-        copyValue: true,
-        emptyDisplayValue: "",
-        type: "localeInt"
-    }, {
-        name: "Description",
-        kind: "Value",
-        title: "Наименование",
-        showTitle: true,
-        length: 1000,
-        inList: true,
-        colSpan: 3,
-        rowSpan: 1,
-        align: "left",
-        copyValue: true,
-        emptyDisplayValue: "",
-        type: "text"
-    }, {
-        name: "MediaRole",
-        kind: "Link",
-        title: "Роль медиа-материала",
-        showTitle: true,
-        inList: true,
-        colSpan: 1,
-        rowSpan: 1,
-        align: "left",
-        copyValue: true,
-        emptyDisplayValue: "",
-        type: "MediaItemRole",
-        editorType: "LinkControl",
-        optionDataSource: "MediaItemRole",
-        valueField: "ID",
-        displayField: "Description",
-        pickListWidth: 400
-    }, {
-        name: "Type",
-        kind: "Value",
-        title: "Тип / Категория",
-        showTitle: true,
-        defaultValue: "Основное",
-        valueMap: ["Основное", "Дополнительное"],
-        inList: true,
-        colSpan: 1,
-        rowSpan: 1,
-        align: "left",
-        copyValue: true,
-        editorType: "select",
-        emptyDisplayValue: "",
-        type: "text"
-    }, {
-        name: "ContactLink",
-        kind: "Value",
-        title: "Контактная информация",
-        showTitle: true,
-        length: 255,
-        inList: true,
-        colSpan: 1,
-        rowSpan: 1,
-        align: "left",
-        copyValue: true,
-        emptyDisplayValue: "",
-        type: "text"
-    }, {
-        name: "Something",
-        kind: "Link",
-        title: "Предложение",
-        showTitle: false,
-        hidden: true,
-        canEdit: false,
-        colSpan: 1,
-        rowSpan: 1,
-        align: "left",
-        copyValue: true,
-        emptyDisplayValue: "",
-        type: "Something",
-        editorType: "LinkControl",
-        optionDataSource: "Something",
-        valueField: "ID",
-        displayField: "Description",
-        pickListWidth: 400
-    }, {
-        name: "CreateTime",
-        kind: "Value",
-        title: "Время создания",
-        showTitle: false,
-        hidden: true,
-        canEdit: false,
-        colSpan: 1,
-        rowSpan: 1,
-        align: "left",
-        copyValue: true,
-        emptyDisplayValue: "",
-        type: "datetime"
-    }, {
-        name: "Image",
-        kind: "Value",
-        title: "Картинка",
-        showTitle: true,
-        inList: true,
-        colSpan: 1,
-        rowSpan: 1,
-        align: "left",
-        copyValue: true,
-        editorType: "AzureUploadControl",
-        emptyDisplayValue: "",
-        type: "text"
-    }, {
-        name: "Video",
-        kind: "Value",
-        title: "Видео",
-        showTitle: true,
-        inList: true,
-        colSpan: 1,
-        rowSpan: 1,
-        align: "left",
-        copyValue: true,
-        editorType: "AzureUploadControl",
-        emptyDisplayValue: "",
-        type: "text"
-    }, {
-        name: "CompressedVideo",
-        kind: "Value",
-        title: "Видео (low resolution)",
-        inList: true,
-        colSpan: 1,
-        rowSpan: 1,
-        align: "left",
-        emptyDisplayValue: "",
-        type: "text"
-    }],
-    // --- Functions ---
-    onSave: function (record) {
-        if (record.Video && !record.CompressedVideo) {
-          isc.RPCManager.sendRequest({
-              data: null,
-              useSimpleHttp: true,
-              contentType: "text/xml",
-              transport: "xmlHttpRequest",
-              httpMethod: "GET",
-              actionURL: AYDA_WS_URL + "Media/CompressVideo/?URL=" + record.Video + "&Item=" + record.ID
-              });
-        }
-    }
-});
-*/
 
-
+/*
 isc.CBMDataSource.create({
     ID: "WorkingTimeInput",
     title: "Время работы",
@@ -904,7 +744,7 @@ isc.CBMDataSource.create({
         type: "datetime"
     }]
 })
-
+*/
 /* *** Source variant ***
 isc.CBMDataSource.create({
     ID: "WorkingTime",

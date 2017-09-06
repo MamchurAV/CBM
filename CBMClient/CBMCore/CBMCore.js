@@ -2287,6 +2287,7 @@ var CBMobject = {
    ////// TODO ...todo :-)
    },
    */
+   
   // -------- Returns object that has only persistent fields ---------
   getPersistent: function () {
     if (!this.ds) {
@@ -2351,6 +2352,7 @@ var CBMobject = {
                     }
                   }
                 );
+        this.infoState = "loaded";       
 //        addDataToCache(this); // <<< uncommented - was good for relations refresh
       } else {
         addDataToCache(this);
@@ -2405,9 +2407,36 @@ var CBMobject = {
 
   },
 
+  
   // ----------- Discard changes to record (or whole record if New/Copied ----------------
   discardChanges: function (record) {
   },
+ 
+  // ----------- Test if mainObject is new, and if so 
+  //      - save it after user's confirmation, or not  -----------
+  testMainRecordSaved :function(additionalMsg, contextValuesManager, callback, args) {
+    var that = this;
+    if (this.infoState === "new") {
+      isc.confirm(isc.CBMStrings.Object_MainRecordNotSaved + (additionalMsg ? additionalMsg : ""),
+        function (ok) {
+            if (ok) {
+              that.save(true, null, null, 
+                      function() {
+                        if (callback){
+                          callback(args);
+                        }
+                      }
+                  );
+              if (contextValuesManager) {
+                contextValuesManager.setValue("infoState", "loaded");
+              }
+            }
+        }
+      );
+      return true; 
+    }
+    return false; // Means only that main recorb was not new
+  }
 
 }; // ---^^^---------- END CBMobject ----------------^^^---
 
