@@ -997,7 +997,7 @@ function getRelationsForViewConcept(forView, callback) {
 // ====================== Transactional data processing =======================
 // ============================================================================
 // ---------------- Singleton TransactionManager object -----------------------
-var TransactionManager = {}; //Object.create();
+var TransactionManager = {};
 // - Managed transactions with default instance -
 TransactionManager.transactions = [{Id: "default", Changes: []}];
 
@@ -2025,41 +2025,64 @@ isc.CBMDataSource.addProperties({
 
       save: function (topCancel) {
         if (this.valuesManager.validate(true)) {
-          
+          var that = this;
+         
           isc.DataSource.get(this.dataSource).onFormSave(this.valuesManager.getValues(), this, context);
           
-          var values = this.valuesManager.getValues();
           // Construct CBMobject to gather edited values back from ValuesManager before save
-          // TODO not new! Edit existing record?
+          var values = this.valuesManager.getValues();
+          var oldValues = this.valuesManager.getOldValues();
+          var changesExists = false;
           var record = Object.create(CBMobject);
+          // Mandatory assign ID, infoState, Concept and Del property 
+          // (that usually not changes, and even can be not in DS fields)
+          record.ID = values.ID;
+          record.infoState = values.infoState;
+          if (values.Concept) {
+            record.Concept = values.Concept;
+          } else {
+            record.Concept = this.dataSource;
+          }
+          //record.Del = values.Del;
+          
           for (var attr in values) {
-            if (values.hasOwnProperty(attr)) {
-              record[attr] = values[attr];
-            }
-            // Initialize Save() for non-standard controls
-            // TODO !!! Universalize kontrol type below
             var field = this.getDataSource().getFields()[attr];
-            if (field && field.editorType === "WeekWorkControl") {
-              var item = this.valuesManager.getItem(attr);
-              if (item) {
-                item.saveCollection();
+            if (field) {
+              if (values.hasOwnProperty(attr)) {
+                // Get only changed values for save (NOT for "new" record!)
+                if (record.infoState !== "loaded"
+                    // Changed
+                    || (values[attr] 
+                      // Compare with respect of Date type
+                      && ((!values[attr].getTime && values[attr] !== oldValues[attr])
+                        || (values[attr].getTime && values[attr].getTime() !== oldValues[attr].getTime())))) {
+                  record[attr] = values[attr];
+                  changesExists = true;
+                }
+              }
+              // Initialize Save() for non-standard controls
+              // TODO !!! Universalize control type below !!! (if possible???)
+              if (field.editorType === "WeekWorkControl") {
+                var item = this.valuesManager.getItem(attr);
+                if (item) {
+                  item.saveCollection();
+                }
               }
             }
           }
-          // Separately assign Concept property (that can be not in DS fields)
-          if (record.Concept === undefined || record.Concept === null) {
-            if (values.Concept) {
-              record.Concept = values.Concept;
-            } else {
-              record.Concept = this.dataSource;
+
+          if (record.infoState === "loaded") {
+            if (changesExists) {
+              record.infoState = "changed";
+              record.fullRecord = values; // For update cache with full set of fields
+            }
+            else {
+              // No changes made to existing record - simply exit edit session
+              that.destroyLater(that, 200);
+              return;
             }
           }
-          // TODO: !!!! Changed only discover here VVV !!!!!!!!!!!!!
-          if (record.infoState === "loaded") {
-            record.infoState = "changed";
-          }
 
-          var that = this;
           if (context.dependent) {
             record.store();
 // TODO Move to CBMObject save (later)           isc.DataSource.get(this.dataSource).onSave(record, this, context);
@@ -2091,6 +2114,9 @@ isc.CBMDataSource.addProperties({
           }
 
           return false;
+        }
+        else {
+          isc.warn(isc.CBMStrings.EditForm_ValidationNotPassed);
         }
       },
 
@@ -2201,6 +2227,104 @@ var CBMobject = {
 //  ds: null,
 //  hostObject: null,
 
+
+  // ----------------- Link this object (record) with some transaction -------------------------
+  store: function (trans) {
+    //TODO: Transactions seemed to be processed not on by-record basis
+    // if (trans) {
+    // this.curentTransaction = trans;
+    // }
+    // if (!this.curentTransaction) {
+    // this.curentTransaction = TransactionManager.getTransaction()
+    // }
+//    TransactionManager.add(this, this.curentTransaction)
+
+    this.save(false);
+  },
+
+  // ----------------- Complete record save to persistent storage -------------------------
+  save: function (real, context, contextField, callback) {
+    var that = this;
+    if (!this.ds) {
+      this.ds = isc.DataSource.get(this.Concept);
+    }
+    // Save main object
+    if (this.infoState === "new" || this.infoState === "copy") {
+      // If Data Source contains unsaved data of <this> object 
+      //   - remove it, and then add with normal save
+      if (this.ds.getCacheData() && this.ds.getCacheData().find({ID: this.ID})) {
+        removeDataFromCache(this);
+      }
+      // - If context defined - set new record to context's collection
+      // TODO set not in every case! (child concepts Relation generated for instance).
+      if (context && !this.notShow) {
+        context[contextField].push(this);
+      }
+
+      if (real) {
+        this.ds.addData(this.getPersistentChanged(),
+                  function(){
+                    if (that.ds.getCacheData() && !that.ds.getCacheData().find({ID:that.ID})) {
+                      addDataToCache(that); 
+                    }
+                  }
+                );
+        this.infoState = "loaded";       
+//        addDataToCache(this); // <<< uncommented - was good for relations refresh
+      } else {
+        addDataToCache(this);
+      }
+    } else if (this.infoState === "changed") {
+      if (real) {
+        var that = this;
+        this.ds.updateData(this.getPersistentChanged(), 
+                    function(){ 
+                      updateDataInCache(that.fullRecord); //Quick update
+                      setTimeout(updateDataInCache(that.fullRecord), 300); //Second update after iSC rewrites cache 
+                    } 
+                );
+      } else {
+        updateDataInCache(this.fullRecord);
+      }
+    } else if (this.infoState === "deleted") {
+      if (real) {
+        this.ds.removeData(this);
+ //       removeDataFromCache(this); // <<< More likely redundant. Remove after tests...
+      } else {
+        removeDataFromCache(this);
+      }
+    }
+    
+    if (callback) {
+      callback();
+    }
+  },
+
+  
+  // Defaults setting
+  setDefaults: function(){
+    if (!this.ds) {
+      this.ds = isc.DataSource.get(this.Concept);
+    }
+    var flds = this.ds.getFields(false);
+    for (var fld  in flds) {
+      if (flds.hasOwnProperty(fld)) {
+        if (flds[fld].defaultValue) {
+          try{
+            this[fld] = eval(flds[fld].defaultValue);
+          } catch (e) {
+            if (e instanceof SyntaxError || e instanceof ReferenceError) {
+            // Simply ignore
+            } else {
+              throw(e);
+            }
+          }
+        }
+      }
+    }
+  },
+  
+
   // -------- Retrieve record for link/aggregate field from DS ----------
   // and store  it in additional <fld_name + "_val"> field
   loadLink: function (fld, callback) {
@@ -2287,8 +2411,10 @@ var CBMobject = {
    ////// TODO ...todo :-)
    },
    */
+
    
   // -------- Returns object that has only persistent fields ---------
+  // TODO: Will be better to drop this and use only getPersistentChanged() below
   getPersistent: function () {
     if (!this.ds) {
       this.ds = isc.DataSource.get(this.Concept);
@@ -2311,96 +2437,28 @@ var CBMobject = {
     return rec;
   },
 
-  // ----------------- Link this object (record) with some transaction -------------------------
-  store: function (trans) {
-    //TODO: Transactions seemed to be processed not on by-record basis
-    // if (trans) {
-    // this.curentTransaction = trans;
-    // }
-    // if (!this.curentTransaction) {
-    // this.curentTransaction = TransactionManager.getTransaction()
-    // }
-//    TransactionManager.add(this, this.curentTransaction)
 
-    this.save(false);
-  },
-
-  // ----------------- Complete record save to persistent storage -------------------------
-  save: function (real, context, contextField, callback) {
-    var that = this;
+  // -------- Returns object that has only persistent fields ---------
+  getPersistentChanged: function () {
     if (!this.ds) {
-      this.ds = isc.DataSource.get(this.Concept);
+      this.ds = isc.datasource.get(this.concept);
     }
-    // Save main object
-    if (this.infoState === "new" || this.infoState === "copy") {
-      // If Data Source contains unsaved data of <this> object 
-      //   - remove it, and then add with normal save
-      if (this.ds.getCacheData() && this.ds.getCacheData().find({ID: this.ID})) {
-        removeDataFromCache(this);
-      }
-      // - If context defined - set new record to context's collection
-      // TODO set not in every case! (child concepts Relation generated for instance).
-      if (context && !this.notShow) {
-        context[contextField].push(this);
-      }
-
-      if (real) {
-        this.ds.addData(this.getPersistent(),
-                  function(){
-                    if (that.ds.getCacheData() && !that.ds.getCacheData().find({ID:that.ID})) {
-                      addDataToCache(that); 
-                    }
-                  }
-                );
-        this.infoState = "loaded";       
-//        addDataToCache(this); // <<< uncommented - was good for relations refresh
-      } else {
-        addDataToCache(this);
-      }
-    } else if (this.infoState === "changed") {
-      if (real) {
-        this.ds.updateData(this.getPersistent());
-      } else {
-        updateDataInCache(this);
-      }
-    } else if (this.infoState === "deleted") {
-      if (real) {
-        this.ds.removeData(this);
- //       removeDataFromCache(this); // <<< More likely redundant. Remove after tests...
-      } else {
-        removeDataFromCache(this);
-      }
-    }
+    // get cbm metadata descriptions (we need it to discover really persistent fields)
+    var rec = {};
     
-    if (callback) {
-      callback();
-    }
-  },
-
-  
-  // Defaults setting
-  setDefaults: function(){
-    if (!this.ds) {
-      this.ds = isc.DataSource.get(this.Concept);
-    }
-    var flds = this.ds.getFields(false);
-    for (var fld  in flds) {
-      if (flds.hasOwnProperty(fld)) {
-        if (flds[fld].defaultValue) {
-          try{
-            this[fld] = eval(flds[fld].defaultValue);
-          } catch (e) {
-            if (e instanceof SyntaxError || e instanceof ReferenceError) {
-            // Simply ignore
-            } else {
-              throw(e);
-            }
-          }
-        }
+    for (var existingFld in this) {
+      var rel = this.ds.getRelation(existingFld);
+      var fld = this.ds.getFields()[existingFld];
+      // copy to returned "rec" only persistent fields
+      if (rel && ((rel.DBColumn && rel.DBColumn !== null && rel.DBTable && rel.DBTable !== null))
+          // and - field is not explicitly marked as not-persistent
+          && fld && !fld.ignore) {
+        rec[existingFld] = this[existingFld];
       }
     }
+    return rec;
   },
-  
+
   
   //----------- Provides collection of Relation -----------------
   getRelatonsMeta: function () {
@@ -2411,6 +2469,7 @@ var CBMobject = {
   // ----------- Discard changes to record (or whole record if New/Copied ----------------
   discardChanges: function (record) {
   },
+ 
  
   // ----------- Test if mainObject is new, and if so 
   //      - save it after user's confirmation, or not  -----------
@@ -2439,6 +2498,7 @@ var CBMobject = {
   }
 
 }; // ---^^^---------- END CBMobject ----------------^^^---
+
 
 
 // -------- CBMobject - related functions and classes -------

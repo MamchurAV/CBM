@@ -744,6 +744,7 @@ isc.CBMDataSource.create({
     name: "ForConcept",
     type: "Concept",
     title: "Belongs to Concept",
+    required: true,
     foreignKey: "Concept.ID",
     editorType: "LinkControl",
     optionDataSource: "Concept",
