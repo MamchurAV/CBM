@@ -964,7 +964,8 @@ function getRelationsForViewConcept(forView, callback) {
   if (viewRec) {
     getRelationsForConcept(viewRec.ForConcept, 
         function (rel) {
-          isc.DataSource.get(conceptName).relations = rel;
+          var ds = isc.DataSource.get(conceptName);
+          if(ds) { ds.relations = rel; }
           if (callback) {
             callback(rel); 
           }
@@ -2052,7 +2053,7 @@ isc.CBMDataSource.addProperties({
                 // Get only changed values for save (NOT for "new" record!)
                 if (record.infoState !== "loaded"
                     // Changed
-                    || (values[attr] 
+                    || (values[attr] !== undefined &&  values[attr] !== null 
                       // Compare with respect of Date type
                       && ((!values[attr].getTime && values[attr] !== oldValues[attr])
                         || (values[attr].getTime && values[attr].getTime() !== oldValues[attr].getTime())))) {
@@ -2077,7 +2078,11 @@ isc.CBMDataSource.addProperties({
               record.fullRecord = values; // For update cache with full set of fields
             }
             else {
-              // No changes made to existing record - simply exit edit session
+              // No changes made to existing record - simply commit upper transaction (for inner savings) and exit edit session
+              if (!context.dependent && !topCancel) {
+                TransactionManager.commit(record.currentTransaction);
+                delete record.currentTransaction;
+              }
               that.destroyLater(that, 200);
               return;
             }
