@@ -2679,9 +2679,75 @@ function createFrom(srcRecords, resultClass, initFunc, context) {
 
 // --- Universal function that provide deletion of Record ---
 // --- Deletion processed to trash bin, or physically, depending on "Del" flag existence, and additional mode
+function deleteRecord(record, delMode, contextGrid, mainToBin) {
+  // --- Internal functions ---
+  var deleteCollection = function (fld, record, delMode, mainToBin) {
+    var collectionRS = isc.ResultSet.create({
+      dataSource: fld.relatedConcept,
+      fetchMode: "paged",
+      criteria: parseJSON("{\"" + fld.backLinkRelation + "\" : \"" + record[fld.mainIDProperty] + "\"}"),
+      dataArrived: function (startRow, endRow) {
+        var collectionNew = [];
+        for (var i = startRow; i < endRow; i++) {
+          var rec = this.get(i);
+          deleteRecord(rec, delMode, mainToBin);
+        }
+        collectionRS.dataArrived = undefined;
+      }
+    });
+    collectionRS.getRange(0, 100000); // Some compromise - composite aggregated records of number no more than 100 000
+  }
+
+  var deleteLinkedRecord = function (fld, record, delMode, mainToBin) {
+    var dsInner = isc.DataSource.get(fld.relatedConcept);
+    if (!dsInner) {
+      isc.warn(isc.CBMStrings.NoDataSourceDefined + isc.CBMStrings.MD_ForViewField + fld.name + " (in function deleteLinkedRecord(). It's most likely You set flag CopyLinked for Attribute with no need.)");
+      return;
+    }
+    dsInner.fetchRecord(record[fld], function (dsResponse, data, dsRequest) {
+      deleteRecord(data, delMode, mainToBin);
+    });
+  }
+
+  // Process linked (aggregated) dependent records
+  var ds = isc.DataSource.get(record.Concept);
+  if (!ds) {
+    isc.warn(isc.CBMStrings.NoDataSourceDefined + " (in function deleteRecord(). )");
+    return;
+  }
+  var atrNames = ds.getFieldNames(false);
+  // Process composite aggregated records
+  for (var i = 0; i < atrNames.length; i++) {
+    var fld = ds.getField(atrNames[i]);
+    // TODO: Replace DS editor type to MD association type, or MD but from DS (where it will exist)?
+    if ((fld.editorType == "CollectionControl" || fld.editorType == "CollectionAggregateControl") && fld.deleteLinked == true) {
+      deleteCollection(fld, record, delMode, ds.isDeleteToBin());
+    } else if ((fld.editorType == "LinkControl" || fld.editorType == "combobox") && fld.deleteLinked == true) {
+      deleteLinkedRecord(fld, record, delMode, ds.isDeleteToBin());
+    }
+  }
+  // Process main record
+  if (delMode == "deleteForce") {
+    ds.removeData(record);
+  } else { // delMode != "deleteForce" - process depending on "Del" flag existence
+    if (record.Del != undefined) { // "Del" flag exists
+      if (delMode == "delete") {
+        record.Del = true;
+      } else { // delMode == "restore" remains
+        record.Del = false;
+      }
+      ds.updateData(record);
+    }
+    // Conditions below - to protect from physical deletion "Del-less" aggregated records
+    else if (mainToBin == undefined || !mainToBin) { // // No "Del" flag exists
+      ds.removeData(record);
+    }
+  }
+};
 // --- DRAFT VARIANT 
 // (Semaphore prepared while processing cycle - so first async results MUST returnes after ALL async calls are made - not erlier)
 // TODO: Refactor significantly, so this implementation is too chaotic, no matter that it works.
+/*
 function deleteRecord(record, delMode, contextGrid, mainToBin,  checkAttrProcessedComesInArgs, lastMain, attributesProcessed) {
   var ds = isc.DataSource.get(record.Concept);
   if (!ds) {
@@ -2830,7 +2896,9 @@ function deleteRecord(record, delMode, contextGrid, mainToBin,  checkAttrProcess
   
   return attributesProcessed;
 
-};
+};*/
+
+
 
 /////////////////////////////////////////////////////
 // TODO: -------- DRAFT Variant in work --------- //
