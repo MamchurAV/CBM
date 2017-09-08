@@ -2279,8 +2279,10 @@ var CBMobject = {
         var that = this;
         this.ds.updateData(this.getPersistentChanged(), 
                     function(){ 
-                      updateDataInCache(that.fullRecord); //Quick update
-                      setTimeout(updateDataInCache(that.fullRecord), 300); //Second update after iSC rewrites cache 
+                      //Quick update
+                      updateDataInCache(that.fullRecord); 
+                      //Second update after iSC rewrites cache with only changed fields
+                      setTimeout(updateDataInCache(that.fullRecord), 300); 
                     } 
                 );
       } else {

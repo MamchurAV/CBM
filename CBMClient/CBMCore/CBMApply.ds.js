@@ -232,7 +232,7 @@ function createPublishings(form, item) {
                     publication.Location = src.Location;
                     publication.IsTest = src.IsTest;
                     publication.StartDate = src.StartDate;
-                    publication.ExpireTime = ds.onNew(publication, form);
+                    publication.ExpireTime = getExpireTime(src);
                     form.items[7].innerGrid.grid.addData(publication);
                     
                     publisher = data.find({SysCode:"vk"});
@@ -242,8 +242,7 @@ function createPublishings(form, item) {
                     publication.Location = src.Location;
                     publication.IsTest = src.IsTest;
                     publication.StartDate =  new Date(src.StartDate.getTime() + 5*60000);
-   
-                    publication.ExpireTime = ds.onNew(publication, form);
+                    publication.ExpireTime = getExpireTime(src);
                     form.items[7].innerGrid.grid.addData(publication);
                     
                     publisher = data.find({SysCode:"Fb"});
@@ -253,7 +252,7 @@ function createPublishings(form, item) {
                     publication.Location = src.Location;
                     publication.IsTest = src.IsTest;
                     publication.StartDate = new Date(src.StartDate.getTime() + 5*60000);
-                    publication.ExpireTime = ds.onNew(publication, form);
+                    publication.ExpireTime = getExpireTime(src);
                     form.items[7].innerGrid.grid.addData(publication);
                   }  
               );
@@ -329,6 +328,20 @@ function sendToPublishingQueue(rec, publisher, callback) {
         callback: callback
    });
 }
+
+// Calculates expiration time from PublicationSource of Event concept
+function getExpireTime(source) {
+  if (source.Concept === "Event") {
+    var endDate;
+    if (source.DueDate ) {
+      endDate = source.DueDate;
+    } else if (source.FromDate ) {
+      endDate = source.FromDate;
+    }
+    return dateDiffInDays(new Date(), endDate);
+  }
+}
+
 
 
 
