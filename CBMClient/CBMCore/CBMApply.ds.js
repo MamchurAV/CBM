@@ -290,6 +290,7 @@ function continuePublishing(srcRecords){
               
               var publisher = data.find({SysCode: "Ayda.Feed"});
               var rec = srcRecords.find({Publisher: publisher.ID});
+              testUpdateExistingFeeds(rec);
               sendToPublishingQueue(rec, publisher.SysCode, 
                   function(response, rawData, request){
                     setTimeout( function(){
@@ -328,6 +329,30 @@ function sendToPublishingQueue(rec, publisher, callback) {
         callback: callback
    });
 }
+
+
+testUpdateExistingFeeds function(record) {
+  var that = this;	
+  var feedDS = isc.DataSource.get("Feed");
+  feedDS.fetchData({Source: this.Source},
+      function(responce, data, request) {
+        if (data.length > 0) {
+          for(var i = 0; i < data.length; i++) {
+			  var feed = data[i];
+			  if (feed.EndDate >= that.StartDate) {
+				  var d = new Date(that.StartDate);
+				  feed.EndDate = new Date(d.getTime() - (1 * 24 * 60 * 60 * 1000)); 
+				  feedDS.updateData(feed);
+			  } 
+		  }
+		  
+        }
+      }
+  );
+}
+
+
+
 
 // Calculates expiration time from PublicationSource of Event concept
 function getExpireTime(source) {

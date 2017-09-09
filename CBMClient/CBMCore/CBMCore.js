@@ -3340,6 +3340,85 @@ isc.LinkControl.addProperties({
 });
 
 
+isc.defineClass("LinkControlExt", "ComboBoxItem", "Button");
+isc.LinkControlExt.addProperties({
+  // shouldSaveValue: true,
+  iconPrompt: "Open/Create",
+  // valueMap: langValueMap,
+  // valueIcons: langValueIcons,
+  // itemLang: tmp_Lang,
+  // strictLang: false,
+  // imageURLPrefix: flagImageURLPrefix,
+  // imageURLSuffix: flagImageURLSuffix,
+   icons: [{
+   src: isc.Page.getAppImgDir() + "new.png",
+   showFocused: true,
+   showOver: false
+   },{
+   src: flagImageURLPrefix + tmp_Lang + flagImageURLSuffix,
+   showFocused: true,
+   showOver: false
+   },{
+   src: flagImageURLPrefix + tmp_Lang + flagImageURLSuffix,
+   showFocused: true,
+   showOver: false
+   } 
+   ],
+
+  iconClick: function (form, item, icon) {
+    var record = item.form.dataSource.createInstance();
+    item.form.dataSource.edit(record, null);
+  },
+
+  // init: function() {
+  // this.setProperty("icons", [{
+  // src: flagImageURLPrefix + tmp_Lang + flagImageURLSuffix,
+  // showFocused: true,
+  // showOver: false
+  // }]);
+  // return this.Super("init", arguments);
+  // }
+
+// useClientFiltering : true,
+  autoFetchData: false,
+  cachePickListResults: false,
+  showPickListOnKeypress: true,
+  // pickListProperties: {
+  // showFilterEditor:true
+  // },
+
+  editorEnter: function (form, item, value) {
+    this.getFilter(form, item, value);
+  },
+
+  getFilter: function (form, item, value) {
+    var relMetadata = form.getDataSource().getRelation(item.name);
+    if (relMetadata.LinkFilter && relMetadata.LinkFilter !== "null") {
+      if(!relMetadata.LinkFilter.startsWith("function")){
+        // Expreccion represenrs filter - processed as filter
+        var filterStr = processJSONExpression(relMetadata.LinkFilter, this.form.valuesManager.values);
+        this.pickListCriteria = parseJSON(filterStr);
+      } else {
+          // Data are supplied by some function (in more complicated cases)
+        this.getClientPickListData = function() {
+          return this.valueMap;
+        };
+        var func = relMetadata.LinkFilter;
+        eval(func);
+      }
+    }
+  },
+  
+/*  getClientPickListData: function () {
+    var relMetadata = form.getDataSource().getRelation(item.name);
+    if (relMetadata.getData) {
+      return relMetadata.getData();
+    }
+  }*/
+});
+
+
+
 isc.ClassFactory.defineClass("MultiLinkControl", isc.MultiComboBoxItem);
 isc.MultiLinkControl.addProperties({
   //TODO: todo...
