@@ -331,7 +331,7 @@ function sendToPublishingQueue(rec, publisher, callback) {
 }
 
 
-testUpdateExistingFeeds function(record) {
+function testUpdateExistingFeeds(record) {
   var that = this;	
   var feedDS = isc.DataSource.get("Feed");
   feedDS.fetchData({Source: this.Source},

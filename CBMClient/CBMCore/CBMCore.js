@@ -2053,9 +2053,10 @@ isc.CBMDataSource.addProperties({
                 // Get only changed values for save (NOT for "new" record!)
                 if (record.infoState !== "loaded"
                     // Changed
-                    || (values[attr] !== undefined &&  values[attr] !== null 
+                    || (values[attr] !== undefined
                       // Compare with respect of Date type
                       && ((!values[attr].getTime && values[attr] !== oldValues[attr])
+                        // For Date - special checks
                         || (values[attr].getTime && values[attr].getTime() !== oldValues[attr].getTime())))) {
                   record[attr] = values[attr];
                   changesExists = true;
@@ -3351,23 +3352,17 @@ isc.LinkControlExt.addProperties({
   // imageURLPrefix: flagImageURLPrefix,
   // imageURLSuffix: flagImageURLSuffix,
    icons: [{
-   src: isc.Page.getAppImgDir() + "new.png",
-   showFocused: true,
-   showOver: false
-   },{
-   src: flagImageURLPrefix + tmp_Lang + flagImageURLSuffix,
-   showFocused: true,
-   showOver: false
-   },{
-   src: flagImageURLPrefix + tmp_Lang + flagImageURLSuffix,
-   showFocused: true,
-   showOver: false
-   } 
+	   src: isc.Page.getAppImgDir() + "list.png",
+	   showFocused: true,
+	   showOver: false
+	   }
    ],
 
   iconClick: function (form, item, icon) {
-    var record = item.form.dataSource.createInstance();
-    item.form.dataSource.edit(record, null);
+    //var record = item.form.dataSource.createInstance();
+    //item.form.dataSource.edit(record, null);
+    var ds = isc.DataSource.get(item.dataSource);
+    var table = createTable(item.dataSource, item); //, callback, filter, rootIdValue, afterCreate)
   },
 
   // init: function() {
