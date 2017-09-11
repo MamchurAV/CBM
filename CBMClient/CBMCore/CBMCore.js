@@ -198,6 +198,17 @@ function dateDiffInDays(begDate, endDate) {
 // ============================================================================
 // ============================================================================
 
+// ================ iSC core customisations (in allowed way) ==================
+isc.RPCManager.addClassProperties({
+   handleTransportError : function (transactionNum, status, httpResponseCode, httpResponseText) 
+   {
+    if (status === -90 && httpResponseCode === 0) {
+      isc.warn("Операция не удалась. Проблема с сетью, либо не работает сервер.");
+      return false;        
+    }
+   }
+})
+
 // ======= Dynamic creation of Isomorphic DataSource (DS) from Metadata =======
 // --- Function that generates Isomorphic DataSource (DS) text from universal CBM metadata. ---
 function generateDStext(forView, futherActions) {
@@ -1716,6 +1727,7 @@ isc.CBMDataSource.addProperties({
     return newRecord;
   },
 
+  // ------------- Functions - interceptors group -------------
   beforeCopy: function (srcRecord, callbacks) {
     var record = this.copyRecord(srcRecord);
     // Special actions here
@@ -1737,6 +1749,9 @@ isc.CBMDataSource.addProperties({
   },
 
   onDelete: function (record) {
+  },
+  
+  beforeEdit(record, context) {
   },
 
   // --- Determine deletion mode - real deletion, or using "Del" property deletion throw trash bin.
@@ -1792,58 +1807,68 @@ isc.CBMDataSource.addProperties({
           }
         }
         
-          var notFound = true;
-          var j = 0;
-          for (; j < UIPaths.length; j++) {
-            if (UIPaths[j] === currRoot) {
-              notFound = false;
-              var nItem = items[[j]].length;
-              if (this.getField(atrNames[i]).kind != "Command") {
-                items[j][nItem] = isc.FormItem.create({name:atrNames[i], width:"100%", hidden: null, showIf: null});
-              } else {
-                // Button linked to DS field seems to be disabled, we create it more "by hand"
-                var fld = this.getField(atrNames[i]);
-                items[j][nItem] = isc.FormItem.create({type:'button', name:atrNames[i], title:fld.title, showTitle:false, click: fld.click, startRow:false, endRow:false, autoFit:true});
-              }
-              // Defaults setting
-              if (this.getField(atrNames[i]).defaultValue) {
-              try{
-                items[j][nItem].defaultValue = eval(this.getField(atrNames[i]).defaultValue);
-              } catch (e) {
-                if (e instanceof SyntaxError || e instanceof ReferenceError) {
-                  // Simply ignore
-                } else {
-                  throw(e);
-                }
-              }
-              }
-              break;
-            }
-          }
-          if (notFound) {
-            UIPaths[j] = currRoot;
-            items[j] = [];
+        var notFound = true;
+        var j = 0;
+        for (; j < UIPaths.length; j++) {
+          if (UIPaths[j] === currRoot) {
+            notFound = false;
+            var nItem = items[[j]].length;
+            var fld = this.getField(atrNames[i]);
             if (this.getField(atrNames[i]).kind != "Command") {
-              items[j][0] = isc.FormItem.create({name:atrNames[i], width:"100%", hidden: null, showIf: null});
+              items[j][nItem] = isc.FormItem.create({name:atrNames[i], width:"100%", hidden: null, showIf: null});
+              if (fld.relatedConcept) {
+                items[j][nItem].relatedConcept = fld.relatedConcept;
+              } else {
+                items[j][nItem].relatedConcept = fld.type;
+              }
             } else {
               // Button linked to DS field seems to be disabled, we create it more "by hand"
-              var fld = this.getField(atrNames[i]);
-              items[j][0] = isc.FormItem.create({type:'button', name:atrNames[i], title:fld.title, showTitle:false, click: fld.click, startRow:false, endRow:false, autoFit:true});
+              items[j][nItem] = isc.FormItem.create({type:'button', name:atrNames[i], title:fld.title, showTitle:false, click: fld.click, startRow:false, endRow:false, autoFit:true});
             }
             // Defaults setting
             if (this.getField(atrNames[i]).defaultValue) {
-              try{
-                items[j][0].defaultValue = eval(this.getField(atrNames[i]).defaultValue);
-              } catch (e) {
-                if (e instanceof SyntaxError || e instanceof ReferenceError) {
-                  // Simply ignore
-                } else {
-                  throw(e);
-                }
+            try{
+              items[j][nItem].defaultValue = eval(this.getField(atrNames[i]).defaultValue);
+            } catch (e) {
+              if (e instanceof SyntaxError || e instanceof ReferenceError) {
+                // Simply ignore
+              } else {
+                throw(e);
+              }
+            }
+            }
+            break;
+          }
+        }
+        if (notFound) {
+          UIPaths[j] = currRoot;
+          items[j] = [];
+          var fld = this.getField(atrNames[i]);
+          if (this.getField(atrNames[i]).kind != "Command") {
+            items[j][0] = isc.FormItem.create({name:atrNames[i], width:"100%", hidden: null, showIf: null});
+            if (fld.relatedConcept) {
+              items[j][0].relatedConcept = fld.relatedConcept;
+            } else {
+              items[j][0].relatedConcept = fld.type;
+            }
+          } else {
+            // Button linked to DS field seems to be disabled, we create it more "by hand"
+            var fld = this.getField(atrNames[i]);
+            items[j][0] = isc.FormItem.create({type:'button', name:atrNames[i], title:fld.title, showTitle:false, click: fld.click, startRow:false, endRow:false, autoFit:true});
+          }
+          // Defaults setting
+          if (this.getField(atrNames[i]).defaultValue) {
+            try{
+              items[j][0].defaultValue = eval(this.getField(atrNames[i]).defaultValue);
+            } catch (e) {
+              if (e instanceof SyntaxError || e instanceof ReferenceError) {
+                // Simply ignore
+              } else {
+                throw(e);
               }
             }
           }
-        // }
+        }
         
         // if (this.getField(atrNames[i]).kind === "Link" 
             // || this.getField(atrNames[i]).kind === "BackLink"
@@ -2010,6 +2035,10 @@ isc.CBMDataSource.addProperties({
 
   // --- Edit pointed record according to metadata of current DS
   edit: function (record, context) {
+        
+    // Function-intrceptor for any specific for DS actions before 
+    this.beforeEdit(record, context);
+    
     var valuesManager = isc.ValuesManager.create({
       dataSource: this,
       values: record
@@ -2567,7 +2596,8 @@ function editRecords(records, context, conceptRecord, trans) {
   }
   // First if works if cls undefined only
   if (typeof(context) != "undefined" && context !== null &&
-    (typeof(cls) == "undefined" || cls === null || cls === "loading" || records.getLength() > 1) || !cls.SysCode) { // DS by Context
+    (typeof(cls) == "undefined" || cls === null || cls === "loading" || records.getLength() > 1) || !cls.SysCode) 
+  { // DS by Context
     ds = context.getDataSource();
     records[0].ds = ds;
     if (records.getLength() === 1) {
@@ -2580,7 +2610,6 @@ function editRecords(records, context, conceptRecord, trans) {
     records[0].ds = ds;
     // --- Load concrete class instance data, if record's class not equal (is subclass) of context class (DataSource)
     if (context.dataSource != cls["SysCode"] && records[0]["infoState"] == "loaded") {
-      //      testCreateDS(cls["SysCode"]);
       var currentRecordRS = isc.ResultSet.create({
         dataSource: cls["SysCode"],
         criteria: {
@@ -3361,8 +3390,8 @@ isc.LinkControlExt.addProperties({
   iconClick: function (form, item, icon) {
     //var record = item.form.dataSource.createInstance();
     //item.form.dataSource.edit(record, null);
-    var ds = isc.DataSource.get(item.dataSource);
-    var table = createTable(item.dataSource, item); //, callback, filter, rootIdValue, afterCreate)
+    var ds = isc.DataSource.get(item.relatedConcept);
+    var table = createTable(item.relatedConcept, item); //, callback, filter, rootIdValue, afterCreate)
   },
 
   // init: function() {
@@ -4887,7 +4916,7 @@ function createTable(forType, context, callback, filter, rootIdValue, afterCreat
   testCreateDS(forType, 
     function(){
       
-      initCreatedTable = function(table){
+      var initCreatedTable = function(table){
         if (!table.innerGrid || !table.innerGrid.grid) {
           return;
         }

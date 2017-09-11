@@ -265,7 +265,10 @@ function createPublishings(form, item) {
 
 function runPublishings(form, item) {
   var srcRecords = form.items[7].innerGrid.grid.getData().localData.findAll({"FactEnqueueDate": undefined});
-  if (!srcRecords){ return false; }
+  if (!srcRecords){ 
+    isc.warn("Нет записей для публикации, либо все они уже публиковались ранее. Повторную публикацию Вы можете сделать для нужных записей индивидуально.");
+    return false; 
+  }
   
   var mainObject = createFromRecord(form.valuesManager.getValues());
   

@@ -339,7 +339,7 @@ isc.CBMDataSource.create({
     type: "PrgComponent", // TODO : Substitute with Party DS when possible
     title: "Source (author) of Concept",
     foreignKey: "Concept.ID",
-    editorType: "LinkControl"
+    editorType: "LinkControlExt"
 //        editorType: "comboBox" // ,
     // optionDataSource : "Party",
     // valueField : "ID",
