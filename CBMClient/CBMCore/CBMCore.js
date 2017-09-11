@@ -3391,7 +3391,10 @@ isc.LinkControlExt.addProperties({
     //var record = item.form.dataSource.createInstance();
     //item.form.dataSource.edit(record, null);
     var ds = isc.DataSource.get(item.relatedConcept);
-    var table = createTable(item.relatedConcept, item); //, callback, filter, rootIdValue, afterCreate)
+    var table = createTable(item.relatedConcept, item, 
+        function(records) {
+			item.setValue(records[0].ID);
+		}); //, callback, filter, rootIdValue, afterCreate)
   },
 
   // init: function() {

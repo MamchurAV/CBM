@@ -382,7 +382,7 @@ isc.CBMDataSource.create({
     type: "PrgVersion",
     title: "Version",
     foreignKey: "PrgVersion.ID",
-    editorType: "LinkControl", //"comboBox",
+    editorType: "LinkControlExt", //"comboBox",
     optionDataSource: "PrgVersion",
     valueField: "ID",
     displayField: "SysCode",
