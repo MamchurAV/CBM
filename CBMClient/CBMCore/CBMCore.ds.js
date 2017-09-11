@@ -336,10 +336,10 @@ isc.CBMDataSource.create({
     title: "Abnormal Inheritance"
   }, {
     name: "Source",
-    type: "Concept", //"PrgComponent", // TODO : Substitute with Party DS when possible
-    title: "Author of Concept",
+    type: "PrgComponent", // TODO : Substitute with Party DS when possible
+    title: "Source (author) of Concept",
     foreignKey: "Concept.ID",
-    editorType: "LinkControlExt"
+    editorType: "LinkControl"
 //        editorType: "comboBox" // ,
     // optionDataSource : "Party",
     // valueField : "ID",
@@ -1424,9 +1424,9 @@ isc.CBMDataSource.create({
     name: "ForRelation",
     type: "Relation",
     title: "Represents Relation",
-    foreignKey: "Relation.ID",
+ //   foreignKey: "Relation.ID", // <<<?
     editorType: "LinkControl",
-//0    optionDataSource: "Relation",
+    optionDataSource: "Relation", // <<<?
     valueField: "ID",
     displayField: "SysCode",
     pickListWidth: 450,

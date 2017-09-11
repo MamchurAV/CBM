@@ -1803,7 +1803,7 @@ isc.CBMDataSource.addProperties({
               } else {
                 // Button linked to DS field seems to be disabled, we create it more "by hand"
                 var fld = this.getField(atrNames[i]);
-                items[j][nItem] = isc.FormItem.create({type:'button', title: fld.title, click: fld.click, startRow:false, endRow:false, autoFit:true});
+                items[j][nItem] = isc.FormItem.create({type:'button', name:atrNames[i], title:fld.title, showTitle:false, click: fld.click, startRow:false, endRow:false, autoFit:true});
               }
               // Defaults setting
               if (this.getField(atrNames[i]).defaultValue) {
@@ -1828,7 +1828,7 @@ isc.CBMDataSource.addProperties({
             } else {
               // Button linked to DS field seems to be disabled, we create it more "by hand"
               var fld = this.getField(atrNames[i]);
-              items[j][0] = isc.FormItem.create({type:'button', title: fld.title, click: fld.click, startRow:false, endRow:false, autoFit:true});
+              items[j][0] = isc.FormItem.create({type:'button', name:atrNames[i], title:fld.title, showTitle:false, click: fld.click, startRow:false, endRow:false, autoFit:true});
             }
             // Defaults setting
             if (this.getField(atrNames[i]).defaultValue) {
@@ -3628,9 +3628,8 @@ isc.InnerGrid.addProperties({
         that.grid = isc.ListGrid.create({
           dataSource: that.dataSource,
           useAllDataSourceFields: false,
-          dataPageSize: 75, // <<< Optimization recomended in actual inherited datasources.
+          dataPageSize: 100, // <<< Optimization recomended in actual inherited datasources.
           alternateRecordStyles: false,
-          ////showFilterEditor: true, // TODO: switch this by user
           canHover: true,
           hoverWidth: 300, //hoverHeight: 20,
           autoFitData: false, // TODO ???
@@ -3639,12 +3638,13 @@ isc.InnerGrid.addProperties({
           selectionType: "multiple",
           //selectionAppearance:"checkbox", // Use if more "stable" selection preferred.
           canDragRecordsOut: true,
-          // recordDoubleClick: function () {
-          // if(that.grid.getSelectedRecord() != null) {
-          // that.grid.callObjectsEdit("loaded");
-          // return false;
-          // }
-          // },
+          // TODO: Set some user action to inline record editing
+          recordDoubleClick: function () {
+            if(that.grid.getSelectedRecord() != null) {
+              that.grid.callObjectsEdit("loaded");
+              return false;
+            }
+          },
           canEdit: true,
           modalEditing: true,
           autoSaveEdits: false,
@@ -3702,7 +3702,6 @@ isc.InnerGrid.addProperties({
           loadDataOnDemand: false, // !!! If false - treeRootValue won't be set!
           listSettingsApplied: false,
           alternateRecordStyles: false,
-          //showFilterEditor: true, // TODO: switch this by user
           canHover: true,
           hoverWidth: 300, //hoverHeight: 40,
           autoFitData: false, // TODO ???
@@ -3722,6 +3721,7 @@ isc.InnerGrid.addProperties({
           formatCellValue: function (value, record, rowNum, colNum, grid) {
             return getLang(value, tmp_Lang, false);
           },
+          // TODO: Set some user action to inline record editing
           recordDoubleClick: function () {
             if (that.grid.getSelectedRecord() != null) {
               that.grid.callObjectsEdit("loaded");
