@@ -209,6 +209,12 @@ isc.RPCManager.addClassProperties({
    }
 })
 
+
+// =================== UI parameters globals =====================
+var ICON_SIZE_SMALL = 10;
+
+
+
 // ======= Dynamic creation of Isomorphic DataSource (DS) from Metadata =======
 // --- Function that generates Isomorphic DataSource (DS) text from universal CBM metadata. ---
 function generateDStext(forView, futherActions) {
@@ -3359,7 +3365,7 @@ isc.LinkControl.addProperties({
         eval(func);
       }
     }
-  },
+  }
   
 /*  getClientPickListData: function () {
     var relMetadata = form.getDataSource().getRelation(item.name);
@@ -3369,42 +3375,107 @@ isc.LinkControl.addProperties({
   }*/
 });
 
-
+// ------------- Link-control with reach facilities --------------
 isc.defineClass("LinkControlExt", "ComboBoxItem", "Button");
 isc.LinkControlExt.addProperties({
   // shouldSaveValue: true,
-  iconPrompt: "Open/Create",
+  
   // valueMap: langValueMap,
-  // valueIcons: langValueIcons,
+  // valueIcons: langValueIcons, 
   // itemLang: tmp_Lang,
   // strictLang: false,
   // imageURLPrefix: flagImageURLPrefix,
   // imageURLSuffix: flagImageURLSuffix,
-   icons: [{
-	   src: isc.Page.getAppImgDir() + "list.png",
-	   showFocused: true,
-	   showOver: false
-	   }
+   icons: [ {
+	    src: isc.Page.getAppImgDir() + "delete.png",
+	    showFocused: true,
+	    showOver: false,
+      width: ICON_SIZE_SMALL, height: ICON_SIZE_SMALL, 
+      inline: true,
+      inlineIconAlign: "right",
+      prompt: "Очистить ссылку", // isc.CBMStrings.InnerGridMenu_Delete, <<< Must be set later
+      name: "clear",
+      showIf: function(form,item) {
+                return item.getValue();
+              }
+	  }, {
+	    src: isc.Page.getAppImgDir() + "new.png",
+	    showFocused: true,
+	    showOver: false,
+      width: ICON_SIZE_SMALL, height: ICON_SIZE_SMALL, 
+      inline: true,
+      inlineIconAlign: "right",
+      prompt: "Создать запись и установить ссылку", // isc.CBMStrings.InnerGridMenu_CreateNew,  <<< Must be set later
+      name: "new",
+      showIf: function(form,item) {
+                return !item.getValue();
+              }
+	  },{
+	    src: isc.Page.getAppImgDir() + "list.png",
+	    showFocused: true,
+	    showOver: false,
+      prompt: "Открыть полнофункциональный список для выбора, поиска и редактирования", // isc.CBMStrings.InnerGridMenu_CreateNew,  <<< Must be set later
+      name: "listWindow"
+	  }
    ],
 
-  iconClick: function (form, item, icon) {
-    //var record = item.form.dataSource.createInstance();
-    //item.form.dataSource.edit(record, null);
-    var ds = isc.DataSource.get(item.relatedConcept);
-    var table = createTable(item.relatedConcept, item, 
-        function(records) {
-			item.setValue(records[0].ID);
-		}); //, callback, filter, rootIdValue, afterCreate)
+  // iconClick: function(form, item, icon) {
+    // if (icon.name === "listWindow") {
+      // var ds = isc.DataSource.get(item.relatedConcept);
+      // var table = createTable(item.relatedConcept, item, 
+          // function(records) {
+        // item.setValue(records[0].ID);
+      // }); // filter, rootIdValue, afterCreate)
+    // }
+  // },
+  
+  doubleClick: function(form, item) {
+    // TODO ******* Edit current selection ******* (new too?)
   },
+  
 
-  // init: function() {
-  // this.setProperty("icons", [{
-  // src: flagImageURLPrefix + tmp_Lang + flagImageURLSuffix,
-  // showFocused: true,
-  // showOver: false
-  // }]);
-  // return this.Super("init", arguments);
-  // }
+  init: function() {
+  this.setProperty("icons", [ {
+	    src: isc.Page.getAppImgDir() + "deleteLink.png",
+	    showFocused: true,
+	    showOver: false,
+      width: ICON_SIZE_SMALL, height: ICON_SIZE_SMALL, 
+      inline: true,
+      inlineIconAlign: "right",
+      prompt: isc.CBMStrings.EditForm_LinkClear,
+      name: "clear",
+      showIf: function(form,item) {
+                return item.getValue();
+              }
+	  }, {
+	    src: isc.Page.getAppImgDir() + "newLink.png",
+	    showFocused: true,
+	    showOver: false,
+      width: ICON_SIZE_SMALL, height: ICON_SIZE_SMALL, 
+      inline: true,
+      inlineIconAlign: "right",
+      prompt: isc.CBMStrings.EditForm_LinkCreateNew,
+      name: "new",
+      showIf: function(form,item) {
+                return !item.getValue();
+              }
+	  },{
+	    src: isc.Page.getAppImgDir() + "list.png",
+	    showFocused: true,
+	    showOver: false,
+      prompt: isc.CBMStrings.EditForm_LinkFullWindow,
+      name: "listWindow",
+      click: function(form, item) {
+                var ds = isc.DataSource.get(item.relatedConcept);
+                var table = createTable(item.relatedConcept, item, 
+                    function(records) {
+                      item.setValue(records[0].ID);
+                    }); // filter, rootIdValue, afterCreate)
+             }
+	  }
+   ]);
+  return this.Super("init", arguments);
+  },
 
 // useClientFiltering : true,
   autoFetchData: false,

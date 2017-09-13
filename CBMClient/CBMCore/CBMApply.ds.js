@@ -263,6 +263,21 @@ function createPublishings(form, item) {
   return false;
 }
 
+
+// Calculates expiration time from PublicationSource of Event concept
+function getExpireTime(source) {
+  if (source.Concept === "Event") {
+    var endDate;
+    if (source.DueDate ) {
+      endDate = source.DueDate;
+    } else if (source.FromDate ) {
+      endDate = source.FromDate;
+    }
+    return dateDiffInDays(new Date(), endDate);
+  }
+}
+
+////////////////////////////////////////////////////////////////
 function runPublishings(form, item) {
   var srcRecords = form.items[7].innerGrid.grid.getData().localData.findAll({"FactEnqueueDate": undefined});
   if (!srcRecords){ 
@@ -277,7 +292,8 @@ function runPublishings(form, item) {
   //    and continue with publishings (by supplied callback)
   if (!mainObject.testMainRecordSaved("  Подумайте, готова ли она к публикации? Всё ли заполнено?", 
                                       form.valuesManager,
-                                      continuePublishing, srcRecords)) {
+                                      continuePublishing, srcRecords)) 
+  {
     // If mainObject not new - continue with publishings too
     continuePublishing(srcRecords);
   }
@@ -357,19 +373,6 @@ function testUpdateExistingFeeds(record) {
   );
 }
 
-
-// Calculates expiration time from PublicationSource of Event concept
-function getExpireTime(source) {
-  if (source.Concept === "Event") {
-    var endDate;
-    if (source.DueDate ) {
-      endDate = source.DueDate;
-    } else if (source.FromDate ) {
-      endDate = source.FromDate;
-    }
-    return dateDiffInDays(new Date(), endDate);
-  }
-}
 
 
 

@@ -273,7 +273,7 @@ isc.CBMDataSource.create({
     title: "Base Concept",
     foreignKey: "Concept.ID",
     rootValue: "null",
-    editorType: "LinkControl",
+    editorType: "LinkControlExt",
     optionDataSource: "Concept",
     valueField: "ID",
     displayField: "SysCode",
