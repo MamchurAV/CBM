@@ -3386,49 +3386,7 @@ isc.LinkControlExt.addProperties({
   // strictLang: false,
   // imageURLPrefix: flagImageURLPrefix,
   // imageURLSuffix: flagImageURLSuffix,
-   icons: [ {
-	    src: isc.Page.getAppImgDir() + "delete.png",
-	    showFocused: true,
-	    showOver: false,
-      width: ICON_SIZE_SMALL, height: ICON_SIZE_SMALL, 
-      inline: true,
-      inlineIconAlign: "right",
-      prompt: "Очистить ссылку", // isc.CBMStrings.InnerGridMenu_Delete, <<< Must be set later
-      name: "clear",
-      showIf: function(form,item) {
-                return item.getValue();
-              }
-	  }, {
-	    src: isc.Page.getAppImgDir() + "new.png",
-	    showFocused: true,
-	    showOver: false,
-      width: ICON_SIZE_SMALL, height: ICON_SIZE_SMALL, 
-      inline: true,
-      inlineIconAlign: "right",
-      prompt: "Создать запись и установить ссылку", // isc.CBMStrings.InnerGridMenu_CreateNew,  <<< Must be set later
-      name: "new",
-      showIf: function(form,item) {
-                return !item.getValue();
-              }
-	  },{
-	    src: isc.Page.getAppImgDir() + "list.png",
-	    showFocused: true,
-	    showOver: false,
-      prompt: "Открыть полнофункциональный список для выбора, поиска и редактирования", // isc.CBMStrings.InnerGridMenu_CreateNew,  <<< Must be set later
-      name: "listWindow"
-	  }
-   ],
 
-  // iconClick: function(form, item, icon) {
-    // if (icon.name === "listWindow") {
-      // var ds = isc.DataSource.get(item.relatedConcept);
-      // var table = createTable(item.relatedConcept, item, 
-          // function(records) {
-        // item.setValue(records[0].ID);
-      // }); // filter, rootIdValue, afterCreate)
-    // }
-  // },
-  
   doubleClick: function(form, item) {
     // TODO ******* Edit current selection ******* (new too?)
   },
@@ -3469,7 +3427,9 @@ isc.LinkControlExt.addProperties({
                 var ds = isc.DataSource.get(item.relatedConcept);
                 var table = createTable(item.relatedConcept, item, 
                     function(records) {
-                      item.setValue(records[0].ID);
+						if(records && records.length > 0) {
+							item.setValue(records[0].ID);
+						}
                     }); // filter, rootIdValue, afterCreate)
              }
 	  }
@@ -5004,13 +4964,19 @@ function createTable(forType, context, callback, filter, rootIdValue, afterCreat
         if (context === undefined) {
           context = table;
         }
+        
         if (filter !== undefined && filter !== null && context != table) {
           filter = isc.DataSource.combineCriteria(filter, table.innerGrid.grid.getCriteria());
           table.innerGrid.grid.setCriteria(filter);
         } else {
           filter = table.innerGrid.grid.getCriteria();
         }
+        
         table.innerGrid.grid.fetchData(filter, function (dsResponse, data, dsRequest) {
+		  if(!context.innerGrid || !context.getDataSource()) {
+			  // Context isn't of grid nature - do nothing
+			  return;
+		  }
           if (context.getDataSource === undefined) {
             if (!context.innerGrid.grid.hasAllData()) {
               context.innerGrid.grid.setCacheData(data);
