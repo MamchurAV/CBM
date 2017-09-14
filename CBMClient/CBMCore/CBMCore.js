@@ -1943,6 +1943,9 @@ isc.CBMDataSource.addProperties({
         click: function () {
           this.topElement.savePosition();
           this.topElement.saveInnerGridsSettings();
+          if (context.setValue && context.setValue) {
+            context.setValue(this.topElement.valuesManager.values.ID);
+	      }
           this.topElement.save();
           return false;
         },
@@ -2149,7 +2152,10 @@ isc.CBMDataSource.addProperties({
             that.destroyLater(that, 200);
           }
                           
-          if(context.parentElement.parentElement.canvasItem
+          if(context
+             && context.parentElement
+             && context.parentElement.parentElement
+             && context.parentElement.parentElement.canvasItem
              && context.parentElement.parentElement.canvasItem.needRefresh) {
             context.parentElement.parentElement.canvasItem.showValue("", null, 
             context.parentElement.parentElement.parentElement, 
@@ -3399,13 +3405,16 @@ isc.LinkControlExt.addProperties({
 	    src: isc.Page.getAppImgDir() + "deleteLink.png",
 	    showFocused: true,
 	    showOver: false,
-      width: ICON_SIZE_SMALL, height: ICON_SIZE_SMALL, 
-      inline: true,
-      inlineIconAlign: "right",
-      prompt: isc.CBMStrings.EditForm_LinkClear,
-      name: "clear",
-      showIf: function(form,item) {
+        width: ICON_SIZE_SMALL, height: ICON_SIZE_SMALL, 
+        inline: true,
+        inlineIconAlign: "right",
+        prompt: isc.CBMStrings.EditForm_LinkClear,
+        name: "clear",
+        showIf: function(form,item) {
                 return item.getValue();
+              },
+        click: function(form, item) {
+			     item.setValue(null);
               }
 	  }, {
 	    src: isc.Page.getAppImgDir() + "newLink.png",
@@ -3418,7 +3427,28 @@ isc.LinkControlExt.addProperties({
       name: "new",
       showIf: function(form,item) {
                 return !item.getValue();
-              }
+              },
+        click: function(form, item) {
+			     var ds = isc.DataSource.get(item.relatedConcept);
+			     var record = ds.createInstance(item);
+				 record.infoState = "new";
+				//~ // If hierarchy - set parent value as in selected record (if any selected)
+				//~ var hierarchyLink = ds.findRelation({HierarchyLink: true}).SysCode; 
+				//~ if (hierarchyLink && this.getSelection().length > 0) {
+				  //~ records[0][hierarchyLink] = this.getSelection()[0][hierarchyLink];
+				//~ }
+				//~ // --- Set fields partisipating in criteria to criteria value ---
+				//~ var criter = this.getCriteria();
+				//~ for (var fld in criter) {
+				  //~ if (records[0].hasOwnProperty(fld)) {
+					//~ records[0][fld] = criter[fld];
+				  //~ }
+				//~ }
+				// var that = this;
+				editRecords([record], item, conceptRS.find("SysCode", ds.ID));
+            
+            
+             }
 	  },{
 	    src: isc.Page.getAppImgDir() + "list.png",
 	    showFocused: true,
