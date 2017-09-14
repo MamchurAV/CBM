@@ -2087,12 +2087,14 @@ isc.CBMDataSource.addProperties({
               if (values.hasOwnProperty(attr)) {
                 // Get only changed values for save (NOT for "new" record!)
                 if (record.infoState !== "loaded"
-                    // Changed
+                    // Changed detection
                     || (values[attr] !== undefined
-                      // Compare with respect of Date type
-                      && ((!values[attr].getTime && values[attr] !== oldValues[attr])
+                      && ( (values[attr] === null && oldValues[attr] !== null)
+                        || (values[attr] !== null && oldValues[attr] === null)
+                        // Compare with respect of Date type
+                        || (!(values[attr] instanceof Date) && values[attr] !== oldValues[attr])
                         // For Date - special checks
-                        || (values[attr].getTime && values[attr].getTime() !== oldValues[attr].getTime())))) {
+                        || ((values[attr] instanceof Date) && values[attr].getTime() !== oldValues[attr].getTime())))) {
                   record[attr] = values[attr];
                   changesExists = true;
                 }
@@ -4020,6 +4022,7 @@ isc.InnerGrid.addProperties({
           width: 25,
           title: "",
           icon: isc.Page.getAppImgDir() + "tickOut.png",
+          prompt: isc.CBMStrings.InnerGrid_ChoiceDone,
           click: function () {
             var thisInnerGrid = this.parentElement.parentElement.parentElement;
             if (thisInnerGrid.grid.anySelected()) {
@@ -5026,7 +5029,8 @@ isc.InnerForm.addProperties({
   cellPadding: 2,
   //  cellBorder : 1, // <<< For layout testing only! In production - set to 0
   autoFocus: true,
-  showTitlesWithErrorMessages: true
+  showTitlesWithErrorMessages: true,
+  itemHoverWidth: 180
 });
 
 

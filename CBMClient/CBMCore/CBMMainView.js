@@ -122,21 +122,18 @@ var loadCommonData = function () {
       window.conceptRS = isc.ResultSet.create({
         dataSource: "Concept",
         allRows: data,
-        //fetchMode: "local",
       });
       isc.DataSource.get("Relation").fetchData(null,
         function (dsResponce, data, dsRequest) {
           window.relationRS = isc.ResultSet.create({
             dataSource: "Relation",
             allRows: data,
-            //fetchMode: "local"
           });
           isc.DataSource.get("RelationKind").fetchData(null,
             function (dsResponce, data, dsRequest) {
               window.relationKindRS = isc.ResultSet.create({
                 dataSource: "RelationKind",
                 allRows: data,
-                //fetchMode: "local"
               });
               // --- Program aspects metadata
               // Presentation aspects metadata
@@ -145,7 +142,6 @@ var loadCommonData = function () {
                   window.viewRS = isc.ResultSet.create({
                     dataSource: "PrgView",
                     allRows: data,
-                    //fetchMode: "local",
                     updatePartialCache: true
                   });
                   isc.DataSource.get("PrgViewField").fetchData(null,
@@ -153,13 +149,12 @@ var loadCommonData = function () {
                       window.viewFieldRS = isc.ResultSet.create({
                         dataSource: "PrgViewField",
                         allRows: data,
-                        //fetchMode: "local",
                         updatePartialCache: true
                       });
                       // Create all dynamic (metadata-based) DS-es on start,
                       // so that it's no profit to spend time during work.
                       // TODO - switch to semi-static DS generation. Till now - let it be lazy.
-                      setTimeout(createDataSources());  //commented for lazy generation 
+                      setTimeout(createDataSources(), 0);  //commented for lazy generation 
                     });
                 });
             });
