@@ -1939,14 +1939,23 @@ isc.CBMDataSource.addProperties({
         name: "savebtn",
         editorType: "button",
         title: isc.CBMStrings.EditForm_Save, //"Save Item",
-        // TODO: VVV save all updates in nested grids (back links) VVV
         click: function () {
           this.topElement.savePosition();
+          // Save atribute-collections (if any)
           this.topElement.saveInnerGridsSettings();
-          if (context.setValue && context.setValue) {
-            context.setValue(this.topElement.valuesManager.values.ID);
-	      }
+          
+          // Store changed value to caller's context object (if any)
+          var currentId = this.topElement.valuesManager.values.ID;
+          var currentValue = this.topElement.valuesManager.values.Description;
+
           this.topElement.save();
+
+          if (context && context.setValue) {
+            context.setValue(currentId);
+            context.mapValueToDisplay(currentValue);
+            context.redraw();
+	      }
+
           return false;
         },
         width: 99,
@@ -2091,6 +2100,8 @@ isc.CBMDataSource.addProperties({
                 // Get only changed values for save (NOT for "new" record!)
                 if (record.infoState !== "loaded"
                     // Changed detection
+                    || (values[attr] && !oldValues[attr])
+                    || (!values[attr] && oldValues[attr])
                     || (values[attr] !== undefined
                       && ( (values[attr] === null && oldValues[attr] !== null)
                         || (values[attr] !== null && oldValues[attr] === null)
@@ -3320,8 +3331,8 @@ isc.SmallMultilineText.addProperties({
 // =============================================================================================
 // ============================== Link controls infrastructure =================================
 // =============================================================================================
-isc.ClassFactory.defineClass("LinkControl", isc.ComboBoxItem);
-isc.LinkControl.addProperties({
+isc.ClassFactory.defineClass("LinkControlExt", isc.ComboBoxItem);
+isc.LinkControlExt.addProperties({
   // shouldSaveValue: true,
   // iconPrompt: "Choose input language",
   // valueMap: langValueMap,
@@ -3384,8 +3395,8 @@ isc.LinkControl.addProperties({
 });
 
 // ------------- Link-control with reach facilities --------------
-isc.defineClass("LinkControlExt", "ComboBoxItem", "Button");
-isc.LinkControlExt.addProperties({
+isc.defineClass("LinkControl", isc.ComboBoxItem);
+isc.LinkControl.addProperties({
   // shouldSaveValue: true,
   
   // valueMap: langValueMap,
@@ -3396,9 +3407,15 @@ isc.LinkControlExt.addProperties({
   // imageURLSuffix: flagImageURLSuffix,
 
   doubleClick: function(form, item) {
-    // TODO ******* Edit current selection ******* (new too?)
+                   var ds = isc.DataSource.get(item.relatedConcept);
+                   var record = ds.cacheResultSet.findByKey(item.getValue());
+                   record.infoState = "loaded";
+                   editRecords([record], item, conceptRS.find("SysCode", ds.ID));
   },
   
+  //~ changed: function (form, item, value) {
+	  //~ item.redraw();
+  //~ },
 
   init: function() {
   this.setProperty("icons", [ {
@@ -3415,7 +3432,8 @@ isc.LinkControlExt.addProperties({
               },
         click: function(form, item) {
 			     item.setValue(null);
-              }
+			     item.redraw();
+			   }
 	  }, {
 	    src: isc.Page.getAppImgDir() + "newLink.png",
 	    showFocused: true,
@@ -3446,7 +3464,7 @@ isc.LinkControlExt.addProperties({
 				//~ }
 				// var that = this;
 				editRecords([record], item, conceptRS.find("SysCode", ds.ID));
-            
+				
             
              }
 	  },{
@@ -5130,7 +5148,9 @@ isc.FormWindow.addProperties({
           || item.editorType ===  "CollectionCrossControl" || item.editorType === "RelationsAggregateControl") {
         
         // In case Save or [X] pressed - save in-grid editings 
-        item.innerGrid.grid.saveAllEdits();
+        if (item.innerGrid && item.innerGrid.grid) {
+          item.innerGrid.grid.saveAllEdits();
+	    }
         
         //Save ListSettings
         if (item.innerGrid.listSettingsChanged) {

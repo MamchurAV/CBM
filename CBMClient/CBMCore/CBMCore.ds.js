@@ -273,7 +273,7 @@ isc.CBMDataSource.create({
     title: "Base Concept",
     foreignKey: "Concept.ID",
     rootValue: "null",
-    editorType: "LinkControlExt",
+    editorType: "LinkControl",
     optionDataSource: "Concept",
     valueField: "ID",
     displayField: "SysCode",
@@ -339,7 +339,7 @@ isc.CBMDataSource.create({
     type: "PrgComponent", // TODO : Substitute with Party DS when possible
     title: "Source (author) of Concept",
     foreignKey: "Concept.ID",
-    editorType: "LinkControlExt"
+    editorType: "LinkControl"
 //        editorType: "comboBox" // ,
     // optionDataSource : "Party",
     // valueField : "ID",
@@ -382,7 +382,7 @@ isc.CBMDataSource.create({
     type: "PrgVersion",
     title: "Version",
     foreignKey: "PrgVersion.ID",
-    editorType: "LinkControlExt", //"comboBox",
+    editorType: "LinkControl", //"comboBox",
     optionDataSource: "PrgVersion",
     valueField: "ID",
     displayField: "SysCode",
