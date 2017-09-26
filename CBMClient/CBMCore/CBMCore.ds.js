@@ -363,6 +363,7 @@ isc.CBMDataSource.create({
     relatedConcept: "Relation",
     backLinkRelation: "ForConcept",
     mainIDProperty: "ID",
+    kind: "BackAggregate",
     copyLinked: true,
     deleteLinked: true,
     showTitle: true, //,
@@ -460,6 +461,7 @@ isc.CBMDataSource.create({
       type: "PrgView",
       title: "Interface presentations",
       canSave: true,
+      kind: "BackAggregate",
       copyLinked: true,
       copyFilter: ", \"Role\":\"Default\"", // Copied only default View
       deleteLinked: true,

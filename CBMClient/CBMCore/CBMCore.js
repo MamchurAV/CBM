@@ -1296,6 +1296,7 @@ isc.DataSource.create({
       part: "main",
       canEdit: false,
       hidden: true
+//inList: true
     }, 
     // {
       // name: "Concept",
@@ -1580,7 +1581,10 @@ isc.CBMDataSource.addProperties({
     var atrNames = this.getFieldNames(false);
     var n = atrNames.length;
     for (var i = 0; i < n; i++) {
-      record[atrNames[i]] = clone(srcRecord[atrNames[i]]);
+      var fldInMain = thatDS.getField(atrNames[i]);
+      if (fldInMain["copyValue"] || fldInMain["copyValue"] === undefined) {
+        record[atrNames[i]] = clone(srcRecord[atrNames[i]]);
+      } 
     }
     // Separately assign Concept property (that can be not in DS fields)
     if (srcRecord.Concept) {
@@ -3871,7 +3875,12 @@ isc.InnerGrid.addProperties({
           }
         })
       }
-
+      
+      that.grid.allowFilterOperators = true;
+      that.grid.filterEditorSubmit = function(criteria) {
+        return true;
+      } 
+      
       that["filters"] = isc.FilterSet.create(); // TODO: (?) - switch "FilterSet" to simple JS object???
       // By default 
       if (ds.isDeleteToBin()) {

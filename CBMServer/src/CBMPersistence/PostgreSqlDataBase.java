@@ -172,7 +172,8 @@ public class PostgreSqlDataBase implements I_DataBase {
 		{
 			orderPart += selTempl.orderby; // MetaModel defined <inTempl.orderby> MUST ends with ID.
 		} else {
-			orderPart += "Id";	
+			String firstTableAlias= fromPart.split(" ")[1];
+			orderPart += firstTableAlias + ".Id";	
 		}
 		sql += " order by " + orderPart;
 
