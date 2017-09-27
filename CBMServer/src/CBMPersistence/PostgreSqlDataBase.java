@@ -121,7 +121,7 @@ public class PostgreSqlDataBase implements I_DataBase {
 				{	
 					if (!entry.getValue().equals("null"))
 					{
-						wherePart += " and " + col + "='" + entry.getValue().toString() + "'"; // TODO leave brackets for strings only
+						wherePart += " and " + col + " like '" + entry.getValue().toString() + "%'"; // TODO leave brackets for strings only
 					}
 					else
 					{
