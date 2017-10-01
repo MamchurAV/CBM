@@ -16,6 +16,9 @@ import org.restlet.Request;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import CBMMeta.Criteria;
+import CBMMeta.CriteriaComplex;
+
 
 /**
  * Class that prepare SmartClient requests in unified for CBM I_Request form.
@@ -27,6 +30,7 @@ public class IscIOFormatter implements I_ClientIOFormatter {
 	
 	/**
 	 * Format ongoing requests
+	 * 
 	 */
 	@Override
 	public DSTransaction formatRequest(Request request) throws Exception 
@@ -56,6 +60,8 @@ public class IscIOFormatter implements I_ClientIOFormatter {
 				DSreq.data.remove("currUser");
 				DSreq.currLocale = (String)DSreq.data.get("currLang");
 				DSreq.data.remove("currLang");
+
+				DSreq.criteria = formatRequestCriteria(DSreq);
 				
 				// --- dsRequest preprocessing (for: 1. ID in linked data discovering - and - 2. provide full returned in response data---
 				if (DSreq.oldValues != null) {
@@ -84,6 +90,8 @@ public class IscIOFormatter implements I_ClientIOFormatter {
 			dsRequest.data.remove("currLang");
 			dsRequest.extraInfo = (String)dsRequest.data.get("extraInfo");
 			dsRequest.data.remove("extraInfo");
+			
+			dsRequest.criteria = formatRequestCriteria(dsRequest);
 			
 			// --- dsRequest preprocessing (for: 1. ID in linked data discovering - and - 2. provide full returned in response data---
 			if (dsRequest.oldValues != null) {
@@ -188,6 +196,75 @@ public class IscIOFormatter implements I_ClientIOFormatter {
 		} else {
 			return "";
 		}
+	}
+	
+	/**
+	 * 	 * Sample:
+	 * {
+	 * 	"dataSource":"Equipment", 
+	 *  "operationType":"fetch", 
+	 *   "startRow":0, 
+	 *   "endRow":100, 
+	 *   "sortBy":[
+	 *       "Description"
+	 *   ], 
+	 *   "textMatchStyle":"substring", 
+	 *   "componentId":"isc_ListGrid_3", 
+	 *   "data":{
+	 *       "operator":"and", 
+	 *       "_constructor":"AdvancedCriteria", 
+	 *       "criteria":[
+	 *           {
+	 *               "fieldName":"Code", 
+	 *               "operator":"iStartsWith", 
+	 *               "value":"ZuZU"
+	 *           },
+	 *           {
+	 *		       "operator":"or", 
+	 *      		 "_constructor":"AdvancedCriteria", 
+	 *  		     "criteria":[
+	 *					{
+	 *						"fieldName":"Code", 
+	 *						"operator":"iStartsWith", 
+	 *		               	"value":"ZuZU"
+	 *           		}, 
+	 *           		{
+	 *						"operator":"equals", 
+	 *						"fieldName":"Del", 
+	 *						"value":false
+	 *       		    }
+	 *       		], 
+	 *           }, 
+	 *           {
+	 *               "operator":"equals", 
+	 *               "fieldName":"Del", 
+	 *               "value":false
+	 *           }
+	 *       ], 
+	 *       "currUser":"b82d29fc-615b-4c6d-90fc-dc0e0b145557", 
+	 *       "itemImg":"34", 
+	 *       "currDate":"2017-09-29T15:22:07.262Z", 
+	 *       "currLang":"en-GB", 
+	 *       "extraInfo":""
+	 *   }, 
+	 *   "oldValues":null
+	 * }
+	 * @param data (look at sample above)
+	 * @return
+	 */
+	private CriteriaComplex formatRequestCriteria(DSRequest req){
+		if (req.data.containsKey("operator")){
+			req.criteria.operator = (String)req.data.get("operator");
+			
+			req.criteria.criterias = formatCriteria((Object[])req.data.get("criteria"));
+		}
+		
+		return null;
+	}
+	
+	private Criteria[] formatCriteria(Object[] crit){
+		
+		return null;
 	}
 
 }

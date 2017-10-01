@@ -7,6 +7,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
+import CBMMeta.CriteriaComplex;
+
 /**
  * @author Alexander Mamchur
  * Represents unified client request 
@@ -27,6 +29,7 @@ public class DSRequest {
 	public List<String> sortBy;
 	public Map<String,Object> data;
 	public Map<String,Object> oldValues;
+	public CriteriaComplex criteria;
 
 	public boolean isTransaction = false;
 }
