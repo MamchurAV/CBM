@@ -13,7 +13,7 @@ import CBMMeta.CriteriaComplex;
  * @author Alexander Mamchur
  * Represents unified client request 
  */
-public class DSRequest {
+public class DSRequest2 {
 	public String operationType;
 	public String operationId;
 	public String componentId;
@@ -27,8 +27,7 @@ public class DSRequest {
 	public int endRow; 
 	public String textMatchStyle;
 	public List<String> sortBy;
-//	public DSRequestData data;
-	public Map<String,Object>  data;
+	public DSRequestData data;
 	public Map<String,Object> oldValues;
 //	public CriteriaComplex criteria;
 
