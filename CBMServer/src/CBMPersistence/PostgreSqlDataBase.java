@@ -14,9 +14,12 @@ import java.util.Map;
 
 import javax.sql.DataSource;
 
+import CBMMeta.Criteria;
 import CBMMeta.SelectTemplate;
 import CBMServer.CBMStart;
 import CBMServer.DSRequest;
+import CBMServer.DSRequestSelect;
+import CBMServer.DSRequestUpdate;
 import CBMServer.DSResponce;
 import CBMUtils.StringHelper;
 
@@ -66,7 +69,7 @@ public class PostgreSqlDataBase implements I_DataBase {
 	 */
 	// TODO Main part of all functional below maybe transferred to StorageMetaData (or some universal "SqlPrepare") class.
 	@Override
-	public DSResponce doSelect(SelectTemplate selTempl, DSRequest dsRequest)
+	public DSResponce doSelect(SelectTemplate selTempl, DSRequestSelect dsRequest)
 		throws Exception {
 		Connection dbCon = null;
 		Statement statement = null;
@@ -112,24 +115,8 @@ public class PostgreSqlDataBase implements I_DataBase {
 			wherePart = selTempl.where;
 		}
 		// --- Where (User filtering)---
-		if (dsRequest!= null && dsRequest.data != null && dsRequest.data.size()>0)
-		{
-			for (Map.Entry<String, Object> entry : dsRequest.data.entrySet())
-			{
-				String col = selTempl.columns.get(entry.getKey());
-				if (col != null)
-				{	
-					if (!entry.getValue().equals("null"))
-					{
-						wherePart += " and " + col + " like '" + entry.getValue().toString() + "%'"; // TODO leave brackets for strings only
-					}
-					else
-					{
-						wherePart += " and " + col + " is null ";
-					}
-				}
- 			}
-		}
+		wherePart += SqlFormatter.prepareWhere(selTempl, dsRequest);
+		
 		sql += " where " + wherePart;
 
 		// --- Group by ---
@@ -236,7 +223,7 @@ public class PostgreSqlDataBase implements I_DataBase {
 	
 	
 	@Override
-	public DSResponce doInsert(Map<String,String[]> insTempl, DSRequest dsRequest)// throws Exception 
+	public DSResponce doInsert(Map<String,String[]> insTempl, DSRequestUpdate dsRequest)// throws Exception 
 	{
 		Connection dbCon = null;
 		Statement statement = null;
@@ -263,7 +250,6 @@ public class PostgreSqlDataBase implements I_DataBase {
 			
 			sql += table + " (";
 
-			// -------- Update list and Where ---------------
 			// -------- Update list and Where ---------------
 			if (dsRequest != null && dsRequest.data != null && dsRequest.data.size()>0)
 			{
@@ -367,7 +353,7 @@ public class PostgreSqlDataBase implements I_DataBase {
 
 
 	@Override
-	public DSResponce doUpdate(Map<String,String[]> updTempl, DSRequest dsRequest) 
+	public DSResponce doUpdate(Map<String,String[]> updTempl, DSRequestUpdate dsRequest) 
 	{
 		Connection dbCon = null;
 		Statement statement = null;
@@ -527,7 +513,7 @@ public class PostgreSqlDataBase implements I_DataBase {
 
 	
 	@Override
-	public DSResponce doDelete(List<String> tables, DSRequest dsRequest) 
+	public DSResponce doDelete(List<String> tables, DSRequestUpdate dsRequest) 
 	{
 		Connection dbCon = null;
 		Statement statement = null;

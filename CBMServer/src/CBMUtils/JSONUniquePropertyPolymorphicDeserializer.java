@@ -20,14 +20,14 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
  *
  * @author robin
  */
-public class UniquePropertyPolymorphicDeserializer<T> extends StdDeserializer<T> {
+public class JSONUniquePropertyPolymorphicDeserializer<T> extends StdDeserializer<T> {
 
 	private static final long serialVersionUID = 1L;
 	
 	// the registry of unique field names to Class types
 	private Map<String, Class<? extends T>> registry;
 	
-	public UniquePropertyPolymorphicDeserializer(Class<T> clazz) {
+	public JSONUniquePropertyPolymorphicDeserializer(Class<T> clazz) {
 		super(clazz);
 		registry = new HashMap<String, Class<? extends T>>();
 	}

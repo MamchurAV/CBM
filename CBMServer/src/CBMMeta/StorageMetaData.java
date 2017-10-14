@@ -73,8 +73,8 @@ public class StorageMetaData implements I_StorageMetaData {
 	@Override
 	public SelectTemplate getSelect(DSRequest req) throws SQLException {
 		String forView = req.dataSource;
-		Date forDate = req.forDate;
-		String forUser = req.currUser;
+		Date forDate = req.data.clientData.currDate;
+		String forUser = req.data.clientData.currUser;
 		return getSelect(forView, forDate, forUser);
 	}
 

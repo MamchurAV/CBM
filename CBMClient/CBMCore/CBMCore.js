@@ -1402,23 +1402,24 @@ isc.CBMDataSource.addProperties({
 
   // --- Additions to request
   transformRequest: function (dsRequest) {
+	//Allways convert criteria to isc.AdvancedCriteria form
+	if (this.convertDataSourceCriteria && dsRequest.data /*&& Object.keys(dsRequest.data).length > 0*/) {
+	  dsRequest.data.criteria = this.convertDataSourceCriteria(dsRequest.data);  
+    }
+    
     if (typeof(curr_Img) != "undefined" && curr_Img != null) {
       curr_Img = (parseInt(curr_Img) + 1) + "";
-      if (dsRequest.data == null) {
-        dsRequest.data = {
-          currUser: curr_Session,
+      if (dsRequest.data === null) {
+        dsRequest.data = {};
+	  }
+      dsRequest.data.clientData = 
+        { currUser: curr_Session,
           itemImg: curr_Img,
           currDate: curr_Date.toISOString(),
           currLocale: tmp_Lang,
           extraInfo: extra_Info
         };
-      } else {
-        dsRequest.data.currUser = curr_Session;
-        dsRequest.data.itemImg = curr_Img;
-        dsRequest.data.currDate = curr_Date.toISOString();
-        dsRequest.data.currLang = tmp_Lang;
-        dsRequest.data.extraInfo = extra_Info;
-      }
+
       extra_Info = "";
     }
     return this.Super("transformRequest", arguments);

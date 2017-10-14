@@ -124,7 +124,7 @@ public class DataAccessService extends ServerResource {
 				switch (dsRequest.operationType) {
 				case "fetch": {
 					// In case of Select - we must manually free DB resources after utilized.
-					DSResponce responce = currentDB.doSelect(metaProvider.getSelect(dsRequest), dsRequest);
+					DSResponce responce = currentDB.doSelect(metaProvider.getSelect(dsRequest), (DSRequestSelect) dsRequest);
 					outSingleOper = clientIOFormatter.formatResponce(responce, dsRequest);
 					responce.releaseDB();
 					break;
@@ -132,20 +132,20 @@ public class DataAccessService extends ServerResource {
 				case "add": {
 					outSingleOper = clientIOFormatter.formatResponce(
 							currentDB.doInsert(metaProvider.getColumnsInfo(dsRequest),
-									dsRequest), dsRequest);
+									(DSRequestUpdate) dsRequest), dsRequest);
 					break;
 				}
 				case "update": {
 					outSingleOper = clientIOFormatter.formatResponce(
 							currentDB.doUpdate(metaProvider.getColumnsInfo(dsRequest),
-									dsRequest), dsRequest);
+									(DSRequestUpdate) dsRequest), dsRequest);
 					break;
 				}
 				case "remove": {
 					// TODO --- If "Del" property exists - switch to update set Del=true
 					outSingleOper = clientIOFormatter.formatResponce(
 							currentDB.doDelete(metaProvider.getDelete(dsRequest),
-									dsRequest), dsRequest);
+									(DSRequestUpdate) dsRequest), dsRequest);
 					break;
 				}
 				}
