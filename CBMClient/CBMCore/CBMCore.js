@@ -1402,14 +1402,18 @@ isc.CBMDataSource.addProperties({
 
   // --- Additions to request
   transformRequest: function (dsRequest) {
-	//Allways convert criteria to isc.AdvancedCriteria form
-	if (this.convertDataSourceCriteria && dsRequest.data /*&& Object.keys(dsRequest.data).length > 0*/) {
-	  dsRequest.data.criteria = this.convertDataSourceCriteria(dsRequest.data);  
+	if (this.convertDataSourceCriteria && dsRequest.data) {
+		// Remove clientData from previous request
+		delete dsRequest.data["clientData"];
+		// Allways convert criteria to isc.AdvancedCriteria form
+		if (Object.keys(dsRequest.data).length > 0) {
+			dsRequest.data.criteria = this.convertDataSourceCriteria(dsRequest.data);  
+		}
     }
     
     if (typeof(curr_Img) != "undefined" && curr_Img != null) {
       curr_Img = (parseInt(curr_Img) + 1) + "";
-      if (dsRequest.data === null) {
+      if (!dsRequest.data) {
         dsRequest.data = {};
 	  }
       dsRequest.data.clientData = 

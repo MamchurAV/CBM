@@ -19,6 +19,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
  * identification, when the document contains a field registered to be unique to that type
  *
  * @author robin
+ * http://www.robinhowlett.com/blog/2015/03/19/custom-jackson-polymorphic-deserialization-without-type-metadata/
  */
 public class JSONUniquePropertyPolymorphicDeserializer<T> extends StdDeserializer<T> {
 

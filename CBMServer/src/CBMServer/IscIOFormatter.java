@@ -35,7 +35,8 @@ import CBMUtils.JSONUniquePropertyPolymorphicDeserializer;
  *
  */
 public class IscIOFormatter implements I_ClientIOFormatter {
-
+	
+	// String request sample for test purposes (move to test later)
 	private String tst = "{\n" +
 			"\t\"dataSource\": \"UserRights\",\n" +
 			"\t\"operationType\": \"fetch\",\n" +
@@ -80,10 +81,7 @@ public class IscIOFormatter implements I_ClientIOFormatter {
 		boolean isFetch = reqStr.contains("\"operationType\":\"fetch\"");
 		// Jackson JSON to JAVA conversion
 		ObjectMapper jsonMapper = new ObjectMapper();
-//VVVVVVVVVVVVV		
-//		testParse();	
-//	
-// ^^^^^^^^^^^^^
+
 		if(reqStr.indexOf("\"transaction\":") >= 0
 			&& reqStr.indexOf("\"operations\":")  >= 0
 			&& reqStr.indexOf("\"transactionNum\":") >= 0)
@@ -123,7 +121,8 @@ public class IscIOFormatter implements I_ClientIOFormatter {
 				dsRequest = (DSRequestSelect)formatDSCriteria(reqStr, jsonMapper);
 			}
 			else {
-				dsRequest = (DSRequestUpdate)jsonMapper.readValue(reqStr, dsRequest.getClass());
+				dsRequest = new DSRequestUpdate();
+				dsRequest = (DSRequestUpdate)jsonMapper.readValue(reqStr, ((DSRequestUpdate)dsRequest).getClass());
 				
 				// --- dsRequest preprocessing (for: 1. ID in linked data discovering - and - 2. provide full returned in response data---
 				if (dsRequest.oldValues != null) {
@@ -233,15 +232,6 @@ public class IscIOFormatter implements I_ClientIOFormatter {
 			return "";
 		}
 	}
-//	private CriteriaComplex formatRequestCriteria(DSRequest req){
-//		if (req.data.containsKey("operator")){
-////			req.criteria.operator = (String)req.data.get("operator");
-//			
-////			req.criteria.criterias = formatCriteria((Object[])req.data.get("criteria"));
-//		}
-//		
-//		return null;
-//	}
 	
 	private DSRequestSelect formatDSCriteria(String src, ObjectMapper jsonMapper ){
 		JSONUniquePropertyPolymorphicDeserializer<Criteria> deserializer = new JSONUniquePropertyPolymorphicDeserializer<Criteria>(Criteria.class);
@@ -249,7 +239,7 @@ public class IscIOFormatter implements I_ClientIOFormatter {
 		deserializer.register("_constructor", CriteriaComplex.class); // if "two" field is present, then it's a TestObjectTwo
 		
 		// Add and register the UniquePropertyPolymorphicDeserializer to the Jackson module
-		SimpleModule module = new SimpleModule("UniquePropertyPolymorphicDeserializer<Criteria>", 
+		SimpleModule module = new SimpleModule("JSONUniquePropertyPolymorphicDeserializer<Criteria>", 
 				new Version(1, 0, 0, "", "", ""));	
 		module.addDeserializer(Criteria.class, deserializer);
 		jsonMapper.registerModule(module);
@@ -264,85 +254,5 @@ public class IscIOFormatter implements I_ClientIOFormatter {
 		return ds;
 	}
 	
-	
-	private Object testParse(){
-		String sos = "{\n" +
-				"    \"dataSource\":\"Feed\", \n" +
-				"    \"operationType\":\"fetch\", \n" +
-				"    \"startRow\":0, \n" +
-				"    \"endRow\":100, \n" +
-				"    \"sortBy\":[\n" +
-				"        \"StartDate\"\n" +
-				"    ], \n" +
-				"    \"textMatchStyle\":\"substring\", \n" +
-				"    \"componentId\":\"isc_ListGrid_0\", \n" +
-				"    \"data\":{\n" +
-				"        \"operator\":\"and\", \n" +
-				"        \"_constructor\":\"AdvancedCriteria\", \n" +
-				"        \"criteria\":[\n" +
-				"            {\n" +
-				"                \"fieldName\":\"Description\", \n" +
-				"                \"operator\":\"iStartsWith\", \n" +
-				"                \"value\":\"Кон\"\n" +
-				"            }, \n" +
-				"            {\n" +
-				"                \"fieldName\":\"Description\", \n" +
-				"                \"operator\":\"iStartsWith\", \n" +
-				"                \"value\":\"Кон\"\n" +
-				"            }, \n" +
-/////////////////				
-"            {\n" +
-"             \"operator\":\"or\", \n" +
-"             \"_constructor\":\"AdvancedCriteria\", \n" +
-"             \"criteria\":[\n" +
-"					{\n" +
-"						\"fieldName\":\"Code\", \n" +
-"						\"operator\":\"iStartsWith\", \n" +
-"						\"value\":\"ZuZU\"\n" +
-"					}, \n" +
-"					{\n" +
-"						\"operator\":\"equals\", \n" +
-"						\"fieldName\":\"Del\", \n" +
-"						\"value\":false\n" +
-"					}\n" +
-"				] \n" +
-"			}, \n" +
-///////////////				
-				"            {\n" +
-				"                \"fieldName\":\"Description\", \n" +
-				"                \"operator\":\"iStartsWith\", \n" +
-				"                \"value\":\"ЕЙОЕ\"\n" +
-				"            }\n" +
-				"        ], \n" +
-				"        \"currUser\":\"f410ece9-659a-48ad-8ff3-23b06f5ac3e2\", \n" +
-				"        \"itemImg\":\"29\", \n" +
-				"        \"currDate\":\"2017-10-04T11:37:03.785Z\", \n" +
-				"        \"currLang\":\"ru-RU\", \n" +
-				"        \"extraInfo\":\"\"\n" +
-				"    }, \n" +
-				"    \"oldValues\":null\n" +
-				"}";
-		ObjectMapper JsonMapper = new ObjectMapper();
-		
-		JSONUniquePropertyPolymorphicDeserializer<Criteria> deserializer = new JSONUniquePropertyPolymorphicDeserializer<Criteria>(Criteria.class);
-		deserializer.register("fieldName", CriteriaItem.class); // if "one" field is present, then it's a TestObjectOne
-		deserializer.register("_constructor", CriteriaComplex.class); // if "two" field is present, then it's a TestObjectTwo
-		
-		// Add and register the UniquePropertyPolymorphicDeserializer to the Jackson module
-		SimpleModule module = new SimpleModule("UniquePropertyPolymorphicDeserializer<Criteria>", 
-				new Version(1, 0, 0, "", "", ""));	
-		module.addDeserializer(Criteria.class, deserializer);
-		JsonMapper.registerModule(module);
-		
-		DSRequestSelect ds = new DSRequestSelect();
-		try{
-		   ds = (DSRequestSelect)JsonMapper.readValue(sos, ds.getClass());
-		} catch (Exception ex) {
-			
-		}
-		
-		return ds;
-	}
-
 }
 	
