@@ -251,9 +251,9 @@ public class PostgreSqlDataBase implements I_DataBase {
 			sql += table + " (";
 
 			// -------- Update list and Where ---------------
-			if (dsRequest != null && dsRequest.data != null && dsRequest.data.size()>0)
+			if (dsRequest != null && dsRequest.data != null && dsRequest.data.data != null && dsRequest.data.data.size()>0)
 			{
-				for (Map.Entry<String, Object> entry : dsRequest.data.entrySet())
+				for (Map.Entry<String, Object> entry : dsRequest.data.data.entrySet())
 				{
 					// --- Get collumn info for request field key
 					String[] colInfo = insTempl.get(entry.getKey());
@@ -367,11 +367,11 @@ public class PostgreSqlDataBase implements I_DataBase {
 			// --- Filter only fields that changes!
 			String sysCode = entry.getKey();
 			// --- If column not exists in input data - don't use its Table 
-			if (!(dsRequest.data.containsKey(sysCode))) {
+			if (!(dsRequest.data.data.containsKey(sysCode))) {
 				continue;
 			}
 			// --- If value not changed - don't use its Table
-			Object v1 = dsRequest.data.get(sysCode);
+			Object v1 = dsRequest.data.data.get(sysCode);
 			Object v2 = null;
 			if(dsRequest.oldValues != null)	{
 				v2 = dsRequest.oldValues.get(sysCode);
@@ -407,9 +407,9 @@ public class PostgreSqlDataBase implements I_DataBase {
 
 			
 			// -------- Update list and Where ---------------
-			if (dsRequest!= null && dsRequest.data != null && dsRequest.data.size()>0)
+			if (dsRequest!= null && dsRequest.data != null && dsRequest.data.data.size()>0)
 			{
-				for (Map.Entry<String, Object> entry : dsRequest.data.entrySet())
+				for (Map.Entry<String, Object> entry : dsRequest.data.data.entrySet())
 				{
 					String[] colInfo = updTempl.get(entry.getKey());
 					// ---- Include columns of this table only
@@ -524,7 +524,7 @@ public class PostgreSqlDataBase implements I_DataBase {
 			String table = tableRow.toLowerCase();
 			// First discover ID value for table
 			id = "";
-			for (Map.Entry<String, Object> entry : dsRequest.data.entrySet())
+			for (Map.Entry<String, Object> entry : dsRequest.data.data.entrySet())
 			{
 				if (entry.getKey().toLowerCase().equals(table.substring(table.indexOf(".") + 1) + ID))
 				{
@@ -534,7 +534,7 @@ public class PostgreSqlDataBase implements I_DataBase {
 			}
 			if(id.equals(""))
 			{
-				for (Map.Entry<String, Object> entry : dsRequest.data.entrySet())
+				for (Map.Entry<String, Object> entry : dsRequest.data.data.entrySet())
 				{
 					if (entry.getKey().toLowerCase().equals(ID))
 					{

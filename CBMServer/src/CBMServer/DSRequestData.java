@@ -12,9 +12,7 @@ import CBMMeta.CriteriaItem;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class DSRequestData {
-//	public String operator;
-//	public String _constructor;
-//	public ArrayList<Criteria> criteria;
-	public ClientData clientData;
+	public Map<String,Object> data;
+	public ClientData clientData = new ClientData();
 	public Criteria criteria;
 }

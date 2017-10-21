@@ -1405,10 +1405,26 @@ isc.CBMDataSource.addProperties({
 	if (this.convertDataSourceCriteria && dsRequest.data) {
 		// Remove clientData from previous request
 		delete dsRequest.data["clientData"];
-		// Allways convert criteria to isc.AdvancedCriteria form
 		if (Object.keys(dsRequest.data).length > 0) {
-			dsRequest.data.criteria = this.convertDataSourceCriteria(dsRequest.data);  
-		}
+			if (dsRequest.operationType === "fetch" ) {
+			    // For fetch  - allways convert criteria to isc.AdvancedCriteria form
+				dsRequest.data.criteria = this.convertDataSourceCriteria(dsRequest.data);  
+			} else {
+				// For data changes - repack send for storage data to data.data 
+//				var tmpData = clone(dsRequest.data);
+				var tmpData = {};
+				for (var attr in dsRequest.data) {
+					if (dsRequest.data.hasOwnProperty(attr)) {
+						tmpData[attr] = dsRequest.data[attr];
+					}
+				}
+				
+				delete dsRequest.data;
+				dsRequest.data = {};
+//				dsRequest.data.data = {}; 
+				dsRequest.data.data = tmpData;
+			}
+		}  
     }
     
     if (typeof(curr_Img) != "undefined" && curr_Img != null) {

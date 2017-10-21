@@ -9,6 +9,7 @@ import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
+import CBMMeta.Criteria;
 import CBMMeta.CriteriaComplex;
 
 /**
@@ -55,6 +56,6 @@ public class DSRequest {
 	public boolean isTransaction = false;
 	
 	public DSRequestData data;
-
+	
 //	public ClientData clientData;
 }

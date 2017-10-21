@@ -124,11 +124,20 @@ public class IscIOFormatter implements I_ClientIOFormatter {
 				dsRequest = new DSRequestUpdate();
 				dsRequest = (DSRequestUpdate)jsonMapper.readValue(reqStr, ((DSRequestUpdate)dsRequest).getClass());
 				
+				
+			//	Object img = cliData.get("itemImg");
+//				dsRequest.data.clientData.itemImg = fromImg(((Map<String,Object>)(Map<String,Object>)((DSRequestUpdate)dsRequest).data.get("clientData")).get("fromImg"));
+//				dsRequest.data.clientData.currUser = (String)((Map<String,Object>)(Map<String,Object>)((DSRequestUpdate)dsRequest).data.get("clientData")).get("currUser");
+//				dsRequest.clientData.itemImg = fromImg(((DSRequestUpdate)dsRequest).data.get("itemImg"));
+//				dsRequest.clientData.itemImg = fromImg(((DSRequestUpdate)dsRequest).data.get("itemImg"));
+//				dsRequest.clientData.itemImg = fromImg(((DSRequestUpdate)dsRequest).data.get("itemImg"));
+//				((DSRequestUpdate)dsRequest).data.remove("clientData");
+				
 				// --- dsRequest preprocessing (for: 1. ID in linked data discovering - and - 2. provide full returned in response data---
 				if (dsRequest.oldValues != null) {
 					for (Map.Entry<String, Object> entry : dsRequest.oldValues.entrySet()) {
-						if (!((DSRequestUpdate)dsRequest).data.containsKey(entry.getKey())) {
-							((DSRequestUpdate)dsRequest).data.put(entry.getKey(), entry.getValue());
+						if (!((DSRequestUpdate)dsRequest).data.data.containsKey(entry.getKey())) {
+							((DSRequestUpdate)dsRequest).data.data.put(entry.getKey(), entry.getValue());
 						}
 					}
 				}

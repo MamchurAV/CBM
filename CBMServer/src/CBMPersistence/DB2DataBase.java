@@ -171,9 +171,9 @@ public class DB2DataBase implements I_DataBase {
 			sql += table + " (";
 
 			// -------- Update list and Where ---------------
-			if (dsRequest!= null && dsRequest.data != null && dsRequest.data.size()>0)
+			if (dsRequest!= null && dsRequest.data != null && dsRequest.data.data.size()>0)
 			{
-				for (Map.Entry<String, Object> entry : dsRequest.data.entrySet())
+				for (Map.Entry<String, Object> entry : dsRequest.data.data.entrySet())
 				{
 					// TODO Filter only fields that changes!
 					String[] colInfo = insTempl.get(entry.getKey());
@@ -222,9 +222,9 @@ public class DB2DataBase implements I_DataBase {
 			sql += table + " SET ";
 
 			// -------- Update list and Where ---------------
-			if (dsRequest!= null && dsRequest.data != null && dsRequest.data.size()>0)
+			if (dsRequest!= null && dsRequest.data != null && dsRequest.data.data.size()>0)
 			{
-				for (Map.Entry<String, Object> entry : dsRequest.data.entrySet())
+				for (Map.Entry<String, Object> entry : dsRequest.data.data.entrySet())
 				{
 					// TODO Filter only fields that changes!
 					String[] colInfo = updTempl.get(entry.getKey());
@@ -258,7 +258,7 @@ public class DB2DataBase implements I_DataBase {
 		String id = "";
 		DSResponce out = new DSResponce();
 		// First discover ID value
-		for (Map.Entry<String, Object> entry : dsRequest.data.entrySet())
+		for (Map.Entry<String, Object> entry : dsRequest.data.data.entrySet())
 		{
 			if (entry.getKey().toUpperCase().equals("ID"))
 			{

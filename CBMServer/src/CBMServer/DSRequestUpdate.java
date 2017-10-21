@@ -14,5 +14,5 @@ import CBMMeta.CriteriaComplex;
  * Represents unified client request 
  */
 public class DSRequestUpdate extends DSRequest {
-	public Map<String,Object>  data;
+//	public Map<String,Object>  data;
 }
