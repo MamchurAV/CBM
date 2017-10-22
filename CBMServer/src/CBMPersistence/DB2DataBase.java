@@ -14,8 +14,6 @@ import java.util.Map;
 
 import CBMMeta.SelectTemplate;
 import CBMServer.DSRequest;
-import CBMServer.DSRequestSelect;
-import CBMServer.DSRequestUpdate;
 import CBMServer.DSResponce;
 
 
@@ -44,7 +42,7 @@ public class DB2DataBase implements I_DataBase {
 	 */
 	// TODO Main part of all functional below maybe transferred to StorageMetaData (or some universal "SqlPrepare") class.
 	@Override
-	public DSResponce doSelect(SelectTemplate selTempl, DSRequestSelect dsRequest)
+	public DSResponce doSelect(SelectTemplate selTempl, DSRequest dsRequest)
 		throws Exception {
 		String sql = "SELECT ";
 		String sqlCount = "Select count(*) ";
@@ -146,7 +144,7 @@ public class DB2DataBase implements I_DataBase {
 	
 	
 	@Override
-	public DSResponce doInsert(Map<String,String[]> insTempl, DSRequestUpdate dsRequest) throws Exception 
+	public DSResponce doInsert(Map<String,String[]> insTempl, DSRequest dsRequest) throws Exception 
 	{
 		DSResponce out = new DSResponce();
 		
@@ -197,7 +195,7 @@ public class DB2DataBase implements I_DataBase {
 	// TODO Provide multiply updates/Deletes
 	
 	@Override
-	public DSResponce doUpdate(Map<String,String[]> updTempl, DSRequestUpdate dsRequest)	throws Exception 
+	public DSResponce doUpdate(Map<String,String[]> updTempl, DSRequest dsRequest)	throws Exception 
 	{
 		DSResponce out = new DSResponce();
 		
@@ -253,7 +251,7 @@ public class DB2DataBase implements I_DataBase {
 
 	
 	@Override
-	public DSResponce doDelete(List<String> tables, DSRequestUpdate dsRequest) throws Exception 
+	public DSResponce doDelete(List<String> tables, DSRequest dsRequest) throws Exception 
 	{
 		String id = "";
 		DSResponce out = new DSResponce();

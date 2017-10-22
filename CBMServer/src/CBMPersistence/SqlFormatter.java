@@ -4,11 +4,11 @@ import CBMMeta.Criteria;
 import CBMMeta.CriteriaItem;
 import CBMMeta.CriteriaComplex;
 import CBMMeta.SelectTemplate;
-import CBMServer.DSRequestSelect;
+import CBMServer.DSRequest;
 
 public class SqlFormatter {
 	
-	public static String prepareWhere(SelectTemplate selectTempl, DSRequestSelect dsRequest) {
+	public static String prepareWhere(SelectTemplate selectTempl, DSRequest dsRequest) {
 	
 		String wherePart = "";
 		if (dsRequest!= null && dsRequest.data != null 

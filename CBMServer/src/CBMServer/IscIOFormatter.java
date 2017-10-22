@@ -88,7 +88,13 @@ public class IscIOFormatter implements I_ClientIOFormatter {
 		{
 			reqStr = reqStr.substring(16, reqStr.length()-1);
 			
-			dsTransaction = (DSTransaction)jsonMapper.readValue(reqStr, dsTransaction.getClass());
+//			dsTransaction = (DSTransaction)jsonMapper.readValue(reqStr, dsTransaction.getClass());
+			if (isFetch){
+				dsTransaction = JSONReadDSTransactionWithCriteria(reqStr, jsonMapper);
+			}
+			else {
+				dsTransaction = (DSTransaction)jsonMapper.readValue(reqStr, dsTransaction.getClass());
+			}			
 			
 			for (DSRequest dsRequest : dsTransaction.operations) {
 				dsRequest.isTransaction = true;
@@ -118,11 +124,11 @@ public class IscIOFormatter implements I_ClientIOFormatter {
 		{
 			DSRequest dsRequest = null;
 			if (isFetch){
-				dsRequest = (DSRequestSelect)formatDSCriteria(reqStr, jsonMapper);
+				dsRequest = JSONReadDSRequestWithCriteria(reqStr, jsonMapper);
 			}
 			else {
-				dsRequest = new DSRequestUpdate();
-				dsRequest = (DSRequestUpdate)jsonMapper.readValue(reqStr, ((DSRequestUpdate)dsRequest).getClass());
+				dsRequest = new DSRequest();
+				dsRequest = (DSRequest)jsonMapper.readValue(reqStr, dsRequest.getClass());
 				
 				
 			//	Object img = cliData.get("itemImg");
@@ -136,8 +142,8 @@ public class IscIOFormatter implements I_ClientIOFormatter {
 				// --- dsRequest preprocessing (for: 1. ID in linked data discovering - and - 2. provide full returned in response data---
 				if (dsRequest.oldValues != null) {
 					for (Map.Entry<String, Object> entry : dsRequest.oldValues.entrySet()) {
-						if (!((DSRequestUpdate)dsRequest).data.data.containsKey(entry.getKey())) {
-							((DSRequestUpdate)dsRequest).data.data.put(entry.getKey(), entry.getValue());
+						if (!dsRequest.data.data.containsKey(entry.getKey())) {
+							dsRequest.data.data.put(entry.getKey(), entry.getValue());
 						}
 					}
 				}
@@ -208,7 +214,7 @@ public class IscIOFormatter implements I_ClientIOFormatter {
 				+ "}";
 			} else  { // -- Non-fetch command
 				dsResponce.retCode = 0;
-				dsResponce.retMsg = "[" + JsonMapper.writeValueAsString(((DSRequestUpdate)dsRequest).data) + "]";
+				dsResponce.retMsg = "[" + JsonMapper.writeValueAsString(dsRequest.data) + "]";
 				String sTmp = "{"     
 						+ " response:{"     
 						+ (dsRequest.isTransaction ? "   queueStatus: 0," : "") // TODO -- Return transaction code here
@@ -242,25 +248,59 @@ public class IscIOFormatter implements I_ClientIOFormatter {
 		}
 	}
 	
-	private DSRequestSelect formatDSCriteria(String src, ObjectMapper jsonMapper ){
+	private DSRequest JSONReadDSRequestWithCriteria(String src, ObjectMapper jsonMapper ){
+		// Prepare JSON deserializer that is aware of Criteria polymorphism
 		JSONUniquePropertyPolymorphicDeserializer<Criteria> deserializer = new JSONUniquePropertyPolymorphicDeserializer<Criteria>(Criteria.class);
 		deserializer.register("fieldName", CriteriaItem.class); // if "one" field is present, then it's a TestObjectOne
 		deserializer.register("_constructor", CriteriaComplex.class); // if "two" field is present, then it's a TestObjectTwo
-		
 		// Add and register the UniquePropertyPolymorphicDeserializer to the Jackson module
 		SimpleModule module = new SimpleModule("JSONUniquePropertyPolymorphicDeserializer<Criteria>", 
 				new Version(1, 0, 0, "", "", ""));	
 		module.addDeserializer(Criteria.class, deserializer);
 		jsonMapper.registerModule(module);
 		
-		DSRequestSelect ds = new DSRequestSelect();
+		DSRequest ds = new DSRequest();
 		try{
-		   ds = (DSRequestSelect)jsonMapper.readValue(src, ds.getClass());
+		   ds = (DSRequest)jsonMapper.readValue(src, ds.getClass());
 		} catch (Exception ex) {
 			
 		}
 		
 		return ds;
+	}
+	
+	
+	private DSTransaction JSONReadDSTransactionWithCriteria(String src, ObjectMapper jsonMapper ){
+		// Prepare JSON deserializer that is aware of Criteria polymorphism
+		JSONUniquePropertyPolymorphicDeserializer<Criteria> deserializer = new JSONUniquePropertyPolymorphicDeserializer<Criteria>(Criteria.class);
+		deserializer.register("fieldName", CriteriaItem.class); // if "one" field is present, then it's a TestObjectOne
+		deserializer.register("_constructor", CriteriaComplex.class); // if "two" field is present, then it's a TestObjectTwo
+		// Add and register the UniquePropertyPolymorphicDeserializer to the Jackson module
+		SimpleModule module = new SimpleModule("JSONUniquePropertyPolymorphicDeserializer<Criteria>", 
+				new Version(1, 0, 0, "", "", ""));	
+		module.addDeserializer(Criteria.class, deserializer);
+		jsonMapper.registerModule(module);
+		
+		DSTransaction trans = new DSTransaction();
+		try{
+			trans = (DSTransaction)jsonMapper.readValue(src, trans.getClass());
+		} catch (Exception ex) {
+			
+		}
+		
+		return trans;
+	}
+	
+	private SimpleModule prepareSimpleModuleForPolymorphicCiteria(){
+		// Prepare JSON deserializer that is aware of Criteria polymorphism
+		JSONUniquePropertyPolymorphicDeserializer<Criteria> deserializer = new JSONUniquePropertyPolymorphicDeserializer<Criteria>(Criteria.class);
+		deserializer.register("fieldName", CriteriaItem.class); // if "one" field is present, then it's a TestObjectOne
+		deserializer.register("_constructor", CriteriaComplex.class); // if "two" field is present, then it's a TestObjectTwo
+		// Add and register the UniquePropertyPolymorphicDeserializer to the Jackson module
+		SimpleModule module = new SimpleModule("JSONUniquePropertyPolymorphicDeserializer<Criteria>", 
+				new Version(1, 0, 0, "", "", ""));	
+		module.addDeserializer(Criteria.class, deserializer);
+		return module;		
 	}
 	
 }

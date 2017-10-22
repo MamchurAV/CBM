@@ -1403,26 +1403,28 @@ isc.CBMDataSource.addProperties({
   // --- Additions to request
   transformRequest: function (dsRequest) {
 	if (this.convertDataSourceCriteria && dsRequest.data) {
-		// Remove clientData from previous request
+		// Remove clientData from previous function pass
 		delete dsRequest.data["clientData"];
+
 		if (Object.keys(dsRequest.data).length > 0) {
 			if (dsRequest.operationType === "fetch" ) {
 			    // For fetch  - allways convert criteria to isc.AdvancedCriteria form
 				dsRequest.data.criteria = this.convertDataSourceCriteria(dsRequest.data);  
 			} else {
-				// For data changes - repack send for storage data to data.data 
-//				var tmpData = clone(dsRequest.data);
-				var tmpData = {};
-				for (var attr in dsRequest.data) {
-					if (dsRequest.data.hasOwnProperty(attr)) {
-						tmpData[attr] = dsRequest.data[attr];
+				// For some reason iSC call this method twice, so to skip the second pass - condition below
+				if ( !dsRequest.data.data ) {
+					// For data changes - repack send for storage data to data.data 
+					var tmpData = {};
+					for (var attr in dsRequest.data) {
+						if (dsRequest.data.hasOwnProperty(attr)) {
+							tmpData[attr] = dsRequest.data[attr];
+						}
 					}
+					
+					delete dsRequest.data;
+					dsRequest.data = {};
+					dsRequest.data.data = tmpData;
 				}
-				
-				delete dsRequest.data;
-				dsRequest.data = {};
-//				dsRequest.data.data = {}; 
-				dsRequest.data.data = tmpData;
 			}
 		}  
     }

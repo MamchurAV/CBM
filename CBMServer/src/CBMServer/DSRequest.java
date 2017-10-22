@@ -56,6 +56,4 @@ public class DSRequest {
 	public boolean isTransaction = false;
 	
 	public DSRequestData data;
-	
-//	public ClientData clientData;
 }

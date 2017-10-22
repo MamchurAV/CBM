@@ -17,8 +17,6 @@ import javax.sql.DataSource;
 import CBMMeta.SelectTemplate;
 import CBMServer.CBMStart;
 import CBMServer.DSRequest;
-import CBMServer.DSRequestSelect;
-import CBMServer.DSRequestUpdate;
 import CBMServer.DSResponce;
 import CBMUtils.StringHelper;
 
@@ -63,7 +61,7 @@ public class MSSqlDataBase implements I_DataBase {
 	 */
 	// TODO Main part of all functional below maybe transferred to StorageMetaData (or some universal "SqlPrepare") class.
 	@Override
-	public DSResponce doSelect(SelectTemplate selTempl, DSRequestSelect dsRequest)
+	public DSResponce doSelect(SelectTemplate selTempl, DSRequest dsRequest)
 		throws Exception {
 		Connection dbCon = null;
 		Statement statement = null;
@@ -218,7 +216,7 @@ public class MSSqlDataBase implements I_DataBase {
 	
 	
 	@Override
-	public DSResponce doInsert(Map<String,String[]> insTempl, DSRequestUpdate dsRequest)// throws Exception 
+	public DSResponce doInsert(Map<String,String[]> insTempl, DSRequest dsRequest)// throws Exception 
 	{
 		Connection dbCon = null;
 		Statement statement = null;
@@ -352,7 +350,7 @@ public class MSSqlDataBase implements I_DataBase {
 
 
 	@Override
-	public DSResponce doUpdate(Map<String,String[]> updTempl, DSRequestUpdate dsRequest) 
+	public DSResponce doUpdate(Map<String,String[]> updTempl, DSRequest dsRequest) 
 	{
 		Connection dbCon = null;
 		Statement statement = null;
@@ -517,7 +515,7 @@ public class MSSqlDataBase implements I_DataBase {
 
 	
 	@Override
-	public DSResponce doDelete(List<String> tables, DSRequestUpdate dsRequest) 
+	public DSResponce doDelete(List<String> tables, DSRequest dsRequest) 
 	{
 		Connection dbCon = null;
 		Statement statement = null;
