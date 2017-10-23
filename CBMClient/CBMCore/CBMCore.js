@@ -1409,7 +1409,9 @@ isc.CBMDataSource.addProperties({
 		if (Object.keys(dsRequest.data).length > 0) {
 			if (dsRequest.operationType === "fetch" ) {
 			    // For fetch  - allways convert criteria to isc.AdvancedCriteria form
-				dsRequest.data.criteria = this.convertDataSourceCriteria(dsRequest.data);  
+			    var criteria = this.convertDataSourceCriteria(dsRequest.data);
+			    dsRequest.data = {}
+				dsRequest.data.criteria = criteria;  
 			} else {
 				// For some reason iSC call this method twice, so to skip the second pass - condition below
 				if ( !dsRequest.data.data ) {

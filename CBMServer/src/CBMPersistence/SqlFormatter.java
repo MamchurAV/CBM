@@ -123,7 +123,7 @@ public class SqlFormatter {
 			result = " = '" + value + "' ";
 			break;
 		case "iEquals": //exactly equal to, if case is disregarded
-			result = " != '" + value + "' ";
+			result = " = '" + value + "' ";
 			break;
 		case "notEqual": //not equal to
 			result = " != '" + value + "' ";
