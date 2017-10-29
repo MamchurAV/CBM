@@ -1,5 +1,6 @@
 package CBMPersistence;
 
+import CBMMeta.ColumnInfo;
 import CBMMeta.Criteria;
 import CBMMeta.CriteriaItem;
 import CBMMeta.CriteriaComplex;
@@ -30,12 +31,13 @@ public class SqlFormatter {
 		{
 			if (crit instanceof CriteriaItem){
 				CriteriaItem critItem = (CriteriaItem)crit;
-				String col = selectTempl.columns.get(critItem.fieldName);
+				ColumnInfo critColumn = selectTempl.columns.stream().filter(c -> c.sysCode.equals(critItem.fieldName)).findFirst().get();
+				String col = critColumn.dbColumn;
 				if (col != null)
 				{	
 					if (!critItem.value.equals("null"))
 					{
-						wherePart += " and " + col + iscDecodeOperator(critItem.operator, critItem.value);
+						wherePart += " and " + iscDecodeOperator(col, critItem.operator, critItem.value, critColumn.relatedType);
 					}
 					else
 					{
@@ -115,26 +117,115 @@ public class SqlFormatter {
 "between"	shortcut for "greaterThan" + "lessThan" + "and". Specify criterion.start and criterion.end
 "betweenInclusive"	shortcut for "greaterOrEqual" + "lessOrEqual" + "and". Specify criterion.start and criterion.end
 	 */
-	private static String iscDecodeOperator(String operator, Object value){
+	private static String iscDecodeOperator(String column, String operator, Object value, String type){
 		String result = "";
-		 // TODO leave brackets for strings only
-		switch (operator){
-		case "equals": //exactly equal to:
-			result = " = '" + value + "' ";
-			break;
-		case "iEquals": //exactly equal to, if case is disregarded
-			result = " = '" + value + "' ";
-			break;
-		case "notEqual": //not equal to
-			result = " != '" + value + "' ";
-			break;
-		case "iNotEqual": //not equal to, if case is disregarded
-			result = " != '" + value + "' ";
-			break;
-		default: //default to exactly equal
-			result = " = '" + value + "' ";
-			break;	
+		if(isString(type)) {
+			switch (operator) {
+//				case "iEquals": //exactly equal to, if case is disregarded
+//					result = " lower(" + column + ") =  '" + ((String) value).toLowerCase() + "' ";
+//					break;
+				case "notEqual": //not equal to
+				case "iNotEqual": //not equal to, if case is disregarded
+					result = column + " != '" + value + "' ";
+					break;
+//				case "iNotEqual": //not equal to, if case is disregarded
+//					result = " lower(" + column + ") !=  '" + ((String) value).toLowerCase() + "' ";
+//					break;
+				case "startsWith": //not equal to, if case is disregarded
+				case "iStartsWith": //not equal to, if case is disregarded
+					result = column + " like  '" + value + "%' ";
+					break;
+//				case "iStartsWith": //not equal to, if case is disregarded
+//					result = " lower(" + column + ") like  '" + ((String) value).toLowerCase() + "%' ";
+//					break;
+				case "contains": //not equal to, if case is disregarded
+				case "iContains": //not equal to, if case is disregarded
+				case "iEquals": //exactly equal to, if case is disregarded
+					result = column + " like  '%" + value + "%' ";
+					break;
+//				case "iContains": //not equal to, if case is disregarded
+//					result = " lower(" + column + ") like  '%" + ((String) value).toLowerCase() + "%' ";
+//					break;
+				default: //default to exactly equal
+					result = column + " = '" + value + "' ";
+					break;
+			}
+		} else if (isNumeric(type)){
+			switch (operator) {
+				case "notEqual": //not equal to
+					result = column + " != " + value + " ";
+					break;
+				default: //default to exactly equal
+					result = column + " = " + value + " ";
+					break;
+			}
+		} else {
+			switch (operator) {
+				case "notEqual": //not equal to
+				case "iNotEqual":
+					result = column + " != '" + value + "' ";
+					break;
+				default: //default to exactly equal
+					result = column + " = '" + value + "' ";
+					break;
+			}
 		}
 		return result;
 	}
+
+
+	private static boolean isString(String type) {
+		if (type.equals("ShortString")
+			|| type.equals("ShortMlString")
+			|| type.equals("StandardString")
+			|| type.equals("StandardMlString")
+			|| type.equals("LongString")
+			|| type.equals("LongMlString")
+			|| type.equals("Text")
+			|| type.equals("URL")
+			|| type.equals("imageFile")){
+				return true;
+		}
+		return false;
+	}
+	
+	
+	private static boolean isNumeric(String type) {
+		if (type.equals("Integer")
+				|| type.equals("Bigint")
+				|| type.equals("Decimal")
+				|| type.equals("Money")
+				|| type.equals("BigDecimal")){
+				return true;
+		}
+		return false;
+	}
+		
+
+	private static boolean isGuidOrDate(String type) {
+		if (type.equals("GUID")
+			|| !(isString(type)
+			||   isNumeric(type))){
+				return true;
+		}
+		return false;
+	}
+
+/*
+	private static String kind(String type){
+		if (type.equals("Boolean")) {
+			return "bool";
+		}
+		if (type.equals("Integer")
+			|| type.equals("Bigint")
+			|| type.equals("Decimal")
+			|| type.equals("Money")
+			|| type.equals("BigDecimal")){
+			return "numeric";
+		}
+		else
+		{
+			return "string";
+		}
+	}*/
 }

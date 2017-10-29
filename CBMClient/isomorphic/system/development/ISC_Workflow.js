@@ -1,13 +1,36 @@
 /*
- * Isomorphic SmartClient
- * Version SNAPSHOT_v11.1d_2017-06-25 (2017-06-25)
- * Copyright(c) 1998 and beyond Isomorphic Software, Inc. All rights reserved.
- * "SmartClient" is a trademark of Isomorphic Software, Inc.
- *
- * licensing@smartclient.com
- *
- * http://smartclient.com/license
- */
+
+  SmartClient Ajax RIA system
+  Version SNAPSHOT_v12.0d_2017-10-28/LGPL Development Only (2017-10-28)
+
+  Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
+  "SmartClient" is a trademark of Isomorphic Software, Inc.
+
+  LICENSE NOTICE
+     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
+     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
+     without an accompanying Isomorphic Software license file, please
+     contact licensing@isomorphic.com for details. Unauthorized copying and
+     use of this software is a violation of international copyright law.
+
+  DEVELOPMENT ONLY - DO NOT DEPLOY
+     This software is provided for evaluation, training, and development
+     purposes only. It may include supplementary components that are not
+     licensed for deployment. The separate DEPLOY package for this release
+     contains SmartClient components that are licensed for deployment.
+
+  PROPRIETARY & PROTECTED MATERIAL
+     This software contains proprietary materials that are protected by
+     contract and intellectual property law. You are expressly prohibited
+     from attempting to reverse engineer this software or modify this
+     software for human readability.
+
+  CONTACT ISOMORPHIC
+     For more information regarding license rights and restrictions, or to
+     report possible license violations, please contact Isomorphic Software
+     by email (licensing@isomorphic.com) or web (www.isomorphic.com).
+
+*/
 
 if(window.isc&&window.isc.module_Core&&!window.isc.module_Workflow){isc.module_Workflow=1;isc._moduleStart=isc._Workflow_start=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc._moduleEnd&&(!isc.Log||(isc.Log&&isc.Log.logIsDebugEnabled('loadTime')))){isc._pTM={message:'Workflow load/parse time: '+(isc._moduleStart-isc._moduleEnd)+'ms',category:'loadTime'};if(isc.Log&&isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;else isc._preLog=[isc._pTM]}isc.definingFramework=true;isc.defineClass("ProcessElement");isc.ProcessElement.addProperties({})
 isc.defineClass("ProcessSequence","ProcessElement");isc.ProcessSequence.addProperties({})
@@ -48,7 +71,7 @@ var _10=this;_2.performDSOperation(this.operationType,_7,function(_14,_7){if(!is
 if(_10.outputField)_11.add(_10.outputField);for(var i=0;i<_11.length;i++){var _12=_11[i];if(_12.startsWith("$")){var _13=_7.length==1?_7[0]:_7;_12=_12.substring(1);_1.setStateVariable(_12,_13)}else{var _5=_12;var _6=_5.lastIndexOf(".");if(_6>0){_5=_5.substring(_6+1)}
 var _13=_7[0][_5];if(typeof _13!='undefined'){if(_7.length>1){_13=[_13];for(var i=1;i<_7.length;i++){_13.add(_7[i][_5])}}
 _1.setStateVariable(_12,_13)}}}}
-_1.start()});return false},isc.A.$87k=function isc_ServiceTask__processCriteriaExpressions(_1,_2){for(var _3 in _1){if(isc.isAn.Array(_1[_3])){for(var i=0;i<_1[_3].length;i++){this.$87k(_1[_3][i],_2)}}else if(_3=="criteria"){this.$87k(_1.criteria,_2)}else if(isc.isA.String(_1[_3])){if(_1[_3].startsWith("$input")){var _5="state."+_1[_3].replace("$input",this.inputField);_1[_3]=isc.Class.evaluate(_5,{state:_2})}else if(_1[_3].startsWith("$inputRecord")){var _5=_1[_3].replace("$inputRecord","state");_1[_3]=isc.Class.evaluate(_5,{state:_2})}}}});isc.B._maxIndex=isc.C+2;isc.defineClass("ScriptTask","Task");isc.A=isc.ScriptTask.getPrototype();isc.B=isc._allFuncs;isc.C=isc.B._maxIndex;isc.D=isc._funcClasses;isc.D[isc.C]=isc.A.Class;isc.A.isAsync=false;isc.B.push(isc.A.getInputData=function isc_ScriptTask_getInputData(){return this.inputData},isc.A.setOutputData=function isc_ScriptTask_setOutputData(_1){this.$87l(this.process,null,_1)},isc.A.getInputRecord=function isc_ScriptTask_getInputRecord(){return this.inputRecord},isc.A.setOutputRecord=function isc_ScriptTask_setOutputRecord(_1){this.$87l(this.process,_1)},isc.A.executeElement=function isc_ScriptTask_executeElement(_1){var _2;var _3;if(this.inputFieldList){_3={};for(var i=0;i<this.inputFieldList.length;i++){_3[this.inputFieldList[i]]=_1.getStateVariable(this.inputFieldList[i])}}
+_1.start()},{operationId:this.operationId});return false},isc.A.$87k=function isc_ServiceTask__processCriteriaExpressions(_1,_2){for(var _3 in _1){if(isc.isAn.Array(_1[_3])){for(var i=0;i<_1[_3].length;i++){this.$87k(_1[_3][i],_2)}}else if(_3=="criteria"){this.$87k(_1.criteria,_2)}else if(isc.isA.String(_1[_3])){if(_1[_3].startsWith("$input")){var _5="state."+_1[_3].replace("$input",this.inputField);_1[_3]=isc.Class.evaluate(_5,{state:_2})}else if(_1[_3].startsWith("$inputRecord")){var _5=_1[_3].replace("$inputRecord","state");_1[_3]=isc.Class.evaluate(_5,{state:_2})}}}});isc.B._maxIndex=isc.C+2;isc.defineClass("ScriptTask","Task");isc.A=isc.ScriptTask.getPrototype();isc.B=isc._allFuncs;isc.C=isc.B._maxIndex;isc.D=isc._funcClasses;isc.D[isc.C]=isc.A.Class;isc.A.isAsync=false;isc.B.push(isc.A.getInputData=function isc_ScriptTask_getInputData(){return this.inputData},isc.A.setOutputData=function isc_ScriptTask_setOutputData(_1){this.$87l(this.process,null,_1)},isc.A.getInputRecord=function isc_ScriptTask_getInputRecord(){return this.inputRecord},isc.A.setOutputRecord=function isc_ScriptTask_setOutputRecord(_1){this.$87l(this.process,_1)},isc.A.executeElement=function isc_ScriptTask_executeElement(_1){var _2;var _3;if(this.inputFieldList){_3={};for(var i=0;i<this.inputFieldList.length;i++){_3[this.inputFieldList[i]]=_1.getStateVariable(this.inputFieldList[i])}}
 if(this.inputField){_2=_1.getStateVariable(this.inputField);if(_3){_3[this.inputField]=_2}}
 this.inputData=_2;this.inputRecord=_3;this.process=_1;try{var _5=this.execute(_2,_3)}catch(e){isc.logWarn("Error while executing ScriptTask: "+e.toString())}
 if(this.isAsync){return false}

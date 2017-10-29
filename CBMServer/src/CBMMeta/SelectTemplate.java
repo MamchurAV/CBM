@@ -12,7 +12,8 @@ import java.util.Map;
  */
 public class SelectTemplate {
 	
-	public Map<String,String> columns; // May be the whole sub-select string
+//	public Map<String,String> columns; // May be the whole sub-select string
+	public List<ColumnInfo> columns; // May be the whole sub-select string
 	public String from;
 	public String where;
 	public String orderby;

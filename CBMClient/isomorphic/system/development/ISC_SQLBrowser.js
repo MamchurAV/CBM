@@ -1,13 +1,36 @@
 /*
- * Isomorphic SmartClient
- * Version SNAPSHOT_v11.1d_2017-06-25 (2017-06-25)
- * Copyright(c) 1998 and beyond Isomorphic Software, Inc. All rights reserved.
- * "SmartClient" is a trademark of Isomorphic Software, Inc.
- *
- * licensing@smartclient.com
- *
- * http://smartclient.com/license
- */
+
+  SmartClient Ajax RIA system
+  Version SNAPSHOT_v12.0d_2017-10-28/LGPL Development Only (2017-10-28)
+
+  Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
+  "SmartClient" is a trademark of Isomorphic Software, Inc.
+
+  LICENSE NOTICE
+     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
+     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
+     without an accompanying Isomorphic Software license file, please
+     contact licensing@isomorphic.com for details. Unauthorized copying and
+     use of this software is a violation of international copyright law.
+
+  DEVELOPMENT ONLY - DO NOT DEPLOY
+     This software is provided for evaluation, training, and development
+     purposes only. It may include supplementary components that are not
+     licensed for deployment. The separate DEPLOY package for this release
+     contains SmartClient components that are licensed for deployment.
+
+  PROPRIETARY & PROTECTED MATERIAL
+     This software contains proprietary materials that are protected by
+     contract and intellectual property law. You are expressly prohibited
+     from attempting to reverse engineer this software or modify this
+     software for human readability.
+
+  CONTACT ISOMORPHIC
+     For more information regarding license rights and restrictions, or to
+     report possible license violations, please contact Isomorphic Software
+     by email (licensing@isomorphic.com) or web (www.isomorphic.com).
+
+*/
 
 if(window.isc&&window.isc.module_Core&&!window.isc.module_SQLBrowser){isc.module_SQLBrowser=1;isc._moduleStart=isc._SQLBrowser_start=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc._moduleEnd&&(!isc.Log||(isc.Log&&isc.Log.logIsDebugEnabled('loadTime')))){isc._pTM={message:'SQLBrowser load/parse time: '+(isc._moduleStart-isc._moduleEnd)+'ms',category:'loadTime'};if(isc.Log&&isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;else isc._preLog=[isc._pTM]}isc.definingFramework=true;isc.defineClass("SQLEditor","VLayout");isc.A=isc.SQLEditor.getPrototype();isc.B=isc._allFuncs;isc.C=isc.B._maxIndex;isc.D=isc._funcClasses;isc.D[isc.C]=isc.A.Class;isc.A.sqlInputFormDefaults={_constructor:"DynamicForm",height:150,showResizeBar:true};isc.A.actionButtonsDefaults={_constructor:"HLayout",layoutMargin:5,membersMargin:5,height:20};isc.A.execSQLButtonDefaults={_constructor:"IButton",title:"Exec SQL",click:"this.creator.execSQL();",autoParent:"actionButtons"};isc.A.previewGridDefaults={_constructor:"ListGrid",dataProperties:{progressiveLoading:true},minFieldWidth:100,autoFetchData:false};isc.A.previewGridStripDefaults={_constructor:"GridToolStrip",width:"100%",generateDSButtonDefaults:{_constructor:"IAutoFitButton",title:"Show DataSource",layoutAlign:"center",click:"this.creator.creator.showDS()"},members:["autoChild:exportButton","starSpacer","autoChild:refreshButton","autoChild:totalRowsIndicator"]};isc.B.push(isc.A.initWidget=function isc_SQLEditor_initWidget(){this.Super("initWidget",arguments);var _1=this;this.addAutoChild("sqlInputForm",{fields:[{name:"sql",showTitle:false,type:"textarea",width:"*",height:"*",colSpan:"*",keyPress:function(_2,_3,_4){if(_4=='Enter'&&isc.EH.ctrlKeyDown()){if(isc.Browser.isSafari)_2.setValue(_2.getElementValue());_1.execSQL();if(isc.Browser.isSafari)return false}}}]});this.addAutoChildren(["actionButtons","execSQLButton"])},isc.A.execSQL=function isc_SQLEditor_execSQL(){var _1=this.sqlInputForm.getValue("sql");if(_1){_1=_1.trim().replace(/(.*);+/,"$1");var _2=isc.DataSource.get("DataSourceStore");_2.performCustomOperation("dsFromSQL",{dbName:this.config.name,sql:_1},this.getID()+".dsLoaded(data)")}},isc.A.dsLoaded=function isc_SQLEditor_dsLoaded(_1){var _2=_1.ds;if(!this.previewGrid)this.addAutoChild("previewGrid",{dataSource:_2});else this.previewGrid.setDataSource(_2);this.previewGrid.fetchData();this.addAutoChild("previewGridStrip",{grid:this.previewGrid})});isc.B._maxIndex=isc.C+3;isc.defineClass("SQLTableBrowser","VLayout");isc.A=isc.SQLTableBrowser.getPrototype();isc.B=isc._allFuncs;isc.C=isc.B._maxIndex;isc.D=isc._funcClasses;isc.D[isc.C]=isc.A.Class;isc.A.previewGridDefaults={_constructor:"ListGrid",canDragSelectText:true,autoFetchData:false,height:"*",minFieldWidth:100,showFilterEditor:true,canEdit:true,dataProperties:{progressiveLoading:true}};isc.A.previewGridStripDefaults={_constructor:"GridToolStrip",width:"100%",generateDSButtonDefaults:{_constructor:"IAutoFitButton",title:"Show DataSource",layoutAlign:"center",click:"this.creator.creator.showDS()"},members:["autoChild:removeButton","autoChild:addButton","autoChild:exportButton","autoChild:generateDSButton","starSpacer","autoChild:refreshButton","autoChild:totalRowsIndicator"]};isc.B.push(isc.A.initWidget=function isc_SQLTableBrowser_initWidget(){this.Super("initWidget",arguments);var _1=isc.DataSource.get("DataSourceStore");_1.performCustomOperation("dsFromTable",{schema:this.schema,dbName:this.dbName,tableName:this.config.name},this.getID()+".dsLoaded(data)")},isc.A.dsLoaded=function isc_SQLTableBrowser_dsLoaded(_1){this.dataSource=_1.ds;this.dataSourceXML=_1.dsXML;this.addAutoChild("previewGrid",{dataSource:this.dataSource});this.addAutoChild("previewGridStrip",{grid:this.previewGrid});this.previewGrid.filterData()},isc.A.showDS=function isc_SQLTableBrowser_showDS(){var _1="<DataSource ID=\""+this.config.name+"\" serverType=\"sql\" dbName=\""+this.dbName+"\" tableName=\""+this.config.name+"\"";if(this.schema)_1+=" schema=\""+this.schema+"\"";_1+=">";var _2=this.dataSourceXML;_2=_2.substring(_2.indexOf(">")+1);_2=_1+_2;isc.Window.create({title:"DataSource XML for table: "+this.config.name,autoDraw:true,autoSize:true,autoCenter:true,items:[isc.DynamicForm.create({numCols:1,width:600,height:600,autoFocus:true,selectOnFocus:true,fields:[{name:"dsData",showTitle:false,type:"textArea",wrap:isc.TextAreaItem.OFF,defaultValue:_2,width:"*",height:"*"}],closeClick:function(){this.destroy();return false}})]})});isc.B._maxIndex=isc.C+3;isc.defineClass("DBPane","TabSet");isc.A=isc.DBPane.getPrototype();isc.B=isc._allFuncs;isc.C=isc.B._maxIndex;isc.D=isc._funcClasses;isc.D[isc.C]=isc.A.Class;isc.A.sqlEditorDefaults={_constructor:"SQLEditor"};isc.A.tablePaneDefaults={_constructor:"SQLTableBrowser"};isc.B.push(isc.A.initWidget=function isc_DBPane_initWidget(){this.Super("initWidget",arguments);this.sqlEditor=this.createAutoChild("sqlEditor",{config:this.config});this.addTab({title:"SQL Editor",pane:this.sqlEditor})},isc.A.showTableBrowser=function isc_DBPane_showTableBrowser(_1){var _2=this.escapeForId(this.config.name+'_'+_1.name);this.showPane({ID:_2,title:_1.name,paneClass:"tablePane"},_1)},isc.A.escapeForId=function isc_DBPane_escapeForId(_1){return isc.isA.String(_1)?_1.replace(/(\/|\.)/g,'_'):_1},isc.A.showPane=function isc_DBPane_showPane(_1,_2){var _3=this.getTab(_1.ID);if(_3){this.selectTab(_3);return}
 _3={};isc.addProperties(_3,_1,{canClose:true,pane:this.createAutoChild(_1.paneClass,{config:_2,dbName:this.config.name})});this.addTab(_3);this.selectTab(_3);this.currentPane=_3.pane});isc.B._maxIndex=isc.C+4;isc.DataSource.create({operationBindings:[{operationType:"fetch"}],allowAdvancedCriteria:true,ID:"DBSchema",fields:[{name:"name",validators:[]},{name:"itemType",validators:[]},{name:"type",validators:[]},{name:"length",type:"integer",validators:[]},{name:"primaryKey",type:"boolean",validators:[]},{name:"path",hidden:true,validators:[],primaryKey:true},{name:"parentID",hidden:true,foreignKey:"DBSchema.path",validators:[]}]})

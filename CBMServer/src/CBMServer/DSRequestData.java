@@ -12,7 +12,10 @@ import CBMMeta.CriteriaItem;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class DSRequestData {
+	// Map contains field-value pairs for changed(/inserted) values
 	public Map<String,Object> data;
+	// Structure for different environment parameters that affects request processing 
 	public ClientData clientData = new ClientData();
+	// Data selection criteria
 	public Criteria criteria;
 }

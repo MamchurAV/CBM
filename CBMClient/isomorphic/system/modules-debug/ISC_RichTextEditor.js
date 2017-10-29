@@ -1,13 +1,36 @@
 /*
- * Isomorphic SmartClient
- * Version SNAPSHOT_v11.1d_2017-06-25 (2017-06-25)
- * Copyright(c) 1998 and beyond Isomorphic Software, Inc. All rights reserved.
- * "SmartClient" is a trademark of Isomorphic Software, Inc.
- *
- * licensing@smartclient.com
- *
- * http://smartclient.com/license
- */
+
+  SmartClient Ajax RIA system
+  Version SNAPSHOT_v12.0d_2017-10-28/LGPL Deployment (2017-10-28)
+
+  Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
+  "SmartClient" is a trademark of Isomorphic Software, Inc.
+
+  LICENSE NOTICE
+     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
+     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
+     without an accompanying Isomorphic Software license file, please
+     contact licensing@isomorphic.com for details. Unauthorized copying and
+     use of this software is a violation of international copyright law.
+
+  DEVELOPMENT ONLY - DO NOT DEPLOY
+     This software is provided for evaluation, training, and development
+     purposes only. It may include supplementary components that are not
+     licensed for deployment. The separate DEPLOY package for this release
+     contains SmartClient components that are licensed for deployment.
+
+  PROPRIETARY & PROTECTED MATERIAL
+     This software contains proprietary materials that are protected by
+     contract and intellectual property law. You are expressly prohibited
+     from attempting to reverse engineer this software or modify this
+     software for human readability.
+
+  CONTACT ISOMORPHIC
+     For more information regarding license rights and restrictions, or to
+     report possible license violations, please contact Isomorphic Software
+     by email (licensing@isomorphic.com) or web (www.isomorphic.com).
+
+*/
 
 if(window.isc&&window.isc.module_Core&&!window.isc.module_RichTextEditor){isc.module_RichTextEditor=1;isc._moduleStart=isc._RichTextEditor_start=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc._moduleEnd&&(!isc.Log||(isc.Log && isc.Log.logIsDebugEnabled('loadTime')))){isc._pTM={ message:'RichTextEditor load/parse time: ' + (isc._moduleStart-isc._moduleEnd) + 'ms', category:'loadTime'};
 if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
@@ -15,9 +38,9 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
 
-if (window.isc && isc.version != "SNAPSHOT_v11.1d_2017-06-25/LGPL Deployment" && !isc.DevUtil) {
+if (window.isc && isc.version != "SNAPSHOT_v12.0d_2017-10-28/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v11.1d_2017-06-25/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v12.0d_2017-10-28/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -366,7 +389,7 @@ isc.ListPropertiesPane.addProperties({
     startNumberFormDefaults: {
         _constructor: "DynamicForm",
         width: "100%",
-        colWidths: [ 90, "*" ],
+        colWidths: [ 60, "*" ],
         numCols: 2
     },
 
@@ -691,6 +714,13 @@ initWidget : function () {
     var listPropertiesPane = this.addAutoChild("listPropertiesPane"),
         bottomLayout = this.addAutoChild("bottomLayout");
 
+
+    if (this.showStartNumberInFooter) {
+        var startNumberForm = listPropertiesPane.startNumberForm;
+        listPropertiesPane.removeMember(startNumberForm);
+        this.bottomLayout.addMember(startNumberForm);
+    }
+
     this.addAutoChild("applyButton", {
         title: this.applyButtonTitle
     });
@@ -752,7 +782,7 @@ isc.RichTextCanvas.addClassProperties({
     //RIGHT:"right",
     FULL:"full",
 
-    //>@classAttr   RichTextCanvas.unsupportedErrorMessage  (string : "Rich text editing not supported in this browser" : [IRW])
+    //>@classAttr   RichTextCanvas.unsupportedErrorMessage  (String : "Rich text editing not supported in this browser" : [IRW])
     // Message to display to the user if they attempt to access the page in a browser which
     // does not support rich-text-editing
     //<
@@ -1254,14 +1284,28 @@ isc.RichTextCanvas.addMethods({
 
         } else {
 
-            if (hasFocus) {
-                this._resetSelection();
 
-            }
+            //if (hasFocus) {
+            //    this._resetSelection();
+            //}
+
 
             //else this._rememberSelection();
         }
 
+    },
+
+
+    focusChanged : function (hasFocus) {
+        if (hasFocus) {
+            this._resetSelection();
+            this._focussing = false;
+        } else {
+            this._focussing = true;
+        }
+        if (this.parentElement && this.parentElement.editAreaFocusChanged) {
+            this.parentElement.editAreaFocusChanged();
+        }
     },
 
     // ------------------- Editor init ------------------
@@ -2444,7 +2488,7 @@ isc.RichTextCanvas.addMethods({
 
     //>    @method    RichTextCanvas.getContents()    ([])
     // Returns the current HTML contents of the RichTextCanvas.
-    // @return (string) (possibly edited) contents
+    // @return (String) (possibly edited) contents
     // @see RichTextCanvas.setContents()
     //<
     getContents : function (dontRemoveMarkup) {
@@ -2461,7 +2505,7 @@ isc.RichTextCanvas.addMethods({
 
     //>    @method    RichTextCanvas.setContents()    ([])
     //      Changes the contents of a widget to newContents, an HTML string.
-    //  @param    newContents    (string)    an HTML string to be set as the contents of this widget
+    //  @param    newContents    (String)    an HTML string to be set as the contents of this widget
     //  @see RichTextCanvas.getContents()
     //<
     setContents : function (contents, force, selectionMarkerIndex, selectionMarkerHTML) {
@@ -2765,7 +2809,7 @@ isc.RichTextCanvas.addMethods({
     //  Applies the alignment / justification passed in to the selected paragraph.
     //  Options are "right", "left", "center" (for alignment), and "full" for fully justified
     //  text.
-    // @param justification (string)    What justification should be applied to the text.
+    // @param justification (String)    What justification should be applied to the text.
     //<
     justifySelection : function (justification) {
         if (justification == isc.RichTextCanvas.CENTER) {
@@ -2791,7 +2835,7 @@ isc.RichTextCanvas.addMethods({
 
     //>@method  RichTextCanvas.setSelectionColor
     //  Set the font color for the selected text.   Takes the desired color as a parameter.
-    // @param color (string)    Color to apply to the text.
+    // @param color (String)    Color to apply to the text.
     //<
     setSelectionColor : function (color) {
         this._execCommand("forecolor", color);
@@ -2799,7 +2843,7 @@ isc.RichTextCanvas.addMethods({
 
     //>@method  RichTextCanvas.setSelectionBackgroundColor
     //  Set the background color for the selected text.   Takes the desired color as a parameter.
-    // @param color (string)    Color to apply to the text background.
+    // @param color (String)    Color to apply to the text background.
     //<
     setSelectionBackgroundColor : function (color) {
         // In Moz "backcolor" will style the entire containing IFRAME - while 'hilitecolor'
@@ -2810,7 +2854,7 @@ isc.RichTextCanvas.addMethods({
 
     //>@method  RichTextCanvas.setSelectionFont
     //  Set the font for the selected text.   Takes the name of a font as a parameter.
-    // @param font (string)    Font to apply to the selection
+    // @param font (String)    Font to apply to the selection
     //<
     setSelectionFont : function (font) {
         this._execCommand("fontname", font);
@@ -3125,7 +3169,7 @@ isc.RichTextEditor.addProperties({
 
     toolbarHeight: 24, // should be less but figure this out later!
 
-    //> @attr RichTextEditor.toolbarBackgroundColor  (string : "#CCCCCC" : [IR])
+    //> @attr RichTextEditor.toolbarBackgroundColor  (String : "#CCCCCC" : [IR])
     //  The background color for the toolbar.
     // @visibility external
     //<
@@ -3565,6 +3609,7 @@ isc.RichTextEditor.addProperties({
     indentPrompt: "Increase indent",
     indentDefaults: {
         showButtonTitle: false,
+        showDownIcon: false,
         icon: "[SKIN]/RichTextEditor/indent.png",
         click : "this.creator.indentSelection()"
     },
@@ -3577,6 +3622,7 @@ isc.RichTextEditor.addProperties({
     outdentPrompt: "Decrease indent",
     outdentDefaults: {
         showButtonTitle: false,
+        showDownIcon: false,
         icon: "[SKIN]/RichTextEditor/outdent.png",
         click : "this.creator.outdentSelection()"
     },
@@ -3589,6 +3635,7 @@ isc.RichTextEditor.addProperties({
     orderedListPrompt: "Convert to a numbered list",
     orderedListDefaults: {
         showButtonTitle: false,
+        showDownIcon: false,
         icon: "[SKIN]/RichTextEditor/text_list_numbers.png",
         click : "this.creator.convertToOrderedList()"
     },
@@ -3601,6 +3648,7 @@ isc.RichTextEditor.addProperties({
     unorderedListPrompt: "Convert to a bullet list",
     unorderedListDefaults: {
         showButtonTitle: false,
+        showDownIcon: false,
         icon: "[SKIN]/RichTextEditor/text_list_bullets.png",
         click : "this.creator.convertToUnorderedList()"
     },
@@ -3613,6 +3661,7 @@ isc.RichTextEditor.addProperties({
     listPropertiesPrompt: "Configure the list",
     listPropertiesDefaults: {
         showButtonTitle: false,
+        showDownIcon: false,
         icon: "[SKIN]/RichTextEditor/text_list_edit.png",
         click : "this.creator.editListProperties()"
     },
@@ -3691,19 +3740,9 @@ isc.RichTextEditor.addProperties({
 
                   changed : isc.RichTextEditor._canvasContentsChanged,
 
-                  focusChanged : function (hasFocus) {
-                    if (hasFocus) {
-                        this._resetSelection();
-                        this._focussing = false;
-                    } else {
-                        this._focussing = true;
-                    }
-                    if (this.parentElement != null) this.parentElement.editAreaFocusChanged();
-                },
-
-                getBrowserSpellCheck : function () {
-                    return this.parentElement.getBrowserSpellCheck()
-                }
+                  getBrowserSpellCheck : function () {
+                      return this.parentElement.getBrowserSpellCheck()
+                  }
             }
         );
         this.addAutoChild("editArea", props);
@@ -4197,7 +4236,7 @@ isc.RichTextItem.addProperties({
     //<
     endRow:true,
 
-    //>@attr RichTextItem.colSpan (number | string : "*": IRW)
+    //>@attr RichTextItem.colSpan (int | String : "*": IRW)
     // By default RichTextItems take up an entire row
     // @visibility external
     //<
@@ -4345,13 +4384,36 @@ isc.RichTextItem.addMethods({
 });
 isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._debugModules.push('RichTextEditor');isc.checkForDebugAndNonDebugModules();isc._moduleEnd=isc._RichTextEditor_end=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc.Log&&isc.Log.logIsInfoEnabled('loadTime'))isc.Log.logInfo('RichTextEditor module init time: ' + (isc._moduleEnd-isc._moduleStart) + 'ms','loadTime');delete isc.definingFramework;if (isc.Page) isc.Page.handleEvent(null, "moduleLoaded", { moduleName: 'RichTextEditor', loadTime: (isc._moduleEnd-isc._moduleStart)});}else{if(window.isc && isc.Log && isc.Log.logWarn)isc.Log.logWarn("Duplicate load of module 'RichTextEditor'.");}
 /*
- * Isomorphic SmartClient
- * Version SNAPSHOT_v11.1d_2017-06-25 (2017-06-25)
- * Copyright(c) 1998 and beyond Isomorphic Software, Inc. All rights reserved.
- * "SmartClient" is a trademark of Isomorphic Software, Inc.
- *
- * licensing@smartclient.com
- *
- * http://smartclient.com/license
- */
+
+  SmartClient Ajax RIA system
+  Version SNAPSHOT_v12.0d_2017-10-28/LGPL Deployment (2017-10-28)
+
+  Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
+  "SmartClient" is a trademark of Isomorphic Software, Inc.
+
+  LICENSE NOTICE
+     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
+     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
+     without an accompanying Isomorphic Software license file, please
+     contact licensing@isomorphic.com for details. Unauthorized copying and
+     use of this software is a violation of international copyright law.
+
+  DEVELOPMENT ONLY - DO NOT DEPLOY
+     This software is provided for evaluation, training, and development
+     purposes only. It may include supplementary components that are not
+     licensed for deployment. The separate DEPLOY package for this release
+     contains SmartClient components that are licensed for deployment.
+
+  PROPRIETARY & PROTECTED MATERIAL
+     This software contains proprietary materials that are protected by
+     contract and intellectual property law. You are expressly prohibited
+     from attempting to reverse engineer this software or modify this
+     software for human readability.
+
+  CONTACT ISOMORPHIC
+     For more information regarding license rights and restrictions, or to
+     report possible license violations, please contact Isomorphic Software
+     by email (licensing@isomorphic.com) or web (www.isomorphic.com).
+
+*/
 

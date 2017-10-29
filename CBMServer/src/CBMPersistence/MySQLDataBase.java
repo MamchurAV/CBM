@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import CBMMeta.ColumnInfo;
 import CBMMeta.SelectTemplate;
 import CBMServer.DSRequest;
 import CBMServer.DSResponce;
@@ -60,11 +61,11 @@ public class MySQLDataBase implements I_DataBase {
 
 		// -------- Preprocess SelectTemplate and data (parameters here) to complete real SQL Select string
 		// --- Select ---
-		for (Map.Entry<String, String> entry : selTempl.columns.entrySet())
+		for (ColumnInfo entry : selTempl.columns)
 		{
-			if (!entry.getValue().equals("null"))
+			if (!entry.dbColumn.equals("null"))
 			{
-				selectPart += entry.getValue() + " as \"" + entry.getKey() + "\", ";
+				selectPart += entry.dbColumn + " as \"" + entry.sysCode + "\", ";
 			}
 		}
 
@@ -105,19 +106,24 @@ public class MySQLDataBase implements I_DataBase {
 		}
 		
 		// --- Order by (Client defined)---
+		// --- Order by (Client defined)---
 		if (dsRequest!= null && dsRequest.sortBy != null  && dsRequest.sortBy.size()>0)
 		{
 			for (int i = 0; i < dsRequest.sortBy.size(); i++)
 			{
-				String col = selTempl.columns.get(dsRequest.sortBy.get(i));
+				String odrCol = dsRequest.sortBy.get(i);
+				String desc = "";
+				if (odrCol.startsWith("-"))
+				{
+					desc = " desc";
+					odrCol = odrCol.substring(1);
+				}
+				final String odrColName = odrCol;
+				String col = selTempl.columns.stream().filter(c -> c.sysCode.equals(odrColName)).findFirst().get().dbColumn;
+						//get(odrCol);
 				if (col != null)
 				{	
-					String odr = col;
-					if (odr.startsWith("-"))
-					{
-						odr = odr.substring(1) + " desc";
-					}
-					orderPart += odr + ", ";
+					orderPart += col + desc + ", ";
 				}
 			}
 		}

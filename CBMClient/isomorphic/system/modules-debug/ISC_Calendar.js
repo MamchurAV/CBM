@@ -1,13 +1,36 @@
 /*
- * Isomorphic SmartClient
- * Version SNAPSHOT_v11.1d_2017-06-25 (2017-06-25)
- * Copyright(c) 1998 and beyond Isomorphic Software, Inc. All rights reserved.
- * "SmartClient" is a trademark of Isomorphic Software, Inc.
- *
- * licensing@smartclient.com
- *
- * http://smartclient.com/license
- */
+
+  SmartClient Ajax RIA system
+  Version SNAPSHOT_v12.0d_2017-10-28/LGPL Deployment (2017-10-28)
+
+  Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
+  "SmartClient" is a trademark of Isomorphic Software, Inc.
+
+  LICENSE NOTICE
+     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
+     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
+     without an accompanying Isomorphic Software license file, please
+     contact licensing@isomorphic.com for details. Unauthorized copying and
+     use of this software is a violation of international copyright law.
+
+  DEVELOPMENT ONLY - DO NOT DEPLOY
+     This software is provided for evaluation, training, and development
+     purposes only. It may include supplementary components that are not
+     licensed for deployment. The separate DEPLOY package for this release
+     contains SmartClient components that are licensed for deployment.
+
+  PROPRIETARY & PROTECTED MATERIAL
+     This software contains proprietary materials that are protected by
+     contract and intellectual property law. You are expressly prohibited
+     from attempting to reverse engineer this software or modify this
+     software for human readability.
+
+  CONTACT ISOMORPHIC
+     For more information regarding license rights and restrictions, or to
+     report possible license violations, please contact Isomorphic Software
+     by email (licensing@isomorphic.com) or web (www.isomorphic.com).
+
+*/
 
 if(window.isc&&window.isc.module_Core&&!window.isc.module_Calendar){isc.module_Calendar=1;isc._moduleStart=isc._Calendar_start=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc._moduleEnd&&(!isc.Log||(isc.Log && isc.Log.logIsDebugEnabled('loadTime')))){isc._pTM={ message:'Calendar load/parse time: ' + (isc._moduleStart-isc._moduleEnd) + 'ms', category:'loadTime'};
 if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
@@ -15,9 +38,9 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
 
-if (window.isc && isc.version != "SNAPSHOT_v11.1d_2017-06-25/LGPL Deployment" && !isc.DevUtil) {
+if (window.isc && isc.version != "SNAPSHOT_v12.0d_2017-10-28/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v11.1d_2017-06-25/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v12.0d_2017-10-28/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -2844,8 +2867,9 @@ isc.CalendarView.addProperties({
 
         if (refreshAll) {
             return [cal.getVisibleStartDate(this), cal.getVisibleEndDate(this)];
-        } else if (this._cache.viewportStartMillis) {
-            return [ new Date(this._cache.viewportStartMillis), new Date(this._cache.viewportEndMillis) ]
+
+        //} else if (this._cache.viewportStartMillis) {
+        //    return [ new Date(this._cache.viewportStartMillis), new Date(this._cache.viewportEndMillis) ]
         }
 
         if (!this.renderEventsOnDemand) {
@@ -3817,7 +3841,7 @@ isc.DaySchedule.addProperties({
         if (this.hasLanes()) {
             var lanes = this.lanes = this.lanes || cal.lanes.duplicate() || [];
             fields[0].frozen = true;
-            var d = cal.chosenDate.duplicate(),
+            var d = this.startDate.duplicate(),
                 scaffolding = isc.DaySchedule._getEventScaffolding(cal, this, d),
                 nDate = isc.DateUtil.createLogicalDate(d.getFullYear(), d.getMonth(),
                                                        d.getDate()),
@@ -3855,7 +3879,7 @@ isc.DaySchedule.addProperties({
             if (cal.minLaneWidth != null) this.minFieldWidth = cal.minLaneWidth;
             this.data = scaffolding;
         } else {
-            var scaffoldingStartDate = cal.chosenDate;
+            var scaffoldingStartDate = this.startDate; //cal.chosenDate;
             fields[0].frozen = true;
             fields.add({name: "day1", align: "center", date: cal.chosenDate, width: "*", autoFitWidth: false});
             if (this.isWeekView()) {
@@ -3879,7 +3903,7 @@ isc.DaySchedule.addProperties({
                         }
                     }
                 }
-                scaffoldingStartDate = this.chosenWeekStart;
+                scaffoldingStartDate = cal.chosenWeekStart;
             } else {
                 this.setShowHeader(false);
             }
@@ -3957,6 +3981,24 @@ isc.DaySchedule.addProperties({
         return obj && obj[fieldName] ? obj[fieldName].duplicate() : null;
     },
 
+    getCellEndDate : function (rowNum, colNum) {
+        if (!this.body || !this.body.fields || !this._cellDates || !this.body.fields[colNum]) {
+            return null;
+        }
+
+        // use the last row if invalid rowNum passed
+        if (rowNum < 0) rowNum = this.data.getLength() - 1;
+
+        // return the cell date from the array built by _getCellDates()
+        var fieldName = this.isDayView() ? "day1" : this.body.fields[colNum][this.fieldIdProperty];
+        if (!fieldName.startsWith("day")) return;
+        var obj = this._cellDates[rowNum];
+
+        // if obj[fieldName] isn't set, date cells weren't calculated yet - return null
+        fieldName = fieldName + "_end";
+        return obj && obj[fieldName] ? obj[fieldName].duplicate() : null;
+    },
+
     getEventLeft : function (event) {
         var col = this.getColFromDate(this.calendar.getEventStartDate(event), event[this.calendar.laneNameField]);
         return this.body.getColumnLeft(col);
@@ -3993,7 +4035,7 @@ isc.DaySchedule.addProperties({
             col = this.getColFromDate(date, lane),
             len = this.data.length
         ;
-        for (var i=0; i<=len; i++) {
+        for (var i=0; i<len; i++) {
             var rDate = this.getCellDate(i, col),
                 rMillis = rDate.getTime()
             ;
@@ -7372,7 +7414,8 @@ isc.DaySchedule.addClassProperties({
             var colDate = date.duplicate(),
                 cellDate = colDate.duplicate()
             ;
-            for (var i=0; i<=rowCount; i++) {
+            for (var i=0; i<rowCount; i++) {
+                if (j == counter-1 && i == rowCount) break;
                 if (!cellDates[i]) cellDates[i] = {};
                 // store the dates in object properties rather than an array - makes life easier
                 // in the week view when weekends aren't visible
@@ -7386,6 +7429,7 @@ isc.DaySchedule.addClassProperties({
 
                 var newTime = isc.DateUtil.getLogicalTimeOnly(colDate, true);
                 newTime.setTime(newTime.getTime() + (minsToAdd*60000));
+                cellDates[i]["day" + (j+1) + "_end"] = isc.DateUtil.dateAdd(newCellDate.duplicate(), "ms", -1);
                 // compare the newTime (which is a logical time and not subject to DST) with the
                 // time portion of the next calculated cellDate - if they're different, the cell's
                 // datetime falls during the DST crossover
@@ -7406,14 +7450,14 @@ isc.DaySchedule.addClassProperties({
                         //    "\n    newTime = " + newHours + ":" + newMinutes + "  :: date is " + newDate_temp +
                         //    "\n    cellTime = " + cellHours + ":" + cellMinutes + "  :: date is " + newCellDate_temp
                         //);
-                    // the time portion of the parsed date doesn't match the logical time -
-                    // this time must be involved in the DST crossover - use whatever was the
-                    // time when they were last the same and store off the cell in question
-                    // so it can be disabled in the UI
-                    if (!view._dstCells) view._dstCells = [];
-                    view._dstCells.add({ rowNum: i+1, colNum: j });
-                } else {
-                    cellDate = newCellDate.duplicate();
+                        // the time portion of the parsed date doesn't match the logical time -
+                        // this time must be involved in the DST crossover - use whatever was the
+                        // time when they were last the same and store off the cell in question
+                        // so it can be disabled in the UI
+                        if (!view._dstCells) view._dstCells = [];
+                        view._dstCells.add({ rowNum: i+1, colNum: j });
+                    } else {
+                        cellDate = newCellDate.duplicate();
                     }
                 }
             }
@@ -7590,7 +7634,7 @@ otherDayBodyBaseStyle: "calMonthOtherDayBody",
 //<
 otherDayBlankStyle: "calMonthOtherDayBlank",
 
-//> @attr calendar.minimumDayHeight (integer : 80 : IRW)
+//> @attr calendar.minimumDayHeight (Integer : 80 : IRW)
 // In the +link{monthView, month view} when +link{showDayHeaders} is true, this is the minimum
 // height applied to a day cell and its header combined.
 // <P>
@@ -7635,6 +7679,19 @@ selectedCellStyle: "calendarCellSelected",
 eventStyleName: "eventWindow",
 
 
+//> @attr calendar.calMonthEventLinkStyle  (CSSStyleName : "calMonthEventLink" : IRW)
+// The base name for the CSS class applied to the links rendered by +link{calendar.getDayBodyHTML}.
+// <P>
+// These links are rendered as plain HTML links using A elements, and the CSS style in the
+// provided skins references the pseudo-classes :link, :visited, :active, :hover.
+// <BR>
+// Even though it goes against the general policy of not exposing the HTML structures SC writes out
+// and not relying on them for styling, applying style to these particular selectors is acceptable,
+// as we're unlikely to use any other kind of HTML structure than a link.
+//
+// @group appearance
+// @visibility calendar
+//<
 calMonthEventLinkStyle: "calMonthEventLink",
 
 // Workday properties
@@ -7819,7 +7876,7 @@ getMinutePixels : function (minutes, rowSize, view) {
 
 //> @method calendar.scrollToTime()
 // Scroll the calendar Day or Week views to the specified time.
-// @param time (string) any parsable time-string
+// @param time (String) any parsable time-string
 // @visibility calendar
 //<
 scrollToTime : function (time, view) {
@@ -9125,7 +9182,7 @@ defaultTimelineColumnSpan: 20,
 // @visibility external
 //<
 
-//> @attr headerLevel.headerWidth (integer : null : IR)
+//> @attr headerLevel.headerWidth (Integer : null : IR)
 // If set, the width for each of the spans in this headerLevel.  Note that this setting only
 // has an effect on the innermost headerLevel.
 // @visibility external
@@ -9566,7 +9623,7 @@ sizeEventsToGrid: true,
 // i18n
 // ---------------------------------------------------------------------------------------
 
-//> @attr calendar.dayViewTitle (string : "Day" : IR)
+//> @attr calendar.dayViewTitle (String : "Day" : IR)
 // The title for the +link{dayView, day view}.
 //
 // @group i18nMessages
@@ -9574,7 +9631,7 @@ sizeEventsToGrid: true,
 //<
 dayViewTitle: "Day",
 
-//> @attr calendar.weekViewTitle (string : "Week" : IR)
+//> @attr calendar.weekViewTitle (String : "Week" : IR)
 // The title for the +link{weekView, week view}.
 //
 // @group i18nMessages
@@ -9582,7 +9639,7 @@ dayViewTitle: "Day",
 //<
 weekViewTitle: "Week",
 
-//> @attr calendar.monthViewTitle (string : "Month" : IR)
+//> @attr calendar.monthViewTitle (String : "Month" : IR)
 // The title for the +link{monthView, month view}.
 //
 // @group i18nMessages
@@ -9590,7 +9647,7 @@ weekViewTitle: "Week",
 //<
 monthViewTitle: "Month",
 
-//> @attr calendar.timelineViewTitle (string : "Timeline" : IR)
+//> @attr calendar.timelineViewTitle (String : "Timeline" : IR)
 // The title for the +link{timelineView, timeline view}.
 //
 // @group i18nMessages
@@ -9764,7 +9821,7 @@ monthMoreEventsLinkTitle: "+ ${eventCount} more...",
 //<
 backButtonTitle: "Back",
 
-//> @attr calendar.previousButtonHoverText (string : "Previous" : IR)
+//> @attr calendar.previousButtonHoverText (String : "Previous" : IR)
 // The text to be displayed when a user hovers over the +link{calendar.previousButton, previous}
 // toolbar button.
 //
@@ -9773,7 +9830,7 @@ backButtonTitle: "Back",
 //<
 previousButtonHoverText: "Previous",
 
-//> @attr calendar.nextButtonHoverText (string : "Next" : IR)
+//> @attr calendar.nextButtonHoverText (String : "Next" : IR)
 // The text to be displayed when a user hovers over the +link{calendar.nextButton, next}
 // toolbar button
 //
@@ -9782,7 +9839,7 @@ previousButtonHoverText: "Previous",
 //<
 nextButtonHoverText: "Next",
 
-//> @attr calendar.addEventButtonHoverText (string : "Add an event" : IR)
+//> @attr calendar.addEventButtonHoverText (String : "Add an event" : IR)
 // The text to be displayed when a user hovers over the +link{calendar.addEventButton, add event}
 // toolbar button
 //
@@ -9791,7 +9848,7 @@ nextButtonHoverText: "Next",
 //<
 addEventButtonHoverText: "Add an event",
 
-//> @attr calendar.datePickerHoverText (string : "Choose a date" : IR)
+//> @attr calendar.datePickerHoverText (String : "Choose a date" : IR)
 // The text to be displayed when a user hovers over the +link{calendar.datePickerButton, date picker}
 // toolbar button
 //
@@ -10461,7 +10518,7 @@ setData : function (newData) {
 //> @method calendar.getData()
 // Get the data that is being displayed and observed
 //
-// @return (object) The data that is being displayed and observed
+// @return (Object) The data that is being displayed and observed
 //<
 getData : function () {
     return this.data;
@@ -11035,7 +11092,7 @@ getDateEditingStyle : function () {
 // @param [endDate]       (Date) end date of event
 // @param [name]          (String) name of event
 // @param [description]   (String) description of event
-// @param [otherFields]   (any) new values of additional fields to be updated
+// @param [otherFields]   (Any) new values of additional fields to be updated
 //
 // @visibility calendar
 // @deprecated in favor of +link{calendar.addCalendarEvent}
@@ -11288,18 +11345,23 @@ processSaveResponse : function (dsResponse, data, dsRequest, oldEvent) {
         if (fromDialog) {
             if (errors) this.eventDialog.items[0].setErrors(errors, true);
             this.displayEventDialog();
+            return;
         } else if (fromEditor) {
             this.eventEditorLayout.show();
             if (errors) this.eventEditor.setErrors(errors, true);
+            return;
         } else if (isUpdate && oldEvent) {
             // if the save was an update, re-add the old event back to the view's eventData array
             var view = this.getSelectedView();
             if (view) view.addEvent(oldEvent);
             // if there were errors, show the message returned in response.data
-            if (errors) isc.RPCManager._handleError(dsResponse, dsRequest);
+            if (errors) {
+                isc.RPCManager._handleError(dsResponse, dsRequest);
+                return;
+            }
         }
         // have RPCManager handle other errors
-        if (!errors) isc.RPCManager._handleError(dsResponse, dsRequest);
+        isc.RPCManager._handleError(dsResponse, dsRequest);
         return;
     }
 
@@ -12660,8 +12722,10 @@ _storeChosenDateRange : function (date) {
     this.chosenDateStart = isc.DateUtil.getStartOf(date, "d", false);
     this.chosenDateEnd = isc.DateUtil.getEndOf(date, "d", false);
 
+    // the 3rd param here ensures the return value is not a logicalDate - needed when this
+    // method is called from a click in the dateChooser when it isn't editing times
     var startDate =
-        this.chosenWeekStart = isc.DateUtil.getStartOf(date, "w", null, this.firstDayOfWeek)
+        this.chosenWeekStart = isc.DateUtil.getStartOf(date, "w", false, this.firstDayOfWeek)
     ;
 
     // make sure the current week surrounds the current date.
@@ -12669,7 +12733,7 @@ _storeChosenDateRange : function (date) {
     if (isc.DateUtil.compareDates(this.chosenDate,startDate) == 1) {
         this.chosenWeekStart.setDate(this.chosenWeekStart.getDate() - 7);
     }
-    this.chosenWeekEnd = isc.DateUtil.getEndOf(this.chosenWeekStart.duplicate(), "w", null,
+    this.chosenWeekEnd = isc.DateUtil.getEndOf(this.chosenWeekStart.duplicate(), "w", false,
         this.firstDayOfWeek);
 
     // similarly, if chosen date is greater than chosenWeekEnd, shift week window up one week.
@@ -12720,7 +12784,7 @@ setChosenDate : function (newDate, fromTimelineView) {
             if (field) isc.addProperties(field, props);
         }
 
-        isc.DaySchedule._getCellDates(this, this.dayView, this.chosenDate);
+        isc.DaySchedule._getCellDates(this, this.dayView, this.chosenDateStart);
     }
 
     // redraw monthView if need be
@@ -12736,7 +12800,8 @@ setChosenDate : function (newDate, fromTimelineView) {
 
     // refresh the weekView if necessary
     if (this.weekView) {
-        if (displayDate.getWeek(this.firstDayOfWeek) != this.weekView.startDate.getWeek(this.firstDayOfWeek)) {
+        var currentStart = this.weekView.startDate;
+        if (!currentStart.getTime || currentStart.getTime() != this.chosenWeekStart.getTime()) {
             this._setWeekTitles();
             if (this.weekViewSelected()) this.weekView._refreshEvents();
             else this.weekView._needsRefresh = true;
@@ -13049,14 +13114,16 @@ _getTabs : function () {
         nTabs.add({title: this.dayViewTitle, pane: this.dayView, viewName: "day" });
     }
     if (this.showWeekView != false) {
-        this.weekView = this.createAutoChild("weekView", isc.addProperties({viewName: "week"},
+        this.weekView = this.createAutoChild("weekView", isc.addProperties({viewName: "week",
+            startDate: this.chosenWeekStart, endDate: this.chosenWeekEnd, _refreshEventsOnDraw: true},
             props,
             { cellHeight: this.rowHeight, enforceVClipping: true } )
         );
         nTabs.add({title: this.weekViewTitle, pane: this.weekView, viewName: "week" });
     }
     if (this.showMonthView != false) {
-        this.monthView = this.createAutoChild("monthView", isc.addProperties({viewName: "month"},
+        this.monthView = this.createAutoChild("monthView", isc.addProperties({viewName: "month",
+            startDate: this.chosenMonthStart, endDate: this.chosenMonthEnd},
             props,
             { bodyConstructor:"MonthScheduleBody"} ));
         nTabs.add({title: this.monthViewTitle, pane: this.monthView, viewName: "month" });
@@ -15009,7 +15076,7 @@ currentViewChanged : function (viewName) {
 // @param calendar (Calendar) the calendar itself
 // @param rowNum (int) the row number to which the parameter date belongs
 // @param colNum (int) the column number to which the parameter date belongs
-// @return (HTML) HTML to display
+// @return (HTMLString) HTML to display
 //
 // @group monthViewFormatting
 // @visibility calendar
@@ -15134,7 +15201,7 @@ monthMoreEventsLinkClick : function (rowNum, colNum, startIndex) {
 //
 // @param date (Date) Date the user is hovering over
 // @param events (Array of CalendarEvent) array of events occurring on the current date. May be empty.
-// @return (HTML) HTML string to display
+// @return (HTMLString) HTML string to display
 //
 // @visibility calendar
 //<
@@ -15158,7 +15225,7 @@ getMonthViewHoverHTML : function(currDate, events) {
 // @param date (Date) JavaScript Date object representing this day
 // @param events (Array of CalendarEvent) events that fall on this day
 // @param calendar (Calendar) the calendar itself
-// @return (HTML) HTML to show in the header of a day in the month view
+// @return (HTMLString) HTML to show in the header of a day in the month view
 //
 // @group monthViewFormatting
 // @visibility calendar
@@ -15437,7 +15504,7 @@ dateChanged : function () {
 //> @method calendar.getActiveDay()
 // Gets the day of the week (0-6) that the mouse is currently over.
 //
-// @return (integer) the day that the mouse is currently over
+// @return (Integer) the day that the mouse is currently over
 // @see calendar.getActiveTime()
 // @visibility external
 //<
@@ -17741,13 +17808,36 @@ eventDragGap: 0
 });
 isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._debugModules.push('Calendar');isc.checkForDebugAndNonDebugModules();isc._moduleEnd=isc._Calendar_end=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc.Log&&isc.Log.logIsInfoEnabled('loadTime'))isc.Log.logInfo('Calendar module init time: ' + (isc._moduleEnd-isc._moduleStart) + 'ms','loadTime');delete isc.definingFramework;if (isc.Page) isc.Page.handleEvent(null, "moduleLoaded", { moduleName: 'Calendar', loadTime: (isc._moduleEnd-isc._moduleStart)});}else{if(window.isc && isc.Log && isc.Log.logWarn)isc.Log.logWarn("Duplicate load of module 'Calendar'.");}
 /*
- * Isomorphic SmartClient
- * Version SNAPSHOT_v11.1d_2017-06-25 (2017-06-25)
- * Copyright(c) 1998 and beyond Isomorphic Software, Inc. All rights reserved.
- * "SmartClient" is a trademark of Isomorphic Software, Inc.
- *
- * licensing@smartclient.com
- *
- * http://smartclient.com/license
- */
+
+  SmartClient Ajax RIA system
+  Version SNAPSHOT_v12.0d_2017-10-28/LGPL Deployment (2017-10-28)
+
+  Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
+  "SmartClient" is a trademark of Isomorphic Software, Inc.
+
+  LICENSE NOTICE
+     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
+     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
+     without an accompanying Isomorphic Software license file, please
+     contact licensing@isomorphic.com for details. Unauthorized copying and
+     use of this software is a violation of international copyright law.
+
+  DEVELOPMENT ONLY - DO NOT DEPLOY
+     This software is provided for evaluation, training, and development
+     purposes only. It may include supplementary components that are not
+     licensed for deployment. The separate DEPLOY package for this release
+     contains SmartClient components that are licensed for deployment.
+
+  PROPRIETARY & PROTECTED MATERIAL
+     This software contains proprietary materials that are protected by
+     contract and intellectual property law. You are expressly prohibited
+     from attempting to reverse engineer this software or modify this
+     software for human readability.
+
+  CONTACT ISOMORPHIC
+     For more information regarding license rights and restrictions, or to
+     report possible license violations, please contact Isomorphic Software
+     by email (licensing@isomorphic.com) or web (www.isomorphic.com).
+
+*/
 

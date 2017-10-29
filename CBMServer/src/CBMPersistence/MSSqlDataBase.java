@@ -14,6 +14,7 @@ import java.util.Map;
 
 import javax.sql.DataSource;
 
+import CBMMeta.ColumnInfo;
 import CBMMeta.SelectTemplate;
 import CBMServer.CBMStart;
 import CBMServer.DSRequest;
@@ -81,11 +82,11 @@ public class MSSqlDataBase implements I_DataBase {
 
 		// -------- Preprocess SelectTemplate and data (parameters here) to complete real SQL Select string
 		// --- Select ---
-		for (Map.Entry<String, String> entry : selTempl.columns.entrySet())
+		for (ColumnInfo entry : selTempl.columns)
 		{
-			if (!entry.getValue().equals("null"))
+			if (!entry.dbColumn.equals("null"))
 			{
-				selectPart += entry.getValue() + " as \"" + entry.getKey() + "\", ";
+				selectPart += entry.dbColumn + " as \"" + entry.sysCode + "\", ";
 			}
 		}
 
@@ -126,6 +127,7 @@ public class MSSqlDataBase implements I_DataBase {
 		}
 		
 		// --- Order by (Client defined)---
+		// --- Order by (Client defined)---
 		if (dsRequest!= null && dsRequest.sortBy != null  && dsRequest.sortBy.size()>0)
 		{
 			for (int i = 0; i < dsRequest.sortBy.size(); i++)
@@ -137,8 +139,9 @@ public class MSSqlDataBase implements I_DataBase {
 					desc = " desc";
 					odrCol = odrCol.substring(1);
 				}
-
-				String col = selTempl.columns.get(odrCol);
+				final String odrColName = odrCol;
+				String col = selTempl.columns.stream().filter(c -> c.sysCode.equals(odrColName)).findFirst().get().dbColumn;
+						//get(odrCol);
 				if (col != null)
 				{	
 					orderPart += col + desc + ", ";

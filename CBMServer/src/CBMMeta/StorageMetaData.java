@@ -98,14 +98,13 @@ public class StorageMetaData implements I_StorageMetaData {
 		mdForSelect.from = "CBM.PrgView pv " + "inner join CBM.Concept c on c.id=pv.ForConcept and c.del='0'";
 		mdForSelect.where = "pv.SysCode = '" + forView + "' and pv.del='0' and pv.actual = '1'";
 		mdForSelect.orderby = "pv.ID"; // Must exist or - be an ID at least
-		mdForSelect.columns = new HashMap<String, String>(7);
-		// mdForSelect.columns.put("IDConcept", "c.ID");
-		mdForSelect.columns.put("IDView", "pv.ID");
-		mdForSelect.columns.put("ExprFrom", "c.ExprFrom");
-		mdForSelect.columns.put("ExprWhere", "c.ExprWhere");
-		mdForSelect.columns.put("ExprOrder", "c.ExprOrder");
-		mdForSelect.columns.put("ExprGroup", "c.ExprGroup");
-		mdForSelect.columns.put("ExprHaving", "c.ExprHaving");
+		mdForSelect.columns = new ArrayList<ColumnInfo>(6);
+		mdForSelect.columns.add(new ColumnInfo("IDView", "CBM.PrgView", "pv.ID", "String"));
+		mdForSelect.columns.add(new ColumnInfo("ExprFrom", "CBM.Concept", "c.ExprFrom", "String"));
+		mdForSelect.columns.add(new ColumnInfo("ExprWhere", "CBM.Concept", "c.ExprWhere", "String"));
+		mdForSelect.columns.add(new ColumnInfo("ExprOrder", "CBM.Concept", "c.ExprOrder", "String"));
+		mdForSelect.columns.add(new ColumnInfo("ExprGroup", "CBM.Concept", "c.ExprGroup", "String"));
+		mdForSelect.columns.add(new ColumnInfo("ExprHaving", "CBM.Concept", "c.ExprHaving", "String"));
 
 		try {
 			metaResponce = metaDB.doSelect(mdForSelect, null);
@@ -139,10 +138,11 @@ public class StorageMetaData implements I_StorageMetaData {
 		mdForSelect.where = "pvf.ForPrgView='" + forViewId + "' and pvf.del='0'";
 		mdForSelect.orderby = "pvf.Odr, r.ID"; // Must exist and be an ID at
 												// least
-		mdForSelect.columns = new HashMap<String, String>(3);
-		mdForSelect.columns.put("DBColumn", "r.dbcolumn");
-		mdForSelect.columns.put("SysCode", "pvf.syscode");
-		mdForSelect.columns.put("RelatedConcept", "c.SysCode");
+		mdForSelect.columns = new ArrayList<ColumnInfo>(4);
+		mdForSelect.columns.add(new ColumnInfo("SysCode", "CBM.PrgViewField", "pvf.syscode", "String"));
+		mdForSelect.columns.add(new ColumnInfo("DBTable", "CBM.Relation", "r.dbtable", "String"));
+		mdForSelect.columns.add(new ColumnInfo("DBColumn", "CBM.Relation", "r.dbcolumn", "String"));
+		mdForSelect.columns.add(new ColumnInfo("RelatedConcept", "CBM.Concept", "c.SysCode", "String"));
 		try {
 			metaResponce = metaDB.doSelect(mdForSelect, null);
 		} catch (Exception ex) {
@@ -150,14 +150,17 @@ public class StorageMetaData implements I_StorageMetaData {
 		}
 
 		if (metaResponce != null && metaResponce.data != null) {
-			out.columns = new HashMap<String, String>();
+			out.columns = new ArrayList<ColumnInfo>();
 			String col;
+			String relatedConcept;
 			while (metaResponce.data.next()) {
 				col = metaResponce.data.getString("DBColumn");
-				if (metaResponce.data.getString("RelatedConcept").equals("Boolean")) {
+				relatedConcept = metaResponce.data.getString("RelatedConcept");
+				if (relatedConcept.equals("Boolean")) {
 					col = "(CASE WHEN " + col + "='0' then 'false' ELSE 'true' END)";
 				}
-				out.columns.put(metaResponce.data.getString("SysCode"), col);
+				out.columns.add(new ColumnInfo(metaResponce.data.getString("SysCode"),
+						metaResponce.data.getString("DBTable"), col, relatedConcept));
 			}
 		}
 		metaResponce.releaseDB();
@@ -208,12 +211,12 @@ public class StorageMetaData implements I_StorageMetaData {
 				+ " and pvf.viewonly = '0'";
 		mdForSelect.orderby = "r.Odr, r.dbtable, pvf.Odr";
 
-		mdForSelect.columns = new HashMap<String, String>(5);
-		mdForSelect.columns.put("syscode", "pvf.syscode");
-		mdForSelect.columns.put("dbcolumn", "r.dbcolumn");
-		mdForSelect.columns.put("dbtable", "r.dbtable");
-		mdForSelect.columns.put("pointedclass", "c.SysCode");
-		mdForSelect.columns.put("versioned", "r.Versioned");
+		mdForSelect.columns = new ArrayList<ColumnInfo>(5);
+		mdForSelect.columns.add(new ColumnInfo("syscode", "CBM.PrgViewField", "pvf.syscode", "String"));
+		mdForSelect.columns.add(new ColumnInfo("dbtable", "CBM.Relation", "r.dbtable", "String"));
+		mdForSelect.columns.add(new ColumnInfo("dbcolumn", "CBM.Relation", "r.dbcolumn", "String"));
+		mdForSelect.columns.add(new ColumnInfo("pointedclass", "CBM.Concept", "c.SysCode", "String"));
+		mdForSelect.columns.add(new ColumnInfo("versioned", "CBM.Relation", "r.Versioned", "Boolean"));
 
 		try {
 			metaResponce = metaDB.doSelect(mdForSelect, null);
@@ -271,8 +274,8 @@ public class StorageMetaData implements I_StorageMetaData {
 		mdForSelect.groupby = "r.dbtable";
 		mdForSelect.orderby = "r.dbtable";
 
-		mdForSelect.columns = new HashMap<String, String>(1);
-		mdForSelect.columns.put("dbtable", "r.dbtable");
+		mdForSelect.columns = new ArrayList<ColumnInfo>(1);
+		mdForSelect.columns.add(new ColumnInfo("dbtable", "CBM.Relation", "r.dbtable", "String"));
 
 		try {
 			metaResponce = metaDB.doSelect(mdForSelect, null);

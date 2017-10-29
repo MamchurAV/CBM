@@ -1390,6 +1390,7 @@ isc.CBMDataSource.addProperties({
     return (rel ? rel : {} );
   },
 
+
   // --- Return CBM-metadata Relation record for this isc DataSource field ---
   findRelation: function (criteria) {
     // If this.relations is null - initialise it (once!)
@@ -1400,13 +1401,15 @@ isc.CBMDataSource.addProperties({
     return (rel ? rel : {} );
   },
 
+
   // --- Additions to request
   transformRequest: function (dsRequest) {
 	if (this.convertDataSourceCriteria && dsRequest.data) {
 		// Remove clientData from previous function pass
 		delete dsRequest.data["clientData"];
 
-		if (Object.keys(dsRequest.data).length > 0) {
+		if (Object.keys(dsRequest.data).length > 0
+			&& dsRequest.data._constructor !== "AdvancedCriteria") {
 			if (dsRequest.operationType === "fetch" ) {
 			    // For fetch  - allways convert criteria to isc.AdvancedCriteria form
 			    var criteria = this.convertDataSourceCriteria(dsRequest.data);
