@@ -1411,6 +1411,9 @@ isc.CBMDataSource.addProperties({
 		if (Object.keys(dsRequest.data).length > 0
 			&& dsRequest.data._constructor !== "AdvancedCriteria") {
 			if (dsRequest.operationType === "fetch" ) {
+				for(var pairKey in dsRequest.data) {
+					dsRequest.data[pairKey] = dsRequest.data[pairKey].replace("~|" + curr_Lang + "|", "");
+				}
 			    // For fetch  - allways convert criteria to isc.AdvancedCriteria form
 			    var criteria = this.convertDataSourceCriteria(dsRequest.data);
 			    dsRequest.data = {}
