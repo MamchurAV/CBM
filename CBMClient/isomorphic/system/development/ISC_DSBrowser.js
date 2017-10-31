@@ -1,13 +1,36 @@
 /*
- * Isomorphic SmartClient
- * Version SNAPSHOT_v11.1d_2017-06-25 (2017-06-25)
- * Copyright(c) 1998 and beyond Isomorphic Software, Inc. All rights reserved.
- * "SmartClient" is a trademark of Isomorphic Software, Inc.
- *
- * licensing@smartclient.com
- *
- * http://smartclient.com/license
- */
+
+  SmartClient Ajax RIA system
+  Version SNAPSHOT_v12.0d_2017-10-28/LGPL Development Only (2017-10-28)
+
+  Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
+  "SmartClient" is a trademark of Isomorphic Software, Inc.
+
+  LICENSE NOTICE
+     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
+     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
+     without an accompanying Isomorphic Software license file, please
+     contact licensing@isomorphic.com for details. Unauthorized copying and
+     use of this software is a violation of international copyright law.
+
+  DEVELOPMENT ONLY - DO NOT DEPLOY
+     This software is provided for evaluation, training, and development
+     purposes only. It may include supplementary components that are not
+     licensed for deployment. The separate DEPLOY package for this release
+     contains SmartClient components that are licensed for deployment.
+
+  PROPRIETARY & PROTECTED MATERIAL
+     This software contains proprietary materials that are protected by
+     contract and intellectual property law. You are expressly prohibited
+     from attempting to reverse engineer this software or modify this
+     software for human readability.
+
+  CONTACT ISOMORPHIC
+     For more information regarding license rights and restrictions, or to
+     report possible license violations, please contact Isomorphic Software
+     by email (licensing@isomorphic.com) or web (www.isomorphic.com).
+
+*/
 
 if(window.isc&&window.isc.module_Core&&!window.isc.module_DSBrowser){isc.module_DSBrowser=1;isc._moduleStart=isc._DSBrowser_start=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc._moduleEnd&&(!isc.Log||(isc.Log&&isc.Log.logIsDebugEnabled('loadTime')))){isc._pTM={message:'DSBrowser load/parse time: '+(isc._moduleStart-isc._moduleEnd)+'ms',category:'loadTime'};if(isc.Log&&isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;else isc._preLog=[isc._pTM]}isc.definingFramework=true;isc.defineClass("DSRegistryList","ListGrid");isc.A=isc.DSRegistryList.getPrototype();isc.B=isc._allFuncs;isc.C=isc.B._maxIndex;isc.D=isc._funcClasses;isc.D[isc.C]=isc.A.Class;isc.A.dataSource="RepoRegistry";isc.B.push(isc.A.initWidget=function isc_DSRegistryList_initWidget(){this.Super("initWidget",arguments)});isc.B._maxIndex=isc.C+1;isc.defineClass("DSList","ListGrid");isc.A=isc.DSList.getPrototype();isc.B=isc._allFuncs;isc.C=isc.B._maxIndex;isc.D=isc._funcClasses;isc.D[isc.C]=isc.A.Class;isc.B.push(isc.A.initWidget=function isc_DSList_initWidget(){this.Super("initWidget",arguments)});isc.B._maxIndex=isc.C+1;isc.defineClass("DSBrowser","VLayout");isc.A=isc.DSBrowser;isc.B=isc._allFuncs;isc.C=isc.B._maxIndex;isc.D=isc._funcClasses;isc.D[isc.C]=isc.A.Class;isc.B.push(isc.A.showWindow=function isc_c_DSBrowser_showWindow(_1,_2){isc.Window.create({title:"DS Builder",width:"100%",height:"100%",canDragReposition:false,closeClick:function(){this.destroy()},items:[isc.DSBrowser.create({autoDraw:false},_2)]},_1).show()});isc.B._maxIndex=isc.C+1;isc.A=isc.DSBrowser.getPrototype();isc.B=isc._allFuncs;isc.C=isc.B._maxIndex;isc.D=isc._funcClasses;isc.D[isc.C]=isc.A.Class;isc.A.dsRegistryListDefaults={_constructor:"DSRegistryList",height:150,autoFetchData:true,canHover:true,defaultFields:[{name:"ID",title:"Name"}],recordClick:"this.creator.dsRegistryChanged(record)"};isc.A.dsRegistryListRefreshButtonDefaults={_constructor:"Img",size:16,src:"[SKIN]/actions/refresh.png",click:"this.creator.dsRegistryList.invalidateCache()"};isc.A.dsListDefaults={_constructor:"DSList",canHover:true,showFilterEditor:true,defaultFields:[{name:"ID",title:"Name"}],recordClick:"this.creator.dsChanged(record)"};isc.A.dsListAddButtonDefaults={_constructor:"Img",size:16,src:"[SKIN]/actions/add.png",click:"this.creator.dsList.startEditingNew()"};isc.A.dsListRemoveButtonDefaults={_constructor:"Img",size:16,src:"[SKIN]/actions/remove.png",click:"this.creator.dsList.removeSelectedData()"};isc.A.dsListRefreshButtonDefaults={_constructor:"Img",size:16,src:"[SKIN]/actions/refresh.png",click:"this.creator.dsList.invalidateCache()"};isc.A.leftSectionDefaults={_constructor:"SectionStack",headerHeight:25,width:300,showResizeBar:true,animateSections:isc.Browser.isSafari,visibilityMode:"visible",autoParent:"mainLayout"};isc.A.mainLayoutDefaults={_constructor:"HLayout",height:"*"};isc.A.rightPaneDefaults={_constructor:"TabSet",tabs:[{name:"welcome",title:"Welcome",ID:"dsb_welcome_tab",canClose:true,pane:isc.Label.create({height:10,autoDraw:false,overflow:"visible",contents:"Select a datasource registry on the left..."})}]};isc.A.autoChildren=["mainLayout"];isc.A.dsRegistryPaneDefaults={_constructor:"DSRegistryPane"};isc.B.push(isc.A.initWidget=function isc_DSBrowser_initWidget(){this.Super("initWidget",arguments);this.dsRegistryList=this.createAutoChild("dsRegistryList");this.dsRegistryListRefreshButton=this.createAutoChild("dsRegistryListRefreshButton");this.dsList=this.createAutoChild("dsList");this.dsListAddButton=this.createAutoChild("dsListAddButton");this.dsListRemoveButton=this.createAutoChild("dsListRemoveButton");this.dsListRefreshButton=this.createAutoChild("dsListRefreshButton");this.leftSection=this.createAutoChild("leftSection",{sections:[{name:"registries",title:"DataSource Registries",expanded:true,controls:[this.dsRegistryListRefreshButton],items:[this.dsRegistryList]},{name:"datasources",title:"DataSources",expanded:true,controls:[this.dsListAddButton,this.dsListRemoveButton,this.dsListRefreshButton],items:[this.dsList]}]});this.addAutoChildren(this.autoChildren);this.mainLayout.addMember(this.leftSection);this.rightPane=this.createAutoChild("rightPane");this.mainLayout.addMember(this.rightPane)},isc.A.dsRegistryChanged=function isc_DSBrowser_dsRegistryChanged(_1){this.currentRegistry=_1;isc.DMI.call("isc_builtin","com.isomorphic.tools.BuiltinRPC","dsFromXML",_1.object,this.getID()+".dsLoaded(data)")},isc.A.dsLoaded=function isc_DSBrowser_dsLoaded(_1){this.currentDS=_1;this.showDSRegistryPane();this.dsList.setDataSource(_1);this.dsList.setFields([{name:"ID",title:"Name"}]);this.dsList.filterData()},isc.A.showDSRegistryPane=function isc_DSBrowser_showDSRegistryPane(){var _1=this.currentRegistry;this.showPane({ID:this.escapeForId("registryPane_"+_1.ID),title:_1.ID,paneClass:"dsRegistryPane"},_1)},isc.A.dsChanged=function isc_DSBrowser_dsChanged(_1){this.currentDS=_1;this.showDSPane()},isc.A.showDSPane=function isc_DSBrowser_showDSPane(){var _1=this.currentDS;this.showDSRegistryPane();var _2={};isc.addProperties(_2,_1,{registry:isc.clone(this.currentRegistry)});this.currentPane.showDSPane(_2)},isc.A.escapeForId=function isc_DSBrowser_escapeForId(_1){return isc.isA.String(_1)?_1.replace(/(\/|\.)/g,'_'):_1},isc.A.showPane=function isc_DSBrowser_showPane(_1,_2){var _3=this.rightPane.getTab(_1.ID);if(_3){this.currentPane=_3.pane;this.rightPane.selectTab(_3);return}
 _3={};isc.addProperties(_3,_1,{canClose:true,pane:this.createAutoChild(_1.paneClass,{config:_2})});var _4=this.rightPane.getTab(0);if(_4&&_4.name=="welcome")this.rightPane.removeTab(0);this.rightPane.addTab(_3);this.rightPane.selectTab(_3);this.currentPane=_3.pane});isc.B._maxIndex=isc.C+8;isc.defineClass("DSRegistryPane","TabSet");isc.A=isc.DSRegistryPane.getPrototype();isc.B=isc._allFuncs;isc.C=isc.B._maxIndex;isc.D=isc._funcClasses;isc.D[isc.C]=isc.A.Class;isc.A.dsPaneDefaults={_constructor:"DSEditor"};isc.B.push(isc.A.initWidget=function isc_DSRegistryPane_initWidget(){this.Super("initWidget",arguments)},isc.A.showDSPane=function isc_DSRegistryPane_showDSPane(_1){var _2=this.escapeForId("dsPane_"+this.config.ID+'_'+_1.ID);this.showPane({ID:_2,title:_1.ID,paneClass:"dsPane"},_1)},isc.A.escapeForId=function isc_DSRegistryPane_escapeForId(_1){return isc.isA.String(_1)?_1.replace(/(\/|\.)/g,'_'):_1},isc.A.showPane=function isc_DSRegistryPane_showPane(_1,_2){var _3=this.getTab(_1.ID);if(_3){this.selectTab(_3);return}

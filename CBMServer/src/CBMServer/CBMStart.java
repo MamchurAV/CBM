@@ -32,6 +32,23 @@ public class CBMStart {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+
+		String sss = "\t            {\n" +
+				"\t \t\t       \"operator\":\"or\", \n" +
+				"\t       \t\t \"_constructor\":\"AdvancedCriteria\", \n" +
+				"\t   \t\t     \"criteria\":[\n" +
+				"\t \t\t\t\t\t{\n" +
+				"\t \t\t\t\t\t\t\"fieldName\":\"Code\", \n" +
+				"\t \t\t\t\t\t\t\"operator\":\"iStartsWith\", \n" +
+				"\t \t\t               \t\"value\":\"ZuZU\"\n" +
+				"\t            \t\t}, \n" +
+				"\t            \t\t{\n" +
+				"\t \t\t\t\t\t\t\"operator\":\"equals\", \n" +
+				"\t \t\t\t\t\t\t\"fieldName\":\"Del\", \n" +
+				"\t \t\t\t\t\t\t\"value\":false\n" +
+				"\t        \t\t    }\n" +
+				"\t        \t\t], \n" +
+				"\t            }, \n";
 	  
 		int port = Integer.parseInt(getParam("port"));
 	    // Add a new HTTP server listening on configured port

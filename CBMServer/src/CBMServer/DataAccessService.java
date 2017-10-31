@@ -131,21 +131,21 @@ public class DataAccessService extends ServerResource {
 				}
 				case "add": {
 					outSingleOper = clientIOFormatter.formatResponce(
-							currentDB.doInsert(metaProvider.getColumnsInfo(dsRequest),
-									dsRequest), dsRequest);
+							currentDB.doInsert(metaProvider.getColumnsInfo(dsRequest), dsRequest),
+							dsRequest);
 					break;
 				}
 				case "update": {
 					outSingleOper = clientIOFormatter.formatResponce(
-							currentDB.doUpdate(metaProvider.getColumnsInfo(dsRequest),
-									dsRequest), dsRequest);
+							currentDB.doUpdate(metaProvider.getColumnsInfo(dsRequest), dsRequest),
+							dsRequest);
 					break;
 				}
 				case "remove": {
 					// TODO --- If "Del" property exists - switch to update set Del=true
 					outSingleOper = clientIOFormatter.formatResponce(
-							currentDB.doDelete(metaProvider.getDelete(dsRequest),
-									dsRequest), dsRequest);
+							currentDB.doDelete(metaProvider.getDelete(dsRequest), dsRequest),
+							dsRequest);
 					break;
 				}
 				}

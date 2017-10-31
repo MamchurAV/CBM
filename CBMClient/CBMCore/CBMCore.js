@@ -1390,6 +1390,7 @@ isc.CBMDataSource.addProperties({
     return (rel ? rel : {} );
   },
 
+
   // --- Return CBM-metadata Relation record for this isc DataSource field ---
   findRelation: function (criteria) {
     // If this.relations is null - initialise it (once!)
@@ -1400,25 +1401,55 @@ isc.CBMDataSource.addProperties({
     return (rel ? rel : {} );
   },
 
+
   // --- Additions to request
   transformRequest: function (dsRequest) {
+	if (this.convertDataSourceCriteria && dsRequest.data) {
+		// Remove clientData from previous function pass
+		delete dsRequest.data["clientData"];
+
+		if (Object.keys(dsRequest.data).length > 0
+			&& dsRequest.data._constructor !== "AdvancedCriteria") {
+			if (dsRequest.operationType === "fetch" ) {
+				for(var pairKey in dsRequest.data) {
+					dsRequest.data[pairKey] = dsRequest.data[pairKey].replace("~|" + curr_Lang + "|", "");
+				}
+			    // For fetch  - allways convert criteria to isc.AdvancedCriteria form
+			    var criteria = this.convertDataSourceCriteria(dsRequest.data);
+			    dsRequest.data = {}
+				dsRequest.data.criteria = criteria;  
+			} else {
+				// For some reason iSC call this method twice, so to skip the second pass - condition below
+				if ( !dsRequest.data.data ) {
+					// For data changes - repack send for storage data to data.data 
+					var tmpData = {};
+					for (var attr in dsRequest.data) {
+						if (dsRequest.data.hasOwnProperty(attr)) {
+							tmpData[attr] = dsRequest.data[attr];
+						}
+					}
+					
+					delete dsRequest.data;
+					dsRequest.data = {};
+					dsRequest.data.data = tmpData;
+				}
+			}
+		}  
+    }
+    
     if (typeof(curr_Img) != "undefined" && curr_Img != null) {
       curr_Img = (parseInt(curr_Img) + 1) + "";
-      if (dsRequest.data == null) {
-        dsRequest.data = {
-          currUser: curr_Session,
+      if (!dsRequest.data) {
+        dsRequest.data = {};
+	  }
+      dsRequest.data.clientData = 
+        { currUser: curr_Session,
           itemImg: curr_Img,
           currDate: curr_Date.toISOString(),
           currLocale: tmp_Lang,
           extraInfo: extra_Info
         };
-      } else {
-        dsRequest.data.currUser = curr_Session;
-        dsRequest.data.itemImg = curr_Img;
-        dsRequest.data.currDate = curr_Date.toISOString();
-        dsRequest.data.currLang = tmp_Lang;
-        dsRequest.data.extraInfo = extra_Info;
-      }
+
       extra_Info = "";
     }
     return this.Super("transformRequest", arguments);

@@ -14,6 +14,7 @@ import java.util.Map;
 
 import javax.sql.DataSource;
 
+import CBMMeta.ColumnInfo;
 import CBMMeta.SelectTemplate;
 import CBMServer.CBMStart;
 import CBMServer.DSRequest;
@@ -81,11 +82,11 @@ public class MSSqlDataBase implements I_DataBase {
 
 		// -------- Preprocess SelectTemplate and data (parameters here) to complete real SQL Select string
 		// --- Select ---
-		for (Map.Entry<String, String> entry : selTempl.columns.entrySet())
+		for (ColumnInfo entry : selTempl.columns)
 		{
-			if (!entry.getValue().equals("null"))
+			if (!entry.dbColumn.equals("null"))
 			{
-				selectPart += entry.getValue() + " as \"" + entry.getKey() + "\", ";
+				selectPart += entry.dbColumn + " as \"" + entry.sysCode + "\", ";
 			}
 		}
 
@@ -107,24 +108,8 @@ public class MSSqlDataBase implements I_DataBase {
 			wherePart = selTempl.where;
 		}
 		// --- Where (User filtering)---
-		if (dsRequest!= null && dsRequest.data != null && dsRequest.data.size()>0)
-		{
-			for (Map.Entry<String, Object> entry : dsRequest.data.entrySet())
-			{
-				String col = selTempl.columns.get(entry.getKey());
-				if (col != null)
-				{	
-					if (!entry.getValue().equals("null"))
-					{
-						wherePart += " and " + col + " like '" + entry.getValue().toString() + "%'"; // TODO leave brackets for strings only
-					}
-					else
-					{
-						wherePart += " and " + col + " is null ";
-					}
-				}
- 			}
-		}
+		wherePart += SqlFormatter.prepareWhere(selTempl, dsRequest);
+
 		sql += " where " + wherePart;
 
 		// --- Group by ---
@@ -142,6 +127,7 @@ public class MSSqlDataBase implements I_DataBase {
 		}
 		
 		// --- Order by (Client defined)---
+		// --- Order by (Client defined)---
 		if (dsRequest!= null && dsRequest.sortBy != null  && dsRequest.sortBy.size()>0)
 		{
 			for (int i = 0; i < dsRequest.sortBy.size(); i++)
@@ -153,8 +139,9 @@ public class MSSqlDataBase implements I_DataBase {
 					desc = " desc";
 					odrCol = odrCol.substring(1);
 				}
-
-				String col = selTempl.columns.get(odrCol);
+				final String odrColName = odrCol;
+				String col = selTempl.columns.stream().filter(c -> c.sysCode.equals(odrColName)).findFirst().get().dbColumn;
+						//get(odrCol);
 				if (col != null)
 				{	
 					orderPart += col + desc + ", ";
@@ -260,10 +247,9 @@ public class MSSqlDataBase implements I_DataBase {
 			sql += table + " (";
 
 			// -------- Update list and Where ---------------
-			// -------- Update list and Where ---------------
-			if (dsRequest != null && dsRequest.data != null && dsRequest.data.size()>0)
+			if (dsRequest != null && dsRequest.data != null && dsRequest.data.data.size()>0)
 			{
-				for (Map.Entry<String, Object> entry : dsRequest.data.entrySet())
+				for (Map.Entry<String, Object> entry : dsRequest.data.data.entrySet())
 				{
 					// --- Get collumn info for request field key
 					String[] colInfo = insTempl.get(entry.getKey());
@@ -381,11 +367,11 @@ public class MSSqlDataBase implements I_DataBase {
 			// --- Filter only fields that changes!
 			String sysCode = entry.getKey();
 			// --- If column not exists in input data - don't use its Table 
-			if (!(dsRequest.data.containsKey(sysCode))) {
+			if (!(dsRequest.data.data.containsKey(sysCode))) {
 				continue;
 			}
 			// --- If value not changed - don't use its Table
-			Object v1 = dsRequest.data.get(sysCode);
+			Object v1 = dsRequest.data.data.get(sysCode);
 			Object v2 = null;
 			if(dsRequest.oldValues != null)	{
 				v2 = dsRequest.oldValues.get(sysCode);
@@ -421,9 +407,9 @@ public class MSSqlDataBase implements I_DataBase {
 
 			
 			// -------- Update list and Where ---------------
-			if (dsRequest!= null && dsRequest.data != null && dsRequest.data.size()>0)
+			if (dsRequest!= null && dsRequest.data != null && dsRequest.data.data.size()>0)
 			{
-				for (Map.Entry<String, Object> entry : dsRequest.data.entrySet())
+				for (Map.Entry<String, Object> entry : dsRequest.data.data.entrySet())
 				{
 					String[] colInfo = updTempl.get(entry.getKey());
 					// ---- Include columns of this table only
@@ -543,7 +529,7 @@ public class MSSqlDataBase implements I_DataBase {
 			String table = tableRow.toLowerCase();
 			// First discover ID value for table
 			id = "";
-			for (Map.Entry<String, Object> entry : dsRequest.data.entrySet())
+			for (Map.Entry<String, Object> entry : dsRequest.data.data.entrySet())
 			{
 				if (entry.getKey().toLowerCase().equals(table.substring(table.indexOf(".") + 1) + ID))
 				{
@@ -553,7 +539,7 @@ public class MSSqlDataBase implements I_DataBase {
 			}
 			if(id.equals(""))
 			{
-				for (Map.Entry<String, Object> entry : dsRequest.data.entrySet())
+				for (Map.Entry<String, Object> entry : dsRequest.data.data.entrySet())
 				{
 					if (entry.getKey().toLowerCase().equals(ID))
 					{

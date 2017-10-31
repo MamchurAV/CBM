@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import CBMMeta.ColumnInfo;
 import CBMMeta.SelectTemplate;
 import CBMServer.DSRequest;
 import CBMServer.DSResponce;
@@ -58,11 +59,11 @@ public class DB2DataBase implements I_DataBase {
 
 		// -------- Preprocess SelectTemplate and data (parameters here) to complete real SQL Select string
 		// --- Select ---
-		for (Map.Entry<String, String> entry : selTempl.columns.entrySet())
+		for (ColumnInfo entry : selTempl.columns)
 		{
-			if (!entry.getValue().equals("null"))
+			if (!entry.dbColumn.equals("null"))
 			{
-				selectPart += entry.getValue() + " as \"" + entry.getKey() + "\", ";
+				selectPart += entry.dbColumn + " as \"" + entry.sysCode + "\", ";
 			}
 		}
 
@@ -78,24 +79,8 @@ public class DB2DataBase implements I_DataBase {
 			wherePart = selTempl.where;
 		}
 		// --- Where (User filtering)---
-		if (dsRequest!= null && dsRequest.data != null && dsRequest.data.size()>0)
-		{
-			for (Map.Entry<String, Object> entry : dsRequest.data.entrySet())
-			{
-				String col = selTempl.columns.get(entry.getKey());
-				if (col != null)
-				{	
-					if (!entry.getValue().equals("null"))
-					{
-						wherePart += " and " + col + "=" + entry.getValue().toString();
-					}
-					else
-					{
-						wherePart += " and " + col + " is null ";
-					}
-				}
- 			}
-		}
+		wherePart += SqlFormatter.prepareWhere(selTempl, dsRequest);
+
 		sql += " where " + wherePart;
 
 		// --- Group by ---
@@ -113,19 +98,24 @@ public class DB2DataBase implements I_DataBase {
 		}
 		
 		// --- Order by (Client defined)---
+		// --- Order by (Client defined)---
 		if (dsRequest!= null && dsRequest.sortBy != null  && dsRequest.sortBy.size()>0)
 		{
 			for (int i = 0; i < dsRequest.sortBy.size(); i++)
 			{
-				String col = selTempl.columns.get(dsRequest.sortBy.get(i));
+				String odrCol = dsRequest.sortBy.get(i);
+				String desc = "";
+				if (odrCol.startsWith("-"))
+				{
+					desc = " desc";
+					odrCol = odrCol.substring(1);
+				}
+				final String odrColName = odrCol;
+				String col = selTempl.columns.stream().filter(c -> c.sysCode.equals(odrColName)).findFirst().get().dbColumn;
+						//get(odrCol);
 				if (col != null)
 				{	
-					String odr = col;
-					if (odr.startsWith("-"))
-					{
-						odr = odr.substring(1) + " desc";
-					}
-					orderPart += odr + ", ";
+					orderPart += col + desc + ", ";
 				}
 			}
 		}
@@ -185,9 +175,9 @@ public class DB2DataBase implements I_DataBase {
 			sql += table + " (";
 
 			// -------- Update list and Where ---------------
-			if (dsRequest!= null && dsRequest.data != null && dsRequest.data.size()>0)
+			if (dsRequest!= null && dsRequest.data != null && dsRequest.data.data.size()>0)
 			{
-				for (Map.Entry<String, Object> entry : dsRequest.data.entrySet())
+				for (Map.Entry<String, Object> entry : dsRequest.data.data.entrySet())
 				{
 					// TODO Filter only fields that changes!
 					String[] colInfo = insTempl.get(entry.getKey());
@@ -236,9 +226,9 @@ public class DB2DataBase implements I_DataBase {
 			sql += table + " SET ";
 
 			// -------- Update list and Where ---------------
-			if (dsRequest!= null && dsRequest.data != null && dsRequest.data.size()>0)
+			if (dsRequest!= null && dsRequest.data != null && dsRequest.data.data.size()>0)
 			{
-				for (Map.Entry<String, Object> entry : dsRequest.data.entrySet())
+				for (Map.Entry<String, Object> entry : dsRequest.data.data.entrySet())
 				{
 					// TODO Filter only fields that changes!
 					String[] colInfo = updTempl.get(entry.getKey());
@@ -272,7 +262,7 @@ public class DB2DataBase implements I_DataBase {
 		String id = "";
 		DSResponce out = new DSResponce();
 		// First discover ID value
-		for (Map.Entry<String, Object> entry : dsRequest.data.entrySet())
+		for (Map.Entry<String, Object> entry : dsRequest.data.data.entrySet())
 		{
 			if (entry.getKey().toUpperCase().equals("ID"))
 			{
