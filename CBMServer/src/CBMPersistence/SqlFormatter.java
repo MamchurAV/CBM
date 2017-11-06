@@ -121,35 +121,53 @@ public class SqlFormatter {
 		String result = "";
 		if(isString(type)) {
 			switch (operator) {
-//				case "iEquals": //exactly equal to, if case is disregarded
-//					result = " lower(" + column + ") =  '" + ((String) value).toLowerCase() + "' ";
-//					break;
+				case "iEquals": //exactly equal to, if case is disregarded
+					result = " (LOWER(" + column + ") =  '" + ((String) value).toLowerCase() + "' OR  " + column + " = '" + value + "') ";
+					break;
 				case "notEqual": //not equal to
-				case "iNotEqual": //not equal to, if case is disregarded
 					result = column + " != '" + value + "' ";
 					break;
-//				case "iNotEqual": //not equal to, if case is disregarded
-//					result = " lower(" + column + ") !=  '" + ((String) value).toLowerCase() + "' ";
-//					break;
+				case "iNotEqual": //not equal to, if case is disregarded
+					result = " (LOWER(" + column + ") !=  '" + ((String) value).toLowerCase() + "' OR " + column + " != '" + value + "') ";
+					break;
 				case "startsWith": //not equal to, if case is disregarded
+					result = column + " LIKE  '" + value + "%' ";
+					break;
 				case "iStartsWith": //not equal to, if case is disregarded
-					result = column + " like  '" + value + "%' ";
+					result = " (LOWER(" + column + ") LIKE  '" + ((String) value).toLowerCase() + "%' OR " + column + " LIKE  '" + value + "%') ";
 					break;
-//				case "iStartsWith": //not equal to, if case is disregarded
-//					result = " lower(" + column + ") like  '" + ((String) value).toLowerCase() + "%' ";
-//					break;
 				case "contains": //not equal to, if case is disregarded
-				case "iContains": //not equal to, if case is disregarded
-				case "iEquals": //exactly equal to, if case is disregarded
-					result = column + " like  '%" + value + "%' ";
+					result = column + " LIKE  '%" + value + "%' ";
 					break;
-//				case "iContains": //not equal to, if case is disregarded
-//					result = " lower(" + column + ") like  '%" + ((String) value).toLowerCase() + "%' ";
-//					break;
+				case "iContains": //not equal to, if case is disregarded
+					result = " (LOWER(" + column + ") LIKE  '%" + ((String) value).toLowerCase() + "%' OR " + column + " LIKE  '%" + value + "%') ";
+					break;
 				default: //default to exactly equal
 					result = column + " = '" + value + "' ";
 					break;
 			}
+		} else if (isMLString(type)) {
+			switch (operator) {
+			case "iEquals": //exactly equal to, if case is disregarded
+			case "iContains": //not equal to, if case is disregarded
+				result = " (LOWER(" + column + ") LIKE  '%" + ((String) value).toLowerCase() + "%' OR " + column + " LIKE  '%" + value + "%') ";
+				break;
+			case "notEqual": //not equal to
+				result = column + " NOT LIKE '%" + value + "%' ";
+				break;
+			case "iNotEqual": //not equal to, if case is disregarded
+				result = " (LOWER(" + column + ") NOT LIKE '%" + ((String) value).toLowerCase() + "%' AND " + column + " NOT LIKE '%" + value + "%') ";
+				break;
+			case "startsWith": //not equal to, if case is disregarded
+				result = column + " LIKE  '" + value + "%' ";
+				break;
+			case "iStartsWith": //not equal to, if case is disregarded
+				result = " (LOWER(" + column + ") LIKE  '" + ((String) value).toLowerCase() + "%' OR " + column + " LIKE  '" + value + "%') ";
+				break;
+			default: //default to exactly equal
+				result = column + " LIKE  '%" + value + "%' ";
+				break;
+		}
 		} else if (isNumeric(type)){
 			switch (operator) {
 				case "notEqual": //not equal to
@@ -176,15 +194,22 @@ public class SqlFormatter {
 
 	private static boolean isString(String type) {
 		if (type.equals("ShortString")
-			|| type.equals("ShortMlString")
 			|| type.equals("StandardString")
-			|| type.equals("StandardMlString")
 			|| type.equals("LongString")
-			|| type.equals("LongMlString")
 			|| type.equals("Text")
 			|| type.equals("URL")
 			|| type.equals("imageFile")){
 				return true;
+		}
+		return false;
+	}
+
+
+	private static boolean isMLString(String type) {
+		if (type.equals("ShortMlString")
+			|| type.equals("StandardMlString")
+			|| type.equals("LongMlString")){
+			return true;
 		}
 		return false;
 	}
