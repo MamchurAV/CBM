@@ -1412,7 +1412,9 @@ isc.CBMDataSource.addProperties({
 		if (Object.keys(dsRequest.data).length > 0) {
 			if (dsRequest.operationType === "fetch" && dsRequest.data._constructor !== "AdvancedCriteria") {
 				for(var pairKey in dsRequest.data) {
-					dsRequest.data[pairKey] = dsRequest.data[pairKey].replace("~|" + curr_Lang + "|", "");
+					if (typeof dsRequest.data[pairKey] === "string") {
+						dsRequest.data[pairKey] = dsRequest.data[pairKey].replace("~|" + curr_Lang + "|", "");
+					}
 				}
 				// For fetch  - allways convert criteria to isc.AdvancedCriteria form
 				var criteria = this.convertDataSourceCriteria(dsRequest.data);
@@ -5330,6 +5332,7 @@ isc.AzureUploadCanvas.addProperties({
             this.div = document.getElementById("uploader_" + this.ID);
             this.azureUploader = new qq.azure.FineUploader({
                 element: this.div,
+                autoUpload: false,
                 request: {
                     endpoint: AZURE_BLOB_URL
                 },
@@ -5366,6 +5369,37 @@ isc.AzureUploadCanvas.addProperties({
                     onDeleteComplete: function(id, name, responseJSON, xhr) {
                       this.iscContext.canvasItem.storeValue(null);
                     },
+                    onSubmit: function(id, name) {
+                      // VVVVVVVVVVVVVVVV  !!! DRAFT !!! VVVVVVVVVVVVVV /////
+                      var options =
+						{
+							imageBox: '.imageBox',
+							thumbBox: '.thumbBox',
+							spinner: '.spinner',
+							imgSrc: 'avatar.png'
+						}
+						var cropper = new cropbox(options);
+						document.querySelector('#file').addEventListener('change', function(){
+							var reader = new FileReader();
+							reader.onload = function(e) {
+								options.imgSrc = e.target.result;
+								cropper = new cropbox(options);
+							}
+							reader.readAsDataURL(this.files[0]);
+							this.files = [];
+						})
+						document.querySelector('#btnCrop').addEventListener('click', function(){
+							var img = cropper.getDataURL()
+							document.querySelector('.cropped').innerHTML += '<img src="'+img+'">';
+						})
+						document.querySelector('#btnZoomIn').addEventListener('click', function(){
+							cropper.zoomIn();
+						})
+						document.querySelector('#btnZoomOut').addEventListener('click', function(){
+							cropper.zoomOut();
+						})
+                      ///////////////////////////////
+                    }
                 }
             });
             // Some CBM-specific context establishing for callbacks (so that it seems buggy in usual resolving techniques) 

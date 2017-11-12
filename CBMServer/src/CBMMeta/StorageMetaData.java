@@ -189,7 +189,8 @@ public class StorageMetaData implements I_StorageMetaData {
 		}
 		// ---- If changes provided to MetaData concepts - drop Metadata for
 		// that concept
-		if (forType == "Concept" || forType == "Relation" || forType == "PrgView" || forType == "PrgViewField") {
+		// TODO debug this part - as below it causes "No metadata for <> found. "
+		if (forType.equals("Concept") || forType.equals("Relation") || forType.equals("PrgView") || forType.equals("PrgViewField")) {
 			// selectInfo.remove(forType);
 			// updInsInfo.remove(forType);
 			// delInfo.remove(forType);
