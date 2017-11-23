@@ -1,7 +1,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v12.0d_2017-10-28/LGPL Deployment (2017-10-28)
+  Version SNAPSHOT_v12.0d_2017-11-23/LGPL Deployment (2017-11-23)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,9 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
 
-if (window.isc && isc.version != "SNAPSHOT_v12.0d_2017-10-28/LGPL Deployment" && !isc.DevUtil) {
+if (window.isc && isc.version != "SNAPSHOT_v12.0d_2017-11-23/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v12.0d_2017-10-28/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v12.0d_2017-11-23/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -2746,7 +2746,7 @@ isc.DateChooser.addMethods({
     // @param date (Date) new value
     // @visibility external
     //<
-    setData : function (data) {
+    setData : function (data, autoShowTimeItem) {
         if (!isc.isA.Date(data)) data = new Date();
 
         var type = "datetime";
@@ -2765,6 +2765,11 @@ isc.DateChooser.addMethods({
         this.chosenDate = dateOnly;
         this.chosenTime = timeOnly;
 
+        if (autoShowTimeItem) {
+            // if autoShowTimeItem is true, always show the timeItem for non-logicalDate data
+            if (data.logicalDate) this.showTimeItem = false;
+            else this.showTimeItem = true;
+        }
         // set the timeItem's value, if it's there
         var timeItem = this.getTimeItem();
         if (timeItem) timeItem.setValue(this.chosenTime);
@@ -8734,9 +8739,9 @@ removeItems : function (items) {
     for (var i = 0 ; i < items.length; i++) {
         var item = items[i];
         if (item == null) continue;
+
         if (hasAdvancedCriteria) {
             var crit = items[i].getCriterion();
-
             if (crit != null) {
                 if (this._extraAdvancedCriteria == null) {
                     this._extraAdvancedCriteria = {
@@ -8746,11 +8751,9 @@ removeItems : function (items) {
                     }
                 }
                 this._extraAdvancedCriteria.criteria.add(crit);
-                // Also clear off "values" so we don't assemble into
-                // the criteria object as part of "getValuesAsCriteria()" in addition
-                // to the stored out advanced criteria
-                delete this.values[items[i].name];
             }
+
+            delete this.values[items[i].name];
         }
     }
 
@@ -14632,9 +14635,6 @@ focusInItem : function (itemName, itemIcon) {
         // focus in it
         if (!itemIcon) item.focusInItem();
         if (itemIcon && item.focusInIcon) item.focusInIcon(itemIcon);
-        // elementFocus will fire 'setFocusItem()' in any case, but do this here as well to
-        // avoid problems with elementFocus being fired asynchronously
-        this.setFocusItem(item, itemIcon);
         if (this._setValuesPending) {
             var theForm = this;
             isc.Page.setEvent("idle",
@@ -16816,7 +16816,10 @@ compareValues : function (value1, value2, field) {
             value2 = value2.valueOf();
         }
 
-        if (value1 == value2) return true;
+        if (value1 == value2) {
+            return true;
+        }
+
         if (isc.isAn.Object(value1) && isc.isAn.Object(value2)) {
             var recursive = isc.DynamicForm.compareValuesRecursive;
             var tempObj = isc.addProperties({}, value2);
@@ -18690,10 +18693,12 @@ isc.FormItem.addProperties({
     // Should we show a special 'picker' +link{FormItemIcon,icon} for this form item? Picker
     // icons are customizable via +link{formItem.pickerIconProperties,pickerIconProperties}. By default
     // they will be rendered inside the form item's +link{formItem.controlStyle,"control box"}
-    // area, and will call +link{FormItem.showPicker()} when clicked.
+    // area. By default clicking the pickerIcon will call +link{FormItem.showPicker()}.
+    //
     // @group pickerIcon
     // @visibility external
     //<
+
 
     //> @attr formItem.showFocusedPickerIcon (Boolean : false : [IRW])
     // If +link{FormItem.showPickerIcon} is true for this item, should the picker icon show
@@ -18715,9 +18720,6 @@ isc.FormItem.addProperties({
     // @visibility external
     //<
     pickerIconDefaults: {
-        click : function (form, item, icon) {
-            item.showPicker();
-        }
     },
 
     //> @attr formItem.pickerIconProperties (FormItemIcon Properties : null : IRWA)
@@ -18806,7 +18808,8 @@ isc.FormItem.addProperties({
     // on the +link{showPickerIcon,picker icon}.
     // <P>
     // Can be specified directly as a Canvas, or created automatically via the
-    // +link{type:AutoChild} pattern.
+    // +link{type:AutoChild} pattern. The default autoChild configuration for the picker is
+    // a Canvas with backgroundColor set and no other modifications.
     // <P>
     // Note that the picker is not automatically destroyed with the FormItem that uses it, in
     // order to allow recycling of picker components.  To destroy a single-use picker, override
@@ -18814,6 +18817,10 @@ isc.FormItem.addProperties({
     //
     // @visibility external
     //<
+
+    pickerDefaults:{
+        backgroundColor:"lightgray"
+    },
 
     //> @attr formItem.pickerConstructor (SCClassName : null : [IRW])
     // Class name of the picker to be created.
@@ -20151,10 +20158,22 @@ isc.FormItem.addProperties({
         //<
 
         //> @method formItemIcon.click()
-        //  Called when this icon is clicked. The default action is to call +link{FormItem.showPicker()}.
+        // Click handler for this icon.
+        // <P>
+        // <smartclient>
+        // Return false to cancel this event.
+        // </smartclient>
+        // <smartgwt>
+        // This event may be cancelled.
+        // </smartgwt>
+        // If this event is not cancelled by the icon-level click handler, it may also
+        // be handled at the FormItem level via +link{formItem.pickerIconClick()} [for the
+        // picker icon only], and then +link{formItem.iconClick()}
+        //
         //  @param  form (DynamicForm)  The Dynamic Form to which this icon's item belongs.
         //  @param  item (FormItem)     The Form Item containing this icon
         //  @param  icon (FormItemIcon) A pointer to the form item icon clicked
+        // @return (boolean) Return false to cancel the event.
         //  @group  formIcons
         //  @visibility external
         //  @example formIcons
@@ -22582,12 +22601,16 @@ isc.FormItem.addMethods({
             if (partName) {
                 var inactiveContext = partName.match(this._$inactiveContextParsingRegex);
                 if (inactiveContext) {
-                    return this._inactiveDirectory[inactiveContext[1]];
+                    return this.getInactiveContext(inactiveContext[1]);
                 }
             }
         }
         return null;
     },
+    getInactiveContext : function (contextID) {
+        return this._inactiveDirectory[contextID];
+    },
+
     // Are we retrieving inactive HTML?
     // This includes the HTML we'll render out into the print window, and
     // the [what?]
@@ -24083,7 +24106,6 @@ isc.FormItem.addMethods({
                 this.getReadOnlyTextBoxStyle() : this.textBoxStyle),
             styleName = this._getCellStyle(tbStyle, this._$textBox)
         ;
-
         //>!BackCompat 2006.3.9
         // deprecated input element style
         if (this.elementClassName != null) {
@@ -24920,6 +24942,7 @@ isc.FormItem.addMethods({
     // can restore it after focus
 
     _storeFocusForRedraw : function () {
+
         this._hadFocusBeforeRedraw = true;
 
         this.rememberSelection();
@@ -26945,11 +26968,16 @@ isc.FormItem.addMethods({
     // clicks on a +link{showPickerIcon,pickerIcon}.  May also be called programmatically.
     // <P>
     // Default implementation lazily creates and shows the +link{FormItem.picker,Picker Autochild}.
-    // May be overridden to implement some custom picker for this item.
+    // <P>
+    // Developers wishing to show a custom picker widget can either implement a
+    // +link{pickerIconClick()} handler with an entirely custom implementation (and bypass
+    // the call to <code>showPicker()</code> altogether),
+    // <smartclient>override this method, </smartclient>
+    // or use the +link{autoChild,AutoChild pattern} to customize the automatically generated
+    // +link{formItem.picker,picker autoChild}.
     //
     // @visibility external
     //<
-
 
     showPicker : function (modal, icon, pickerProperties, rect) {
 
@@ -32986,12 +33014,36 @@ isc.FormItem.addMethods({
             if (!isc.isA.Function(icon.click)) {
                 isc.Func.replaceWithMethod(icon, "click", "form,item,icon");
             }
-            if (icon.click(this.form, this, icon) == false) return false;
+            if (icon.click(this.form, this, icon) == false) {
+                return false;
+            }
+        }
+        if (icon.pickerIcon && this.pickerIconClick) {
+            if (this.pickerIconClick(this.form, this, icon) == false) {
+                return false;
+            }
         }
 
-        if (icon.pickerIcon && this.pickerIconClick) this.pickerIconClick(this.form, this, icon);
+        if (this.iconClick) {
+            if (this.iconClick(this.form, this, icon) == false) {
+                return false;
+            }
+        }
+    },
 
-        if (this.iconClick) this.iconClick(this.form, this, icon);
+    // Default pickerIconClick handler will show the picker autoChild
+    // May be overridden for custom behavior
+    // Documented in registerStringMethods block
+
+    suppressPickerForCustomIconClick:true,
+    pickerIconClick : function () {
+        var pickerIcon = this.getIcon("picker");
+        if (this.suppressPickerForCustomIconClick
+            && pickerIcon != null && pickerIcon.click != null)
+        {
+            return;
+        }
+        this.showPicker();
     },
 
 
@@ -36294,9 +36346,16 @@ isc.FormItem.registerStringMethods({
 
     //> @method formItem.pickerIconClick()
     // Notification method called when the +link{showPickerIcon,picker icon} is clicked.
+    // This method will fire after the +link{formItemIcon.click()} handler for the
+    // +link{formItem.pickerIconProperties,pickerIcon}. If the event is not cancelled,
+    // the standard +link{formItem.iconClick()} will also fire.
+    // <P>
+    // The default implementation will call +link{showPicker()}.
+    //
     // @param form (DynamicForm) the DynamicForm containing the picker icon's item.
     // @param item (FormItem) the FormItem containing the picker icon.
     // @param pickerIcon (FormItemIcon) the picker icon.
+    // @return (boolean) Return false to cancel the event.
     // @group pickerIcon
     // @visibility external
     //<
@@ -36308,13 +36367,18 @@ isc.FormItem.registerStringMethods({
     //  The icon's +link{FormItemIcon.click()} method if any is called first. Then, if the clicked
     //  icon is the +link{showPickerIcon,picker icon}, the +link{pickerIconClick()} method is
     //  called. Then, this method is called.
+    //  <P>
+    //  This event may be cancelled <smartclient>by returning false</smartclient> to
+    //  suppress the +link{formItem.click()} handler from also firing in response to the
+    //  user interaction.
+    //
     //  @group  formIcons
     //  @visibility external
     //  @param form (DynamicForm)   a pointer to this item's form
     //  @param  item    (FormItem)  a pointer to this form item
     //  @param  icon    (FormItemIcon)  a pointer to the icon that received the click event.
+    // @return (boolean) return false to cancel this event
     //<
-    // Note - developers would be more likely to set a click handler on each icon.
     iconClick : "form,item,icon",
 
     //> @method formItem.iconKeyPress()
@@ -39567,8 +39631,8 @@ isc.Validator.addClassProperties({
             },
 
             isRule:true,
-            supportedTargets:["FormItem"],
-            action : function (result, item, validator, record, component) {
+            supportedTargets:["FormItem", "Canvas"],
+            action : function (result, item, validator, record, component, componentType) {
                 // do nothing unless we actually ran (so if appliesWhen doesn't pass we don't
                 // run the 'populate' logic)
                 if (result != true) return;
@@ -39605,6 +39669,8 @@ isc.Validator.addClassProperties({
                     }
                 }
 
+                var name = (componentType == "Canvas" ? item : item.name);
+
                 var formulaResult = validator._formulaFunction(record, component);
                 // Treat non-numeric results as undefined
                 if (isNaN(formulaResult)) {
@@ -39612,63 +39678,72 @@ isc.Validator.addClassProperties({
                     formulaResult = undef;
                 }
 
-                if (item && item.setValue) {
+                if (validator.debugLogCategory && isc.Log.logIsDebugEnabled(validator.debugLogCategory)) {
+                    isc.Log.logDebug("Perform rule action with formula result: " + formulaResult, validator.debugLogCategory);
+                }
 
-                    var oldValue = item.getValue(),
-                        lastComputedValue = item._lastFormulaValue,
-                        isInitialValue = (lastComputedValue == null),
-                        isFieldCleared = (validator.autoPopulateClearedFlag != false && lastComputedValue != null && oldValue == null && !item.hasFocus),
-                        saveValue = !validator.overwriteInvalidValue || isInitialValue || isFieldCleared
-                    ;
+                if (componentType == "FormItem") {
+                    if (item && item.setValue) {
+
+                        var oldValue = item.getValue(),
+                            lastComputedValue = item._lastFormulaValue,
+                            isInitialValue = (lastComputedValue == null),
+                            isFieldCleared = (validator.autoPopulateClearedFlag != false && lastComputedValue != null && oldValue == null && !item.hasFocus),
+                            saveValue = !validator.overwriteInvalidValue || isInitialValue || isFieldCleared
+                        ;
 
 
-                    if (item._forceApplyFormula) {
-                        saveValue = true;
-                        delete item._forceApplyFormula;
-                    }
+                        if (item._forceApplyFormula) {
+                            saveValue = true;
+                            delete item._forceApplyFormula;
+                        }
 
-                    // When validator.overwriteInvalidValue=true
-                    //   - for an editable field, the current value will be replaced if the end user has not changed
-                    //     the value since the last time it was computed by the formula, or if the value of the field
-                    //     is invalid according to declared validators.
-                    //   - values calculated by the formula will always replace the current value of a non-editable field.
-                    //     This will take place as a side-effect of the handling of an editable field because the last
-                    //     computed value will never change by a user edit.
+                        // When validator.overwriteInvalidValue=true
+                        //   - for an editable field, the current value will be replaced if the end user has not changed
+                        //     the value since the last time it was computed by the formula, or if the value of the field
+                        //     is invalid according to declared validators.
+                        //   - values calculated by the formula will always replace the current value of a non-editable field.
+                        //     This will take place as a side-effect of the handling of an editable field because the last
+                        //     computed value will never change by a user edit.
 
-                    // It's key that a formula overwriting invalid user-edited values - an example is a formula
-                    // that auto-populates an end date field with start date + one day.  If the user then edits
-                    // the end date field, we still want to overwrite the end date with the formula result if the
-                    // user enters a new start date that is after the end date.
+                        // It's key that a formula overwriting invalid user-edited values - an example is a formula
+                        // that auto-populates an end date field with start date + one day.  If the user then edits
+                        // the end date field, we still want to overwrite the end date with the formula result if the
+                        // user enters a new start date that is after the end date.
 
-                    if (!saveValue && item.form && lastComputedValue != null) {
-                        saveValue = true;
-                        if (oldValue != lastComputedValue) {
-                            var validationOptions = {
-                                    skipServerValidation: true
-                                },
-                                fieldResult = item.form.validateField(item, item.validators, oldValue, item.form.getValues(), validationOptions)
-                            ;
-                            saveValue = (fieldResult && !fieldResult.valid);
+                        if (!saveValue && item.form && lastComputedValue != null) {
+                            saveValue = true;
+                            if (oldValue != lastComputedValue) {
+                                var validationOptions = {
+                                        skipServerValidation: true
+                                    },
+                                    fieldResult = item.form.validateField(item, item.validators, oldValue, item.form.getValues(), validationOptions)
+                                ;
+                                saveValue = (fieldResult && !fieldResult.valid);
+                            }
+                        }
+
+                        if (saveValue && oldValue != formulaResult) {
+                            item.setValue(formulaResult);
+                            item._lastFormulaValue = formulaResult;
+
+                            // Give any dependent rules via a rulesEngine a chance to fire.
+                            if (item.form && item.form.rulesEngine) {
+                                // Must use another thread if triggered from rules engine
+                                isc.Class.delayCall("processChanged", [item.form, item], 0, item.form.rulesEngine);
+                            }
+                        }
+                    } else if (item && component && component.setValue) {
+                        var fieldName = item.fieldName;
+                        if (fieldName == null) fieldName = item.dataPath;
+                        var oldValue = component.getValue(fieldName);
+                        if (oldValue != formulaResult) {
+                            component.setValue(fieldName, formulaResult);
                         }
                     }
-
-                    if (saveValue && oldValue != formulaResult) {
-                        item.setValue(formulaResult);
-                        item._lastFormulaValue = formulaResult;
-
-                        // Give any dependent rules via a rulesEngine a chance to fire.
-                        if (item.form && item.form.rulesEngine) {
-                            // Must use another thread if triggered from rules engine
-                            isc.Class.delayCall("processChanged", [item.form, item], 0, item.form.rulesEngine);
-                        }
-                    }
-                } else if (item && component && component.setValue) {
-                    var fieldName = item.fieldName;
-                    if (fieldName == null) fieldName = item.dataPath;
-                    var oldValue = component.getValue(fieldName);
-                    if (oldValue != formulaResult) {
-                        component.setValue(fieldName, formulaResult);
-                    }
+                } else {
+                    if (component.setProperty) component.setProperty(name, formulaResult);
+                    else component[name] = formulaResult;
                 }
             },
 
@@ -39708,8 +39783,8 @@ isc.Validator.addClassProperties({
             },
 
             isRule:true,
-            supportedTargets:["FormItem"],
-            action : function (result, item, validator, record, component) {
+            supportedTargets:["FormItem", "Canvas"],
+            action : function (result, item, validator, record, component, componentType) {
                 // do nothing unless we actually ran (so if appliesWhen doesn't pass we don't
                 // run the 'populate' logic)
                 if (result != true) return;
@@ -39746,64 +39821,75 @@ isc.Validator.addClassProperties({
                             isc.SummaryBuilder.generateFunction(formulaObject, fieldDescriptors, null, true);
                     }
                 }
+                var name = (componentType == "Canvas" ? item : item.name);
 
-                var formulaResult = validator._summaryFunction(record, item.name, component);
-                if (item.setValue) {
+                var formulaResult = validator._summaryFunction(record, name, (componentType == "Canvas" ? null : component));
 
-                    var oldValue = item.getValue(),
-                        lastComputedValue = item._lastFormulaValue,
-                        isInitialValue = (lastComputedValue == null),
-                        isFieldCleared = (validator.autoPopulateClearedFlag != false && lastComputedValue != null && oldValue == null && !item.hasFocus),
-                        saveValue = !validator.overwriteInvalidValue || isInitialValue || isFieldCleared
-                    ;
+                if (validator.debugLogCategory && isc.Log.logIsDebugEnabled(validator.debugLogCategory)) {
+                    isc.Log.logDebug("Perform rule action with formula result: " + formulaResult, validator.debugLogCategory);
+                }
+
+                if (componentType == "FormItem") {
+                    if (item.setValue) {
+
+                        var oldValue = item.getValue(),
+                            lastComputedValue = item._lastFormulaValue,
+                            isInitialValue = (lastComputedValue == null),
+                            isFieldCleared = (validator.autoPopulateClearedFlag != false && lastComputedValue != null && oldValue == null && !item.hasFocus),
+                            saveValue = !validator.overwriteInvalidValue || isInitialValue || isFieldCleared
+                        ;
 
 
-                    if (item._forceApplyFormula) {
-                        saveValue = true;
-                        delete item._forceApplyFormula;
-                    }
+                        if (item._forceApplyFormula) {
+                            saveValue = true;
+                            delete item._forceApplyFormula;
+                        }
 
-                    // When validator.overwriteInvalidValue=true
-                    //   - for an editable field, the current value will be replaced if the end user has not changed
-                    //     the value since the last time it was computed by the formula, or if the value of the field
-                    //     is invalid according to declared validators.
-                    //   - values calculated by the formula will always replace the current value of a non-editable field.
-                    //     This will take place as a side-effect of the handling of an editable field because the last
-                    //     computed value will never change by a user edit.
+                        // When validator.overwriteInvalidValue=true
+                        //   - for an editable field, the current value will be replaced if the end user has not changed
+                        //     the value since the last time it was computed by the formula, or if the value of the field
+                        //     is invalid according to declared validators.
+                        //   - values calculated by the formula will always replace the current value of a non-editable field.
+                        //     This will take place as a side-effect of the handling of an editable field because the last
+                        //     computed value will never change by a user edit.
 
-                    // It's key that a formula overwriting invalid user-edited values - an example is a formula
-                    // that auto-populates an end date field with start date + one day.  If the user then edits
-                    // the end date field, we still want to overwrite the end date with the formula result if the
-                    // user enters a new start date that is after the end date.
+                        // It's key that a formula overwriting invalid user-edited values - an example is a formula
+                        // that auto-populates an end date field with start date + one day.  If the user then edits
+                        // the end date field, we still want to overwrite the end date with the formula result if the
+                        // user enters a new start date that is after the end date.
 
-                    if (!saveValue && item.form && lastComputedValue != null) {
-                        saveValue = true;
-                        if (oldValue != lastComputedValue) {
-                            var validationOptions = {
-                                    skipServerValidation: true
-                                },
-                                fieldResult = item.form.validateField(item, item.validators, oldValue, item.form.getValues(), validationOptions)
-                            ;
-                            saveValue = (fieldResult && !fieldResult.valid);
+                        if (!saveValue && item.form && lastComputedValue != null) {
+                            saveValue = true;
+                            if (oldValue != lastComputedValue) {
+                                var validationOptions = {
+                                        skipServerValidation: true
+                                    },
+                                    fieldResult = item.form.validateField(item, item.validators, oldValue, item.form.getValues(), validationOptions)
+                                ;
+                                saveValue = (fieldResult && !fieldResult.valid);
+                            }
+                        }
+                        if (saveValue && oldValue != formulaResult) {
+                            item.setValue(formulaResult);
+                            item._lastFormulaValue = formulaResult;
+
+                            // Give any dependent rules via a rulesEngine a chance to fire.
+                            if (item.form && item.form.rulesEngine) {
+                                // Must use another thread if triggered from rules engine
+                                isc.Class.delayCall("processChanged", [item.form, item], 0, item.form.rulesEngine);
+                            }
+                        }
+                    } else if (component && component.setValue) {
+                        var fieldName = item.fieldName;
+                        if (fieldName == null) fieldName = item.dataPath;
+                        var oldValue = component.getValue(fieldName);
+                        if (oldValue != formulaResult) {
+                            component.setValue(fieldName, formulaResult);
                         }
                     }
-                    if (saveValue && oldValue != formulaResult) {
-                        item.setValue(formulaResult);
-                        item._lastFormulaValue = formulaResult;
-
-                        // Give any dependent rules via a rulesEngine a chance to fire.
-                        if (item.form && item.form.rulesEngine) {
-                            // Must use another thread if triggered from rules engine
-                            isc.Class.delayCall("processChanged", [item.form, item], 0, item.form.rulesEngine);
-                        }
-                    }
-                } else if (component && component.setValue) {
-                    var fieldName = item.fieldName;
-                    if (fieldName == null) fieldName = item.dataPath;
-                    var oldValue = component.getValue(fieldName);
-                    if (oldValue != formulaResult) {
-                        component.setValue(fieldName, formulaResult);
-                    }
+                } else {
+                    if (component.setProperty) component.setProperty(name, formulaResult);
+                    else component[name] = formulaResult;
                 }
             },
 
@@ -39886,6 +39972,10 @@ isc.Validator.addClassProperties({
 
                 var formulaResult = validator._formulaFunction(record, component);
 
+                if (validator.debugLogCategory && isc.Log.logIsDebugEnabled(validator.debugLogCategory)) {
+                    isc.Log.logDebug("Perform rule action with formula result: " + formulaResult, validator.debugLogCategory);
+                }
+
                 if (item.setValue) {
 
                     var itemType = item.type || item.defaultType,
@@ -39952,6 +40042,118 @@ isc.Validator.addClassProperties({
                 // if passed a non object as formulaVars, ignore it
 
                 if (rule.formulaVars == null || !isc.isAn.Object(rule.formulaVars)) return null;
+                var sourceField = [];
+                for (var key in rule.formulaVars) {
+                    sourceField.add(rule.formulaVars[key]);
+                }
+                return sourceField;
+            }
+        },
+
+        populateFromDataPath: {
+            type:"populateFromDataPath",
+            title:"Populate value from ruleScope DataPath",
+            description:"Populates a target with a DataPath value",
+            valueType:"custom",
+            dataType:"none",
+            getAttributesFromEditor:function (fieldName, item) {
+                // item stores value as an object formula/formulaVars
+                return item.getValue();
+            },
+            setEditorAttributes:function(fieldName, item, attributes) {
+                // Attributes we're interested in are formulaVars and formula
+                if (attributes != null && attributes.formula != null) {
+                    item.setValue({formula:attributes.formula, formulaVars:attributes.formulaVars});
+                } else {
+                    item.clearValue();
+                }
+            },
+
+            isRule:true,
+            supportedTargets:["FormItem", "Canvas"],
+            action : function (result, item, validator, record, component, componentType) {
+                // do nothing unless we actually ran (so if appliesWhen doesn't pass we don't
+                // run the 'populate' logic)
+                if (result != true) return;
+
+                var name = (componentType == "Canvas" ? item : item.name),
+                    path = validator.formula,
+                    formulaResult = isc.Canvas._getFieldValue(path, null, record)
+                ;
+
+                if (validator.debugLogCategory && isc.Log.logIsDebugEnabled(validator.debugLogCategory)) {
+                    isc.Log.logDebug("Perform rule action with formula result: " + formulaResult, validator.debugLogCategory);
+                }
+
+                if (componentType == "FormItem") {
+                    if (item.setValue) {
+
+                        var oldValue = item.getValue(),
+                            lastComputedValue = item._lastFormulaValue,
+                            isInitialValue = (lastComputedValue == null),
+                            isFieldCleared = (validator.autoPopulateClearedFlag != false && lastComputedValue != null && oldValue == null && !item.hasFocus),
+                            saveValue = !validator.overwriteInvalidValue || isInitialValue || isFieldCleared
+                        ;
+
+
+                        if (item._forceApplyFormula) {
+                            saveValue = true;
+                            delete item._forceApplyFormula;
+                        }
+
+                        // When validator.overwriteInvalidValue=true
+                        //   - for an editable field, the current value will be replaced if the end user has not changed
+                        //     the value since the last time it was computed by the formula, or if the value of the field
+                        //     is invalid according to declared validators.
+                        //   - values calculated by the formula will always replace the current value of a non-editable field.
+                        //     This will take place as a side-effect of the handling of an editable field because the last
+                        //     computed value will never change by a user edit.
+
+                        // It's key that a formula overwriting invalid user-edited values - an example is a formula
+                        // that auto-populates an end date field with start date + one day.  If the user then edits
+                        // the end date field, we still want to overwrite the end date with the formula result if the
+                        // user enters a new start date that is after the end date.
+
+                        if (!saveValue && item.form && lastComputedValue != null) {
+                            saveValue = true;
+                            if (oldValue != lastComputedValue) {
+                                var validationOptions = {
+                                        skipServerValidation: true
+                                    },
+                                    fieldResult = item.form.validateField(item, item.validators, oldValue, item.form.getValues(), validationOptions)
+                                ;
+                                saveValue = (fieldResult && !fieldResult.valid);
+                            }
+                        }
+                        if (saveValue && oldValue != formulaResult) {
+                            item.setValue(formulaResult);
+                            item._lastFormulaValue = formulaResult;
+
+                            // Give any dependent rules via a rulesEngine a chance to fire.
+                            if (item.form && item.form.rulesEngine) {
+                                // Must use another thread if triggered from rules engine
+                                isc.Class.delayCall("processChanged", [item.form, item], 0, item.form.rulesEngine);
+                            }
+                        }
+                    } else if (component && component.setValue) {
+                        var fieldName = item.fieldName;
+                        if (fieldName == null) fieldName = item.dataPath;
+                        var oldValue = component.getValue(fieldName);
+                        if (oldValue != formulaResult) {
+                            component.setValue(fieldName, formulaResult);
+                        }
+                    }
+                } else {
+                    if (component.setProperty) component.setProperty(name, formulaResult);
+                    else component[name] = formulaResult;
+                }
+            },
+
+            // By default populate rules depend on their formula source fields so
+            // changes to those fields should trigger the rule to re-run.
+            getDependentFields : function (rule, triggerEvent) {
+                // if passed a non object as formulaVars, ignore it
+                if (rule.formulaVars == null || !isc.isAn.Object(rule.formulaVars) || isc.isAn.emptyArray(rule.formulaVars)) return null;
                 var sourceField = [];
                 for (var key in rule.formulaVars) {
                     sourceField.add(rule.formulaVars[key]);
@@ -42786,6 +42988,45 @@ isc.CanvasItem.addMethods({
         return this.Super("blurItem", arguments);
     },
 
+    // Values management with nested editors
+    // If our canvas is (or contains) a DynamicForm, a common pattern is for our
+    // value to depend on the value of item(s) within that form.
+    // If updateValue / valueIsDirty is called on us, we really want the nested item
+    // to be up to date too (its 'changed' handler will likely already handle calling
+    // storeValue on us if necessary).
+    // Therefore catch this case by checking for a nested focus item and passing the
+    // dirty/update methods through to it
+    _getNestedFocusItem : function () {
+        var canvas = this.canvas,
+            focusCanvas = isc.EH.getFocusCanvas();
+
+        if (canvas && focusCanvas &&
+            isc.isA.DynamicForm(focusCanvas) &&
+            canvas.contains(focusCanvas, true))
+        {
+            return focusCanvas.getFocusSubItem();
+        }
+    },
+
+    _itemValueIsDirty : function () {
+        if (this.Super("_itemValueIsDirty", arguments)) return true;
+
+        var embeddedFocusItem = this._getNestedFocusItem();
+        if (embeddedFocusItem) {
+            return embeddedFocusItem._itemValueIsDirty();
+        }
+        return false;
+    },
+
+    updateValue : function () {
+        var embeddedFocusItem = this._getNestedFocusItem();
+        if (embeddedFocusItem) {
+            embeddedFocusItem.updateValue();
+        }
+        return this.Super("updateValue", arguments);
+
+    },
+
     // observation of focusChanged / childFocusChanged on the Canvas
 
     canvasFocusChanged : function () {
@@ -43633,7 +43874,28 @@ isc.TextItem.addProperties({
     // @visibility external
     //<
     // default implementation of formItem.shouldSaveOnEnter() returns this
-    saveOnEnter: true
+    saveOnEnter: true,
+
+    //> @attr textItem.escapeHTML (Boolean : true : IRW)
+    // By default HTML characters will be escaped when +link{canEdit} is false and
+    // +link{readOnlyDisplay} is "static", so that the raw value of the field (for
+    // example <code>"&lt;b&gt;AAA&lt;/b&gt;"</code>) is displayed to the user rather than
+    // the interpreted HTML (for example <code>"<b>AAA</b>"</code>).  Setting
+    // <code>escapeHTML</code> false will instead force HTML values in a textItem to be
+    // interpreted by the browser in that situation.
+    // @group appearance
+    // @visibility external
+    //<
+    escapeHTML: true,
+
+
+    getCanEscapeHTML : function () {
+        if ((this._isPrinting() && this.printFullText) || this.renderAsStatic()) {
+            return true;
+        }
+        return this.canEscapeHTML;
+    }
+
 });
 
 isc.TextItem.addMethods({
@@ -44089,7 +44351,9 @@ isc.TextItem.addMethods({
             // Moz if appropriate so we don't get the red wavy line under email addresses etc.
 
 
-            if (isc.Browser.isMoz || isc.Browser.isSafari) {
+            if (isc.Browser.isMoz || isc.Browser.isSafari || isc.Browser.isEdge ||
+                (isc.Browser.isIE && isc.Browser.version >= 10))
+            {
                 if (this.getBrowserSpellCheck()) template[template.length] = " spellcheck=true";
                 else template[template.length] = " spellcheck=false"
             }
@@ -51152,11 +51416,6 @@ isc.SelectItem.addProperties({
     // override emptyDisplayValue to show a nonbreaking space so styling works correctly
     emptyDisplayValue:"&nbsp;",
 
-    //> @method SelectItem.showPicker()
-    // @include FormItem.showPicker()
-    // @visibility external
-    //<
-
     //> @attr SelectItem.textBoxStyle (FormItemBaseStyle : "selectItemText", [IRA])
     // @include FormItem.textBoxStyle
     // @visibility external
@@ -51691,6 +51950,15 @@ isc.SelectItem.addMethods({
 
 
 
+    //> @method selectItem.showPicker()
+    // Method to show a picker for this item. By default this method is called if the user
+    // clicks on a +link{showPickerIcon,pickerIcon}.  May also be called programmatically.
+    // <P>
+    // Overridden from the default +link{formItem.showPicker()} implementation to show
+    // the +link{pickList}
+    //
+    // @visibility external
+    //<
     showPicker : function (waitForData, queueFetches) {
         this.showPickList(waitForData, queueFetches);
     },
@@ -59707,7 +59975,19 @@ isc.TextAreaItem.addMethods({
     },
 
 
-    escapeHTML:true,
+    //> @attr textAreaItem.escapeHTML (Boolean : true : IRW)
+    // By default HTML characters will be escaped when +link{canEdit} is false and
+    // +link{readOnlyDisplay} is "static", so that the raw value of the field (for
+    // example <code>"&lt;b&gt;AAA&lt;/b&gt;"</code>) is displayed to the user rather than
+    // the interpreted HTML (for example <code>"<b>AAA</b>"</code>).  Setting
+    // <code>escapeHTML</code> false will instead force HTML values in a textAreaItem to be
+    // interpreted by the browser in that situation.
+    // @group appearance
+    // @visibility external
+    //<
+    escapeHTML: true,
+
+
     getCanEscapeHTML : function () {
         if ((this._isPrinting() && this.printFullText) || this.renderAsStatic()) {
             return true;
@@ -59796,7 +60076,9 @@ isc.TextAreaItem.addMethods({
 
                     // enable / disable native spellcheck in Moz
                     // Same setting in Safari - see comments in TextItem.js
-                    ((isc.Browser.isMoz || isc.Browser.isSafari) ?
+
+                    ((isc.Browser.isMoz || isc.Browser.isSafari || isc.Browser.isEdge ||
+                      (isc.Browser.isIE && isc.Browser.version >= 10)) ?
                         (this.getBrowserSpellCheck() ? " spellcheck=true" : " spellcheck=false") :
                         null),
                     (isc.Browser.isSafari && this.browserAutoCapitalize == false
@@ -66080,6 +66362,11 @@ comboFormDefaults: {
     writeFormTag: false
 },
 
+//> @attr MultiComboBoxItem.optionOperationId (String : null : [IR])
+// @include FormItem.optionOperationId
+// @visibility external
+//<
+
 //> @attr MultiComboBoxItem.displayField (String : null : IRA)
 // The <code>displayField</code> of the combo box.
 // @see ComboBoxItem.displayField
@@ -67095,6 +67382,7 @@ _createCanvas : function () {
     var comboBoxProperties = isc.addProperties({ ID: this.ID + isc._underscore + "comboBox" }, this.comboBoxDefaults, this.comboBoxProperties, {
         creator: this,
         optionDataSource: this.optionDataSource,
+        optionOperationId: this.optionOperationId,
         autoFetchData: this.autoFetchData,
         valueMap: this.valueMap,
         displayField: this.displayField,
@@ -69609,6 +69897,8 @@ isc.SpinnerItem.addProperties({
     //<
     unstackedTextBoxStyle: "textItem",
 
+    //readOnlyTextBoxStyle: "staticTextItem",
+
     //> @attr spinnerItem.unstackedPrintTextBoxStyle (FormItemBaseStyle : null : IR)
     // In +link{SpinnerItem.writeStackedIcons,unstacked mode}, the base CSS class name for the
     // <code>SpinnerItem</code>'s text box element when printed. If unset, then +link{SpinnerItem.unstackedTextBoxStyle}
@@ -70058,8 +70348,20 @@ isc.SpinnerItem.addMethods({
     },
 
     getIconHTML : function (icon) {
-        if (this._isPrinting()) return null;
+        if (this._isPrinting() || (this.getCanEdit() == false && this.renderAsStatic())) {
+            return null;
+        }
         return this.Super("getIconHTML", arguments);
+    },
+
+    getControlStyle : function () {
+        // use the readOnlyTextBoxStyle with canEdit: false and readOnlyDisplay: "static"
+        var tbStyle = (this.getCanEdit() == false && this.renderAsStatic() ?
+                this.getReadOnlyTextBoxStyle() : this.controlStyle),
+            styleName = this._getCellStyle(tbStyle)
+        ;
+
+        return styleName;
     },
 
     getTextBoxStyle : function () {
@@ -78460,6 +78762,13 @@ isc.NestedEditorItem.addMethods({
             dynProps.showComplexFields = false;
         }
 
+        if (this.grid) {
+            // if this item is being used as an editor in a grid, prevent the child editor form
+            // from overflowing the item - fill the item width and then apply overflow: CLIP_H
+            dynProps.width = this.getWidth();
+            dynProps.overflow = isc.Canvas.CLIP_H;
+        }
+
         dynProps.values = this.getValue();
 
         this.addAutoChild("editor", dynProps);
@@ -80354,7 +80663,7 @@ isc.RelativeDateItem.addProperties({
     // <P>
     // A relative date such as "n days from now" is normally shifted to the end of the day when
     // used as a range endpoint, and the beginning of the day when used as the beginning of a range.
-    // (The rounding direction on some item can be specified via
+    // (The rounding direction on some items can be specified via
     // +link{relativeDateItem.rangePosition}).
     // This causes the intuitive behavior that "from yesterday to today" is from the beginning of
     // yesterday to the end of today, and that "from today until 5 days from now" includes the
@@ -81069,7 +81378,8 @@ isc.RelativeDateItem.addMethods({
         if (this.showCalculatedDateField) {
             items[blurbIndex] = isc.addProperties({}, this.calculatedDateFieldDefaults,
                 this.calculatedDateFieldProperties,
-                { cellStyle: this.getHintStyle(), defaultValue: this.invalidCalculatedDatePrompt },
+                { cellStyle: this.getHintStyle(), textBoxStyle: this.getHintStyle(),
+                    defaultValue: this.invalidCalculatedDatePrompt },
                 { name: "calculatedDateField" }
             );
         }
@@ -84420,7 +84730,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v12.0d_2017-10-28/LGPL Deployment (2017-10-28)
+  Version SNAPSHOT_v12.0d_2017-11-23/LGPL Deployment (2017-11-23)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

@@ -1,7 +1,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v12.0d_2017-10-28/LGPL Deployment (2017-10-28)
+  Version SNAPSHOT_v12.0d_2017-11-23/LGPL Deployment (2017-11-23)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,9 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
 
-if (window.isc && isc.version != "SNAPSHOT_v12.0d_2017-10-28/LGPL Deployment" && !isc.DevUtil) {
+if (window.isc && isc.version != "SNAPSHOT_v12.0d_2017-11-23/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v12.0d_2017-10-28/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v12.0d_2017-11-23/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -29655,6 +29655,9 @@ _getDataChangedRecord : function (originalRecord, rowNum, type) {
 
 dataChanged : function (type, originalRecord, rowNum, updateData, filterChanged, dataFromCache) {
     if (isc._traceMarkers) arguments.__this = this;
+    // This may be a recursive call to dataChanged() from us performing a local filter on
+    // our underlying ResultSet object used for filtering. This can be ignored.
+    if (this._filteringLocalDataFromDataChanged) return;
 
     // set a flag so we know we're handling dataChanged
     // This prevents us from causing unnecessary additional redraws from dataChanged on the
@@ -29795,13 +29798,13 @@ dataChanged : function (type, originalRecord, rowNum, updateData, filterChanged,
                         var node = nodes[0];
                         for (var i = 0; i < groupByFields.length; i++) {
                             var undef, fieldName = groupByFields[i];
-                            if (originalRecord[fieldName] === undef) continue;
 
                             var field = this.getUnderlyingField(fieldName),
                                 newValue = this._getGroupValue(updatedRecord[fieldName],
                                                                updatedRecord, field, fieldName),
                                 oldValue = this._getGroupValue(originalRecord[fieldName],
-                                                               originalRecord, field, fieldName);
+                                                               originalRecord, field, fieldName)
+                            ;
                             if (newValue != oldValue) {
                                 this._remapEditRows();
 
@@ -29872,11 +29875,13 @@ dataChanged : function (type, originalRecord, rowNum, updateData, filterChanged,
             }
 
         } else {
-            if (this.filterLocalData && !this.data._resorting && this.data.resort) this.data.resort();
+            if (this.filterLocalData && !this.data._resorting && this.data.resort) {
+                this.data.resort();
+            }
         }
     }
 
-    if (this.filterLocalData && !this._filteringLocalDataFromDataChanged) {
+    if (this.filterLocalData) {
         var baseData = this.getOriginalData();
         if (baseData.filterLocalData) {
             this._filteringLocalDataFromDataChanged = true;
@@ -30015,12 +30020,21 @@ dataChanged : function (type, originalRecord, rowNum, updateData, filterChanged,
 
     if (this.hilites) this.applyHilites();
 
-
     if (!this._suppressRedrawOnDataChanged) {
         // recalculate autoFitWidth field widths to fit the new data
         if (resetAutoFitWidths) this.updateFieldWidthsForAutoFitValue(this._$dataChanged);
 
-        this.redrawForDataChanged();
+
+        var mustRedraw = true;
+        if (!this.forceRedrawOnDataChanged &&
+            type == "update" && originalRecord != null) {
+            var currentRowNum = this.data.indexOf(originalRecord);
+            if (currentRowNum != null && currentRowNum != -1) {
+                this.refreshRow(currentRowNum);
+                mustRedraw = false;
+            }
+        }
+        if (mustRedraw) this.redrawForDataChanged();
     }
 
     // Note - a regroup may require a re-selection of the prior-to-regroup selection
@@ -30034,6 +30048,10 @@ dataChanged : function (type, originalRecord, rowNum, updateData, filterChanged,
 
     if (filterChanged) this._provideCriteriaToRuleContext();
 },
+// forceRedrawOnDataChanged - flag to disable targetted row refresh if we got
+// "dataChanged" for a single updated record.
+
+forceRedrawOnDataChanged:false,
 
 
 _setMarkForRegroup : function (
@@ -30094,7 +30112,6 @@ _forceUpdateFieldWidths : function (reason) {
 // canSortClientOnly value and current data-state
 _$new_data: "New dataset loaded",
 _dataArrived : function (startRow, endRow) {
-
     var sortField = this._getSortFieldNum();
 
 
@@ -30179,7 +30196,11 @@ _dataArrived : function (startRow, endRow) {
     }
 
     this._restoreBodyOverflow();
-    this._markBodyForRedraw();
+
+
+    if (!this._handlingDataChanged) {
+        this._markBodyForRedraw();
+    }
 
     this._fromDataArrived = true;
     this.dataArrived(startRow, endRow);
@@ -35071,7 +35092,7 @@ redrawHeader : function(rightNow) {
 // <smartgwt><p>
 // <b>Note: This is an override point.</b></smartgwt>
 //
-// @param   record (ListGridRecord) Record associated with this cell. May be <code>null</code>
+// @param   [record] (ListGridRecord) Record associated with this cell. May be <code>null</code>
 //                                  for a new edit row at the end of this grid's data set.
 // @param   rowNum  (number)    row number for the cell
 // @param   colNum  (number)    column number of the cell
@@ -36924,9 +36945,6 @@ getEditItemCellValue : function (record, rowNum, colNum) {
     // If we have any errors for the field, set them on the form item too so the error icon
     // gets rendered out
     var errors = this.getCellErrors(rowNum, colNum);
-    if (errors) {
-        this._editRowForm.setFieldErrors(itemName, errors);
-    }
 
     // get the HTML for the form item
     // Relies on the form item being present - this is fine as long as our logic to create
@@ -36952,11 +36970,6 @@ getEditItemCellValue : function (record, rowNum, colNum) {
 
     var HTML = item.getStandaloneItemHTML(item.getValue(), false, true);
 
-    // once we've retrieve the HTML, clear the errors so if we re-render the form for another item
-    // etc, we don't end up with errors hanging around
-    if (errors) {
-        this._editRowForm.setFieldErrors(itemName, null);
-    }
 
 
 
@@ -36999,15 +37012,7 @@ getInactiveEditorCellValue : function (record, rowNum, colNum, suppressContext) 
     } else {
 
         var context = {grid:this.getID(), record:record, rowNum:rowNum, colNum:colNum}
-
-        var errors = this.getCellErrors(rowNum, colNum);
-        if (errors) {
-            this._editRowForm.setFieldErrors(itemName, errors);
-        }
         HTML = item.getInactiveEditorHTML(value, false, true, context);
-        if (errors) {
-            this._editRowForm.setFieldErrors(itemName, null);
-        }
 
         // the inactiveEditorContext ID gets stored directly on the cell
         // When we refresh the cell we'll throw away this inactive context (and potentially create
@@ -43711,7 +43716,7 @@ getFieldFilterEditorProperties : function (field) {
             lgField: field,
             init : function () {
                 this.Super("init", arguments);
-                this._defaultOperator = this.getOperator();
+                this._defaultOperator = this.lgField.filterOperator || this.getOperator();
             },
             setCriterion : function (criterion) {
                 this.Super("setCriterion", arguments);
@@ -44677,9 +44682,9 @@ _updateGroupForEditValueChange : function (rowNum) {
     }
 
     if (shouldRegroup) {
-        // call _remapEditRows() before _incrementalRegroup, as does dataChanged()
+
+        this._incrementalRegroup(node, node);
         this._remapEditRows();
-        this._incrementalRegroup(null, node, curVals);
         this.markForRedraw();
     }
     return shouldRegroup;
@@ -45840,6 +45845,60 @@ makeEditForm : function (rowNum, colNum) {
 
             showErrorIcons:this.showErrorIcons,
 
+            // Override hasFieldErrors/getFieldErrors:
+            // We don't apply the validation errors directly
+            // to the form but we do need this method to return the appropriate errors
+            // if showErrorStyle etc gets set to true for the item itself
+            hasFieldErrors : function (fieldName) {
+                var grid = this.grid;
+                if (grid) {
+                    var item;
+                    if (isc.isAn.Object(fieldName)) {
+                        item = fieldName;
+                        fieldName = item.name;
+                    }
+                    var rowNum = this._determineRowNum(item || fieldName);
+                    return grid.cellHasErrors(rowNum, fieldName);
+                }
+                return this.Super("hasFieldErrors", arguments);
+            },
+            getFieldErrors : function (fieldName) {
+                var grid = this.grid;
+                if (grid) {
+                    var item;
+                    if (isc.isAn.Object(fieldName)) {
+                        item = fieldName;
+                        fieldName = item.name;
+                    }
+                    var rowNum = this._determineRowNum(item || fieldName);
+                    return grid.getCellErrors(rowNum, fieldName);
+                }
+                return this.Super("getFieldErrors", arguments);
+            },
+            _determineRowNum : function (fieldName) {
+                var grid = this.grid;
+                var item;
+                // handle being passed the item rather than the fieldName
+                if (isc.isAn.Object(fieldName)) {
+                    item = fieldName;
+                    fieldName = item.name
+                } else {
+                    item = this.getItem(fieldName);
+                }
+                var rowNum;
+                // Determining the rowNum: we need to handle the standard
+                // case (getting HTML for the edit row) and the case where we're
+                // writing out inactive editor HTML [used for 'alwaysShowEditors']
+
+                if (item && item._retrievingInactiveHTML) {
+                    var context = item.getInactiveContext(item._currentInactiveContext);
+                    rowNum = context.rowNum;
+                } else {
+                    rowNum = grid.getEditRow();
+                }
+                return rowNum;
+            },
+
             // pass it this widget's datasource too
             dataSource:this.dataSource,
             // suppressAllDSFields - this ensures that if we are created without any
@@ -46761,6 +46820,10 @@ getEditItem : function (editField, record, editedRecord, rowNum, colNum, width, 
         {
             item.editorType = (this._datetimeEditorTypes[eT] == true? this._$datetime : this._$date);
             item.useTextField = true;
+
+
+            item.selectOnFocus = true;
+
             // This improves the appearance for this item type
             item.cellPadding = 0;
             // Don't apply a style to the sub items' cells - we don't want padding, etc.
@@ -46774,6 +46837,9 @@ getEditItem : function (editField, record, editedRecord, rowNum, colNum, width, 
             item.editorType = this._$time;
             var ds = this.getDataSource();
             if (ds && ds.allowAdvancedCriteria == false) item.allowExpressions = false;
+
+
+            item.selectOnFocus = true;
         }
 
         //>PopUpTextAreaItem
@@ -47100,7 +47166,11 @@ refreshCellValue : function (rowNum, colNum, refreshingRow, allowEditCellRefresh
                 // refocus. Otherwise allow the blur handler to fire, since we won't be
                 // restoring focus.
                 if (cellWillShowEditor) {
-                     form._blurFocusItemWithoutHandler();
+                    // Explicitly store focus for redraw, so we can refocus after
+                    // redraw using the standard DF redraw mechanism
+
+                    editItem._storeFocusForRedraw();
+                    form._blurFocusItemWithoutHandler();
                 }
                 else editItem.blurItem();
             }
@@ -47137,7 +47207,7 @@ refreshCellValue : function (rowNum, colNum, refreshingRow, allowEditCellRefresh
 
             if (cellHasFocus) {
                 editItem._suppressGridTextSelection = true;
-                form._focusInItemWithoutHandler(editItem);
+                editItem._refocusAfterRedraw();
                 editItem._suppressGridTextSelection = false;
             }
         }
@@ -47693,7 +47763,7 @@ getEditedRecord : function (rowNum, colNum, suppressUpdate) {
     // DBC._duplicateValues() now copes with being passed a null component (it just performs a
     // straight schemaless dup)
     isc.Canvas._duplicateValues(this.getEditForm(), record, baseRecordCopy, null,
-                                this.keepNativeJavaObjs !== false);
+                                this.keepNativeJavaObjs !== false, this.getDataSource());
     this.combineRecords(rtn, baseRecordCopy);
     this.combineRecords(rtn, editValues);
     if (rtn.__ref) rtn.__ref = null;
@@ -47970,6 +48040,10 @@ _displayNewEditValues : function (rowNum, colNum, changedFields, errors) {
         // undrawn cell - just continue to the next field
         // [note do this after modifying edit form values]
         if (fieldColNum == -1) continue;
+
+        // If we're in the middle of handle dataChanged, no need to refresh any cells -
+        // We'll mark for redraw at the end of dataChanged
+        if (this._handlingDataChanged) continue;
         hasVisibleChanges = true;
 
         if (!editItemDrawn) {
@@ -49900,7 +49974,7 @@ storeUpdatedEditorValue : function (suppressChange, editCol) {
 
             // if the value is unchanged, carry on.
             if (this.fieldValuesAreEqual(
-                    this.getSpecifiedField(fieldName),
+                    this.getUnderlyingField(fieldName),
                     fieldVal, currentValues[fieldName]))
             {
                 continue;
@@ -49927,7 +50001,7 @@ storeUpdatedEditorValue : function (suppressChange, editCol) {
             var value = formValues[fieldName];
             // if the value is unchanged, carry on.
             if (this.fieldValuesAreEqual(
-                    this.getSpecifiedField(fieldName),
+                    this.getUnderlyingField(fieldName),
                     value, currentValues[fieldName]))
             {
                 continue;
@@ -51805,7 +51879,16 @@ _saveLocally : function (editInfo, saveCallback) {
 
         // handle deferred dataChanged now that loop is done
 
-        if (dataChanged) this.getOriginalData().dataChanged();
+        if (dataChanged) {
+            var origData = this.getOriginalData(),
+                passParams = !this.forceRedrawOnDataChanged &&
+                            isc.ResultSet && isc.isA.ResultSet(origData);
+            if (passParams) {
+                origData.dataChanged("update", record, rowNum, record);
+            } else {
+                origData.dataChanged();
+            }
+        }
 
 
         this.combineValuesRecursively(record, newValues, seenFieldNames);
@@ -60314,7 +60397,7 @@ getFilterOperatorMenuItems : function (field, includeTitleItem) {
             targetField: field,
             fieldName: field.name,
             operator: operator,
-            checked: (field.filterOperator || formItem.getOperator()) == operator.ID,
+            checked: (formItem.getOperator() || field.filterOperator) == operator.ID,
             click: function(target, item, menu) {
                 this.grid.setFieldSearchOperator(this.targetField, this.operator)
             }
@@ -64447,13 +64530,28 @@ _incrementalRegroup : function (record, originalRecord, newValues) {
         this._lastStoredSelectedState = this.getSelectedState(true);
     }
 
-    // first remove record
-    var groups = originalRecord ? this.data.getParents(originalRecord) : [],
-        removeSucceeded = originalRecord ? this.data.remove(originalRecord) : false,
-        originalGroupNode = null
-    ;
+    // cache the current group chain associated with the original record
+    var groups = originalRecord ? this.data.getParents(originalRecord) : [];
+
+
+    if (this.groupTree == this.data && record == originalRecord) {
+        originalRecord = null;
+    }
+
+    // if an original record is still present, remove it now before ListGrid._addRecordToGroup()
+    var removeSucceeded = originalRecord ? this.data.remove(originalRecord) : false;
+
+    // re-add record to group.
+    // record may be null if eg adding a new record to unbound data. If it is,
+    // add the new values instead - they represent what was added.
+    // if original remove failed and we had data to begin with, don't add -
+    // it's already been added elsewhere
+    if (!(originalRecord && !removeSucceeded) && (record || newValues)) {
+        this._addRecordToGroup(this.groupTree, record || newValues, true, true);
+    }
 
     // next recalc group titles and remove empty groups
+    var originalGroupNode = null;
     for (var i = 0; i < groups.length - 1; i++) {
         var currGroup = groups[i],
             members = currGroup.groupMembers,
@@ -64472,15 +64570,6 @@ _incrementalRegroup : function (record, originalRecord, newValues) {
             }
             if (!originalGroupNode) originalGroupNode = currGroup;
         }
-    }
-
-    // re-add record to group.
-    // record may be null if eg adding a new record to unbound data. If it is,
-    // add the new values instead - they represent what was added.
-    // if original remove failed and we had data to begin with, don't add -
-    // it's already been added elsewhere
-    if (!(originalRecord && !removeSucceeded) && (record || newValues)) {
-        this._addRecordToGroup(this.groupTree, record || newValues, true, true);
     }
 
     // reset this flag so that future calls to toggleFolder() don't bail
@@ -65023,6 +65112,10 @@ _getGroupValue : function (fieldValue, record, field, fieldName,
     if (displayField == null) displayField = field.displayField;
     if (valueMap     == null) valueMap     = field.valueMap;
 
+
+    var undef;
+    if (fieldValue === undef) fieldValue = null;
+
     if (field.getGroupValue) {
         fieldValue = field.getGroupValue(fieldValue, record, field, fieldName, this);
     } else if (userFormula) {
@@ -65055,6 +65148,7 @@ _getGroupValue : function (fieldValue, record, field, fieldName,
 },
 
 // helper function for adding a record to an existing group, or creating a new group
+
 _addRecordToGroup : function (groupTree, record, setGroupTitles, openFolders) {
     return this.__addRecordToGroup(
         this.getGroupByFields(), this.data, this.emptyCellValue,
@@ -65080,24 +65174,24 @@ __addRecordToGroup : function (
         node;
 
 
+
+    // recordNum passed to 'getRawCellValue' should be position of data in this.data
+    // in order for things like edit-values to behave as expected.
+    // Note that this may not reflect the position in the 'currData' [this.originalData]
+    // and indeed can legitimately be -1 at this point if we're reacing to
+    // a record being added to our dataSet.
+
+    var recordNum = dataOpenList != null ? dataOpenList.indexOf(record) : data.indexOf(record);
+
+
+    var editedRecord = this.rowEditNotComplete(recordNum) ?
+                       this.getEditedRecord(recordNum) : record;
+
     for (var i = 0; i < groupFields.length; i++) {
         // find index of field w/ fieldName
         var fieldName = groupFields[i],
-            field = this.getUnderlyingField(fieldName),
-            recordNum;
-
-        // recordNum passed to 'getRawCellValue' should be position of data in this.data
-        // in order for things like edit-values to behave as expected.
-        // Note that this may not reflect the position in the 'currData' [this.originalData]
-        // and indeed can legitimately be -1 at this point if we're reacing to
-        // a record being added to our dataSet.
-
-        if (dataOpenList != null) {
-            recordNum = dataOpenList.indexOf(record);
-        } else {
-            recordNum = data.indexOf(record);
-        }
-
+            field = this.getUnderlyingField(fieldName)
+        ;
         var userFormula = groupByFieldUserFormulas == null ?
                 field.userFormula : groupByFieldUserFormulas[i],
             userSummary = groupByFieldUserSummaries == null ?
@@ -65116,7 +65210,7 @@ __addRecordToGroup : function (
 
         // compute the group value from the raw cell value and record
         var originalValue = fieldValue;
-        fieldValue = this._getGroupValue(fieldValue, record, field, fieldName,
+        fieldValue = this._getGroupValue(fieldValue, editedRecord, field, fieldName,
             userFormula, userSummary, displayField, valueMap, nullGroupTitle);
 
         // find the group, if it exists
@@ -65166,6 +65260,10 @@ __addRecordToGroup : function (
         // move to next group
         currRoot = node;
     }
+
+
+    if (groupTree == data) data.remove(record);
+
     // add record to group
     if (showGroupSummary) groupTree.addBeforeSummaries(record, currRoot);
     else                  groupTree.add               (record, currRoot);
@@ -73645,6 +73743,14 @@ showAvailableSampleValue: true,
 //<
 showSampleValues: true,
 
+//> @attr fieldPicker.canFilterSampleValue (Boolean : false : IR)
+// Whether the current fields' filter row allows the sample value column to be filtered.
+// @see sampleValueTitle
+// @see sampleRecord
+// @visibility external
+//<
+canFilterSampleValue: false,
+
 //> @attr fieldPicker.confirmText (String : "Must save pending changes to proceed. OK?" : [IR])
 // @group i18nMessages
 // @visibility external
@@ -73840,7 +73946,7 @@ createDataSourceFromFields : function (fields, exclusions, available, skipDuplic
             fields.add({
                 name: this.sampleValueField,
                 title: this.sampleValueTitle,
-                canFilter: false,
+                canFilter: this.canFilterSampleValue,
                 canEdit: false,
                 type: "any"
             });
@@ -89308,6 +89414,60 @@ helpTextIntro: "Building Formula Columns<P>For basic arithmetic, type in symbols
 // @visibility external
 //<
 
+//> @attr formulaBuilder.nearbyComponentFieldPrompt (String : "This value comes from the '${fieldName}' field in the nearby component [${componentName}]" : IR)
+// The prompt to show when mouse hovers over a field supplied by
+// a nearby component through +link{targetRuleScope}.
+// <p>
+// The prompt is a dynamic string and is formatted like +link{label.dynamicContents}
+// where the following variables are available:
+// <ul>
+// <li>fieldName</li>
+// <li>componentName</li>
+// </ul>
+//
+// @see currentComponentFieldPrompt
+// @see dataSourceFieldPrompt
+// @group i18nMessages
+// @visibility external
+//<
+nearbyComponentFieldPrompt: "This value comes from the '${fieldName}' field in the nearby component [${componentName}]",
+
+//> @attr formulaBuilder.currentComponentFieldPrompt (String : "This value comes from the '${fieldName}' field in the current component [${componentName}]" : IR)
+// The prompt to show when mouse hovers over a field supplied by
+// the current component through +link{targetRuleScope}.
+// <p>
+// The prompt is a dynamic string and is formatted like +link{label.dynamicContents}
+// where the following variables are available:
+// <ul>
+// <li>fieldName</li>
+// <li>componentName</li>
+// </ul>
+//
+// @see nearbyComponentFieldPrompt
+// @see dataSourceFieldPrompt
+// @group i18nMessages
+// @visibility external
+//<
+currentComponentFieldPrompt: "This value comes from the '${fieldName}' field in the current component [${componentName}]",
+
+//> @attr formulaBuilder.dataSourceFieldPrompt (String : "This value comes from the '${fieldName}' field in any nearby component that uses DataSource '${dataSource}'. Values that are edited by end users are preferred." : IR)
+// The prompt to show when mouse hovers over a field supplied by
+// a DataSource through +link{targetRuleScope}.
+// <p>
+// The prompt is a dynamic string and is formatted like +link{label.dynamicContents}
+// where the following variables are available:
+// <ul>
+// <li>fieldName</li>
+// <li>dataSource</li>
+// </ul>
+//
+// @see currentComponentFieldPrompt
+// @see nearbyComponentFieldPrompt
+// @group i18nMessages
+// @visibility external
+//<
+dataSourceFieldPrompt: "This value comes from the '${fieldName}' field in any nearby component that uses DataSource '${dataSource}'. Values that are edited by end users are preferred.",
+
 // ------------------------------------------
 // autoChildren
 //
@@ -89332,7 +89492,7 @@ fieldKeyDefaults: {_constructor: "ListGrid",
     autoFitExpandField:"title",
     detailField: "title",
     canHover: true,
-    hoverMode: "detailField",
+    hoverWidth: 250,
     defaultFields: [
         {name: "mappingKey", width: 40},
         {name: "title", width: "*"},
@@ -89341,6 +89501,40 @@ fieldKeyDefaults: {_constructor: "ListGrid",
         {name: "type", showIf: "false"},
         {name: "length", showIf: "false"}
     ],
+    cellHoverHTML : function (record, rowNum, colNum) {
+        if (!this.creator.targetRuleScope) return record[this.detailField];
+
+        var fieldName = this.getFieldName(colNum);
+        if (fieldName != "title" && fieldName != "sourceDS") return "";
+
+        var componentPrefix,
+            ds,
+            message = record.title,
+            vars = {}
+        ;
+        if (record.sourceDSID) {
+            ds = isc.DS.get(record.sourceDSID);
+            if (ds && ds.criteriaBasePath) componentPrefix = ds.criteriaBasePath;
+        }
+
+        if (componentPrefix) {
+            message = this.creator.nearbyComponentFieldPrompt;
+
+            var name = record.name.replace(componentPrefix+".","");
+            if (record.criteriaPath) {
+                name = record.title;
+            } else if (this.creator.localComponent && record.name.split(".")[0] == this.creator.localComponent.getID()) {
+                message = this.creator.currentComponentFieldPrompt;
+            }
+            vars.fieldName = record.name.replace(componentPrefix+".","");
+            vars.componentName = ds.pluralTitle;
+        } else if (record.sourceDSID) {
+            message = this.creator.dataSourceFieldPrompt;
+            vars.fieldName = record.name.replace(record.sourceDSID+".","");
+            vars.dataSource = record.sourceDSID;
+        }
+        return message.evalDynamicString(this, vars);
+    },
     // It's intuitive to attempt to click on the key grid to input entries.
     // Therefore allow this.
     recordClick : function (viewer, record) {
@@ -89422,7 +89616,7 @@ instructionsTextStart: "The following fields are available for use in this ${bui
 instructionsDefaults: {
     _constructor: "DynamicForm",
     height: 1,
-    colWidths: ["*", 1],
+    colWidths: ["*", 45],
     extraSpace: 10,
     overflow: "visible"
 },
@@ -89807,9 +90001,9 @@ getFields : function () {
             var ds = this.dataSources[i],
                 fields = ds.getFields();
             for (var field in fields) {
-                var fbField = isc.addProperties({}, fields[field],
-                    {name:(ds.criteriaBasePath ? ds.criteriaBasePath : ds.getID()) + "." + field,
-                     sourceDS:ds.title || ds.getID()});
+                var name = fields[field].criteriaPath || (ds.criteriaBasePath ? ds.criteriaBasePath : ds.getID()) + "." + field,
+                    fbField = isc.addProperties({}, fields[field], {name:name,sourceDS:ds.title || ds.getID(),sourceDSID: ds.getID()})
+                ;
                 values.add(fbField);
             }
         }
@@ -90989,7 +91183,7 @@ generateRuleScopeFunction : function (userFormula, targetRuleScope, component, c
 
     // Check for non-qualified fields
     if (component) {
-        var fields = (component.getItems ? component.getItems() : component.getAllFields());
+        var fields = (component.getItems ? component.getItems() : (component.getAllFields ? component.getAllFields() : isc.getKeys(component)));
         if (fields) {
             var componentPath = component.ID+".values.";
             for (var i = 0; i < fields.length; i++) {
@@ -91671,10 +91865,10 @@ generateRuleScopeFunction : function (userSummary, targetRuleScope, component, c
     var ruleScopeDataSources = isc.Canvas.getAllRuleScopeDataSources(targetRuleScope);
     for (var i = 0; i < ruleScopeDataSources.length; i++) {
         var ds = ruleScopeDataSources[i],
-        fields = ds.getFields();
+            fields = ds.getFields();
         for (var field in fields) {
             var basePath = (ds.criteriaBasePath ? ds.criteriaBasePath : ds.ID),
-                fieldPath = basePath + "." + field,
+                fieldPath = fields[field].criteriaPath || basePath + "." + field,
                 isUsed = this.fieldIsUsed(format, fieldPath, userSummary.allowEscapedKeys)
             ;
             if (isUsed) {
@@ -94369,7 +94563,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v12.0d_2017-10-28/LGPL Deployment (2017-10-28)
+  Version SNAPSHOT_v12.0d_2017-11-23/LGPL Deployment (2017-11-23)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

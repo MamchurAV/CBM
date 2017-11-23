@@ -1,7 +1,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v12.0d_2017-10-28/LGPL Deployment (2017-10-28)
+  Version SNAPSHOT_v12.0d_2017-11-23/LGPL Deployment (2017-11-23)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,9 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
 
-if (window.isc && isc.version != "SNAPSHOT_v12.0d_2017-10-28/LGPL Deployment" && !isc.DevUtil) {
+if (window.isc && isc.version != "SNAPSHOT_v12.0d_2017-11-23/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v12.0d_2017-10-28/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v12.0d_2017-11-23/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -982,6 +982,9 @@ isc.CalendarView.addProperties({
             // no-op here to avoid automatic snapping to the wrong place
         },
         dragRepositionStart : function () {
+
+            if (!this.eventCanvas) return isc.EH.STOP_BUBBLING;
+
             var canvas = this.eventCanvas,
                 event = canvas.event,
                 cal = canvas.calendar,
@@ -1060,6 +1063,9 @@ isc.CalendarView.addProperties({
             return isc.EH.STOP_BUBBLING;
         },
         dragRepositionMove : function () {
+
+            if (!this.eventCanvas) return isc.EH.STOP_BUBBLING;
+
             var canvas = this.eventCanvas,
                 props = canvas._dragProps,
                 event = canvas.event,
@@ -1352,6 +1358,9 @@ isc.CalendarView.addProperties({
             return isc.EH.STOP_BUBBLING;
         },
         dragRepositionStop : function () {
+
+            if (!this.eventCanvas) return isc.EH.STOP_BUBBLING;
+
             var canvas = this.eventCanvas,
                 props = canvas._dragProps,
                 cal = canvas.calendar,
@@ -3779,7 +3788,6 @@ isc.DaySchedule.addProperties({
 
         this.renderEventsOnDemand = cal.renderEventsOnDemand;
         this.eventDragGap = cal.eventDragGap;
-        this.fields = [];
 
         this.Super("initWidget");
 
@@ -4170,6 +4178,11 @@ isc.DaySchedule.addProperties({
         this.setSnapGap();
         // if scrollToWorkday is set, do that here
         if (this.calendar.scrollToWorkday) this.scrollToWorkdayStart();
+
+        if (this._fireViewChangedOnDraw) {
+            delete this._fireViewChangedOnDraw;
+            this.calendar.currentViewChanged(this.viewName);
+        }
     },
 
     setSnapGap : function () {
@@ -5132,6 +5145,10 @@ isc.MonthSchedule.addProperties({
         if (this._refreshEventsOnDraw) {
             delete this._refreshEventsOnDraw;
             this.refreshEvents();
+        }
+        if (this._fireViewChangedOnDraw) {
+            delete this._fireViewChangedOnDraw;
+            this.calendar.currentViewChanged(this.viewName);
         }
     }
 
@@ -6313,7 +6330,10 @@ isc.TimelineView.addProperties({
 
         //isc.logWarn('setTimelineRange:' + [timelineGranularity, timelineUnitsPerColumn,
         //        cal.timelineGranularity, cal.timelineUnitsPerColumn]);
-        cal.dateChooser.setData(this.startDate);
+
+        // the second param here causes the dateChooser to set showTimeItem false if the date
+        // is a logicalDate, and true otherwise
+        cal.dateChooser.setData(this.startDate, true);
         if (!fromSetChosenDate) cal.setChosenDate(this.startDate, true);
         //cal.setDateLabel();
 
@@ -6571,7 +6591,8 @@ isc.TimelineView.addProperties({
             }
         }
 
-        this._totalGranularityCount--;
+
+        //this._totalGranularityCount--;
 
         for (var i=0, fieldCount=newFields.length; i<fieldCount; i++) {
             var field = newFields[i];
@@ -6858,6 +6879,10 @@ isc.TimelineView.addProperties({
         this.eventDragTarget.setView(this);
 
         //this.refreshEvents();
+        if (this._fireViewChangedOnDraw) {
+            delete this._fireViewChangedOnDraw;
+            this.calendar.currentViewChanged(this.viewName);
+        }
 
     },
 
@@ -7536,6 +7561,9 @@ isc.Calendar.addProperties({
 
 defaultWidth: "100%",
 defaultHeight: "100%",
+
+// we don't want the Calendar as a whole to overflow
+overflow: "hidden",
 
 year:new Date().getFullYear(),  // full year number
 month:new Date().getMonth(),    // 0-11
@@ -9887,7 +9915,13 @@ mainViewDefaults : {
 
 dateChooserConstructor: "DateChooser",
 dateChooserDefaults: {
-    visibility: "hidden"
+    left: 0,
+    top: -9999,
+    autoDraw: false,
+    visibility: "hidden",
+    autoHide: true,
+    showCancelButton: true,
+    closeOnEscapeKeypress: true
 },
 
 //> @attr calendar.eventDialog (AutoChild Window : null : R)
@@ -10072,6 +10106,7 @@ controlsBarDefaults : {
     width: 1,
     height: 1,
     overflow: "visible",
+    layoutMargin: 5,
     membersMargin: 5
 },
 
@@ -13023,7 +13058,7 @@ next : function () {
         this.timelineView.nextOrPrev(true);
         return;
     }
-    this.dateChooser.setData(newDate);
+    this.dateChooser.setData(newDate, true);
     this.setChosenDate(newDate);
 },
 
@@ -13053,7 +13088,7 @@ previous : function () {
         this.timelineView.nextOrPrev(false);
         return;
     }
-    this.dateChooser.setData(newDate);
+    this.dateChooser.setData(newDate, true);
     this.setChosenDate(newDate);
 },
 
@@ -13150,11 +13185,17 @@ _createTabSet : function (tabsArray) {
                 var view = this.creator.getSelectedView();
                 // if the view is already drawn, redraw it now to ensure that cellStyles update
                 if (view.isDrawn()) view.redraw();
+                else {
+                    // if the view isn't drawn yet, delay the currentViewChanged() notification until draw
+                    view._fireViewChangedOnDraw = true;
+                }
                 if (view._needsRefresh) {
                     view._refreshEvents();
                     //this.creator.refreshSelectedView();
                 }
-                this.creator.currentViewChanged(tabPane.viewName);
+                if (!view._fireViewChangedOnDraw) {
+                    this.creator.currentViewChanged(tabPane.viewName);
+                }
             }
         } );
         var tabToSelect;
@@ -13417,8 +13458,8 @@ createChildren : function () {
         autoHide: true,
         autoClose: true,
         // override dateClick to change the selected day
-        dateClick : function (year, month, day) {
-            var nDate = this.Super("dateClick", arguments);
+        dataChanged : function () {
+            var nDate = this.getData();
             if (nDate) this.creator.setChosenDate(nDate);
             return nDate;
         },
@@ -13436,10 +13477,10 @@ createChildren : function () {
     // layout for date chooser and main calendar view
     if (!this.children) this.children = [];
     var mainMembers = [];
-    var subMembers = [];
-    //if (this.canCreateEvents) subMembers.add(this.addEventButton);
-    subMembers.add(this.dateChooser);
     if (this.showDateChooser) {
+        var subMembers = [];
+        //if (this.canCreateEvents) subMembers.add(this.addEventButton);
+        subMembers.add(this.dateChooser);
         mainMembers.add(isc.VLayout.create({
                     autoDraw:false,
                     width: "20%",
@@ -17810,7 +17851,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v12.0d_2017-10-28/LGPL Deployment (2017-10-28)
+  Version SNAPSHOT_v12.0d_2017-11-23/LGPL Deployment (2017-11-23)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

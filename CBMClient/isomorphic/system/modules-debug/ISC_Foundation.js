@@ -1,7 +1,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v12.0d_2017-10-28/LGPL Deployment (2017-10-28)
+  Version SNAPSHOT_v12.0d_2017-11-23/LGPL Deployment (2017-11-23)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,9 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
 
-if (window.isc && isc.version != "SNAPSHOT_v12.0d_2017-10-28/LGPL Deployment" && !isc.DevUtil) {
+if (window.isc && isc.version != "SNAPSHOT_v12.0d_2017-11-23/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v12.0d_2017-10-28/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v12.0d_2017-11-23/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -17086,9 +17086,13 @@ isc.defineClass("ToolStripGroup", "VLayout").addProperties({
     },
 
     _updateLabel : function () {
-        if (this.label) {
-            this.label.setWidth(this.body.getVisibleWidth());
-        }
+
+        var innerWidth = this.getInnerWidth(),
+            visibleWidth =  this.body.getVisibleWidth(),
+            newWidth = (innerWidth >= 0 ? innerWidth : visibleWidth)
+        ;
+
+        if (this.label) this.label.setWidth(newWidth);
     }
 
 });
@@ -17881,15 +17885,24 @@ isc.SectionStack.addProperties({
     //> @object SectionStackSection
     // Section descriptor used by a SectionStack to describe a section of items which are shown
     // or hidden together along with their associated header.
-    // <P>
-    // A section header (see +link{sectionStack.sectionHeaderClass}) is created from this descriptor when
-    // the SectionStack is drawn. Any changes after creation  must be made to the section header:
-    // +link{sectionStack.getSectionHeader}.
-    // <P>
-    // Additional SectionHeader properties set on the SectionStackSection not explicitly documented such as
-    // "iconAlign" or "prompt" is supported<smartgwt> - use
+    // <P><smartclient>
+    // A section header (see +link{sectionStack.sectionHeaderClass}) is created from this
+    // descriptor when the SectionStack is created.  Any changes after creation  must be made to
+    // the section header: +link{sectionStack.getSectionHeader}.
+    // </smartclient><smartgwt>
+    // A <code>SectionStackSection</code> can't be modified once it's been added to a
+    // +link{SectionStack}, which creates its section header (by default a +link{SectionHeader},
+    // but see +link{sectionStack.sectionHeaderClass}).  After that, you must call the
+    // appropriate <code>SectionStack</code> method to modify a section property, or the
+    // section header getter method to get the updated property value.  As a convenience, we
+    // route several <code>SectionStackSection</code> setter methods to the +link{SectionStack}
+    // for you after the <code>SectionStackSection</code> has been added to it, but with the
+    // exception of +link{SectionStackSection.items}, you'll always get the original property
+    // values when calling a getter directly on a <code>SectionStackSection</code>.
+    // </smartgwt><P>
+    // Additional SectionHeader properties set on the SectionStackSection not explicitly
+    // documented, such as "iconAlign" or "prompt", are supported<smartgwt> - use
     // <code>setAttribute()</code></smartgwt>.
-    //
     // @treeLocation Client Reference/Layout/SectionStack
     // @visibility external
     //<
@@ -20513,7 +20526,7 @@ isc._thumbProperties = {
 
     // send special notifications for some events
     mouseOver : function () {return this.scrollbar.thumbOver();},
-    mouseOut : function () {return this.scrollbar.thumbOut();},
+    mouseOut : function (event) {return this.scrollbar.thumbOut(event);},
     mouseDown : function () {return this.scrollbar.thumbDown();},
     dragStart : function () {return this.scrollbar.thumbDragStart();},
     dragMove : function () {return this.scrollbar.thumbMove();},
@@ -21001,6 +21014,9 @@ setScrollTarget : function (newTarget) {
         delete this.scrollTarget[this.vertical ? "_vscrollbar" : "_hscrollbar"];
     }
 
+    // setScrollTarget() can be called to switch targets, so clear any previous eventParent
+    if (this.scrollTarget && this.scrollTarget.receiveScrollbarEvents) this._redirectEvents();
+
     // If a newTarget was specified, set the scrollTarget to it.
     // If a newTarget was not specified, we'll use the current scrollTarget. If the
     // current scrollTarget isn't set, we use the scrollBar itself to avoid
@@ -21012,11 +21028,15 @@ setScrollTarget : function (newTarget) {
     // We now are sure that we have a scrollTarget. If the scrollTarget has been changed
     // then we re-observe it. Otherwise, we're done.
 
-    if (this._selfManaged && this.scrollTarget != this) {
-         this.observe(this.scrollTarget, "scrollTo",        "observer.setThumb()");
-        this.observe(this.scrollTarget, "_adjustOverflow", "observer.setThumb()");
-        this._setScrollbarOnTarget(this.scrollTarget);
+    var scrollTarget = this.scrollTarget;
+    if (this._selfManaged && scrollTarget != this) {
+         this.observe(scrollTarget, "scrollTo",        "observer.setThumb()");
+        this.observe(scrollTarget, "_adjustOverflow", "observer.setThumb()");
+        this._setScrollbarOnTarget(scrollTarget);
     }
+
+
+    if (scrollTarget.receiveScrollbarEvents) this._redirectEvents(scrollTarget);
 
     if (this.thumb != null) {
         var scrollTargetIsRTL = newTarget == null ? isc.Page.isRTL() : newTarget.isRTL();
@@ -21514,10 +21534,13 @@ handleMouseMove : function () {
 //            may redraw the button
 //        @group    events
 //<
-handleMouseOut : function () {
+handleMouseOut : function (event) {
     if (this.ns.EH.mouseIsDown()) return isc.EH.STOP_BUBBLING;
     if (this.showRollOver) {
         this.setState(isc.StatefulCanvas.STATE_UP);
+    }
+    if (this._shouldSuppressMouseOut(event)) {
+        return isc.EH.STOP_BUBBLING;
     }
 },
 
@@ -21571,9 +21594,12 @@ thumbOver : function () {
 //
 //        @return    (boolean)    false == cancel event processing
 //<
-thumbOut : function () {
+thumbOut : function (event) {
     if (!isc.EH.mouseIsDown()) {
         this.thumb.setState(isc.StatefulCanvas.STATE_UP);
+    }
+    if (this._shouldSuppressMouseOut(event)) {
+        return isc.EH.STOP_BUBBLING;
     }
 },
 
@@ -21712,6 +21738,26 @@ hide : function (a,b,c,d) {
         this.moveTo(this.scrollTarget.getLeft(), this.scrollTarget.getTop());
         this.resizeTo(1,1);
     }
+},
+
+// helper to set eventParent of both this scrollbar and the thumb
+_redirectEvents : function (eventParent) {
+    var thumb = this.thumb;
+    if (!eventParent) eventParent = null;
+    this.eventParent = eventParent;
+    if (thumb != null) thumb.eventParent = eventParent;
+},
+
+
+_shouldSuppressMouseOut : function (event) {
+    var target = event.target;
+    return target && target == this.scrollTarget && target.receiveScrollbarEvents;
+},
+
+// whether canvas is one of ours (the scrollbar or thumb) that bubbles to scrollTarget
+_hasScrollTargetEventParent : function (canvas) {
+    if (this.disabled) return false;
+    return canvas == this || canvas && canvas == this.thumb;
 }
 
 });
@@ -26449,6 +26495,16 @@ isc.NavigationBar.addProperties({
                 }
 
 
+                if (transitioningElements.isEmpty()) {
+
+                    this._leftIconButton._origStyleName     = null;
+                    this._oldLeftTitleButton._origStyleName = null;
+                    this.leftButton._origStyleName          = null;
+                    this._oldTitleLabel._origStyleName      = null;
+                    this.titleLabel._origStyleName          = null;
+                    return;
+                }
+
                 if (this._animateStateChangeTimer != null) {
                     isc.Timer.clear(this._animateStateChangeTimer);
                     this._animateStateChangeTimer = null;
@@ -26580,6 +26636,7 @@ isc.NavigationBar.addProperties({
             isc.Timer.clear(this._animateStateChangeTimer);
             this._animateStateChangeTimer = null;
         }
+        this._pendingAnimateStateChangeCall = false;
 
         var animationInfo = this._animationInfo,
             Canvas_setStyleName = isc.Canvas._instancePrototype.setStyleName,
@@ -29371,12 +29428,12 @@ isc.SplitPane.addProperties({
             this.setProperty("vertical", true);
 
             this.leftLayout.removeMembers(this.leftLayout.members);
-
             this.portraitSidePanel.setPagedPanel(this._pagedPanel);
-
             this.updateDetailToolStrip();
-            this.setMembers([this.detailToolStrip]);
-            if (this.detailPane != null) this.addMember(this.detailPane);
+
+            var newMembers = [this.detailToolStrip];
+            if (this.detailPane != null) newMembers.add(this.detailPane);
+            this.setMembers(newMembers);
 
             var pages;
             if (prevConfig !== "portrait") {
@@ -31297,7 +31354,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v12.0d_2017-10-28/LGPL Deployment (2017-10-28)
+  Version SNAPSHOT_v12.0d_2017-11-23/LGPL Deployment (2017-11-23)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

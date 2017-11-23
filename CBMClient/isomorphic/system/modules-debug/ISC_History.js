@@ -1,7 +1,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v12.0d_2017-10-28/LGPL Deployment (2017-10-28)
+  Version SNAPSHOT_v12.0d_2017-11-23/LGPL Deployment (2017-11-23)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -91,9 +91,9 @@ isc._start = new Date().getTime();
 
 // versioning - values of the form ${value} are replaced with user-provided values at build time.
 // Valid values are: version, date, project (not currently used)
-isc.version = "SNAPSHOT_v12.0d_2017-10-28/LGPL Deployment";
-isc.versionNumber = "SNAPSHOT_v12.0d_2017-10-28";
-isc.buildDate = "2017-10-28";
+isc.version = "SNAPSHOT_v12.0d_2017-11-23/LGPL Deployment";
+isc.versionNumber = "SNAPSHOT_v12.0d_2017-11-23";
+isc.buildDate = "2017-11-23";
 isc.expirationDate = "";
 
 isc.scVersion = "12.0d";
@@ -1786,6 +1786,7 @@ isc.Browser.seleniumPresent = (function () {
 
 //> @type Autotest
 // @value isc.Browser.SHOWCASE autotest is targeting SmartClient or SGWT showcases
+// @value isc.Browser.SELENESE autotest is targeting a single sample with Selenese
 // @value isc.Browser.RUNNER autotest is targeting TestRunner-based JS tests
 //<
 
@@ -1795,6 +1796,13 @@ isc.Browser.seleniumPresent = (function () {
 // @constant
 //<
 isc.Browser.SHOWCASE = "showcase";
+
+//> @classAttr Browser.SELENESE (Constant : "selenese" : [R])
+// A declared value of the enum type
+// +link{type:Autotest,Autotest}.
+// @constant
+//<
+isc.Browser.SELENESE = "selenese";
 
 //> @classAttr Browser.RUNNER (Constant : "runner" : [R])
 // A declared value of the enum type
@@ -1985,8 +1993,9 @@ isc.Browser._getSupportsNativeTouchScrolling = function () {
             (!(this.isIPhone || this.isIPad) || this.iOSVersion >= 6));
 };
 
-isc.Browser._supportsWebkitOverflowScrolling = ("WebkitOverflowScrolling" in document.documentElement.style &&
-                                                isc.Browser.iOSVersion >= 6);
+isc.Browser._supportsWebkitOverflowScrolling = isc.Browser.iOSVersion >= 6 &&
+                   ("webkitOverflowScrolling" in document.documentElement.style)
+;
 
 // Does the browser support CanvasRenderingContext2D.isPointInStroke()?
 isc.Browser._supportsCanvasIsPointInStroke = (function () {
@@ -3134,7 +3143,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v12.0d_2017-10-28/LGPL Deployment (2017-10-28)
+  Version SNAPSHOT_v12.0d_2017-11-23/LGPL Deployment (2017-11-23)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

@@ -1,7 +1,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v12.0d_2017-10-28/LGPL Deployment (2017-10-28)
+  Version SNAPSHOT_v12.0d_2017-11-23/LGPL Deployment (2017-11-23)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,9 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
 
-if (window.isc && isc.version != "SNAPSHOT_v12.0d_2017-10-28/LGPL Deployment" && !isc.DevUtil) {
+if (window.isc && isc.version != "SNAPSHOT_v12.0d_2017-11-23/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v12.0d_2017-10-28/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v12.0d_2017-11-23/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -13916,7 +13916,7 @@ firstGeneratedSequenceValue: 0,
 // <li> <code>java.util.ArrayList</code> is used for fields of type <code>List</code>
 // <li> <code>java.util.HashSet</code> is used for fields of type <code>Set</code>
 // <li> <code>java.util.LinkedList</code> is used for fields of type <code>Queue</code>
-// <li> <code>org.apache.commons.collections.map.LinkedMap</code> is used for fields of type <code>Map</code>
+// <li> <code>java.util.LinkedHashMap</code> is used for fields of type <code>Map</code>
 // <li> <code>java.util.ArrayList</code> is used for fields that are otherwise of type <code>Collection</code>
 // </ul>
 // Note that this value is used even if the target Collection or Map is declared as a concrete
@@ -28131,6 +28131,7 @@ rawData=rpcResponse.results;
     //   field names)
     _$Defaults : "Defaults",
     _$Properties : "Properties",
+    _$dynamicProperties : "dynamicProperties",
     getObjectField : function (targetType, includeAllFields, excludedFields) {
 
         if (!targetType) return null;
@@ -28157,8 +28158,12 @@ rawData=rpcResponse.results;
             ;
 
             // HACK: ignore fields intended for properties to configure subobjects
-            if (isc.endsWith(fieldName, this._$Properties) ||
-                isc.endsWith(fieldName, this._$Defaults)) continue;
+            // HACK: further hack to allow DynamicProperties as normal field
+            if (fieldName != this._$dynamicProperties &&
+                    (isc.endsWith(fieldName, this._$Properties) || isc.endsWith(fieldName, this._$Defaults)))
+            {
+                continue;
+            }
 
             // remember excluded fields, so we can pass the list to our superclass, so that a
             // we won't choose a field in a superclass that was marked "inapplicable" in a
@@ -47024,38 +47029,73 @@ _sendBuiltinRPCRequest : function (methodName, callback, arguments, requestDebug
 isc.DMI.callBuiltin = isc.DMI.makeDMIMethod("isc_builtin", "builtin", true);
 
 
+if (isc.Browser.seleniumPresent) {
 
 
-if (isc.Browser.seleniumPresent && isc.Browser.isFirefox) {
+    if (isc.Browser.isFirefox) {
 
-    document.addEventListener("IscSeleniumConfigureServerLogsEvent", function (event) {
-        var arguments = event.target.getAttribute("arguments");
-        isc.DMI._sendBuiltinRPCRequest("setTemporaryLogThreshold", null,
-                                       arguments.split(/,\s*/));
-    }, false);
+        document.addEventListener("IscSeleniumConfigureServerLogsEvent", function (event) {
+            var arguments = event.target.getAttribute("arguments");
+            isc.DMI._sendBuiltinRPCRequest("setTemporaryLogThreshold", null,
+                                           arguments.split(/,\s*/));
+        }, false);
 
-    document.addEventListener("IscSeleniumClearServerLogsEvent", function (event) {
-        isc.DMI._sendBuiltinRPCRequest("clearLogEntries");
-    }, false);
+        document.addEventListener("IscSeleniumClearServerLogsEvent", function (event) {
+            isc.DMI._sendBuiltinRPCRequest("clearLogEntries");
+        }, false);
 
-    document.addEventListener("IscSeleniumRequestServerLogsEvent", function (event) {
-        var eventDocument = event.target.ownerDocument;
-        isc.DMI._sendBuiltinRPCRequest("getLogEntries", function (rpcResponse) {
-            var messages = [],
-            data = rpcResponse.data;
-            if (data && data.length > 0) messages = data.getProperty("logMessage");
+        document.addEventListener("IscSeleniumRequestServerLogsEvent", function (event) {
+            var eventDocument = event.target.ownerDocument;
+            isc.DMI._sendBuiltinRPCRequest("getLogEntries", function (rpcResponse) {
+                var messages = [],
+                data = rpcResponse.data;
+                if (data && data.length > 0) messages = data.getProperty("logMessage");
 
-            var answerElement = eventDocument.createElement("IscSeleniumCaptureLogs");
-            answerElement.setAttribute("logMessages", messages.join(""));
+                var answerElement = eventDocument.createElement("IscSeleniumCaptureLogs");
+                answerElement.setAttribute("logMessages", messages.join(""));
 
-            eventDocument.documentElement.appendChild(answerElement);
+                eventDocument.documentElement.appendChild(answerElement);
 
-            var capturedEvent = eventDocument.createEvent("HTMLEvents");
-            capturedEvent.initEvent("IscSeleniumServerLogsCapturedEvent", true, false);
-            answerElement.dispatchEvent(capturedEvent);
-        });
-        isc.DMI._sendBuiltinRPCRequest("revertTemporaryLogThresholds");
-    }, false);
+                var capturedEvent = eventDocument.createEvent("HTMLEvents");
+                capturedEvent.initEvent("IscSeleniumServerLogsCapturedEvent", true, false);
+                answerElement.dispatchEvent(capturedEvent);
+            });
+            isc.DMI._sendBuiltinRPCRequest("revertTemporaryLogThresholds");
+        }, false);
+
+    }
+
+    // DMI extensions to provide easy server log support to SmartClientWebDriver
+    isc.DMI.addClassProperties({
+
+        configureServerLogs : function () {
+            this._sendBuiltinRPCRequest("setTemporaryLogThreshold", null, arguments);
+            return true;
+        },
+
+        clearServerLogs : function () {
+            this._sendBuiltinRPCRequest("clearLogEntries");
+            return true;
+        },
+
+        requestServerLogs : function () {
+            delete this._serverLogs;
+            this._sendBuiltinRPCRequest("getLogEntries", function (rpcResponse) {
+                var data = rpcResponse.data;
+                isc.DMI._serverLogs = data && data.length > 0 ?
+                    data.getProperty("logMessage") : [];
+            });
+            this._sendBuiltinRPCRequest("revertTemporaryLogThresholds");
+        },
+
+        receivedServerLogs : function () {
+            return this._serverLogs != null;
+        },
+
+        getServerLogs : function () {
+            return this._serverLogs;
+        }
+    });
 
 }
 
@@ -61333,7 +61373,7 @@ isc.ClassFactory.defineClass("Rule", "Validator");
 //  be passed to the validator action method.
 // @value Canvas
 //  Validator supports a Canvas as a target. In this case the target canvas will be passed to the
-//  ation method. No targetContainer will be passed for simple canvases.
+//  action method. No targetContainer will be passed for simple canvases.
 // @value Section
 //  Validator supports a SectionStackSection as a target. In this case the target Section will be
 //  passed to the action method, and the stack will be passed as the targetContainer parameter.
@@ -61615,7 +61655,7 @@ isc.RulesEngine.addProperties({
         var record = {};
         for (var i = 0; i < this.members.length; i++) {
             var member = this.members[i];
-            if (!member.getValues) continue;
+            if (member.destroyed || !member.getValues) continue;
 
             var values = member.getValues(),
                 dataSource = member.getDataSource(),
@@ -61625,7 +61665,7 @@ isc.RulesEngine.addProperties({
                 record[dsID] = isc.addProperties(record[dsID] || {}, values);
             } else {
 
-                record.addProperties(values);
+                isc.addProperties(record, values);
             }
         }
 
@@ -61656,9 +61696,14 @@ isc.RulesEngine.addProperties({
             var rule = rules[i],
                 values = ruleContext,
                 fieldNames = rule.fieldName,
+                propertyNames = rule.propertyName,
                 locator = rule.locator,
                 shouldApply = true
             ;
+
+            if (rule.debugLogCategory && this.logIsDebugEnabled(rule.debugLogCategory)) {
+                this.logDebug("Processing rule: " + this.echo(rule), rule.debugLogCategory);
+            }
 
             // If rule.applyWhen is specified we can test this against the full set of values,
             // before spinning through individual targets, running the 'performAction' et al.
@@ -61793,6 +61838,39 @@ isc.RulesEngine.addProperties({
                     if (result == null) result = true;
                 }
             }
+
+            // Support propertyName being a single propertyName, an array of propertyName strings, or
+            // a comma-separated string.
+            // Normalize to an array first.
+            if (isc.isA.String(propertyNames)) {
+                propertyNames = propertyNames.split(",");
+            // handle locator with no specified propertyName
+            } else if (propertyNames == null) {
+                propertyNames = [];
+            }
+            for (var j = 0; j < propertyNames.length; j++) {
+                var propertyName = propertyNames[j],
+                    componentID = propertyName.substring(0,propertyName.indexOf(".")),
+                    propertyName = (componentID.length > 0 ? propertyName.substring(componentID.length+1) : propertyName),
+                    component = (componentID.length > 0 ? window[componentID] : null)
+                ;
+
+
+
+                if (component == null || propertyName == null) {
+                    this.logWarn("RulesEngine contains rule definition with specified propertyName:"
+                            + propertyName + " - unable to find associated " +
+                             (component == null ? "member component" : "property") + " for this rule.");
+                    continue;
+                }
+
+                var isValid = null;
+                if (shouldApply) {
+                    isValid =
+                        (isc.Validator.processValidator(propertyName, rule, value, null, values) == true);
+                }
+                isc.Validator.performAction(isValid, propertyName, rule, values, component, "Canvas");
+            }
         }
         return result;
     },
@@ -61888,7 +61966,7 @@ isc.RulesEngine.addProperties({
     // still fail validation.
 
     applyFieldValidators : function (errors, component) {
-        var rules = this.rulesData,
+        var rules = this.rulesData || [],
             ruleContext = this.getValues(),
             addedErrors = false
         ;
@@ -66101,7 +66179,7 @@ isc.EditContext.addProperties({
                 parentSchema = (parentComponent ? isc.DS.get(parentComponent.type) : null),
                 parentLiveObject = (parentComponent ? parentComponent.liveObject : null),
                 parentFieldName = isc.DS.getObjectField(parentLiveObject, editNode.type),
-                parentField = (parentFieldName ? parentSchema.fields[parentFieldName] : null)
+                parentField = (parentFieldName ? parentSchema.getFields()[parentFieldName] : null)
             ;
             if ((properties.name != null || (isc.isA.DynamicForm(parentLiveObject) && properties.type != null)) &&
                     parentField && parentField.rebuildOnChange && parentField.rebuildOnChange.toLowerCase() == "true")
@@ -66125,7 +66203,7 @@ isc.EditContext.addProperties({
                 this.removeNode(editNode);
 
                 // update the node with the new name and add it
-                if (properties.name != null) {
+                if (properties.name != null && editNode.type != "DynamicProperty") {
                     editNode.name = editNode.ID = properties.name;
                     delete properties.name;
                 }
@@ -67930,7 +68008,7 @@ isc.Palette.addInterfaceProperties({
             defaults.title = paletteNodeDefaults.title;
         }
 
-        if (this.generateNames) {
+        if (this.generateNames && (schema.addGlobalId == null || schema.addGlobalId != false)) {
             // generate an id if one wasn't specified
             var ID = editNode.ID || paletteNodeDefaults[schema.getAutoIdField()];
             if (ID == null) {
@@ -94091,7 +94169,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v12.0d_2017-10-28/LGPL Deployment (2017-10-28)
+  Version SNAPSHOT_v12.0d_2017-11-23/LGPL Deployment (2017-11-23)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
