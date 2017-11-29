@@ -123,15 +123,15 @@ function createPublishings(form, item) {
 
 
 // Calculates expiration time from PublicationSource of Event concept
-function getExpireTime(source) {
-  if (source.Concept === "Event") {
+function getExpireTime(src) {
+  if (src.Concept === "Event") {
     var endDate;
-    if (source.DueDate ) {
-      endDate = source.DueDate;
-    } else if (source.FromDate ) {
-      endDate = source.FromDate;
+    if (src.DueDate ) {
+      endDate = src.DueDate;
+    } else if (src.FromDate ) {
+      endDate = src.FromDate;
     }
-    return dateDiffInDays(new Date(), endDate);
+    return dateDiffInDays(src.StartDate, endDate);
   }
 }
 
