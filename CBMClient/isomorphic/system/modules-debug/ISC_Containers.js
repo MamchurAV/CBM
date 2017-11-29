@@ -1,13 +1,36 @@
 /*
- * Isomorphic SmartClient
- * Version SNAPSHOT_v11.1d_2017-06-25 (2017-06-25)
- * Copyright(c) 1998 and beyond Isomorphic Software, Inc. All rights reserved.
- * "SmartClient" is a trademark of Isomorphic Software, Inc.
- *
- * licensing@smartclient.com
- *
- * http://smartclient.com/license
- */
+
+  SmartClient Ajax RIA system
+  Version SNAPSHOT_v12.0d_2017-11-23/LGPL Deployment (2017-11-23)
+
+  Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
+  "SmartClient" is a trademark of Isomorphic Software, Inc.
+
+  LICENSE NOTICE
+     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
+     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
+     without an accompanying Isomorphic Software license file, please
+     contact licensing@isomorphic.com for details. Unauthorized copying and
+     use of this software is a violation of international copyright law.
+
+  DEVELOPMENT ONLY - DO NOT DEPLOY
+     This software is provided for evaluation, training, and development
+     purposes only. It may include supplementary components that are not
+     licensed for deployment. The separate DEPLOY package for this release
+     contains SmartClient components that are licensed for deployment.
+
+  PROPRIETARY & PROTECTED MATERIAL
+     This software contains proprietary materials that are protected by
+     contract and intellectual property law. You are expressly prohibited
+     from attempting to reverse engineer this software or modify this
+     software for human readability.
+
+  CONTACT ISOMORPHIC
+     For more information regarding license rights and restrictions, or to
+     report possible license violations, please contact Isomorphic Software
+     by email (licensing@isomorphic.com) or web (www.isomorphic.com).
+
+*/
 
 if(window.isc&&window.isc.module_Core&&!window.isc.module_Containers){isc.module_Containers=1;isc._moduleStart=isc._Containers_start=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc._moduleEnd&&(!isc.Log||(isc.Log && isc.Log.logIsDebugEnabled('loadTime')))){isc._pTM={ message:'Containers load/parse time: ' + (isc._moduleStart-isc._moduleEnd) + 'ms', category:'loadTime'};
 if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
@@ -15,9 +38,9 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
 
-if (window.isc && isc.version != "SNAPSHOT_v11.1d_2017-06-25/LGPL Deployment" && !isc.DevUtil) {
+if (window.isc && isc.version != "SNAPSHOT_v12.0d_2017-11-23/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v11.1d_2017-06-25/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v12.0d_2017-11-23/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -43,14 +66,14 @@ isc.ClassFactory.defineClass("ImgTab", "StretchImgButton");
 
 // add properties to the class
 isc.ImgTab.addProperties({
-    //>    @attr    isc.ImgTab.capSize        (number : 2 : IRW)
+    //>    @attr ImgTab.capSize        (number : 2 : IRW)
     // How big are the end pieces by default
     // @group appearance
     // @visibility external
     //<
     capSize:2,
 
-    //>    @attr    isc.ImgTab.skinImgDir        (URL : "images/Tab/" : IRW)
+    //>    @attr ImgTab.skinImgDir        (URL : "images/Tab/" : IRW)
     // Base path for the images.   <B>Note</B> that when used within a TabSet, the
     // +link{tabSet.tabBarPosition} is appended as an additional path segment, yielding
     // "images/Tab/top/" et al.
@@ -59,7 +82,7 @@ isc.ImgTab.addProperties({
     //<
     skinImgDir:"images/Tab/",
 
-    //> @attr isc.ImgTab.labelSkinImgDir (URL : "images/" : IRW)
+    //> @attr ImgTab.labelSkinImgDir (URL : "images/" : IRW)
     // Base path for images shown within this ImgTab's label. This will be used for
     // icons (such as the close icon) by default.
     // @visibility external
@@ -87,24 +110,24 @@ isc.ImgTab.addProperties({
     //<
     src:"[SKIN]tab.gif",
 
-    //>    @attr    isc.ImgTab.showRollOver        (Boolean : false : IRW)
+    //>    @attr ImgTab.showRollOver        (Boolean : false : IRW)
     // Should we visibly change state when the mouse goes over this tab
     // @visibility external
     //<
     showRollOver:false,
 
-    //>    @attr    isc.ImgTab.showFocus    (boolean : true : IRW)
+    //>    @attr ImgTab.showFocus    (boolean : true : IRW)
     // Should we visibly change state when the tab receives keyboard focus?
     // @deprecated as of SmartClient 6.1 in favor of +link{imgTab.showFocused}
     // @visibility external
     //<
-    //>    @attr    isc.ImgTab.showFocused    (Boolean : true : IRW)
+    //>    @attr ImgTab.showFocused    (Boolean : true : IRW)
     // Should we visibly change state when the tab receives keyboard focus?
     // @visibility external
     //<
     showFocused:true,
 
-    //>    @attr    isc.ImgTab.align        (Alignment : isc.Canvas.CENTER : IRW)
+    //>    @attr ImgTab.align        (Alignment : isc.Canvas.CENTER : IRW)
     // Alignment of title text
     //        @group    positioning
     // @visibility external
@@ -112,14 +135,14 @@ isc.ImgTab.addProperties({
     // agrees with superclass
     //align:isc.Canvas.CENTER,
 
-    //>    @attr    isc.ImgTab.valign        (VerticalAlignment : isc.Canvas.CENTER : IRW)
+    //>    @attr ImgTab.valign        (VerticalAlignment : isc.Canvas.CENTER : IRW)
     // Vertical alignment of title text.
     //        @group    positioning
     //<
     // agrees with superclass
     //valign:isc.Canvas.CENTER,
 
-    //>    @attr    isc.ImgTab.actionType        (ButtonActionType : isc.Button.BUTTON : IRWA)
+    //>    @attr ImgTab.actionType        (ButtonActionType : isc.Button.BUTTON : IRWA)
     //            button behavior -- BUTTON, RADIO or CHECKBOX
     //<
     actionType:isc.Button.RADIO,
@@ -176,18 +199,18 @@ isc.ImgTab.addProperties({
 isc.ClassFactory.defineClass("TabBar", "Toolbar");
 
 isc.TabBar.addProperties({
-    //>    @attr    isc.TabBar.tabs        (Array of Tab Properties : null : IR)
+    //>    @attr TabBar.tabs        (Array of Tab Properties : null : IR)
     // Tab for this TabBar.
     // @visibility external
     //<
 
-    //>    @attr    isc.TabBar.breadth    (number : 21 : IRW)
+    //>    @attr TabBar.breadth    (number : 21 : IRW)
     // Breadth of the tabBar (including baseline breadth)
     // @visibility external
     //<
     breadth: 21,
 
-    //>    @attr    isc.TabBar.buttonConstructor    (class: ImgTab : AIRW)
+    //>    @attr TabBar.buttonConstructor    (Class: ImgTab : AIRW)
     // SmartClient component used for the tabs of the tabBar.
     // Must be Button or Button subclass.
     // @visibility external
@@ -329,7 +352,7 @@ isc.TabBar.addProperties({
         }
     },
 
-    //>    @attr    isc.TabBar.skinImgDir        (URL : "images/Tab/" : AIRW)
+    //>    @attr TabBar.skinImgDir        (SCImgURL : "images/Tab/" : AIRW)
     //            base path for the tab images, if an image-based
     //            tab is being used.
     //        @group skins, files
@@ -368,7 +391,7 @@ isc.TabBar.addProperties({
     // @visibility external
     //<
 
-    //>    @attr isc.TabBar.baseLineThickness (number : 1 : IR)
+    //>    @attr TabBar.baseLineThickness (number : 1 : IR)
     // Thickness of the baseLine, in pixels.  This should be set to match the media specified
     // by +link{baseLineSrc}.  The baseLineThickness also determines the degree of overlap with
     // the TabSet's paneContainer when using decorative edges - see +link{TabSet.paneContainer}
@@ -379,14 +402,14 @@ isc.TabBar.addProperties({
     //<
     baseLineThickness:1,
 
-    //>    @attr isc.TabBar.baseLineSrc    (SCImgURL : "[SKIN]baseline.gif" : IR)
+    //>    @attr TabBar.baseLineSrc    (SCImgURL : "[SKIN]baseline.gif" : IR)
     // Sets +link{stretchImg.src} for the +link{group:baseLine} StretchImg.
     // @group baseLine
     // @visibility external
     //<
     baseLineSrc:"[SKIN]baseline.gif",
 
-    //>    @attr isc.TabBar.baseLineCapSize    (number : 2 : IR)
+    //>    @attr TabBar.baseLineCapSize    (number : 2 : IR)
     // Set +link{stretchImg.capSize} for the +link{group:baseLine} stretchImg.
     // @group baseLine
     // @visibility external
@@ -395,21 +418,21 @@ isc.TabBar.addProperties({
 
     // Positioning and Alignment
     // --------------------------------------------------------------------------------------------
-    //>    @attr    isc.TabBar.tabBarPosition    (Side : isc.Canvas.TOP : IRW)
+    //>    @attr TabBar.tabBarPosition    (Side : isc.Canvas.TOP : IRW)
     // Position of the tabBar in relation to whatever it controls.
     //<
     // Not doc'd, do via TabSet
     tabBarPosition:isc.Canvas.TOP,
 
     // --------------------------------------------------------------------------------------------
-    //>    @attr    isc.TabBar.selectedTab        (number : 0 : IR)
+    //>    @attr TabBar.selectedTab        (number : 0 : IR)
     // Index of the initially selected tab.  Settable at initialization only, afterwards, call
     // +link{selectTab}.
     //<
     // Not doc'd, do via TabSet
     selectedTab:0,
 
-    //>    @attr    isc.TabBar.defaultTabSize        (number : 80 : IR)
+    //>    @attr TabBar.defaultTabSize        (number : 80 : IR)
     // Default size (length) in pixels for tabs within this tabBar
     // @visibility external
     //<
@@ -550,10 +573,8 @@ _tabIconClickHandler : function () {
 },
 
 tabIconClick : function (tab) {
-
     var ts = this.parentElement;
     return ts._tabIconClick(tab);
-
 },
 
 // reset any native scroll that occurred on focus if the tabs are taller than
@@ -582,6 +603,17 @@ _clearSgwtTabReferences : function () {
             delete liveButtons[i].__module;
         }
     }
+},
+
+// helper for tabSet.fixLayout()
+_canAdaptWidth : function () {
+    var liveButtons = this.getMembers();
+    if (!liveButtons) return false;
+
+    for (var i = 0; i < liveButtons.length; i++) {
+        if (liveButtons[i].canAdaptWidth) return true;
+    }
+    return false;
 },
 
 // Override to add "more" button and hide buttons that are now on "more" tab
@@ -848,7 +880,7 @@ layoutChildren : function (a,b,c,d) {
 //       set to "selected." Repeated clicks should not fire this method.
 //       This assumption can be overridden by setting allowButtonReselect:true.
 //
-// @param tab (tab)  tab that has been selected.
+// @param tab (Tab)  tab that has been selected.
 //<
 buttonSelected : function (tab) {
 
@@ -874,7 +906,7 @@ buttonDeselected : function (tab) {
 
 //> @method tabBar.getSelectedTab()    (A)
 // Get the tab object currently selected.
-// @return (tab) tab object
+// @return (Tab) tab object
 //<
 getSelectedTab : function () {
     return this.getButtonNumber(this.getSelectedButton());
@@ -963,7 +995,7 @@ _completeScroll : function (scrolledToTab) {
 //                          If not specified the tab will be scrolled to whichever end it is
 //                          currently clipped by.
 // @param [animated] (boolean) If true, do an animated scroll.
-// @param [callback] (callback) If specified this will fire when the tab has been scrolled into
+// @param [callback] (Callback) If specified this will fire when the tab has been scrolled into
 //                              view. Will be synchronously fired if this is not an animated
 //                              scroll, or if the tab is already in view, so no scrolling occurs.
 //                              The callback takes a single argument, <code>tab</code> - the tab
@@ -1096,7 +1128,7 @@ dragReorderStop : function () {
 // <P>
 // The more specialized +link{Dialog} subclass of Window has additional functionality targetted
 // at simple prompts and confirmations, such as buttons with default actions, and single-method
-// +link{classMethod:isc.warn(),shortcuts} for common application dialogs.
+// +link{staticMethod:isc.warn(),shortcuts} for common application dialogs.
 //
 // @inheritsFrom Layout
 // @treeLocation Client Reference/Layout
@@ -1108,25 +1140,47 @@ isc.ClassFactory.defineClass("Window", "Layout");
 isc.Window.addClassProperties({
     //> @type ContentLayoutPolicy
     // Policy controlling how the window will manage content within its body.
-
-    // @value  Window.NONE
+    //
+    // @value  isc.Window.NONE
     // Window does not try to size members at all on either axis.  Window body defaults to
     // a Canvas if not autosizing.  Otherwise a Layout is used with policies on both axes set
     // to +link{LayoutPolicy} "none".
-    //NONE: "none", // NOTE: constant declared by Canvas
-
-    // @value Window.VERTICAL
+    //
+    // @value isc.Window.VERTICAL
     // Window body defaults to VLayout behavior.  (Body is actually just a Layout with
     // +link{Layout.vertical}: true.)
-    //VERTICAL: "vertical", // NOTE: constant declared by Canvas
-
-    // @value Window.HORIZONTAL
+    //
+    // @value isc.Window.HORIZONTAL
     // Window body defaults to HLayout behavior.  (Body is actually just a Layout with
     // +link{Layout.vertical}: false.)
-    //HORIZONTAL: "horizontal" // NOTE: constant declared by Canvas
-
+    //
     // @visibility external
     //<
+
+    //> @classAttr Window.NONE (Constant : "none" : [R])
+    // A declared value of the enum type
+    // +link{type:ContentLayoutPolicy,ContentLayoutPolicy}.
+    // @visibility external
+    // @constant
+    //<
+    //NONE: "none", // NOTE: constant declared by Canvas
+
+    //> @classAttr Window.VERTICAL (Constant : "vertical" : [R])
+    // A declared value of the enum type
+    // +link{type:ContentLayoutPolicy,ContentLayoutPolicy}.
+    // @visibility external
+    // @constant
+    //<
+    //VERTICAL: "vertical", // NOTE: constant declared by Canvas
+
+    //> @classAttr Window.HORIZONTAL (Constant : "horizontal" : [R])
+    // A declared value of the enum type
+    // +link{type:ContentLayoutPolicy,ContentLayoutPolicy}.
+    // @visibility external
+    // @constant
+    //<
+    //HORIZONTAL: "horizontal" // NOTE: constant declared by Canvas
+
 });
 
 //> @groupDef body
@@ -1162,21 +1216,21 @@ isc.Window.addProperties({
     // Skinning
     // ---------------------------------------------------------------------------------------
 
-    //>    @attr    window.styleName    (string : "windowBackground" : IRW)
+    //>    @attr    window.styleName    (String : "windowBackground" : IRW)
     //            Default style for the Window background
     //        @group    appearance, header
     //<
     styleName:"windowBackground",
     printStyleName:"normal",
 
-    //>    @attr    window.skinImgDir        (URL : "images/Window/" : IRWA)
+    //>    @attr    window.skinImgDir        (SCImgURL : "images/Window/" : IRWA)
     //        Where do 'skin' images (those provided with the class) live?
     //        This is local to the Page.skinDir
     //        @group    appearance, images
     //<
     skinImgDir:"images/Window/",
 
-    //>    @attr    window.backgroundColor    (string : "#DDDDDD" : IRW)
+    //>    @attr    window.backgroundColor    (String : "#DDDDDD" : IRW)
     //            background color, picked up in Header, Footer, etc.
     //        @group    appearance, header
     //<
@@ -1223,7 +1277,7 @@ isc.Window.addProperties({
         return this.canDragReposition;
     },
 
-    //>    @attr    window.keepInParentRect        (boolean | rect: null : IRWA)
+    //>    @attr    window.keepInParentRect        (boolean | Rect: null : IRWA)
     // If +link{window.canDragReposition} or +link{window.canDragResize} is true, should the
     // windows size and position be constrained such that it remains within the viewport of
     // its parent element (or for top level windows, within the viewport of the browser window)?
@@ -1253,7 +1307,7 @@ isc.Window.addProperties({
 
     canDragResize:false,
 
-    //>    @attr    window.resizeFrom    (array : ["R","B","BR"] : IRWA)
+    //>    @attr    window.resizeFrom    (Array : ["R","B","BR"] : IRWA)
     //            which parts of the window can be clicked and
     //            dragged to resize it?
     //        @group    resizing
@@ -1287,7 +1341,7 @@ isc.Window.addProperties({
     useBackMask: isc.Browser.isIE && isc.Browser.minorVersion >= 5.5 && isc.Browser.version < 9,
 
     // Document opacity just so we can refer back to useBackMask
-    //> @attr Window.opacity (integer : null : IRWA)
+    //> @attr Window.opacity (Integer : null : IRWA)
     // Renders the widget to be partly transparent. A widget's opacity property may
     // be set to any number between 0 (transparent) to 100 (opaque).
     // Null means don't specify opacity directly, 100 is fully opaque.
@@ -1353,7 +1407,7 @@ isc.Window.addProperties({
     //<
     modalMaskOpacity: 50,
 
-    //> @attr window.modalMaskStyle (string : "modalMask" : IR)
+    //> @attr window.modalMaskStyle (String : "modalMask" : IR)
     // Specifies the CSS style for the modal mask.
     // @group modal, appearance
     // @see window.modalMask
@@ -1468,7 +1522,7 @@ isc.Window.addProperties({
     //  @group  appearance, body
     //<
 
-    //>    @attr window.src (string : null : [IRW])
+    //>    @attr window.src (String : null : [IRW])
     // A URL to load as content for the Window's body.  If specified, this
     // attribute will take precedence over the items attribute.
     // <P>
@@ -1480,7 +1534,7 @@ isc.Window.addProperties({
     // @visibility external
     //<
 
-    //> @attr window.contentsType (string : "page" : IR)
+    //> @attr window.contentsType (String : "page" : IR)
     // If this window has +link{window.src} specified, this property can be used to indicate
     // whether the source is a standalone HTML page or an HTML fragment.
     // <P>
@@ -1496,7 +1550,7 @@ isc.Window.addProperties({
     contentsType:"page",
 
 
-    //>    @attr    window.bodyConstructor (string : null : IRWA)
+    //>    @attr    window.bodyConstructor (String : null : IRWA)
     // The name of the widget class (as a string) to use for the body. If unset the appropriate
     // constructor type will be determined as follows:<br>
     // - if +link{window.items} is defined as an array of widgets, and +link{window.contentLayout}
@@ -1512,7 +1566,7 @@ isc.Window.addProperties({
     //<
 
 
-    //>    @attr    window.bodyDefaults        (object : ... : IRWA)
+    //>    @attr    window.bodyDefaults        (Object : ... : IRWA)
     // Default properties for the body of the Window<br>
     // You can change the class-level bodyDefaults for all Windows by changing this item
     // or set  instance.body to be another object of properties to override for your instance only
@@ -1775,7 +1829,8 @@ isc.Window.addProperties({
     showTitle:true,
 
     // When showTitle is false, should the contents of the header be set to the title?
-    showTitleAsHeaderContents:true,
+
+    //showTitleAsHeaderContents:false,
 
     //>    @attr window.title        (HTMLString : "Untitled Window" : [IRW])
     //          title for this Window, shown in the header (if drawn)
@@ -1847,7 +1902,7 @@ isc.Window.addProperties({
     //<
     headerIconConstructor:"Img",
 
-    //>    @attr    window.headerIconDefaults        (object : ... : IRWA)
+    //>    @attr    window.headerIconDefaults        (Object : ... : IRWA)
     //
     // This is an object literal property block specifying the various properties of the
     // headerIcon - the icon that appears at the top left of the window and is by default the
@@ -3170,7 +3225,7 @@ removeFooterControl : function (control) {
     }
 },
 
-//> @attr Window.status (string : null : IRW)
+//> @attr Window.status (String : null : IRW)
 // Text to show in the status bar of the window (if one is visible)
 // @group appearance
 // @visibility external
@@ -3178,7 +3233,7 @@ removeFooterControl : function (control) {
 
 //>    @method    Window.setStatus()  ([])
 //            Sets the text in the status bar of the window, redrawing if necessary.
-//        @param statusString (string) new text for the status bar
+//        @param statusString (String) new text for the status bar
 //        @group    appearance
 //      @visibility external
 //<
@@ -3197,7 +3252,7 @@ setStatus : function (statusString) {
 // necessary.
 //      @visibility external
 //        @group    appearance, body
-//        @param url (string) URL of new contents to be displayed in the window body
+//        @param url (String) URL of new contents to be displayed in the window body
 //<
 setSrc : function (url) {
     this.src = url;
@@ -3395,7 +3450,7 @@ hasInherentWidth : function () { return this.autoSize; },
 //      @visibility external
 //        @group    windowItems
 //      @param  item    (Canvas)    the widget to be added
-//      @return (array) array of widgets added
+//      @return (Array) array of widgets added
 //<
 addItem : function (item, position) {
     return this.addItems([item], position);
@@ -3406,7 +3461,7 @@ addItem : function (item, position) {
 //      @visibility external
 //        @group    windowItems
 //      @param  item    (Canvas)    the widget to be removed
-//      @return (array) the array of widgets removed
+//      @return (Array) the array of widgets removed
 //<
 removeItem : function (item) {
     return this.removeItems([item]);
@@ -3417,7 +3472,7 @@ removeItem : function (item) {
 //      @visibility external
 //        @group    windowItems
 //      @param  items    (Array of Canvas)    an array of widgets to be added
-//      @return (array)  array of widgets added
+//      @return (Array)  array of widgets added
 //<
 addItems : function (items, position) {
     if (!isc.isAn.Array(items)) items = [items];
@@ -3467,8 +3522,8 @@ addItems : function (items, position) {
 //            Removes an array of widgets from the window.
 //      @visibility external
 //        @group    windowItems
-//      @param  items   (array of canvases) an array of widgets to be removed
-//      @return (array) the array of widgets removed
+//      @param  items   (Array of Canvas) an array of widgets to be removed
+//      @return (Array) the array of widgets removed
 //<
 removeItems : function (items) {
 
@@ -3556,7 +3611,7 @@ replaceItem : function (oldItem, newItem) {
 // real children (the children of a Window - ie, the elements of its "children" array - are
 // its component parts like header and body)
 //
-// @param child (ID | Canvas)   the child Canvas to reveal, or its global ID
+// @param child (GlobalId | Canvas)   the child Canvas to reveal, or its global ID
 // @visibility external
 //<
 revealChild : function (child) {
@@ -3707,7 +3762,7 @@ dragResizeStart : function () {
 //             return a value to the callback function
 //                and hide the Window
 //
-//        @param    value    (any)    return value for the Window
+//        @param    value    (Any)    return value for the Window
 //<
 returnValue : function (value) {
     if (this.isVisible()) this.hide();
@@ -5075,7 +5130,7 @@ isc.defineClass("Portlet", "Window").addProperties({
     // "target" is the solid appearance.
     dragAppearance:"outline",
 
-    //>@attr portlet.dragType (string : "Portlet" : IRWA)
+    //>@attr portlet.dragType (String : "Portlet" : IRWA)
     // <p>By default, +link{portalLayout.portletDropTypes} is set so that any component can be
     // dragged into a +link{PortalLayout}. If the component is not a +link{Portlet},
     // it will be automatically be wrapped in a newly created +link{Portlet}.</p>
@@ -5249,7 +5304,7 @@ isc.defineClass("Portlet", "Window").addProperties({
     //<
     showCloseConfirmationMessage:true,
 
-    //>@attr portlet.closeConfirmationMessage (string : "Close portlet?" : IRW)
+    //>@attr portlet.closeConfirmationMessage (String : "Close portlet?" : IRW)
     // Confirmation message to show the user when closing portlets if
     // +link{showCloseConfirmationMessage} is true.
     // @visibility external
@@ -7042,7 +7097,7 @@ isc.defineClass("PortalLayout", "Layout").addProperties({
         this.reflow("showColumnMenus changed");
     },
 
-    //> @attr portalLayout.columnBorder (string : "1px solid gray" : IRW)
+    //> @attr portalLayout.columnBorder (String : "1px solid gray" : IRW)
     // Border to show around columns in this PortalLayout
     // @visibility external
     //<
@@ -7052,7 +7107,7 @@ isc.defineClass("PortalLayout", "Layout").addProperties({
     //> @method portalLayout.setColumnBorder()
     // Sets the columnBorder for to the specified value and updates any drawn columns to reflect
     // this.
-    // @param columnBorder (string) New border to show around columns
+    // @param columnBorder (String) New border to show around columns
     // @visibility external
     //<
     setColumnBorder : function (columnBorder) {
@@ -7622,16 +7677,16 @@ isc.defineClass("PortalLayout", "Layout").addProperties({
     // <code>positionInExistingRow</code> parameter.
     //
     // @param portlet (Portlet) Portlet to add to this layout.
-    // @param [colNum] (integer) Column in which the Portlet should be added. If unspecified,
+    // @param [colNum] (Integer) Column in which the Portlet should be added. If unspecified,
     //  portlet will be added to the first column.  If specified, but the
     //  specified column does not exist, a column is automatically added at the specified
     //  colNum index.
-    // @param [rowWithinCol] (integer) Row-position within the specified column for this portlet.
+    // @param [rowWithinCol] (Integer) Row-position within the specified column for this portlet.
     //  If unspecified defaults to zero - the portlet will be added to the top of the column.
     //  By default a new row will be added to the column for the portlet. Use the
     //  <code>positionInExistingRow</code> parameter to add the portlet to an existing
     //  row.
-    // @param [positionInExistingRow] (integer) Position within an existing row in the
+    // @param [positionInExistingRow] (Integer) Position within an existing row in the
     //  column. If this parameter is passed, this portlet will be added to the
     //  existing row at <code>rowWithinCol</code>, at the specified position.
     //  This allows developers to place multiple portlets side by side on a row within
@@ -7983,17 +8038,19 @@ isc.defineClass("PortalLayout", "Layout").addProperties({
 
 
 //>    @class    Dialog
-// Dialogs are a specialized version of +link{Window} used for small windows that contain just a text
-// message or a text mesage with some standard buttons.
+// Dialogs are a specialized version of +link{Window} used for small windows that contain just
+// a text message or a text mesage with some standard buttons.
 // <P>
-// Many typical modal dialogs such as alerts and confirmations are built into the system with convenience
-// APIs - see +link{classMethod:isc.say()}, +link{classMethod:isc.warn()} and +link{classMethod:isc.askForValue}.
+// Many typical modal dialogs such as alerts and confirmations are built into the system with
+// convenience APIs - see +link{staticMethod:isc.say()}, +link{staticMethod:isc.warn()} and
+// +link{staticMethod:isc.askForValue}.
 // <P>
 // Dialogs can be modal or non-modal according to +link{Window.isModal,isModal}.
 // <P>
-// NOTE: If you are building a dialog that will involve more than just buttons and a message, consider
-// starting from the +link{Window} class instead, where arbitrary components can be added to the body
-// area via +link{Window.addItem()}.
+// NOTE: If you are building a dialog that will involve more than just buttons and a message,
+// consider starting from the +link{Window} class instead, where arbitrary components can be
+// added to the body area via +link{Window.addItem()}.
+// <P>
 // This is an example of creating a custom dialog:
 // <smartclient>
 // <pre>
@@ -8033,49 +8090,49 @@ isc.ClassFactory.defineClass("Dialog", "Window");
 
 // add class properties
 isc.Dialog.addClassProperties({
-    //>    @classAttr    Dialog._openModalDialogs        (array : [] : IRWA)
+    //>    @classAttr    Dialog._openModalDialogs        (Array : [] : IRWA)
     //             list of open modal Dialogs so we can keep track as we open them
     //        @group    modal
     //        @see    Dialog.show()
     //<
     _openModalDialogs : [],
 
-    //> @classAttr  Dialog.OK_BUTTON_TITLE  (HTML : "OK" : IRW)
+    //> @classAttr  Dialog.OK_BUTTON_TITLE  (HTMLString : "OK" : IRW)
     // Title for the <code>"OK"</code> button.
     // @see type:DialogButtons
     // @group i18nMessages
     // @visibility external
     //<
     OK_BUTTON_TITLE:"OK",
-    //> @classAttr  Dialog.APPLY_BUTTON_TITLE  (HTML : "Apply" : IRW)
+    //> @classAttr  Dialog.APPLY_BUTTON_TITLE  (HTMLString : "Apply" : IRW)
     // Title for the <code>"Apply"</code> button.
     // @see type:DialogButtons
     // @group i18nMessages
     // @visibility external
     //<
     APPLY_BUTTON_TITLE:"Apply",
-    //> @classAttr  Dialog.YES_BUTTON_TITLE  (HTML : "Yes" : IRW)
+    //> @classAttr  Dialog.YES_BUTTON_TITLE  (HTMLString : "Yes" : IRW)
     // Title for the <code>"Yes"</code> button.
     // @see type:DialogButtons
     // @group i18nMessages
     // @visibility external
     //<
     YES_BUTTON_TITLE:"Yes",
-    //> @classAttr  Dialog.NO_BUTTON_TITLE  (HTML : "No" : IRW)
+    //> @classAttr  Dialog.NO_BUTTON_TITLE  (HTMLString : "No" : IRW)
     // Title for the <code>"No"</code> button.
     // @see type:DialogButtons
     // @group i18nMessages
     // @visibility external
     //<
     NO_BUTTON_TITLE:"No",
-    //> @classAttr  Dialog.CANCEL_BUTTON_TITLE  (HTML : "Cancel" : IRW)
+    //> @classAttr  Dialog.CANCEL_BUTTON_TITLE  (HTMLString : "Cancel" : IRW)
     // Title for the <code>"Cancel"</code> button.
     // @see type:DialogButtons
     // @group i18nMessages
     // @visibility external
     //<
     CANCEL_BUTTON_TITLE:"Cancel",
-    //> @classAttr  Dialog.DONE_BUTTON_TITLE  (HTML : "Done" : IRW)
+    //> @classAttr  Dialog.DONE_BUTTON_TITLE  (HTMLString : "Done" : IRW)
     // Title for the <code>"Done"</code> button.
     // @see type:DialogButtons
     // @group i18nMessages
@@ -8085,8 +8142,8 @@ isc.Dialog.addClassProperties({
 
     // Default Titles for the prompt windows themselves
 
-    //> @classAttr  Dialog.CONFIRM_TITLE    (HTML : "Confirm" : IRW)
-    // Default title for the dialog displayed in response to the +link{classMethod:isc.confirm()} method.
+    //> @classAttr  Dialog.CONFIRM_TITLE    (HTMLString : "Confirm" : IRW)
+    // Default title for the dialog displayed in response to the +link{staticMethod:isc.confirm()} method.
     // Note that a custom title can be specified as the <code>title</code> attribute of the
     // <code>properties</code> parameter passed to that method.
     // @group i18nMessages
@@ -8094,8 +8151,8 @@ isc.Dialog.addClassProperties({
     //<
     CONFIRM_TITLE:"Confirm",
 
-    //> @classAttr  Dialog.SAY_TITLE    (HTML : "Note" : IRW)
-    // Default title for the dialog displayed in response to the +link{classMethod:isc.say()} method.
+    //> @classAttr  Dialog.SAY_TITLE    (HTMLString : "Note" : IRW)
+    // Default title for the dialog displayed in response to the +link{staticMethod:isc.say()} method.
     // Note that a custom title can be specified as the <code>title</code> attribute of the
     // <code>properties</code> parameter passed to that method.
     // @group i18nMessages
@@ -8103,8 +8160,8 @@ isc.Dialog.addClassProperties({
     //<
     SAY_TITLE:"Note",
 
-    //> @classAttr  Dialog.WARN_TITLE    (HTML : "Warning" : IRW)
-    // Default title for the dialog displayed in response to the +link{classMethod:isc.warn()} method.
+    //> @classAttr  Dialog.WARN_TITLE    (HTMLString : "Warning" : IRW)
+    // Default title for the dialog displayed in response to the +link{staticMethod:isc.warn()} method.
     // Note that a custom title can be specified as the <code>title</code> attribute of the
     // <code>properties</code> parameter passed to that method.
     // @group i18nMessages
@@ -8112,8 +8169,8 @@ isc.Dialog.addClassProperties({
     //<
     WARN_TITLE:"Warning",
 
-    //> @classAttr  Dialog.ASK_TITLE    (HTML : "Question" : IRW)
-    // Default title for the dialog displayed in response to the +link{classMethod:isc.ask()} method.
+    //> @classAttr  Dialog.ASK_TITLE    (HTMLString : "Question" : IRW)
+    // Default title for the dialog displayed in response to the +link{staticMethod:isc.ask()} method.
     // Note that a custom title can be specified as the <code>title</code> attribute of the
     // <code>properties</code> parameter passed to that method.
     // @group i18nMessages
@@ -8121,8 +8178,8 @@ isc.Dialog.addClassProperties({
     //<
     ASK_TITLE:"Question",
 
-    //> @classAttr  Dialog.ASK_FOR_VALUE_TITLE    (HTML : "Please enter a value" : IRW)
-    // Default title for the dialog displayed by +link{classMethod:isc.askForValue()}.
+    //> @classAttr  Dialog.ASK_FOR_VALUE_TITLE    (HTMLString : "Please enter a value" : IRW)
+    // Default title for the dialog displayed by +link{staticMethod:isc.askForValue()}.
     // A custom title can alternatively be specified as the <code>title</code> attribute of the
     // <code>properties</code> parameter passed to that method.
     // @group i18nMessages
@@ -8130,8 +8187,8 @@ isc.Dialog.addClassProperties({
     //<
     ASK_FOR_VALUE_TITLE:"Please enter a value",
 
-    //> @classAttr  LoginDialog.LOGIN_TITLE (HTML : "Please log in" : IRW)
-    // Default title for the dialog displayed by +link{classMethod:isc.showLoginDialog()}.
+    //> @classAttr  LoginDialog.LOGIN_TITLE (HTMLString : "Please log in" : IRW)
+    // Default title for the dialog displayed by +link{staticMethod:isc.showLoginDialog()}.
     // A custom title can alternatively be specified as the <code>title</code> attribute of the
     // <code>properties</code> parameter passed to that method.
     // @group i18nMessages
@@ -8140,36 +8197,36 @@ isc.Dialog.addClassProperties({
 
     LOGIN_TITLE:"Please log in",
 
-    //> @classAttr  LoginDialog.USERNAME_TITLE (HTML : "Username" : IRW)
+    //> @classAttr  LoginDialog.USERNAME_TITLE (HTMLString : "Username" : IRW)
     // Default title for the +link{loginDialog.usernameItem,"usernameItem"} field in the
-    // dialog displayed by +link{classMethod:isc.showLoginDialog()}.
+    // dialog displayed by +link{staticMethod:isc.showLoginDialog()}.
     // @group i18nMessages
     // @visibility external
     //<
 
     USERNAME_TITLE:"Username",
 
-    //> @classAttr  LoginDialog.PASSWORD_TITLE (HTML : "Password" : IRW)
+    //> @classAttr  LoginDialog.PASSWORD_TITLE (HTMLString : "Password" : IRW)
     // Default title for the +link{loginDialog.passwordItem,"passwordItem"} field in the
-    // dialog displayed by +link{classMethod:isc.showLoginDialog()}.
+    // dialog displayed by +link{staticMethod:isc.showLoginDialog()}.
     // @group i18nMessages
     // @visibility external
     //<
 
     PASSWORD_TITLE:"Password",
 
-    //> @classAttr  LoginDialog.LOGIN_BUTTON_TITLE (HTML : "Log in" : IRW)
+    //> @classAttr  LoginDialog.LOGIN_BUTTON_TITLE (HTMLString : "Log in" : IRW)
     // Default title for login button in the dialog displayed by
-    // +link{classMethod:isc.showLoginDialog()}.
+    // +link{staticMethod:isc.showLoginDialog()}.
     // @group i18nMessages
     // @visibility external
     //<
 
     LOGIN_BUTTON_TITLE:"Log in",
 
-    //> @classAttr  LoginDialog.LOGIN_ERROR_MESSAGE (HTML : "Invalid username or password" : IRW)
+    //> @classAttr  LoginDialog.LOGIN_ERROR_MESSAGE (HTMLString : "Invalid username or password" : IRW)
     // Default error message displayed on failed login in the dialog shown by
-    // +link{classMethod:isc.showLoginDialog()}.
+    // +link{staticMethod:isc.showLoginDialog()}.
     // @group i18nMessages
     // @visibility external
     //<
@@ -8190,7 +8247,7 @@ isc.Dialog.addClassProperties({
     // <smartclient>
     // Refer to these buttons via the syntax <code>isc.Dialog.OK</code> when passing them into
     // +link{dialog.buttons} or into the <code>properties</code> argument of helper
-    // methods such as +link{classMethod:isc.say()}.
+    // methods such as +link{staticMethod:isc.say()}.
     // </smartclient>
     // <p>
     // All buttons added via <code>setButtons</code> will fire the
@@ -8263,7 +8320,7 @@ isc.Dialog.addProperties({
 
     // Body Settings
     // ----------------------------------------------------------------------------------------
-    //>    @attr    dialog.bodyStyle    (string : "dialogBody" : IA)
+    //>    @attr    dialog.bodyStyle    (String : "dialogBody" : IA)
     // Style of the Window body
     //        @group    appearance, header
     //        @see    Window.makeBody()
@@ -8317,7 +8374,7 @@ isc.Dialog.addProperties({
     // @visibility external
     //<
 
-    //> @attr dialog.messageStyle (CSSStyle : "normal" : IR)
+    //> @attr dialog.messageStyle (CSSStyleName : "normal" : IR)
     // Style to apply to the message text shown in the center of the dialog
     // @visibility external
     //<
@@ -8360,21 +8417,21 @@ isc.Dialog.addProperties({
 
     // Header
     // ----------------------------------------------------------------------------------------
-    //>    @attr    dialog.headerStyle    (string : "DialogHeader" : IA)
+    //>    @attr    dialog.headerStyle    (String : "DialogHeader" : IA)
     // Style of the Dialog header
     //        @group    appearance, header
     //        @see    Dialog.makeHeader()
     //<
     headerStyle:"dialogHeader",
 
-    //>    @attr    dialog.windowHeaderHilite    (string : "WindowHeader" : IA)
+    //>    @attr    dialog.windowHeaderHilite    (String : "WindowHeader" : IA)
     //            Highlight style for the Dialog header
     //        @group    appearance, header
     //        @see    Window.makeHeader()
     //<
     hiliteHeaderStyle:"dialogHeaderHilite",
 
-    //>    @attr    dialog.headerLabelTextStyle    (string : "dialogHeaderText" : IA)
+    //>    @attr    dialog.headerLabelTextStyle    (String : "dialogHeaderText" : IA)
     //            Style of the Dialog headerLabel text
     //        @group    appearance, headerLabel
     //        @see    Dialog.makeHeaderLabel()
@@ -8446,7 +8503,7 @@ isc.Dialog.addProperties({
     // Array of Buttons to show in the +link{showToolbar,toolbar}, if shown.
     // <P>
     // The set of buttons to use is typically set by calling one of the shortcuts such as
-    // +link{classMethod:isc.say()} or +link{classMethod:isc.confirm()}.  A custom set of
+    // +link{staticMethod:isc.say()} or +link{staticMethod:isc.confirm()}.  A custom set of
     // buttons can be passed to these shortcuts methods via the "properties" argument, or to a
     // directly created Dialog.
     // <P>
@@ -8499,25 +8556,25 @@ isc.Dialog.addProperties({
     // Body Icons
     // ---------------------------------------------------------------------------------------
     //> @attr Dialog.askIcon (SCImgURL : "[SKIN]ask.png" : IR)
-    // Icon to show in the <smartclient>+link{classMethod:isc.ask()}</smartclient>
+    // Icon to show in the <smartclient>+link{staticMethod:isc.ask()}</smartclient>
     // <smartgwt>{@link com.smartgwt.client.util.SC#ask SC.ask()}</smartgwt> dialog.
     // @visibility external
     //<
     askIcon:"[SKIN]ask.png",
     //> @attr Dialog.sayIcon (SCImgURL : "[SKIN]say.png" : IR)
-    // Icon to show in the <smartclient>+link{classMethod:isc.say()}</smartclient>
+    // Icon to show in the <smartclient>+link{staticMethod:isc.say()}</smartclient>
     // <smartgwt>{@link com.smartgwt.client.util.SC#say SC.say()}</smartgwt> dialog.
     // @visibility external
     //<
     sayIcon:"[SKIN]say.png",
     //> @attr Dialog.warnIcon (SCImgURL : "[SKIN]warn.png" : IR)
-    // Icon to show in the <smartclient>+link{classMethod:isc.warn()}</smartclient>
+    // Icon to show in the <smartclient>+link{staticMethod:isc.warn()}</smartclient>
     // <smartgwt>{@link com.smartgwt.client.util.SC#warn SC.warn()}</smartgwt> dialog.
     // @visibility external
     //<
     warnIcon:"[SKIN]warn.png",
     //> @attr Dialog.confirmIcon (SCImgURL : "[SKIN]confirm.png" : IR)
-    // Icon to show in the <smartclient>+link{classMethod:isc.confirm()}</smartclient>
+    // Icon to show in the <smartclient>+link{staticMethod:isc.confirm()}</smartclient>
     // <smartgwt>{@link com.smartgwt.client.util.SC#confirm SC.confirm()}</smartgwt> dialog.
     // @visibility external
     //<
@@ -8835,8 +8892,8 @@ isc.Dialog.changeDefaults("toolbarDefaults",
 //
 // @group Prompting
 // @visibility external
-// @see classMethod:isc.showPrompt
-// @see classMethod:isc.clearPrompt
+// @see staticMethod:isc.showPrompt
+// @see staticMethod:isc.clearPrompt
 //<
 isc.Dialog.Prompt = {
     ID:"isc_globalPrompt",
@@ -8881,7 +8938,7 @@ isc.Dialog.Prompt = {
     //    Dialog will redraw and resize to show the entire message
     //    any properties in attributes will get applied and may be visibily changed
     //
-    //    @param    newMessage    (string)    message to display
+    //    @param    newMessage    (String)    message to display
     //    @param    properties (Dialog Properties)    object of name:value pairs to apply to the object
     //                                    properties are applied before the redraw
     //<
@@ -8937,7 +8994,7 @@ isc.Dialog.Prompt = {
 
 
 
-//>    @classMethod isc.showPrompt()
+//>    @staticMethod isc.showPrompt()
 //
 //    Method available on the isc object to show a modal prompt to the user.
 //  This method will display the message using the Dialog.Prompt singleton object.<br>
@@ -8948,7 +9005,7 @@ isc.Dialog.Prompt = {
 //  <p/>Use <code>"&#36;{loadingImage}"</code> to include +link{Canvas.loadingImageSrc,a loading image}.
 //
 //
-//    @param    message            (string)    message to display
+//    @param    message            (String)    message to display
 //    @param    [properties]    (Dialog Properties)    additional properties for the Dialog, applied before
 //                                       the Dialog is shown
 //
@@ -8979,7 +9036,7 @@ isc.addGlobal("showPrompt", function (message, properties) {
     isc.Dialog.Prompt.showMessage(message, properties);
 });
 
-//>    @classMethod    isc.clearPrompt()
+//>    @staticMethod isc.clearPrompt()
 //
 //    Clear the modal prompt being shown to the user.
 //
@@ -8994,7 +9051,7 @@ isc.addGlobal("clearPrompt", function () {
 
 
 
-//>    @classMethod isc.showFadingPrompt()
+//>    @staticMethod isc.showFadingPrompt()
 //
 //    Method available on the isc object to show a temporary modal prompt to the user.
 //  This method will display the message using the Dialog.Prompt singleton object, then hide it
@@ -9007,10 +9064,10 @@ isc.addGlobal("clearPrompt", function () {
 //  The prompt may be cleared before the duration has elapsed via a call to +link{isc.clearPrompt()}
 //  and any callback specified will still be fired even if the prompt is dismissed early.
 //
-//    @param    message            (string)    message to display
+//    @param    message            (String)    message to display
 //  @param  duration        (number)    how long the message should appear for in milliseconds before
 //    fading from view.
-//  @param  [callback]      (callback) When the prompt is hidden, callback will be fired.
+//  @param  [callback]      (Callback) When the prompt is hidden, callback will be fired.
 //    @param    [properties]    (Dialog Properties)    additional properties for the Dialog, applied before
 //                                       the Dialog is shown
 //
@@ -9041,8 +9098,9 @@ isc.addGlobal("showFadingPrompt", function (message, duration, callback, propert
 //
 // A singleton Dialog instance that will show text to the user and provide buttons for their
 // response.  The Dialog will expand to show all the text that you put into it. This dialog
-// is shown in response to calls to +link{classMethod:isc.say()}, +link{classMethod:isc.warn()}, +link{classMethod:isc.ask} and
-// +link{classMethod:isc.confirm()}.
+// is shown in response to calls to +link{staticMethod:isc.say()},
+// +link{staticMethod:isc.warn()}, +link{staticMethod:isc.ask} and
+// +link{staticMethod:isc.confirm()}.
 // <P>
 // This can be used in cases where a developer would alternatively make use of the native
 // JavaScript <code>alert()</code> and <code>confirm()</code> methods.  The main differences
@@ -9060,8 +9118,8 @@ isc.addGlobal("showFadingPrompt", function (message, duration, callback, propert
 //  hide this object rather than manipulating the Dialog directly.
 //  @group  Prompting
 //  @visibility external
-//  @see classMethod:isc.warn
-//  @see classMethod:isc.ask
+//  @see staticMethod:isc.warn
+//  @see staticMethod:isc.ask
 //<
 isc.Dialog.Warn = {
     ID:"isc_globalWarn",
@@ -9088,7 +9146,7 @@ isc.Dialog.Warn = {
     // Dialog will redraw and resize to show the entire message
     // any properties in attributes will get applied and may be visibily changed
     //
-    //    @param    newMessage    (string)    message to display
+    //    @param    newMessage    (String)    message to display
     //    @param    attributes    (Dialog Properties)    object of name:value pairs to apply to the object
     //                                    properties are applied before the redraw
     //<
@@ -9159,7 +9217,7 @@ isc.Dialog.Warn = {
     }
 };
 
-//> @classMethod isc.showMessage()
+//> @staticMethod isc.showMessage()
 // Show a modal dialog with a message, icon, and response buttons.
 //<
 isc.addGlobal("showMessage", function (message, messageType, callback, properties) {
@@ -9238,7 +9296,7 @@ isc.addGlobal("showMessage", function (message, messageType, callback, propertie
     isc.Dialog.Warn.showMessage(message, properties);
 });
 
-//> @classMethod isc.getLastDialog()
+//> @staticMethod isc.getLastDialog()
 // Returns the last-shown isc.say/ask/warn/confirm dialog.  Do not document externally.
 //<
 isc.addGlobal("getLastDialog", function () {
@@ -9259,13 +9317,13 @@ isc._applyDialogHandlers = function (properties) {
     }
 }
 
-//>    @classMethod    isc.warn()
+//>    @staticMethod isc.warn()
 // Show a modal dialog with a message, icon, and "OK" button. See +link{dialog.warnIcon}.
 // <P>
 // The callback will receive boolean true for an OK button click, or null if the Dialog is
 // dismissed via the close button.
 //
-//    @param    message            (string)    message to display
+//    @param    message            (String)    message to display
 //  @param  [callback]      (Callback)  Optional Callback to fire when the user
 //                                      dismisses the dialog. This has the single parameter
 //                                      'value', indicating the value returned by the Warn
@@ -9278,8 +9336,8 @@ isc._applyDialogHandlers = function (properties) {
 // @group Prompting
 // @visibility external
 // @see classAttr:Dialog.Warn
-// @see classMethod:isc.say()
-// @see classMethod:isc.ask()
+// @see staticMethod:isc.say()
+// @see staticMethod:isc.ask()
 // @see method:Dialog.okClick()
 // @see classAttr:Dialog.WARN_TITLE
 //<
@@ -9287,14 +9345,14 @@ isc.addGlobal("warn", function (message, callback, properties) {
     isc.showMessage(message, "warn", callback, properties);
 });
 
-//>    @classMethod    isc.say()
+//>    @staticMethod isc.say()
 // Show a modal dialog with a message, icon, and "OK" button.  Intended for notifications which
 // are not really warnings (default icon is less severe). See +link{dialog.sayIcon}.
 // <P>
 // The callback will receive boolean true for an OK button click, or null if the Dialog is
 // dismissed via the close button.
 //
-//    @param    message            (string)    message to display
+//    @param    message            (String)    message to display
 //  @param  [callback]      (Callback)  Optional Callback to fire when the user
 //                                      dismisses the dialog. This has the single parameter
 //                                      'value', indicating the value returned by the Warn
@@ -9307,8 +9365,8 @@ isc.addGlobal("warn", function (message, callback, properties) {
 // @group Prompting
 // @visibility external
 // @see classAttr:Dialog.Warn
-// @see classMethod:isc.warn()
-// @see classMethod:isc.ask()
+// @see staticMethod:isc.warn()
+// @see staticMethod:isc.ask()
 // @see method:Dialog.okClick()
 // @see classAttr:Dialog.SAY_TITLE
 //<
@@ -9317,13 +9375,13 @@ isc.addGlobal("say", function (message, callback, properties) {
 });
 
 
-//>    @classMethod    isc.ask()
+//>    @staticMethod isc.ask()
 // Show a modal dialog with a message, icon, and "Yes" and "No" buttons. See +link{dialog.askIcon}.
 // <P>
 // The callback will receive boolean true for a Yes button click, boolean false for a No button
 // click, or null if the Dialog is dismissed via the close button.
 //
-//    @param    message            (string)    message to display
+//    @param    message            (String)    message to display
 //  @param  [callback]      (Callback)  Callback to fire when the
 //                                      user clicks a button to dismiss the dialog.
 //                                      This has the single parameter 'value', indicating the
@@ -9337,7 +9395,7 @@ isc.addGlobal("say", function (message, callback, properties) {
 // @group Prompting
 // @visibility external
 // @see Dialog.Warn
-// @see classMethod:isc.warn()
+// @see staticMethod:isc.warn()
 // @see method:Dialog.yesClick()
 // @see method:Dialog.noClick()
 // @see classAttr:Dialog.ASK_TITLE
@@ -9347,7 +9405,7 @@ isc.addGlobal("ask", function (message, callback, properties) {
     isc.showMessage(message, "ask", callback, properties);
 });
 
-//>    @classMethod    isc.confirm()
+//>    @staticMethod isc.confirm()
 // Show a modal dialog with a message, icon, and "OK" and "Cancel" buttons. See +link{dialog.confirmIcon}.
 // <P>
 // The callback will receive boolean true for an OK button click, or null for a Cancel click or
@@ -9355,7 +9413,7 @@ isc.addGlobal("ask", function (message, callback, properties) {
 // <P>
 // Note: this does not override the native window.confirm() method.
 //
-//    @param    message            (string)    message to display
+//    @param    message            (String)    message to display
 //  @param  [callback]      (Callback)  Callback to fire when the
 //                                      user clicks a button to dismiss the dialog.
 //                                      This has the single parameter 'value', indicating the
@@ -9369,7 +9427,7 @@ isc.addGlobal("ask", function (message, callback, properties) {
 // @group Prompting
 // @visibility external
 // @see Dialog.Warn
-// @see classMethod:isc.warn()
+// @see staticMethod:isc.warn()
 // @see method:Dialog.okClick()
 // @see method:Dialog.cancelClick()
 // @see classAttr:Dialog.CONFIRM_TITLE
@@ -9390,13 +9448,13 @@ isc.confirm = function (message, callback, properties) {
 //  manipulating the Dialog directly.
 //  @group  Prompting
 //  @visibility external
-//  @see classMethod:isc.askForValue
+//  @see staticMethod:isc.askForValue
 //<
 
-//> @classMethod isc.askForValue()
+//> @staticMethod isc.askForValue()
 // Show a modal dialog with a text entry box, asking the user to enter a value.
 // <P>
-// As with other convenience methods that show Dialogs, such as +link{classMethod:isc.warn()},
+// As with other convenience methods that show Dialogs, such as +link{staticMethod:isc.warn()},
 // the dialog is shown and the function immediately returns.  When the user responds, the
 // provided callback is called.
 // <P>
@@ -9409,7 +9467,7 @@ isc.confirm = function (message, callback, properties) {
 // Keyboard focus is automatically placed in the text entry field, and hitting the enter key is
 // the equivalent of pressing OK.
 //
-//    @param    message            (string)    message to display
+//    @param    message            (String)    message to display
 //  @param  [callback]      (Callback)  Callback to fire when the
 //                                      user clicks a button to dismiss the dialog.
 //                                      This has the single parameter 'value', indicating the
@@ -9498,10 +9556,11 @@ isc.askForValue = function (message, callback, properties) {
     askDialog.askForm.focusInItem("value");
 };
 
-//> @classMethod isc.dismissCurrentDialog()
-// If a dialog triggered via +link{classMethod:isc.say()}, +link{classMethod:isc.ask()},
-// +link{classMethod:isc.warn()}, +link{classMethod:isc.confirm()} or +link{classMethod:isc.askForValue()}
-// is currently visible, it will be dismissed.  The callback passed to the relevant method will never fire.
+//> @staticMethod isc.dismissCurrentDialog()
+// If a dialog triggered via +link{staticMethod:isc.say()}, +link{staticMethod:isc.ask()},
+// +link{staticMethod:isc.warn()}, +link{staticMethod:isc.confirm()} or
+// +link{staticMethod:isc.askForValue()} is currently visible, it will be dismissed.  The
+// callback passed to the relevant method will never fire.
 // <p>
 // Note this is a rarely used API with very few valid use cases.  As an example, perhaps some kind of
 // periodic (non-user triggered) event would cause an entire area of the UI to be removed (such as a tab)
@@ -9524,11 +9583,11 @@ isc.addGlobal("dismissCurrentDialog", function () {
     }
 });
 
-//> @classMethod isc.showLoginDialog()
+//> @staticMethod isc.showLoginDialog()
 // Handle a complete login interaction with a typical login dialog asking for username and
 // password credentials using the +link{LoginDialog} class.
 // <P>
-// As with other convenience methods that show Dialogs, such as +link{classMethod:isc.warn()},
+// As with other convenience methods that show Dialogs, such as +link{staticMethod:isc.warn()},
 // the dialog is shown and the function immediately returns.  When the user responds, the
 // provided callback function is called.
 // <P>
@@ -9601,7 +9660,7 @@ isc.addGlobal("dismissCurrentDialog", function () {
 // the username and password to the authentication mechanism of your choice, calling
 // dialogCallback once the authentication process completes.
 //
-// @see classMethod:isc.showLoginDialog
+// @see staticMethod:isc.showLoginDialog
 // @inheritsFrom Window
 // @treeLocation Client Reference/Control
 // @group Prompting
@@ -11246,15 +11305,16 @@ isc.TabSet.addProperties({
     // @visibility external
     //<
 
-    //> @attr tab.title (HTMLString : null : IRW)
-    // Specifies the title of the this tab.  To change the title after the TabSet has been
-    // created, call +link{TabSet.setTabTitle}.
+    //> @attr tab.title (HTMLString : null : IR)
+    // Specifies the title of the this tab.  <smartclient>To change the title after the TabSet
+    // has been created, call +link{TabSet.setTabTitle}.</smartclient>
     //
     // @see TabSet.setTabTitle
     // @visibility external
     //<
 
-    //> @attr tab.canEditTitle (boolean : null : IRW)
+
+    //> @attr tab.canEditTitle (boolean : null : IR)
     //
     // If specified, overrides the +link{TabSet.canEditTabTitles} setting, for this one tab
     // only.
@@ -11262,29 +11322,39 @@ isc.TabSet.addProperties({
     // Note that the TabSet's +link{TabSet.titleEditEvent,titleEditEvent} must be set to a
     // supported +link{TabTitleEditEvent} in order for users to be able to edit this tab's
     // title.
-    //
+    // <smartclient><p>
+    // After the TabSet has been created, you can change a tab's <code>canEditTtile</code>
+    // property by calling +link{TabSet.setTabProperties()}.</smartclient>
     // @see TabSet.canEditTabTitles
-    // @visibility external
     // @example userEditableTitles
-    //<
-
-    //> @attr tab.prompt (HTMLString : null : IRW)
-    // Specifies the prompt to be displayed when the mouse hovers over the tab.
-    //
     // @visibility external
     //<
 
-    //> @attr tab.pickerTitle (HTMLString : null : IRW)
+
+    //> @attr tab.prompt (HTMLString : null : IR)
+    // Specifies the prompt to be displayed when the mouse hovers over the tab.
+    // <smartclient><p>
+    // After the TabSet has been created, you can change a tab's <code>prompt</code> property by
+    // calling +link{TabSet.setTabProperties()}.</smartclient>
+    // @visibility external
+    //<
+
+
+    //> @attr tab.pickerTitle (HTMLString : null : IR)
     // If +link{tabSet.showTabPicker} is true for this TabSet, if set this property will determine
     // the title of the picker menu item for this tab. If unset, +link{tab.title} will be used
-    // instead
+    // instead.
+    // <smartclient><p>
+    // After the TabSet has been created, you can change a tab's <code>pickerTitle</code>
+    // property by calling +link{TabSet.setTabProperties()}.</smartclient>
     // @see TabSet.showTabPicker
     // @see tab.title
     // @group tabBarControls
     // @visibility external
     //<
 
-    //> @attr tab.pane (ID | Canvas: null : IRW)
+
+    //> @attr tab.pane (Canvas | ID : null : IR)
     //
     // Specifies the pane associated with this tab.  You have two options for the value of
     // the pane attribute:
@@ -11292,12 +11362,13 @@ isc.TabSet.addProperties({
     // <li><b>ID</b> - The global ID of an already created Canvas (or subclass).
     // <li><b>Canvas</b> - A live instance of a Canvas (or subclass).
     // </ul>
-    // You can change the pane associated with a given tab after the TabSet has been created by
-    // calling +link{TabSet.updateTab}.
+    // <smartclient>You can change the pane associated with a given tab after the TabSet has
+    // been created by calling +link{TabSet.updateTab}.</smartclient>
     //
     // @see TabSet.updateTab
     // @visibility external
     //<
+
 
     //> @attr tab.paneMargin (int : null : IR)
     // Space to leave around the pane within this Tab.
@@ -11305,7 +11376,7 @@ isc.TabSet.addProperties({
     // @visibility external
     //<
 
-    //> @attr tab.ID (identifier : null : IRW)
+    //> @attr tab.ID (GlobalId : null : IR)
     // Optional ID for the tab, which can later be used to reference the tab.
     // APIs requiring a reference to a tab will accept the tab's ID
     // [including  +link{tabSet.selectTab()}, +link{tabSet.updateTab()}, +link{tabSet.removeTab()}].<br>
@@ -11318,7 +11389,13 @@ isc.TabSet.addProperties({
     // @visibility external
     //<
 
-    //> @attr tab.name (identifier : null : IRW)
+    //> @type TabName
+    // An +link{Identifier} that must be locally unique within the containing +link{TabSet}.
+    // @baseType Identifier
+    // @visibility external
+    //<
+
+    //> @attr tab.name (TabName : null : IR)
     // Optional name for the tab, which can later be used to reference the tab.
     // APIs requiring a reference to a tab will accept the tab's name
     // [including  +link{tabSet.selectTab()}, +link{tabSet.updateTab()}, +link{tabSet.removeTab()}].<br>
@@ -11331,31 +11408,37 @@ isc.TabSet.addProperties({
     // @visibility external
     //<
 
-    //> @attr tab.width (number : 100 : IRW)
+    //> @attr tab.width (number : 100 : IR)
     // You can specify an explicit width for the tab using this property.  Note that tabs
     // automatically size to make room for the full title, but if you want to e.g. specify a
     // uniform width for all tabs in a TabSet, this property enables you to do so.
-    //
+    // <p>
+    // <smartclient>After the TabSet has been created, you can change a tab's <code>width</code>
+    // property by calling +link{TabSet.setTabProperties()}.</smartclient>
     // @visibility external
     //<
 
+
     //> @attr tab.canAdaptWidth (Boolean : false : IR)
     // If enabled, the tab will collapse to show just its icon when showing the title would
-    // cause overflow of a containing +link{TabBar}.
+    // cause overflow of a containing +link{TabBar}.  While collapsed, the tab will show its
+    // title on hover, unless an explicit hover has been specified such as by +link{prompt}.
     //
     // @see Button.canAdaptWidth
     // @see Canvas.canAdaptWidth
     // @visibility external
     //<
 
-    //> @attr tab.disabled (boolean : null : IRW)
-    // If specified, this tab will initially be rendered in a disabled state. To enable or
-    // disable tabs on the fly use the +link{tabSet.enableTab()}, and +link{tabSet.disableTab()}
+    //> @attr tab.disabled (boolean : null : IR)
+    // If specified, this tab will initially be rendered in a disabled state. <smartclient>To
+    // enable or disable tabs on the fly use the +link{tabSet.enableTab()}, and
+    // +link{tabSet.disableTab()}.</smartclient>
     // methods.
     // @visibility external
     //<
 
-    //> @attr tab.icon (SCImgURL : null : IRW)
+
+    //> @attr tab.icon (SCImgURL : null : IR)
     // If specified, this tab will show an icon next to the tab title.
     // <p>
     // <b>NOTE:</b> if you enable +link{tabSet.canCloseTabs,closeable tabs},
@@ -11371,28 +11454,46 @@ isc.TabSet.addProperties({
     // and +link{tab.iconHeight}. Without an explicitly specified size, tabs may be drawn
     // overlapping or with gaps the first time a page is loaded, because the icon is not cached
     // and therefore its size isn't known.
+    // <smartclient><p>
+    // After the TabSet has been created, you can change a tab's <code>icon</code> property by
+    // calling +link{TabSet.setTabIcon()}.</smartclient>
     //
     // @visibility external
     // @example tabsOrientation
     // @see tabSet.tabIconClick
     //<
 
-    //> @attr tab.iconSize (integer : 16 : IRW)
+
+    //> @attr tab.iconSize (Integer : 16 : IR)
     // If +link{tab.icon} is specified, this property may be used to specify a size for the icon.
     // Per side sizing may be specified instead via +link{tab.iconWidth} and +link{tab.iconHeight}.
+    // <smartclient><p>
+    // After the TabSet has been created, you can change a tab's <code>iconSize</code> property
+    // by calling +link{TabSet.setTabProperties()}.</smartclient>
     // @visibility external
     //<
+
     defaultTabIconSize: 16,
 
-    //> @attr tab.iconWidth (integer : null : IRW)
-    // If +link{tab.icon} is specified, this property may be used to specify a size for the icon
+    //> @attr tab.iconWidth (Integer : null : IR)
+    // If +link{tab.icon} is specified, this property may be used to specify a width for the
+    // icon.
+    // <smartclient><p>
+    // After the TabSet has been created, you can change a tab's <code>iconWidth</code> property
+    // by calling +link{TabSet.setTabProperties()}.</smartclient>
     // @visibility external
     //<
 
-    //> @attr tab.iconHeight (integer : null : IRW)
-    // If +link{tab.icon} is specified, this property may be used to specify a size for the icon
+
+    //> @attr tab.iconHeight (Integer : null : IR)
+    // If +link{tab.icon} is specified, this property may be used to specify a height for the
+    // icon.
+    // <smartclient><p>
+    // After the TabSet has been created, you can change a tab's <code>iconHeight</code>
+    // property by calling +link{TabSet.setTabProperties()}.</smartclient>
     // @visibility external
     //<
+
 
     //> @attr tab.canReorder (Boolean : null : IR)
     // If +link{tabSet.canReorderTabs} is set to <code>true</code>, setting <code>canReorder</code>
@@ -11409,7 +11510,7 @@ isc.TabSet.addProperties({
     // @see TabSet.canReorderTabs
     //<
 
-    //> @attr tab.canClose (boolean : null : IRW)
+    //> @attr tab.canClose (boolean : null : IR)
     // Determines whether this tab should show a close icon allowing the user to dismiss the tab
     // by clicking on the close icon directly. The URL for the close icon's image will be derived from
     // +link{tabSet.closeTabIcon} by default, but may be overridden by explicitly specifying
@@ -11420,22 +11521,23 @@ isc.TabSet.addProperties({
     // Note that setting <code>canClose</code> means that +link{tab.icon} cannot be used,
     // because it's used for the +link{tab.closeIcon,closeIcon} - see
     // +link{tabSet.canCloseTabs} for a workaround.
-    // <p>
-    // After the TabSet has been created, you can change a tab's canClose property by calling
-    // +link{TabSet.setCanCloseTab()}.
+    // <smartclient><p>
+    // After the TabSet has been created, you can change a tab's <code>canClose</code> property
+    // by calling +link{TabSet.setCanCloseTab()}.</smartclient>
     //
     // @visibility external
     // @example closeableTabs
     // @see TabSet.closeClick()
     //<
 
-    //> @attr tab.closeIcon (SCImgURL : null : IRW)
+
+    //> @attr tab.closeIcon (SCImgURL : null : IR)
     // Custom src for the close icon for this tab to display if it is closeable.
     // See +link{tab.canClose} and +link{tabSet.canCloseTabs}.
     // @visibility external
     //<
 
-    //> @attr tab.closeIconSize (number : null :IRW)
+    //> @attr tab.closeIconSize (number : null : IR)
     // Size of the +link{tab.closeIcon} for this tab. If unspecified the icon will be sized
     // according to +link{tabSet.closeTabIconSize}
     // @visibility external
@@ -11846,7 +11948,9 @@ isc.TabSet.addProperties({
     // @visibility external
     //<
     tabBarControlLayoutConstructor:"Layout",
-    tabBarControlLayoutDefaults:{},
+    tabBarControlLayoutDefaults:{
+        overflow:"hidden"
+    },
 
     //>Animation
     //> @attr   tabSet.animateTabScrolling  (Boolean : true : [IR])
@@ -11902,18 +12006,17 @@ isc.TabSet.addProperties({
         mouseUp : function () {
             this.setState(isc.StatefulCanvas.STATE_UP, this.clickPart);
         },
+
         mouseStillDown : function () {
-            this.click();
-        },
-        click : function () {
             var back = this.clickPart == this.backPartName;
 
             if (this.isRTL()) back = !back;
             // figure out which part they clicked in and remember it
             if (back) this.creator.scrollBack();
             else this.creator.scrollForward();
-
-            return false;
+        },
+        click : function () {
+            return false; // just cancel bubbling
         }
     },
 
@@ -11966,7 +12069,7 @@ isc.TabSet.addProperties({
     //<
     touchPickerButtonSize:16,
 
-    //> @attr   tabSet.skinImgDir (string : "images/TabSet/" : [IR])
+    //> @attr   tabSet.skinImgDir (SCImgURL : "images/TabSet/" : [IR])
     // @include Canvas.skinImgDir
     //<
     skinImgDir:"images/TabSet/",
@@ -12364,7 +12467,7 @@ isc.TabSet.addProperties({
 
     // Explicitly call out titleEditorProperties as TextItem config so it gets
     // picked up in SGWT
-    //> @attr tabSet.titleEditorProperties (TextItem properties : null : IR)
+    //> @attr tabSet.titleEditorProperties (TextItem Properties : null : IR)
     // Properties for the auto-generated +link{tabSet.titleEditor}. This is the text item
     // we use to edit tab titles in this tabSet.
     // @see tabSet.titleEditor
@@ -12977,8 +13080,8 @@ disablePaneWithTab:true,
 //      Creates canvas from properties object.
 //      Ensures canvas is deparented / hidden.
 //      Returns canvas.
-//  @param  pane (object | canvas) object literal / canvas to be made into a pane
-// @param tab (object | ImgTab) tab to which the pane is being applied
+//  @param  pane (Object | Canvas) object literal / canvas to be made into a pane
+// @param tab (Object | ImgTab) tab to which the pane is being applied
 // @visibility internal
 //<
 createPane : function (pane, tab) {
@@ -13089,7 +13192,7 @@ _asymmetricEdgeOffsetPropertyMap : {
 // Default implementation will return null unless +link{tabSet.showPartialEdges,showPartialEdges}
 // is true, in which case it will return the three edges opposite the
 // +link{tabSet.tabBarPosition,tabBarPosition}.
-// @return (array) array of custom edges to show
+// @return (Array) array of custom edges to show
 // @visibility external
 //<
 getPaneContainerEdges : function () {
@@ -13118,21 +13221,21 @@ draw : function (a,b,c,d) {
 
 //>    @method    tabSet.setTabTitle()    (A)
 // Changes the title of a tab
-// @param    tab      (Tab | number | ID | name)
-// @param    title    (HTML)  new title
+// @param    tab      (Tab | number | GlobalId | TabName)
+// @param    title    (HTMLString)  new title
 // @visibility external
 // @example titleChange
 //<
 setTabTitle : function (tab, title) {
     this.getTabObject(tab).title = title;
-    this.getTab(tab).setTitle(title);
+    if (this.getTab(tab)) this.getTab(tab).setTitle(title);
     // reset the menu to pick up the new title
     this.resetTabPickerMenu();
 },
 
 //>    @method    tabSet.setTabIcon() (A)
 // Changes the icon for a tab
-// @param tab (Tab | number | ID | name) tab to update
+// @param tab (Tab | number | GlobalId | TabName) tab to update
 // @param icon (SCImgURL) new icon
 // @visibility external
 //<
@@ -13142,7 +13245,7 @@ setTabIcon : function (tab, icon) {
 
 //>@method tabSet.enableTab()
 // If the specified tab is disabled, enable it now.
-// @param   tab (Tab | number | ID | name)
+// @param   tab (Tab | number | GlobalId | TabName)
 // @see tab.disabled
 // @visibility external
 //<
@@ -13152,7 +13255,7 @@ enableTab : function (tab) {
 
 //>@method tabSet.disableTab()
 // If the specified tab is enabled, disable it now.
-// @param   tab (Tab | number | ID | name)
+// @param   tab (Tab | number | GlobalId | TabName)
 // @see tab.disabled
 // @visibility external
 //<
@@ -13162,8 +13265,8 @@ disableTab : function (tab) {
 
 //>@method tabSet.setTabProperties() (A)
 // Apply properties to an existing tab in a tabSet.
-// @param tab (Tab | number | ID | name) Identifier for the tab to be modified
-// @param properties (object) Javascript object containing the set of properties to be applied
+// @param tab (Tab | number | GlobalId | TabName) Identifier for the tab to be modified
+// @param properties (Object) Javascript object containing the set of properties to be applied
 //  to the tab.
 // @visibility external
 //<
@@ -13300,7 +13403,7 @@ addTabs : function (newTabs, position) {
 
 //> @method tabSet.setTabPane()
 // Apply a new +link{tab.pane,pane} to an existing tab in this tabSet
-// @param tab (number | string | Tab) Tab to update (may be referenced by ID or index)
+// @param tab (number | String | Tab) Tab to update (may be referenced by ID or index)
 // @param pane (Canvas) new Pane for the tab
 // @visibility external
 //<
@@ -13326,8 +13429,8 @@ setTabPane : function (tab, pane) {
 // call this method.  To avoid this, call +link{updateTab()} with <code>null</code> as the new
 // pane immediately before removing the tab, or set +link{tabSet.destroyPanes} to false.
 //
-// @param    tabs      (Tab | ID | name | number | Array of Tab)  list of tabs, tabIDs, or tab numbers
-//
+// @param    tabs      (Tab | GlobalId | TabName | number | Array of Tab)  list of tabs, tabIDs,
+//                                                                        or tab numbers
 // @see TabSet.removeTabs
 // @visibility external
 // @example tabsAddAndRemove
@@ -13340,8 +13443,8 @@ removeTab : function (tab, dontDestroy) {
 // Remove one or more tabs.  The pane(s) associated with the removed tab(s) is automatically
 // destroyed when you call this method.
 //
-// @param    tabs      (Tab | ID | name | number)   list of tabs, tabIDs, tab names, or tab numbers
-//
+// @param    tabs      (Tab | GlobalId | TabName | number)   list of tabs, tabIDs, tab names, or
+//                                                          tab numbers
 // @see TabSet.removeTab
 // @visibility external
 //<
@@ -13430,7 +13533,7 @@ removeLastTab : function() {
 
 //>    @method    tabSet.reorderTab()
 // Move a tab to another location in the tabset.
-// @param tab (Tab | ID | name | number) tab to move
+// @param tab (Tab | GlobalId | TabName | number) tab to move
 // @param [moveToPosition] (number) the index to move the tab to - defaults to the end of the
 //                                  tabset if not passed
 // @visibility external
@@ -13481,7 +13584,7 @@ reorderTab : function (tab, moveToPosition) {
 //> @method tabSet.canCloseTab()
 // Returns true if this tab is closeable. Determined by checking +link{tab.canClose} and
 // +link{tabSet.canCloseTabs}.
-// @param tab (int | ID | name | Tab) tab to check
+// @param tab (int | GlobalId | TabName | Tab) tab to check
 // @return (boolean) true if tab is closeable
 //<
 canCloseTab : function (tab) {
@@ -13493,7 +13596,7 @@ canCloseTab : function (tab) {
 //> @method tabSet.setCanCloseTab()
 // Sets the given tab's +link{tab.canClose,canClose} property to the boolean parameter canClose.
 // If canClose is null, this will have the effect of causing the tab to fall back on +link{tabSet.canCloseTabs}.
-// @param tab (Tab | ID | name | number) tab to change
+// @param tab (Tab | GlobalId | TabName | number) tab to change
 // @param canClose (boolean) new value for the tab's canClose property, or null to clear it
 // @visibility external
 //<
@@ -13583,7 +13686,7 @@ tabIconClick : function (tab) {
 // Get the tab Object originally passed to +link{tabSet.tabs}, by index, name or ID.
 // If passed a tab Object, just returns it.
 //
-// @param    tab   (int | ID | name | Tab)
+// @param    tab   (int | GlobalId | TabName | Tab)
 // @return (Tab) the tab, or null if not found
 // @visibility external
 //<
@@ -13611,7 +13714,7 @@ getTabObject : function (tab) {
 // Tab, and code that accesses and manipulates Tabs as Canvases won't be compatible with that
 // implementation.
 //
-// @param    tab   (int | ID | name | Canvas)
+// @param    tab   (int | GlobalId | TabName | Canvas)
 // @return (StatefulCanvas) the tab Canvas, or null if not found or TabSet not drawn yet
 //
 // @visibility external
@@ -13636,7 +13739,7 @@ getTab : function (tab) {
 //> @method tabSet.getTabPane()
 // Returns the pane for a given tab.
 //
-// @param    tab   (object | number | ID | name | Tab)
+// @param    tab   (Object | number | GlobalId | TabName | Tab)
 // @return (Canvas) the tab pane
 // @visibility external
 //<
@@ -13657,7 +13760,7 @@ findTabObject : function (propertyName, propertyValue) {
 
 //> @method tabSet.getTabNumber()
 // Get the index of a tab, from the tab, tab ID or tab name.  If passed a number, just returns it.
-// @param    tab   (number | ID | name | tab)
+// @param    tab   (number | GlobalId | TabName | Tab)
 // @return (number) the index of the tab, or -1 if not found
 // @visibility external
 //<
@@ -13688,7 +13791,7 @@ getTabNumber : function (tab) {
 // <P>
 // NOTE: the old pane for the tab is not destroy()d
 //
-// @param    tab   (number | ID | name | Tab) tab to update
+// @param    tab   (number | GlobalId | TabName | Tab) tab to update
 // @param    pane  (Canvas | ID) new pane for the tab
 // @visibility external
 //<
@@ -13759,7 +13862,7 @@ updateTab : function (tab, pane) {
 // no effect
 //
 // @visibility external
-// @param child (ID | Canvas)   the child Canvas to reveal, or its global ID
+// @param child (GlobalId | Canvas)   the child Canvas to reveal, or its global ID
 //<
 revealChild : function (child) {
     if (!isc.isA.String(child)) child = child.ID;
@@ -13778,7 +13881,7 @@ revealChild : function (child) {
 //            this method takes into account the position of the tabBar in the tabSet,
 //            and lays out the tabBar and the paneContainer accordingly.
 //<
-fixLayout : function () {
+fixLayout : function (deltaX, deltaY) {
     // abbreviations
     var tb = this._tabBar,
         // round corners: for layout only, manipulate the edgedCanvas instead of the
@@ -13789,6 +13892,10 @@ fixLayout : function () {
     // this method requires that both the tabBar and the paneContainer be instantiated before
     // it is called.
     if (tb == null || pc == null) return;
+
+    // avoid resizing-triggered recursive calls
+    if (this._fixingLayout) return;
+    this._fixingLayout = true;
 
     // make sure paneContainer is below _tabBarBaseLine
     if (pc.getZIndex(true) >= this._tabBarBaseLine.getZIndex(true)) pc.moveBelow(this._tabBarBaseLine);
@@ -13847,9 +13954,13 @@ fixLayout : function () {
             break;
     }
 
-    // showControls will show (or hide) the control layout, and return true if showing.
+    // showControls() will show (or hide) the control layout, and return true if showing.
     var showControls = false;
     if (this.showTabBar) {
+
+        if (this._shouldAdaptTabsBeforeShowingControls(vertical ? deltaY : deltaX)) {
+            this._adjustControlClipping(vertical);
+        }
         showControls = this.showControls();
     } else {
         showControls = this.hideControls();
@@ -13857,13 +13968,7 @@ fixLayout : function () {
 
     // If we're showing the control layout adjust our tab-bar size to take it into account
     if (showControls) {
-        // Force clipping so we can scroll the tb as expected
-        // Required even if we were already showing the scroller - we may have resized
-        if (vertical) tb.setHeight(this.getViewportHeight() - this.tabBarControlLayout.getHeight());
-        else {
-            tb.setWidth(this.getViewportWidth() - this.tabBarControlLayout.getWidth());
-            if (this.isRTL()) tb.setLeft(this.tabBarControlLayout.getWidth());
-        }
+        this._adjustControlClipping(vertical);
         this.tabBarControlLayout.bringToFront();
     } else {
         tb.resizeTo(vertical ? null : "100%", vertical ? "100%" : null);
@@ -13871,15 +13976,22 @@ fixLayout : function () {
             tb.setLeft(0);
         }
     }
+
     // If the tab bar is currently scrolled, but there is enough space to display all its
     // tabs, force a scroll back to zero/zero
 
     var totalTabs = this._getTabSizes();
     if (vertical) {
-        if (tb.getScrollTop() > 0 && totalTabs <= tb.getViewportHeight()) tb.scrollTo(null,0,"descrollTabs");
+        if (tb.getScrollTop() > 0 && totalTabs <= tb.getViewportHeight()) {
+            tb.scrollTo(null, 0, "descrollTabs");
+        }
     } else {
-        if (tb.getScrollLeft() > 0 && totalTabs <= tb.getViewportWidth()) tb.scrollTo(0,null,"descrollTabs");
+        if (tb.getScrollLeft() > 0 && totalTabs <= tb.getViewportWidth()) {
+            tb.scrollTo(0, null, "descrollTabs");
+        }
     }
+
+    delete this._fixingLayout;
 },
 
 //>@method  tabSet.shouldShowControl()
@@ -13888,7 +14000,7 @@ fixLayout : function () {
 // included as canvases. Standard controls for scrolling the tabBar will be included if
 // the relevant +link{tabSet.showTabScroller} or +link{tabSet.showTabPicker} property is not
 // false, and there is not enough space in the tab-bar to display all the tabs.
-// @parameter (control) control from the +link{tabSet.tabBarControls} array
+// @parameter (Control) control from the +link{tabSet.tabBarControls} array
 // @return  (boolean)   true if the control shoudl be displayed
 // @group tabBarControls
 //<
@@ -13932,16 +14044,18 @@ shouldShowControl : function (control) {
 },
 
 _getTabSizes : function () {
-    if (!this._tabBar) return 0;
-    var contentSize = this._tabBar.getMemberSizes(),
-        vertical = this._tabBar.vertical;
+    var bar = this._tabBar;
+    if (!bar) return 0;
+
+    var contentSize = bar.getMemberSizes();
     if (contentSize == null || contentSize.length == 0) return 0;
 
-    contentSize = contentSize.sum();
+    contentSize = contentSize.sum() + bar.membersMargin * (contentSize.length - 1);
 
 
-    var sizeAdjustment = (vertical ? (this._tabBar._topMargin || 0) + (this._tabBar._bottomMargin || 0)
-                                  : (this._tabBar._leftMargin || 0) + (this._tabBar._rightMargin || 0));
+    var vertical = bar.vertical,
+        sizeAdjustment = vertical ? (bar._topMargin  || 0) + (bar._bottomMargin || 0)
+                                  : (bar._leftMargin || 0) + (bar._rightMargin  || 0);
     return contentSize + sizeAdjustment;
 },
 
@@ -13989,8 +14103,8 @@ getTabPickerSrc : function () {
 // If passed a canvas, it will be returned intact.<br>
 // Will also map the special strings <code>"tabPicker"</code> and <code>"tabScroller"</code> to
 // standard tab picker and scroller controls.
-// @param control (string | canvas)    Control from +link{tabSet.tabBarControls} array.
-// @return (canvas) Control widget to include in the control layout for this tabset
+// @param control (String | Canvas)    Control from +link{tabSet.tabBarControls} array.
+// @return (Canvas) Control widget to include in the control layout for this tabset
 // @group tabBarControls
 //<
 
@@ -14019,14 +14133,14 @@ getControl : function (control) {
                 height:vertical ? (2*sbsize) : (this.tabBarThickness - this._tabBar.baseLineThickness),
                 items: this.needEmptyButton ? [{height:vertical ? 5 : null,
                                                 width:vertical ? null : 6,
-                                                src:isc.Canvas._blankImgURL},
+                                                src:isc.Canvas._blankImgURL, extraCSSText:(vertical ? "margin: 0 auto" : "vertical-align:middle")},
                        isc.addProperties({name:this.getScrollerBackImgName(),
                               width:vertical ? null : sbsize - this.scrollerForwardHMarginSize,
                               height:vertical ? sbsize - this.scrollerForwardVMarginSize : null}, this.scrollerBackImg),
                        {height:vertical ? 8 : null,
                         width:vertical ? null : 10,
                         name: "emptyButton",
-                        src:isc.Canvas._blankImgURL},
+                        src:isc.Canvas._blankImgURL, extraCSSText:(vertical ? "margin: 0 auto" : "vertical-align:middle")},
                        isc.addProperties({name:this.getScrollerForwardImgName(),
                               width:vertical ? null : sbsize - this.scrollerBackHMarginSize,
                               height:vertical ? sbsize - this.scrollerBackVMarginSize : null}, this.scrollerForwardImg)]
@@ -14186,23 +14300,23 @@ placeControlLayout : function (controlSize) {
 
     if (barPos == isc.Canvas.LEFT) {
         left = 0;
-        top = this.getHeight() - controlSize;
+        top = this.getViewportHeight() - controlSize;
         width = tbThickness;
         height = controlSize;
     } else if (barPos == isc.Canvas.RIGHT) {
-        left = this.getWidth() - tbThickness;
-        top = this.getHeight() - controlSize;
+        left = this.getViewportWidth() - tbThickness;
+        top = this.getViewportHeight() - controlSize;
         width = tbThickness;
         height = controlSize;
     } else if (barPos == isc.Canvas.BOTTOM) {
         width = controlSize;
-        left = this.isRTL() ? 0 : (this.getWidth() - controlSize);
-        top = this.getHeight() - tbThickness;
+        left = this.isRTL() ? 0 : (this.getViewportWidth() - controlSize);
+        top = this.getViewportHeight() - tbThickness;
         height = tbThickness;
     // Last possibility is TOP
     } else {
         width = controlSize;
-        left = this.isRTL() ? 0 : this.getWidth() - controlSize;
+        left = this.isRTL() ? 0 : this.getViewportWidth() - controlSize;
         top = 0;
         height = tbThickness;
     }
@@ -14210,6 +14324,60 @@ placeControlLayout : function (controlSize) {
     this.tabBarControlLayout.setRect(left, top, width, height);
     if (!this.children.contains(this.tabBarControlLayout)) this.addChild(this.tabBarControlLayout);
 
+},
+
+
+
+// clip the controls if needed to ensure at least one tab is shown
+_adjustControlClipping : function (vertical) {
+    var tb = this._tabBar,
+        firstTab = tb.getButton(0);
+
+    if (vertical) {
+        // size the tabBar so as to show all the controls
+        tb.setHeight(Math.max(0, this.getViewportHeight() -
+                              this.tabBarControlLayout.getHeight()));
+        // except, ensure the first tab is always visible
+        if (firstTab && firstTab.isDrawn()) {
+            var minBarHeight = firstTab.getVisibleHeight() + (tb._topMargin || 0),
+                controlSize = this.getViewportHeight() - minBarHeight;
+            if (tb.getVisibleHeight() < minBarHeight && controlSize > 0) {
+                this.placeControlLayout(controlSize);
+                tb.setHeight(minBarHeight);
+            }
+        }
+    } else {
+        // size the tabBar so as to show all the controls
+        tb.setWidth(Math.max(0, this.getViewportWidth() -
+                             this.tabBarControlLayout.getWidth()));
+        // except, ensure the first tab is always visible
+        if (firstTab && firstTab.isDrawn()) {
+            var margin = this.isRTL() ? tb._rightMargin : tb._leftMargin,
+                minBarWidth = firstTab.getVisibleWidth() + (margin || 0),
+                controlSize = this.getViewportWidth() - minBarWidth;
+            if (tb.getVisibleWidth() < minBarWidth && controlSize > 0) {
+                this.placeControlLayout(controlSize);
+                tb.setWidth(minBarWidth);
+            }
+        }
+        if (this.isRTL()) tb.setLeft(this.tabBarControlLayout.getWidth());
+    }
+},
+
+// decide whether to make a call to _adjustControlClipping() before showControls()
+_shouldAdaptTabsBeforeShowingControls : function (delta) {
+    var tb = this._tabBar,
+        controls = this.tabBarControlLayout;
+
+    // nothing to do if controls aren't visible, or no adaptive-width tabs are present
+    if (!controls || !controls.isVisible() || !tb._canAdaptWidth()) return false;
+
+
+    if (delta == null) return true;
+
+    // if the tab navigation controls are already showing for a narrowing of the tabSet, or not
+    // already showing for a widening, then skip the extra call to _adjustControlClipping().
+    return tb.hasMember(this.tabPicker) || tb.hasMember(this.scroller) ? delta > 0 : delta < 0;
 },
 
 _controlLayoutChildResized : function () {
@@ -14231,7 +14399,11 @@ _controlLayoutChildResized : function () {
 
 // Hide the controlLayout
 hideControls : function () {
-    if (this.tabBarControlLayout && this.tabBarControlLayout.isVisible()) this.tabBarControlLayout.hide();
+    if (this.tabBarControlLayout &&
+        this.tabBarControlLayout.visibility != isc.Canvas.HIDDEN)
+    {
+        this.tabBarControlLayout.hide();
+    }
 },
 
 // Add custom control immediately before tab scroller/picker
@@ -14314,9 +14486,9 @@ resetTabPickerMenu : function () {
 },
 
 // fix layout on a change of size
-layoutChildren : function (reason,b,c,d) {
-    this.invokeSuper(isc.TabSet, "layoutChildren", reason,b,c,d);
-    this.fixLayout();
+layoutChildren : function (reason, deltaX, deltaY, d) {
+    this.invokeSuper(isc.TabSet, "layoutChildren", reason, deltaX, deltaY, d);
+    this.fixLayout(deltaX, deltaY);
 },
 
 _tabResized : function () {
@@ -14352,7 +14524,7 @@ _showTab : function (tab) {
 //              - scroll to (0,0)
 //
 //        @see this.tabBar.buttonSelected
-//        @param    tab    (tab) tab that has been selected.
+//        @param    tab    (Tab) tab that has been selected.
 //<
 
 _tabSelected : function (tab) {
@@ -14501,10 +14673,10 @@ _tabSelected : function (tab) {
 // method only fires when the tabset is drawn.
 //
 // @param tabSet (TabSet) the tabSet containing the tab.
-// @param tabNum (integer) the index of the newly selected tab
+// @param tabNum (Integer) the index of the newly selected tab
 // @param tabPane (Canvas) the newly selected tab's pane if set
 // @param ID (String) the ID of the newly selected tab
-// @param tab (tab) pointer to the selected tab object
+// @param tab (Tab) pointer to the selected tab object
 // @param name (String) the name of the newly selected tab
 //
 // @see tab.tabDeselected
@@ -14517,11 +14689,11 @@ _tabSelected : function (tab) {
 // method only fires when the tabset is drawn.
 //
 // @param tabSet (TabSet) the tabSet containing the tab.
-// @param tabNum (integer) the index of the deselected tab
+// @param tabNum (Integer) the index of the deselected tab
 // @param tabPane (Canvas) the deselected tab's pane if set
 // @param ID (String) the ID of the deselected tab
-// @param tab (tab) pointer to the tab being deselected
-// @param newTab (tab) pointer to the new tab being selected
+// @param tab (Tab) pointer to the tab being deselected
+// @param newTab (Tab) pointer to the new tab being selected
 // @param name (String) the name of the deselected tab
 //
 // @return (boolean) return <code>false</code> to cancel the tab selection
@@ -14570,7 +14742,7 @@ getSelectedTabNumber : function () {
 
 //>    @method    tabSet.selectTab()    ([])
 //    Select a tab
-// @param    tab   (number | ID | name | Tab) tab to select
+// @param    tab   (number | GlobalId | TabName | Tab) tab to select
 // @visibility external
 // @example tabsOrientation
 //<
@@ -14644,7 +14816,7 @@ _editTabTitle : function (tab) {
 // Places an editor in the title of the parameter tab and allows the user to edit the title.
 // Note that this programmatic method will <b>always</b> allow editing of the specified tab's
 // title, regardless of the settings of +link{canEditTabTitles} or +link{Tab.canEditTitle}.
-// @param    tab      (Tab | String | integer)   The tab whose title should be edited (may be
+// @param    tab      (Tab | String | Integer)   The tab whose title should be edited (may be
 //   specified by ID or index)
 // @see TabSet.canEditTabTitles
 // @see Tab.canEditTitle
@@ -14888,8 +15060,8 @@ isc.TabSet.registerStringMethods({
     // <code>draw()</code>
     // @param tabNum (number) number of the tab
     // @param tabPane (Canvas) pane for this tab
-    // @param ID (id) id of the tab
-    // @param tab (tab) the tab object (not tab button instance)
+    // @param ID (GlobalId) id of the tab
+    // @param tab (Tab) the tab object (not tab button instance)
     // @param name (String) the name of the newly selected tab
     // @visibility external
     //<
@@ -14900,9 +15072,9 @@ isc.TabSet.registerStringMethods({
     //  Notification fired when a tab is deselected.
     // @param tabNum (number) number of the deselected tab
     // @param tabPane (Canvas) pane for this deselected tab
-    // @param ID (id) id of the deselected tab
-    // @param tab (tab) the deselected tab object (not tab button instance)
-    // @param newTab (tab) the tab object being selected
+    // @param ID (GlobalId) id of the deselected tab
+    // @param tab (Tab) the deselected tab object (not tab button instance)
+    // @param newTab (Tab) the tab object being selected
     // @return (boolean) return false to cancel the tab deselection
     // @visibility external
     //<
@@ -14995,13 +15167,36 @@ isc.defineClass("PaneContainer", "VLayout").addMethods({
 isc.TabSet.registerDupProperties("tabs", ["pane"]);
 isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._debugModules.push('Containers');isc.checkForDebugAndNonDebugModules();isc._moduleEnd=isc._Containers_end=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc.Log&&isc.Log.logIsInfoEnabled('loadTime'))isc.Log.logInfo('Containers module init time: ' + (isc._moduleEnd-isc._moduleStart) + 'ms','loadTime');delete isc.definingFramework;if (isc.Page) isc.Page.handleEvent(null, "moduleLoaded", { moduleName: 'Containers', loadTime: (isc._moduleEnd-isc._moduleStart)});}else{if(window.isc && isc.Log && isc.Log.logWarn)isc.Log.logWarn("Duplicate load of module 'Containers'.");}
 /*
- * Isomorphic SmartClient
- * Version SNAPSHOT_v11.1d_2017-06-25 (2017-06-25)
- * Copyright(c) 1998 and beyond Isomorphic Software, Inc. All rights reserved.
- * "SmartClient" is a trademark of Isomorphic Software, Inc.
- *
- * licensing@smartclient.com
- *
- * http://smartclient.com/license
- */
+
+  SmartClient Ajax RIA system
+  Version SNAPSHOT_v12.0d_2017-11-23/LGPL Deployment (2017-11-23)
+
+  Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
+  "SmartClient" is a trademark of Isomorphic Software, Inc.
+
+  LICENSE NOTICE
+     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
+     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
+     without an accompanying Isomorphic Software license file, please
+     contact licensing@isomorphic.com for details. Unauthorized copying and
+     use of this software is a violation of international copyright law.
+
+  DEVELOPMENT ONLY - DO NOT DEPLOY
+     This software is provided for evaluation, training, and development
+     purposes only. It may include supplementary components that are not
+     licensed for deployment. The separate DEPLOY package for this release
+     contains SmartClient components that are licensed for deployment.
+
+  PROPRIETARY & PROTECTED MATERIAL
+     This software contains proprietary materials that are protected by
+     contract and intellectual property law. You are expressly prohibited
+     from attempting to reverse engineer this software or modify this
+     software for human readability.
+
+  CONTACT ISOMORPHIC
+     For more information regarding license rights and restrictions, or to
+     report possible license violations, please contact Isomorphic Software
+     by email (licensing@isomorphic.com) or web (www.isomorphic.com).
+
+*/
 

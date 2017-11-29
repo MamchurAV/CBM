@@ -1,13 +1,36 @@
 /*
- * Isomorphic SmartClient
- * Version SNAPSHOT_v11.1d_2017-06-25 (2017-06-25)
- * Copyright(c) 1998 and beyond Isomorphic Software, Inc. All rights reserved.
- * "SmartClient" is a trademark of Isomorphic Software, Inc.
- *
- * licensing@smartclient.com
- *
- * http://smartclient.com/license
- */
+
+  SmartClient Ajax RIA system
+  Version SNAPSHOT_v12.0d_2017-11-23/LGPL Development Only (2017-11-23)
+
+  Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
+  "SmartClient" is a trademark of Isomorphic Software, Inc.
+
+  LICENSE NOTICE
+     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
+     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
+     without an accompanying Isomorphic Software license file, please
+     contact licensing@isomorphic.com for details. Unauthorized copying and
+     use of this software is a violation of international copyright law.
+
+  DEVELOPMENT ONLY - DO NOT DEPLOY
+     This software is provided for evaluation, training, and development
+     purposes only. It may include supplementary components that are not
+     licensed for deployment. The separate DEPLOY package for this release
+     contains SmartClient components that are licensed for deployment.
+
+  PROPRIETARY & PROTECTED MATERIAL
+     This software contains proprietary materials that are protected by
+     contract and intellectual property law. You are expressly prohibited
+     from attempting to reverse engineer this software or modify this
+     software for human readability.
+
+  CONTACT ISOMORPHIC
+     For more information regarding license rights and restrictions, or to
+     report possible license violations, please contact Isomorphic Software
+     by email (licensing@isomorphic.com) or web (www.isomorphic.com).
+
+*/
 
 if(window.isc&&window.isc.module_Core&&!window.isc.module_AdminConsole){isc.module_AdminConsole=1;isc._moduleStart=isc._AdminConsole_start=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc._moduleEnd&&(!isc.Log||(isc.Log&&isc.Log.logIsDebugEnabled('loadTime')))){isc._pTM={message:'AdminConsole load/parse time: '+(isc._moduleStart-isc._moduleEnd)+'ms',category:'loadTime'};if(isc.Log&&isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;else isc._preLog=[isc._pTM]}isc.definingFramework=true;isc.defineClass("AdminConsole","TabSet");isc.A=isc.AdminConsole.getPrototype();isc.B=isc._allFuncs;isc.C=isc.B._maxIndex;isc.D=isc._funcClasses;isc.D[isc.C]=isc.A.Class;isc.A.paneMargin=0;isc.A.dbConfiguratorConstructor="DBConfigurator";isc.A.dsImporterConstructor="DSImporter";isc.A.serverLogViewerConstructor="ServerLogViewer";isc.A.databaseBrowserConstructor="DatabaseBrowser";isc.A.schedulerManagerConstructor="QuartzManager";isc.A.dataSourceNavigatorConstructor="DataSourceNavigator";isc.A.creatorName="adminConsole";isc.A.showDBConfigurator=true;isc.A.showDSImporter=true;isc.A.showServerLogViewer=true;isc.A.showDatabaseBrowser=true;isc.A.showSchedulerManager=true;isc.A.showOtherTools=true;isc.A.showDataSourceNavigator=true;isc.B.push(isc.A.initWidget=function isc_AdminConsole_initWidget(){this.Super("initWidget",arguments);this.dataSourceNavigator=this.createAutoChild("dataSourceNavigator",{mode:"adminConsole"});this.dbConfigurator=this.createAutoChild("dbConfigurator",{autoFetchData:false});this.dsImporter=this.createAutoChild("dsImporter");this.serverLogViewer=this.createAutoChild("serverLogViewer",{autoFetchData:false});this.databaseBrowser=this.createAutoChild("databaseBrowser",{autoFetchData:false,showHeader:false,canDragPosition:false,canDragResize:true,width:"100%",showSelectButton:false});this.schedulerManager=this.createAutoChild("schedulerManager",{autoFetchData:false});this.otherTools=isc.HTMLPane.create({width:"100%",height:"100%",contents:'<ul><li><a href="'+isc.Page.getToolsDir()+'visualBuilder/index.jsp" target="_blank">Visual Builder</a></li><li><a href="'+isc.Page.getToolsDir()+'bmmlImporter.jsp" target="_blank">Reify Mockup Importer</a></li><li><a href="'+isc.Page.getToolsDir()+'batchDSGenerator.jsp" target="_blank">Batch DataSource Generator</a></li></ul>'});this.dbConfigurator.onBrowseDatabaseClicked=function(_3){this.databaseBrowser.dbName=_3;this.databaseBrowser.getDatabaseTables();this.selectTab("databaseBrowser")}.bind(this);this.tabSelected=function(_3,_4,_5,_6,_7){isc.History.addHistoryEntry(_6.ID)};if(this.showDBConfigurator){this.addTab({ID:"dbConfigurator",title:"Database Configuration",pane:this.dbConfigurator,tabSelected:function(){if(this.dbConfigurator.dbList&&this.dbConfigurator.dbList.getTotalRows()===0)
 {this.dbConfigurator.getDefinedDatabases()}}.bind(this)})}

@@ -460,7 +460,7 @@ function generateDStext(forView, futherActions) {
                 case "StandardMlString":
                 case "LongMlString":
                 case "ShortMlString":
-                  resultDS += "type: \"multiLangText\", ";
+                  resultDS += "type: \"multiLangText\", filterEditorType: \"text\", ";
                   if (viewFields[i].ControlType && viewFields[i].ControlType !== "null") {
                     resultDS += "editorType: \"" + viewFields[i].ControlType + "\"";
                   } else {
@@ -1343,6 +1343,7 @@ isc.CBMDataSource.addProperties({
   // resultBatchSize:100, // <<< TODO  optimization here
   inheritsFrom: BaseDataSource,
   useParentFieldOrder: true,
+  allowAdvancedCriteria : true,
   //~ nullStringValue: "",
   //~ nullIntegerValue: "", 
   //~ nullFloatValue: "", 
@@ -1390,6 +1391,7 @@ isc.CBMDataSource.addProperties({
     return (rel ? rel : {} );
   },
 
+
   // --- Return CBM-metadata Relation record for this isc DataSource field ---
   findRelation: function (criteria) {
     // If this.relations is null - initialise it (once!)
@@ -1400,25 +1402,56 @@ isc.CBMDataSource.addProperties({
     return (rel ? rel : {} );
   },
 
+
   // --- Additions to request
   transformRequest: function (dsRequest) {
+	if (this.convertDataSourceCriteria && dsRequest.data) {
+		// Remove clientData from previous function pass
+		delete dsRequest.data["clientData"];
+
+		if (Object.keys(dsRequest.data).length > 0) {
+			if (dsRequest.operationType === "fetch" && dsRequest.data._constructor !== "AdvancedCriteria") {
+				for(var pairKey in dsRequest.data) {
+					if (typeof dsRequest.data[pairKey] === "string") {
+						dsRequest.data[pairKey] = dsRequest.data[pairKey].replace("~|" + curr_Lang + "|", "");
+					}
+				}
+				// For fetch  - allways convert criteria to isc.AdvancedCriteria form
+				var criteria = this.convertDataSourceCriteria(dsRequest.data);
+				dsRequest.data = {}
+				dsRequest.data.criteria = criteria;  
+			} else {
+				// For some reason iSC call this method twice, so to skip the second pass - condition below
+				if ( !dsRequest.data.data ) {
+					// For data changes - repack send for storage data to data.data 
+					var tmpData = {};
+					for (var attr in dsRequest.data) {
+						if (dsRequest.data.hasOwnProperty(attr)) {
+							tmpData[attr] = dsRequest.data[attr];
+						}
+					}
+					
+					delete dsRequest.data;
+					dsRequest.data = {};
+					dsRequest.data.data = tmpData;
+				}
+			}
+		}  
+    }
+    
     if (typeof(curr_Img) != "undefined" && curr_Img != null) {
       curr_Img = (parseInt(curr_Img) + 1) + "";
-      if (dsRequest.data == null) {
-        dsRequest.data = {
-          currUser: curr_Session,
+      if (!dsRequest.data) {
+        dsRequest.data = {};
+	  }
+      dsRequest.data.clientData = 
+        { currUser: curr_Session,
           itemImg: curr_Img,
           currDate: curr_Date.toISOString(),
           currLocale: tmp_Lang,
           extraInfo: extra_Info
         };
-      } else {
-        dsRequest.data.currUser = curr_Session;
-        dsRequest.data.itemImg = curr_Img;
-        dsRequest.data.currDate = curr_Date.toISOString();
-        dsRequest.data.currLang = tmp_Lang;
-        dsRequest.data.extraInfo = extra_Info;
-      }
+
       extra_Info = "";
     }
     return this.Super("transformRequest", arguments);
@@ -3164,7 +3197,8 @@ function getLang(value, language, strictLang) {
     if (!strictLang) {
       return value;
     } else {
-      return null; // - ??? (arguable)
+//      return null; // - ??? (arguable)
+      return value; // - ??? (better?)
     }
   }
   // --- For multilanguage string - try to find requested language part,
@@ -3213,7 +3247,7 @@ isc.SimpleType.create({
   },
 
   editFormatter: function (value, field, form, record) {
-    if (value === null) return "";
+    if (!value || value === null) return "";
     var lang = tmp_Lang; // Default - global current language
     var strict = false;
     if (field && field.itemLang) {
@@ -3229,7 +3263,11 @@ isc.SimpleType.create({
       if (value === null) {
         return null;
       } else {
-        return "~|" + field.itemLang + "|" + value;
+		  if (field.itemLang) {
+			return "~|" + field.itemLang + "|" + value;
+		  } else {
+			return value;
+		  }
       }
     }
     var out = fullValue;
@@ -3247,11 +3285,12 @@ isc.SimpleType.create({
         }
       } else if (field.strictLang) {
         // OR - Append new language part
-        out = fullValue + "~|" + field.itemLang + "|" + value;
+        out = fullValue
+         + "~|" + field.itemLang + "|" + value;
       } else {
         // OR - replace in all cases the first part
         i = fullValue.indexOf("~|"); // Test if first part starts with language prefix
-        j = fullValue.indexOf("~|", 1);
+        j = fullValue.indexOf("~|", 1); // Test if language descriptor exists in string
         if (i === 0) { // Preserve language prefix of first part in all cases
           out = fullValue.slice(0, 8) + value;
         } else {
@@ -3261,7 +3300,10 @@ isc.SimpleType.create({
           out = out + fullValue.slice(j);
         }
       }
-    }
+    } else {
+		out = value;
+	}
+    
     return out;
   }
 
@@ -3699,6 +3741,7 @@ isc.InnerGrid.addProperties({
   // So sometime may cause confusion.
   // TODO: - make cuch cases more clear
   refresh: function () {
+ 	this.grid.setCriteria(this.grid.getFilterEditorCriteria());
     this.grid.invalidateCache();
     // this.grid.refreshData();
     // var that = this.grid;
@@ -4816,7 +4859,7 @@ isc.WeekWorkControl.addProperties({
 
 
 // ============== CBM common Window class ===================================
-isc.ClassFactory.defineClass("BaseWindow", isc.Window);
+isc.ClassFactory.defineClass("BaseWindow", isc.Window );
 isc.BaseWindow.addProperties({
   width: 700,
   height: 500,
@@ -5289,6 +5332,7 @@ isc.AzureUploadCanvas.addProperties({
             this.div = document.getElementById("uploader_" + this.ID);
             this.azureUploader = new qq.azure.FineUploader({
                 element: this.div,
+                autoUpload: false,
                 request: {
                     endpoint: AZURE_BLOB_URL
                 },
@@ -5324,7 +5368,7 @@ isc.AzureUploadCanvas.addProperties({
                     },
                     onDeleteComplete: function(id, name, responseJSON, xhr) {
                       this.iscContext.canvasItem.storeValue(null);
-                    },
+                    } //,
                 }
             });
             // Some CBM-specific context establishing for callbacks (so that it seems buggy in usual resolving techniques) 

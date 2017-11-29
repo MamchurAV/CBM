@@ -9,20 +9,21 @@
   <script>window.isc_useSimpleNames = false;</script> 
   <script>var isomorphicDir="isomorphic/";</script>
 
-  <script SRC=CBMClient/isomorphic/system/modules/ISC_Core.js></script>
-  <script SRC=CBMClient/isomorphic/system/modules/ISC_Foundation.js></script>
-  <script SRC=CBMClient/isomorphic/system/modules/ISC_Containers.js></script>
-  <script SRC=CBMClient/isomorphic/system/modules/ISC_Grids.js></script>
-  <script SRC=CBMClient/isomorphic/system/modules/ISC_Forms.js></script>
-  <script SRC=CBMClient/isomorphic/system/modules/ISC_DataBinding.js></script>
+  <script SRC=CBMClient/isomorphic/system/modules-debug/ISC_Core.js></script>
+  <script SRC=CBMClient/isomorphic/system/modules-debug/ISC_Foundation.js></script>
+  <script SRC=CBMClient/isomorphic/system/modules-debug/ISC_Containers.js></script>
+  <script SRC=CBMClient/isomorphic/system/modules-debug/ISC_Grids.js></script>
+  <script SRC=CBMClient/isomorphic/system/modules-debug/ISC_Forms.js></script>
+  <script SRC=CBMClient/isomorphic/system/modules-debug/ISC_DataBinding.js></script>
   <!-- <script SRC=CBMClient/isomorphic/system/modules/ISC_RichTextEditor.js></script> -->
   <!--<script SRC=CBMClient/isomorphic/system/modules/ISC_Calendar.js></script-->
   <!--script SRC=CBMClient/isomorphic/system/modules-debug/ISC_Workflow.js></script-->
-  <!--script SRC=CBMClient/isomorphic/system/modules-debug/ISC_Drawing.js></script-->
+  <script SRC=CBMClient/isomorphic/system/modules-debug/ISC_Drawing.js></script>
   
   <!-- CBM Skin -->
   <script SRC=CBMClient/isomorphic/skins/CBM/load_skin.js></script>
-  
+ 
+ 
   <!-- Fine Uploader section -->
   <link href=CBMClient/fine-uploader/fine-uploader-gallery.css rel="stylesheet">
   <script src=CBMClient/fine-uploader/azure.fine-uploader.min.js></script>
@@ -117,10 +118,10 @@
   <link href='https://api.mapbox.com/mapbox-gl-js/v0.36.0/mapbox-gl.css' rel='stylesheet' />
 -->
   <!-- END LeafLet section -->
-
 </HEAD>
+
 <BODY CLASS="pageBackground" STYLE="overflow:hidden">
-v2017-09-14
+v2017-11-29 /dev
  
 <script>
 isc.setAutoDraw(false);
@@ -146,7 +147,11 @@ isc.Page.setAppImgDir("CBMClient/images/");
 <script src="CBMClient/CBMCore/CBMCore.js"></script>
 <script src="CBMClient/CBMCore/CBMCore.ds.js"></script>
 <script src="CBMClient/CBMCore/CBMMainView.js"></script>
+
+<script src="CBMClient/Utils/ImageProcessWindow.js"></script>
 <!-- <script src="login/login.js"></script> -->
+
+
 
 </BODY>
 </HTML>

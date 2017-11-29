@@ -118,6 +118,11 @@ Validator.ds.xml
 	    <cacheAllData type="boolean" xmlAttribute="true"/>
 	    <cacheAcrossOperationIds type="boolean" xmlAttribute="true"/>
 
+        <!-- mockMode -->
+        <mockMode type="boolean" xmlAttribute="true"/>
+        <mockDataRows type="integer" xmlAttribute="true"/>
+        <mockDataCriteria type="Criterion" multiple="true"/>
+              
         <!-- for declaring inline types -->
 	    <types type="DataSourceField" multiple="true" propertiesOnly="true" 
                uniqueProperty="ID" visibility="internal"/>

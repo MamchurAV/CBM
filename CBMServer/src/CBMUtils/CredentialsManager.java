@@ -185,7 +185,7 @@ public class CredentialsManager implements I_AutentificationManager {
 		// ----- Initial autentification of user by strong password hash
 		if (cook != null && !cook.getValue().equals("")) { // TODO Maybe not only cookie existence is sign for first check! 
 			String sc = cook.getValue();
-			String[] cookData = decodeCredentials(sc, Integer.parseInt(req.itemImg));
+			String[] cookData = decodeCredentials(sc, Integer.parseInt(req.data.clientData.itemImg));
 			login = cookData[0];
 			pass = cookData[1];
 			if (login != null && pass != null) {
@@ -195,7 +195,7 @@ public class CredentialsManager implements I_AutentificationManager {
 	//			sysInstance = cookData[4];
 				// TODO: Distinguish between first and subsequent entries...
 				boolean newUser = false;
-				if(req.extraInfo != null && req.extraInfo.contains("usReg")){
+				if(req.data.clientData.extraInfo != null && req.data.clientData.extraInfo.contains("usReg")){
 					newUser = true;
 				}
 				// Continue with rights resolving 
@@ -211,18 +211,18 @@ public class CredentialsManager implements I_AutentificationManager {
 				Request.getCurrent().getCookies().removeAll("ItemImg");
 			} else {
 				// TODO use localized message from CBMServerMessages class here. Temporary variant below
- 				outMsg = "Вы произвели перезагрузку страницы, (либо сработала загрузка ранее загруженной страницы), тогда как для старта приложения нужно войти через SBMStart. Повторите попытку использовав ссылку заканчивающуюся на CBMStart, (не CBMClient).";
+ 				outMsg = "Перезагрузите страницу"; //Вы произвели перезагрузку страницы, (либо сработала загрузка ранее загруженной страницы), тогда как для старта приложения нужно войти через SBMStart. Повторите попытку использовав ссылку заканчивающуюся на CBMStart";
 // 				outMsg = "You seems to use <Reload> page, instead of real relogin. Use CBMStart URL please to login.";
 			}
 		}
 		// ----- Authenticate user by Session ID
 		else {
 			// ----- Get credentials from Data block -----
-			outMsg = identifyBySessionID(req.currUser, Integer.parseInt(req.itemImg));
+			outMsg = identifyBySessionID(req.data.clientData.currUser, Integer.parseInt(req.data.clientData.itemImg));
 		}
 
 		if (outMsg.equals("OK")){
-			req.currUser = getLogin();
+			req.data.clientData.currUser = getLogin();
 			
 			// TODO: !!! HERE !!! Resolve fine-grained rights for distinguished user and Request
 			

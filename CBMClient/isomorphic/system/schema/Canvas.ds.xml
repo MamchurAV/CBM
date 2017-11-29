@@ -249,6 +249,8 @@
         <!-- RuleScope -->
         <field name="ruleScope"         type="identifier"/>
         <field name="isRuleScope"       type="boolean"/>
+
+        <field name="dynamicProperties" type="DynamicProperty" multiple="true" childTagName="property" />   
 	</fields>
 
 	<types>

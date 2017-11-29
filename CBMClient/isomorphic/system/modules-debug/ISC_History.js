@@ -1,13 +1,36 @@
 /*
- * Isomorphic SmartClient
- * Version SNAPSHOT_v11.1d_2017-06-25 (2017-06-25)
- * Copyright(c) 1998 and beyond Isomorphic Software, Inc. All rights reserved.
- * "SmartClient" is a trademark of Isomorphic Software, Inc.
- *
- * licensing@smartclient.com
- *
- * http://smartclient.com/license
- */
+
+  SmartClient Ajax RIA system
+  Version SNAPSHOT_v12.0d_2017-11-23/LGPL Deployment (2017-11-23)
+
+  Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
+  "SmartClient" is a trademark of Isomorphic Software, Inc.
+
+  LICENSE NOTICE
+     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
+     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
+     without an accompanying Isomorphic Software license file, please
+     contact licensing@isomorphic.com for details. Unauthorized copying and
+     use of this software is a violation of international copyright law.
+
+  DEVELOPMENT ONLY - DO NOT DEPLOY
+     This software is provided for evaluation, training, and development
+     purposes only. It may include supplementary components that are not
+     licensed for deployment. The separate DEPLOY package for this release
+     contains SmartClient components that are licensed for deployment.
+
+  PROPRIETARY & PROTECTED MATERIAL
+     This software contains proprietary materials that are protected by
+     contract and intellectual property law. You are expressly prohibited
+     from attempting to reverse engineer this software or modify this
+     software for human readability.
+
+  CONTACT ISOMORPHIC
+     For more information regarding license rights and restrictions, or to
+     report possible license violations, please contact Isomorphic Software
+     by email (licensing@isomorphic.com) or web (www.isomorphic.com).
+
+*/
 
 var isc = window.isc ? window.isc : {};if(window.isc&&!window.isc.module_History){isc.module_History=1;isc._moduleStart=isc._History_start=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc._moduleEnd&&(!isc.Log||(isc.Log && isc.Log.logIsDebugEnabled('loadTime')))){isc._pTM={ message:'History load/parse time: ' + (isc._moduleStart-isc._moduleEnd) + 'ms', category:'loadTime'};
 if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
@@ -18,7 +41,7 @@ else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 if (!window.isc || typeof isc.Packager != "object") {
 
 
-//> @class isc
+//> @object isc
 // The <code>isc</code> object contains global methods and objects of the Isomorphic SmartClient
 // framework.
 // <P>
@@ -68,21 +91,21 @@ isc._start = new Date().getTime();
 
 // versioning - values of the form ${value} are replaced with user-provided values at build time.
 // Valid values are: version, date, project (not currently used)
-isc.version = "SNAPSHOT_v11.1d_2017-06-25/LGPL Deployment";
-isc.versionNumber = "SNAPSHOT_v11.1d_2017-06-25";
-isc.buildDate = "2017-06-25";
+isc.version = "SNAPSHOT_v12.0d_2017-11-23/LGPL Deployment";
+isc.versionNumber = "SNAPSHOT_v12.0d_2017-11-23";
+isc.buildDate = "2017-11-23";
 isc.expirationDate = "";
 
-isc.scVersion = "11.1d";
-isc.scVersionNumber = "11.1";
-isc.sgwtVersion = "6.1d";
-isc.sgwtVersionNumber = "6.1";
+isc.scVersion = "12.0d";
+isc.scVersionNumber = "12.0";
+isc.sgwtVersion = "12.0d";
+isc.sgwtVersionNumber = "12.0";
 
 // these reflect the latest stable version relative to the branch from which this build is
 // created.  So for example for 11.0d/6.0d, this will be 10.1/5.1.  But for 10.0/5.0 this will
 // be 10.0/5.0.
-isc.scParityStableVersionNumber = "11.0";
-isc.sgwtParityStableVersionNumber = "6.0";
+isc.scParityStableVersionNumber = "11.1";
+isc.sgwtParityStableVersionNumber = "6.1";
 
 // license template data
 isc.licenseType = "LGPL";
@@ -179,7 +202,7 @@ isc.getOptionalModule = function (module) {
 };
 
 
-isc.$a4b5c1c2d3 = function (moduleName) {
+isc.$P5hy05Xgj7AN = function (moduleName) {
     if (this.hasOptionalModule(moduleName)) return;
     var moduleEntry = isc._optionalModules[moduleName];
     if (moduleEntry) moduleEntry.present = !!moduleName + "";
@@ -491,7 +514,7 @@ isc.Browser.isIE6 = isc.Browser.isIE && isc.Browser.version <= 6;
 //<
 isc.Browser.supportsHTML5Audio = (document.createElement("audio") != null) ? "play" : null;
 
-//>    @classAttr    Browser.caminoVersion (string : ? : R)
+//>    @classAttr    Browser.caminoVersion (String : ? : R)
 //        For Camino-based browsers, the Camino version number.
 //<
 if (isc.Browser.isCamino) {
@@ -501,7 +524,7 @@ if (isc.Browser.isCamino) {
 }
 
 if (isc.Browser.isFirefox) {
-//>    @classAttr    Browser.firefoxVersion (string : ? : R)
+//>    @classAttr    Browser.firefoxVersion (String : ? : R)
 //        For Firefox-based browsers, the Firefox version number.
 //          - 0.10.1    is Firefox PR 1
 //      After this the version numbers reported match those in the about dialog
@@ -516,7 +539,7 @@ if (isc.Browser.isFirefox) {
     isc.Browser.firefoxMajorMinorNumber = parseFloat(majorMinorVersion);
 }
 
-//>    @classAttr    Browser.geckoVersion (integer : ? : R)
+//>    @classAttr    Browser.geckoVersion (Integer : ? : R)
 //        For Gecko-based browsers, the Gecko version number.
 //      Looks like a datestamp:
 //          - 20011019 is Netscape 6.2
@@ -672,7 +695,7 @@ isc.Browser.isIE10 = isc.Browser.isIE && isc.Browser.version >= 10;
 
 isc.Browser.isIE11 = isc.Browser.isIE && isc.Browser.version >= 11;
 
-//> @classAttr  Browser.AIRVersion (string : ? : R)
+//> @classAttr  Browser.AIRVersion (String : ? : R)
 // If this application running in the Adobe AIR environment, what version of AIR is
 // running. Will be a string, like "1.0".
 //<
@@ -1713,18 +1736,18 @@ isc.Browser.setIsDesktop = function (isDesktop) {
 
 isc.Browser.isBorderBox = (isc.Browser.isIE && !isc.Browser.isStrict);
 
-//>    @classAttr    Browser.lineFeed    (string : ? : RA)
+//>    @classAttr    Browser.lineFeed    (String : ? : RA)
 //        Linefeed for this platform
 //<
 
 isc.Browser.lineFeed = (isc.Browser.isWin ? "\r\n" : "\n");
 
-//>    @classAttr    Browser._supportsMethodTimeout    (string : ? : RA)
+//>    @classAttr    Browser._supportsMethodTimeout    (String : ? : RA)
 //        setTimeout() requires text string parameter in MacIE or IE 4
 //<
 isc.Browser._supportsMethodTimeout = false;//!(isc.Browser.isIE && (isc.Browser.isMac || isc.Browser.version == 4));
 
-//>    @classAttr    Browser.isDOM (string : ? : RA)
+//>    @classAttr    Browser.isDOM (String : ? : RA)
 //        Whether this is a DOM-compliant browser.  Indicates general compliance with DOM standards,
 //      not perfect compliance.
 //<
@@ -1762,11 +1785,31 @@ isc.Browser.seleniumPresent = (function () {
 })();
 
 //> @type Autotest
-// @value Browser.SHOWCASE autotest is targeting SmartClient or SGWT showcases
-isc.Browser.SHOWCASE = "showcase";
-// @value Browser.RUNNER autotest is targeting TestRunner-based JS tests
-isc.Browser.RUNNER = "runner";
+// @value isc.Browser.SHOWCASE autotest is targeting SmartClient or SGWT showcases
+// @value isc.Browser.SELENESE autotest is targeting a single sample with Selenese
+// @value isc.Browser.RUNNER autotest is targeting TestRunner-based JS tests
 //<
+
+//> @classAttr Browser.SHOWCASE (Constant : "showcase" : [R])
+// A declared value of the enum type
+// +link{type:Autotest,Autotest}.
+// @constant
+//<
+isc.Browser.SHOWCASE = "showcase";
+
+//> @classAttr Browser.SELENESE (Constant : "selenese" : [R])
+// A declared value of the enum type
+// +link{type:Autotest,Autotest}.
+// @constant
+//<
+isc.Browser.SELENESE = "selenese";
+
+//> @classAttr Browser.RUNNER (Constant : "runner" : [R])
+// A declared value of the enum type
+// +link{type:Autotest,Autotest}.
+// @constant
+//<
+isc.Browser.RUNNER = "runner";
 
 //> @classAttr Browser.autotest (Autotest : varies : R)
 // The current mode of the autotest system (null if not in autotest mode)
@@ -1950,8 +1993,9 @@ isc.Browser._getSupportsNativeTouchScrolling = function () {
             (!(this.isIPhone || this.isIPad) || this.iOSVersion >= 6));
 };
 
-isc.Browser._supportsWebkitOverflowScrolling = ("WebkitOverflowScrolling" in document.documentElement.style &&
-                                                isc.Browser.iOSVersion >= 6);
+isc.Browser._supportsWebkitOverflowScrolling = isc.Browser.iOSVersion >= 6 &&
+                   ("webkitOverflowScrolling" in document.documentElement.style)
+;
 
 // Does the browser support CanvasRenderingContext2D.isPointInStroke()?
 isc.Browser._supportsCanvasIsPointInStroke = (function () {
@@ -2073,6 +2117,10 @@ isc.Browser.canUseAggressiveGridTimings = !isc.Browser.isAndroid;
 isc.Browser.useHighPerformanceGridTimings = window.isc_useHighPerformanceGridTimings == null ?
     isc.Browser.canUseAggressiveGridTimings : window.isc_useHighPerformanceGridTimings && isc.Browser.canUseAggressiveGridTimings;
 
+
+isc.Browser._usePointerCursorForHand =
+        isc.Browser.isMoz || (isc.Browser.isSafari && isc.Browser.isStrict) ||
+        (isc.Browser.isIE && isc.Browser.version >= 9 && isc.Browser.isStrict);
 
 }
 
@@ -2278,7 +2326,7 @@ if (!isc.SA_Page.isLoaded()) {
 
 
 
-//> @class History
+//> @object History
 //
 // This class provides synthetic history support.  Using this class, you can create history
 // entries at any point and be called back when the user next navigates to any of these history
@@ -2316,7 +2364,7 @@ if (!isc.SA_Page.isLoaded()) {
 //--------------------------------------------------------------------------------------------------
 isc.defineStandaloneClass("History", {
 
-//> @classMethod history.registerCallback()
+//> @staticMethod History.registerCallback()
 // Registers a callback to be called when the user navigates to a synthetic history entry.
 // <p>
 // <b>NOTE:</b> Only one primary callback can be registered at a time. Unless <code>isAdditional</code>
@@ -2411,7 +2459,7 @@ registerCallback : function (callback, requiresData, isAdditional) {
     return historyId;
 },
 
-//> @classMethod history.unregisterCallback()
+//> @staticMethod History.unregisterCallback()
 // Unregisters a callback so that it will no longer be called when the user navigates to a synthetic
 // history entry.
 //
@@ -2439,7 +2487,7 @@ unregisterCallback : function (historyId) {
     return true;
 },
 
-//> @classMethod History.getCurrentHistoryId()
+//> @staticMethod History.getCurrentHistoryId()
 //
 // Returns the current history id as reflected by the current URL.
 //
@@ -2453,12 +2501,12 @@ getCurrentHistoryId : function () {
 },
 
 
-//> @classMethod History.getHistoryData()
+//> @staticMethod History.getHistoryData()
 //
 // Returns the data associated with the specified history id.
 //
 // @param id (String) The id for which to fetch history data.
-// @return (any) The data associated with the specified history id.
+// @return (Any) The data associated with the specified history id.
 // @visibility external
 //<
 getHistoryData : function (historyId) {
@@ -2466,7 +2514,7 @@ getHistoryData : function (historyId) {
 },
 
 
-//> @classMethod History.setHistoryTitle()
+//> @staticMethod History.setHistoryTitle()
 //
 // Sets the title associated with all history entries.  This is the string that appears in the
 // history drop-down.  If left unset, this default to the history id that is passed into
@@ -2482,7 +2530,7 @@ setHistoryTitle : function (title) {
     this.historyTitle = title;
 },
 
-//> @classMethod History.addHistoryEntry()
+//> @staticMethod History.addHistoryEntry()
 //
 // Call this method to add a synthetic history entry.  The new history entry is added in the
 // history stack after the currently visible page - in exactly the same way as the browser
@@ -2538,19 +2586,19 @@ setHistoryTitle : function (title) {
 // to +link{History.registerCallback()} you can suppress the callback from firing unless the stored
 // data object is actually available.
 //
-// @param id (string) The id you want to associate with this history entry.  This value will
+// @param id (String) The id you want to associate with this history entry.  This value will
 // appear as an anchor reference at the end of the URL string.  For example, if you pass in
 // "foo" as the id, the URL will then have a #foo tacked on the end of it.  This id will be
 // passed back to the callback you specified in +link{History.registerCallback} when the user
 // navigates to this history entry in the future.
 //
-// @param [title] (string) The title to show in the history drop-down for this history entry.  If
+// @param [title] (String) The title to show in the history drop-down for this history entry.  If
 // not specified, the <code>id</code> is used, unless you've set an explicit history title via
 // +link{History.setHistoryTitle}.  Note: this currently works in IE only.  You may pass a
 // title in any other browser, but it will not change what's displayed in the history
 // drop-down.
 //
-// @param [data] (any) Arbitrary data to associate with this history entry.  When the user next
+// @param [data] (Any) Arbitrary data to associate with this history entry.  When the user next
 // navigates to this history entry, this data will be provided as an argument to your callback
 // function.  Note that the SmartClient Core module is also required to be loaded on the page
 // for this particular feature to work.
@@ -2679,7 +2727,7 @@ _finishAddingHistoryEntry : function () {
     }
 },
 
-//> @classMethod history.readyForAnotherHistoryEntry()
+//> @staticMethod History.readyForAnotherHistoryEntry()
 //
 // Can another history entry be added to the browser's history stack in the current thread?
 // <p>
@@ -3093,13 +3141,36 @@ _fireHistoryCallback : function (historyId) {
 isc.History._init();
 isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._debugModules.push('History');isc.checkForDebugAndNonDebugModules();isc._moduleEnd=isc._History_end=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc.Log&&isc.Log.logIsInfoEnabled('loadTime'))isc.Log.logInfo('History module init time: ' + (isc._moduleEnd-isc._moduleStart) + 'ms','loadTime');delete isc.definingFramework;if (isc.Page) isc.Page.handleEvent(null, "moduleLoaded", { moduleName: 'History', loadTime: (isc._moduleEnd-isc._moduleStart)});}else{if(window.isc && isc.Log && isc.Log.logWarn)isc.Log.logWarn("Duplicate load of module 'History'.");}
 /*
- * Isomorphic SmartClient
- * Version SNAPSHOT_v11.1d_2017-06-25 (2017-06-25)
- * Copyright(c) 1998 and beyond Isomorphic Software, Inc. All rights reserved.
- * "SmartClient" is a trademark of Isomorphic Software, Inc.
- *
- * licensing@smartclient.com
- *
- * http://smartclient.com/license
- */
+
+  SmartClient Ajax RIA system
+  Version SNAPSHOT_v12.0d_2017-11-23/LGPL Deployment (2017-11-23)
+
+  Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
+  "SmartClient" is a trademark of Isomorphic Software, Inc.
+
+  LICENSE NOTICE
+     INSTALLATION OR USE OF THIS SOFTWARE INDICATES YOUR ACCEPTANCE OF
+     ISOMORPHIC SOFTWARE LICENSE TERMS. If you have received this file
+     without an accompanying Isomorphic Software license file, please
+     contact licensing@isomorphic.com for details. Unauthorized copying and
+     use of this software is a violation of international copyright law.
+
+  DEVELOPMENT ONLY - DO NOT DEPLOY
+     This software is provided for evaluation, training, and development
+     purposes only. It may include supplementary components that are not
+     licensed for deployment. The separate DEPLOY package for this release
+     contains SmartClient components that are licensed for deployment.
+
+  PROPRIETARY & PROTECTED MATERIAL
+     This software contains proprietary materials that are protected by
+     contract and intellectual property law. You are expressly prohibited
+     from attempting to reverse engineer this software or modify this
+     software for human readability.
+
+  CONTACT ISOMORPHIC
+     For more information regarding license rights and restrictions, or to
+     report possible license violations, please contact Isomorphic Software
+     by email (licensing@isomorphic.com) or web (www.isomorphic.com).
+
+*/
 
