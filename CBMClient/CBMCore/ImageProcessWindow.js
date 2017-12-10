@@ -1,7 +1,9 @@
 ﻿isc.BaseWindow.create({
 	ID: "ImageProcessWindow", 
 	title: "Image preprocessing window",
-	crop: function(canvas, offsetX, offsetY, width, height, callback) {
+	caller: null,
+  
+	crop: function(canvas, offsetX, offsetY, width, height, callback, topWind) {
 	  // create an in-memory canvas
 	  var buffer = document.createElement('canvas');
 	  var b_ctx = buffer.getContext('2d');
@@ -14,12 +16,14 @@
 	  b_ctx.drawImage(canvas, offsetX, offsetY, width, height,
 					  0, 0, buffer.width, buffer.height);
 	  // now call the callback with the dataURL of our buffer canvas
-	  callback(buffer.toDataURL());
+	  callback(buffer.toDataURL(), topWind.caller);
 	},
 	
-	deployCroped: function(dataURL) {
-	// TODO: Replace temporal code below to real results yelding to client component
-			document.body.style.backgroundImage = 'url(' + dataURL + ')';
+	deployCroped: function(dataURL, caller) {
+		// document.body.style.backgroundImage = 'url(' + dataURL + ')'; // <<< TEST only
+		if (caller){
+			caller.addFiles(dataURL);
+		}
 	},
 
 	 items: [
@@ -39,63 +43,86 @@
 					}),
 								
 				isc.HLayout.create({ 
-			members: [
-				isc.DynamicForm.create({
-					autoDraw: false,
-					ID: "uploadForm", width: 80,
-					fields: [
-						{ name: "image", type: "imageFile", canEdit: true, showFileInline: true, downloadIconSrc: "new.png",
-							changed: function(form, item){
-								if (item.uploadItem._dataElement.files && item.uploadItem._dataElement.files[0]) {
-									var reader = new FileReader();
-										reader.onload = function(e) {
-										//rCanv.setImage(e.target.result); 
-										imgCanv.setSrc( e.target.result );
-										imgCanv.currImg = new Image();
-										imgCanv.currImg.src = e.target.result;
-										
-										// Drav selective rectangle
-										isc.DrawRect.create({
-											ID: "choiceArea",
-											left: 0, top: 0,
-											width: 150, height: 100,
-											title: isc.CBMStrings.Image_PartSelectorTitle,
-											lineColor: "#88FFFF"
-											}, {
-												autoDraw: true,
-												canDrag: true,
-												drawPane: drCanv,
-												titleRotationMode: "neverRotate",
-												canResize: true
-											});
-										choiceArea.showKnobs(["resize"]);
+				members: [
+					isc.DynamicForm.create({
+						autoDraw: false,
+						//ID: "uploadForm", 
+						width: 80,
+						fields: [
+							{ name: "image", type: "imageFile", canEdit: true, showFileInline: true, downloadIconSrc: "new.png",
+								changed: function(form, item){
+									if (item.uploadItem._dataElement.files && item.uploadItem._dataElement.files[0]) {
+										var reader = new FileReader();
+											reader.onload = function(e) {
+											//rCanv.setImage(e.target.result); 
+											imgCanv.setSrc( e.target.result );
+											imgCanv.currImg = new Image();
+											imgCanv.currImg.src = e.target.result;
+											
+											// Drav selective rectangle
+											isc.DrawRect.create({
+												ID: "choiceArea",
+												left: 0, top: 0,
+												width: 150, height: 100,
+												title: isc.CBMStrings.Image_PartSelectorTitle,
+												lineColor: "#88FFFF"
+												}, {
+													autoDraw: true,
+													canDrag: true,
+													drawPane: drCanv,
+													titleRotationMode: "neverRotate",
+													canResize: true
+												});
+											choiceArea.showKnobs(["resize"]);
 
-									}
-									
-									reader.readAsDataURL(item.uploadItem._dataElement.files[0]);
-								  }
-							} 
-						},
-					]
-				}),
-				isc.Button.create({Id: "btnCrop", title:"Готово",
-					click: function(){
-						var topWind = this.topElement;
-						//var box = choiceArea.getBoundingBox();
-						//topWind.crop(imgCanv.currImg, box[0], box[1], box[2]-box[0], box[3]-box[1], topWind.deployCroped);
-						topWind.crop(imgCanv.currImg, 
-                      choiceArea.left, choiceArea.top, choiceArea.width, choiceArea.height, 
-                      topWind.deployCroped);
-					}
-				})
-			]})
+										}
+										
+										reader.readAsDataURL(item.uploadItem._dataElement.files[0]);
+									  }
+								} 
+							}
+						]
+					}),
+					isc.Button.create({Id: "btnCrop", title:"Готово",
+						click: function(){
+							var topWind = this.topElement;
+							topWind.crop(imgCanv.currImg, 
+						  choiceArea.left, choiceArea.top, choiceArea.width, choiceArea.height, 
+						  topWind.deployCroped, 
+						  topWind);
+						  
+						  this.topElement.close();
+						}
+					})
+				]})
 	 ],
 
-	draw: function () {
-		this.setPosition();
-		if (!this.readyToDraw()) return this;
-		this.Super("draw", arguments);
-	 }
+  draw: function () {
+    this.setPosition();
+    if (!this.readyToDraw()) return this;
+    this.Super("draw", arguments);
+    
+    if (this.caller){
+		imgCanv.setSrc(this.caller.getFile());
+		imgCanv.currImg = new Image();
+		imgCanv.currImg.src = imgCanv.src;
+		// Drav selective rectangle
+		isc.DrawRect.create({
+			ID: "choiceArea",
+			left: 0, top: 0,
+			width: 150, height: 100,
+			title: isc.CBMStrings.Image_PartSelectorTitle,
+			lineColor: "#88FFFF"
+			}, {
+				autoDraw: true,
+				canDrag: true,
+				drawPane: drCanv,
+				titleRotationMode: "neverRotate",
+				canResize: true
+			});
+		choiceArea.showKnobs(["resize"]);
+   }
+  }
 	
 });
  
