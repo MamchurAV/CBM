@@ -38,26 +38,27 @@
 											var reader = new FileReader();
 											reader.onload = function(e) {
 												// Set image 
-												imgCanv.setSrc(e.target.result);
-												imgCanv.currImg = new Image();
-												imgCanv.currImg.src = e.target.result;
+												ImageProcessWindow.updateImage(e.target.result);
+												//~ imgCanv.setSrc(e.target.result);
+												//~ imgCanv.currImg = new Image();
+												//~ imgCanv.currImg.src = e.target.result;
 												
-												// Drav selective rectangle
-												isc.DrawRect.create({
-													ID: "choiceArea",
-													left: 0, top: 0,
-													width: 200, height: 150,
-													//width: imgX, height: imgY,
-													title: isc.CBMStrings.Image_PartSelectorTitle,
-													lineColor: "#88FFFF"
-													}, {
-														autoDraw: true,
-														canDrag: true,
-														drawPane: drCanv,
-														titleRotationMode: "neverRotate",
-														canResize: true
-													});
-												choiceArea.showKnobs(["resize"]);
+												//~ // Drav selective rectangle
+												//~ isc.DrawRect.create({
+													//~ ID: "choiceArea",
+													//~ left: 0, top: 0,
+													//~ width: 200, height: 150,
+													//~ //width: imgX, height: imgY,
+													//~ title: isc.CBMStrings.Image_PartSelectorTitle,
+													//~ lineColor: "#88FFFF"
+													//~ }, {
+														//~ autoDraw: true,
+														//~ canDrag: true,
+														//~ drawPane: drCanv,
+														//~ titleRotationMode: "neverRotate",
+														//~ canResize: true
+													//~ });
+												//~ choiceArea.showKnobs(["resize"]);
 												}
 											
 											reader.readAsDataURL(item.uploadItem._dataElement.files[0]);
@@ -94,37 +95,72 @@
 		if (this.caller){
 			// Set image 
 			var img = this.caller.getFile();
-			imgCanv.setSrc(img);
-			imgCanv.currImg = new Image();
-			imgCanv.currImg.src = imgCanv.src;
+			this.updateImage(img);
+			//~ imgCanv.setSrc(img);
+			//~ imgCanv.currImg = new Image();
+			//~ imgCanv.currImg.src = imgCanv.src;
 			
-			// Adjust image size to adopt to window size 
-			var sizeIndexX = imgCanv.currImg.width / imgCanv.width;
-			var sizeIndexY = imgCanv.currImg.height / imgCanv.height;
-			if (sizeIndexX > sizeIndexY) {
-				imgCanv.setProperty("imageWidth", imgCanv.width - 1);
-			} else {
-				imgCanv.setProperty("imageHeight", imgCanv.height - 1);
-			}
+			//~ // Adjust image size to adopt to window size 
+			//~ var sizeIndexX = imgCanv.currImg.width / imgCanv.width;
+			//~ var sizeIndexY = imgCanv.currImg.height / imgCanv.height;
+			//~ if (sizeIndexX > sizeIndexY) {
+				//~ imgCanv.setProperty("imageWidth", imgCanv.width - 1);
+			//~ } else {
+				//~ imgCanv.setProperty("imageHeight", imgCanv.height - 1);
+			//~ }
 
-			// Drav selective rectangle
-			isc.DrawRect.create({
-				ID: "choiceArea",
-				left: 0, top: 0,
-				width: 200, height: 150,
-				//width: imgCanv.width - 40, height: imgCanv.height - 40,
-				title: isc.CBMStrings.Image_PartSelectorTitle,
-				lineColor: "#88FFFF"
-				}, {
-					autoDraw: true,
-					canDrag: true,
-					drawPane: drCanv,
-					titleRotationMode: "neverRotate",
-					canResize: true
-				});
-			choiceArea.showKnobs(["resize"]);
+			//~ // Drav selective rectangle
+			//~ isc.DrawRect.create({
+				//~ ID: "choiceArea",
+				//~ left: 0, top: 0,
+				//~ width: 200, height: 150,
+				//~ //width: imgCanv.width - 40, height: imgCanv.height - 40,
+				//~ title: isc.CBMStrings.Image_PartSelectorTitle,
+				//~ lineColor: "#88FFFF"
+				//~ }, {
+					//~ autoDraw: true,
+					//~ canDrag: true,
+					//~ drawPane: drCanv,
+					//~ titleRotationMode: "neverRotate",
+					//~ canResize: true
+				//~ });
+			//~ choiceArea.showKnobs(["resize"]);
 		}
 	},
+
+	updateImage: function(img) {
+		// Set image 
+		imgCanv.setSrc(img);
+		imgCanv.currImg = new Image();
+		imgCanv.currImg.src = imgCanv.src;
+		
+		// Adjust image size to adopt to window size 
+		var sizeIndexX = imgCanv.currImg.width / imgCanv.width;
+		var sizeIndexY = imgCanv.currImg.height / imgCanv.height;
+		if (sizeIndexX > sizeIndexY) {
+			imgCanv.setProperty("imageWidth", imgCanv.width - 1);
+		} else {
+			imgCanv.setProperty("imageHeight", imgCanv.height - 1);
+		}
+
+		// Drav selective rectangle
+		isc.DrawRect.create({
+			ID: "choiceArea",
+			left: 0, top: 0,
+			width: 200, height: 150,
+			//width: imgCanv.width - 40, height: imgCanv.height - 40,
+			title: isc.CBMStrings.Image_PartSelectorTitle,
+			lineColor: "#88FFFF"
+			}, {
+				autoDraw: true,
+				canDrag: true,
+				drawPane: drCanv,
+				titleRotationMode: "neverRotate",
+				canResize: true
+			});
+		choiceArea.showKnobs(["resize"]);
+	},
+
 	
 	crop: function(canvas, offsetX, offsetY, width, height, callback, topWind) {
 	  // create an in-memory canvas

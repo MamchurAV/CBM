@@ -15,7 +15,8 @@ isc.ImageCropedUploadControl.addProperties({
 							border: "1px solid blue",
 							width: 120, height: 80,
 //							imageType: "stretch",
-							imageWidth: 119, imageHeight: 79,
+							//imageWidth: 119, 
+							imageHeight: 79,
 							imageType: "center",
 							click: function(event){ 
 								ImageProcessWindow.caller = this.parentElement;
@@ -75,11 +76,11 @@ isc.ImageCropedUploadControl.addProperties({
 				},
 				
 				setBlob: function(blob) {
-         if(typeof blob === "string"){
-            thumbnailImg.setSrc(blob);
+					if(typeof blob === "string"){
+						thumbnailImg.setSrc(blob);
 					} else {
-            thumbnailImg.parentElement.canvasItem.blobToUpload = blob; 
-         }
+						thumbnailImg.parentElement.canvasItem.blobToUpload = blob; 
+					}
 				}
 
     });
