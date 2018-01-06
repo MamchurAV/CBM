@@ -12,6 +12,29 @@ function loadScript(script) {
   document.writeLn('<' + 'script src="' + script + '"><' + '/script>');
 };
 
+
+function base64toBlob(base64Data, contentType) {
+    contentType = contentType || '';
+    var sliceSize = 1024;
+    var byteCharacters = atob(base64Data);
+    var bytesLength = byteCharacters.length;
+    var slicesCount = Math.ceil(bytesLength / sliceSize);
+    var byteArrays = new Array(slicesCount);
+
+    for (var sliceIndex = 0; sliceIndex < slicesCount; ++sliceIndex) {
+        var begin = sliceIndex * sliceSize;
+        var end = Math.min(begin + sliceSize, bytesLength);
+
+        var bytes = new Array(end - begin);
+        for (var offset = begin, i = 0 ; offset < end; ++i, ++offset) {
+            bytes[i] = byteCharacters[offset].charCodeAt(0);
+        }
+        byteArrays[sliceIndex] = new Uint8Array(bytes);
+    }
+    return new Blob(byteArrays, { type: contentType });
+};
+
+
 var parseJSON = function (data) {
   
   var out =  window.JSON && window.JSON.parse 
@@ -20,6 +43,7 @@ var parseJSON = function (data) {
   return out;
 };
 
+
 // ----------------- Additions to standard Array ---------------------------------
 // ---- To clear it ------------------------------------------
 Array.prototype.popAll = function () {
@@ -27,6 +51,7 @@ Array.prototype.popAll = function () {
     this.pop();
   }
 };
+
 
 // ----- To find element (if ECMAScript 7 not supported by browser)
 if (!Array.prototype.includes) {
@@ -93,6 +118,7 @@ function clone(obj) {
   throw new Error("Unable to copy obj! Its type isn't supported.");
 };
 
+
 // --- Useful to copy values of fields from src to dest objects. ----------------
 function syncronize(src, dest, exclude) {
 //  var destRelationsMeta = dest.getRelatonsMeta(); // TODO: CBMObject.getRelatonsMeta()
@@ -123,6 +149,7 @@ function syncronize(src, dest, exclude) {
     }
   }
 };
+
 
 // ----- Includes properties (with values) from secontd and more objects to first one.
 // Properties from first object (or just included) are NOT replaced by that in later objects.
@@ -4959,6 +4986,9 @@ isc.BaseWindow.addProperties({
   },
 
   savePosition: function () {
+	//~ if (!this.winPos) {
+		//~ this.WinPos = windowSettingsRS.dataSource.createInstance();
+	//~ }
     if (this.winPos.T != this.getPageTop() || this.winPos.L != this.getPageLeft() || this.winPos.W != this.getWidth() || this.winPos.H != this.getHeight()) {
       this.winPos.T = this.getPageTop();
       this.winPos.L = this.getPageLeft();
