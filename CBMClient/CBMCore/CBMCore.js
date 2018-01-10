@@ -4986,6 +4986,9 @@ isc.BaseWindow.addProperties({
   },
 
   savePosition: function () {
+	//~ if (!this.winPos) {
+		//~ this.WinPos = windowSettingsRS.dataSource.createInstance();
+	//~ }
     if (this.winPos.T != this.getPageTop() || this.winPos.L != this.getPageLeft() || this.winPos.W != this.getWidth() || this.winPos.H != this.getHeight()) {
       this.winPos.T = this.getPageTop();
       this.winPos.L = this.getPageLeft();

@@ -1,8 +1,8 @@
 ﻿// ===================== Files Uploading block ===========================
 
-isc.ClassFactory.defineClass("AzureUploadControl", isc.CanvasItem);
-isc.AzureUploadControl.addProperties({
-  shouldSaveValue: true, 
+isc.ClassFactory.defineClass("ImageCropedUploadControl", isc.CanvasItem);
+isc.ImageCropedUploadControl.addProperties({
+  shouldSaveValue: false, 
  
   
   createCanvas: function (formParent) {
@@ -11,13 +11,16 @@ isc.AzureUploadControl.addProperties({
           height: 40,
 	      members: [
 					isc.Img.create({
-							ID: "thumbnailImg",
 							border: "1px solid blue",
 							width: 120, height: 80,
-							imageType: "stretch",
+//							imageType: "stretch",
+//							imageWidth: 119, 
+							imageHeight: 79,
+							imageType: "center",
 							click: function(event){ 
 								ImageProcessWindow.caller = this.parentElement;
 								ImageProcessWindow.show();
+								ImageProcessWindow.setImage();
 							}
 					}),
 								
@@ -25,38 +28,50 @@ isc.AzureUploadControl.addProperties({
 				members: [
 					isc.DynamicForm.create({
 						autoDraw: false,
-						ID: "uploadForm", width: 80,
+           width: 80,
 						fields: [
 							{ type: "imageFile", canEdit: true, downloadIconSrc: "new.png",
 								changed: function(form, item){
 									if (item.uploadItem._dataElement.files && item.uploadItem._dataElement.files[0]) {
 										var reader = new FileReader();
-											reader.onload = function(e) {
-											thumbnailImg.setSrc( e.target.result );
+                  var thumbnailImg = this.form.parentElement.parentElement.members[0];
+										reader.onload = function(e){
+                    thumbnailImg.setSrc(e.target.result);
 										}
+										var uploadControl = this.editForm.parentElement.parentElement.parentElement.canvasItem;
 										// Mark control as changed
-										this.editForm.parentElement.parentElement.parentElement.canvasItem.setProperty("choiceDone", true);
+										uploadControl.setProperty("choiceDone", true);
 										
 										reader.readAsDataURL(item.uploadItem._dataElement.files[0]);
-									  }
+
+										uploadControl.fileToUpload = item.uploadItem._dataElement.files[0];
+									}
 								} 
 							}
 						]
+					}),
+					
+					isc.Button.create({
+							title: "Загрузить",
+							click: function(event){ 
+             this.parentElement.parentElement.canvasItem.upload.bind(this.parentElement.parentElement.canvasItem)();
+							}
 					})
 				]})
 		  ], 
 				                
-				getFile: function(){
-					return this.members[0].src;
-				},
-				
-				addFiles: function(file) {
-					thumbnailImg.setSrc(file);
-					// Mark control as changed
-					this.canvasItem.choiceDone = true;
-				}
+      getFile: function(){
+        return this.members[0].src;
+      },
+      
+      setBlob: function(blob) {
+        if(typeof blob === "string"){
+          this.setSrc(blob);
+        } else {
+          this.parentElement.canvasItem.blobToUpload = blob;
+        }
+      }
 
-		  
     });
     
     this.fileUploader = new qq.azure.FineUploaderBasic({
@@ -91,9 +106,11 @@ isc.AzureUploadControl.addProperties({
                 },
                 callbacks: {
                     onComplete: function(id, name, responseJSON, xhr) {
-                      var newName = xhr.responseURL.substring(0, xhr.responseURL.indexOf("?"));
-                      //this.iscContext.canvasItem.storeValue(newName);
-                      this.canvas.canvasItem.storeValue(newName); //<<<<<<<<<<<<<<<<<<<<<?????
+                      if (xhr){
+                        var newName = xhr.responseURL.substring(0, xhr.responseURL.indexOf("?"));
+                        //this.iscContext.canvasItem.storeValue(newName);
+                        this.canvas.canvasItem.storeValue(newName); //<<<<<<<<<<<<<<<<<<<<<?????
+                      }
                     },
                     onDeleteComplete: function(id, name, responseJSON, xhr) {
                       this.canvas.canvasItem.storeValue(null);
@@ -110,18 +127,27 @@ isc.AzureUploadControl.addProperties({
                 }
             });
 
-	return canv;
+    return canv;
   },
   
-	getValue: function(){
-		this.Super("getValue", arguments);
-		if (this.canvas.canvasItem.choiceDone) {
-			// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< FineUploader
-            this.fileUploader.uploadStoredFiles();
-        }
-	}, 
+  
+	// getValue: function(){
+		// this.Super("getValue", arguments);
+		// if (this.canvas.canvasItem.choiceDone) {
+      // this.upload();
+    // }
+  // }, 
+  
+  
+  upload: function(){
+    if (this.blobToUpload){
+      this.fileUploader.addFiles(this.blobToUpload);
+    } else if (this.fileToUpload){
+      this.fileUploader.addFiles(this.fileToUpload);
+    }
+    this.fileUploader.uploadStoredFiles();
+  }
 	
-
 });
 // <<< End Azure-Upload control
 
@@ -191,8 +217,8 @@ isc.UploadControl.addProperties({
 */
 
 // ------------------------ Azure direct upload control  ----------------------------
-isc.defineClass("AzureUploadCanvas_0", "Canvas");
-isc.AzureUploadCanvas_0.addProperties({
+isc.defineClass("AzureUploadCanvas", "Canvas");
+isc.AzureUploadCanvas.addProperties({
   
     getInnerHTML : function () {
                       var divHtml = "<div id=uploader_" + this.ID + ">Upload file!!!</div>";
@@ -275,11 +301,11 @@ isc.AzureUploadCanvas_0.addProperties({
     redrawOnResize: false 
 }); 
 
-isc.ClassFactory.defineClass("AzureUploadControl_0", isc.CanvasItem);
-isc.AzureUploadControl_0.addProperties({
+isc.ClassFactory.defineClass("AzureUploadControl", isc.CanvasItem);
+isc.AzureUploadControl.addProperties({
   shouldSaveValue: true, 
   createCanvas: function (formParent) {
-                  var canv = isc.AzureUploadCanvas_0.create(); 
+                  var canv = isc.AzureUploadCanvas.create(); 
                   return canv;
                 }
 });
