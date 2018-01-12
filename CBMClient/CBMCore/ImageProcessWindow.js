@@ -85,12 +85,14 @@
 		imgCanv.currImg.src = imgCanv.src;
 		
 		// Adjust image size to adopt to window size 
-		var sizeIndexX = imgCanv.currImg.width / imgCanv.width;
-		var sizeIndexY = imgCanv.currImg.height / imgCanv.height;
-		if (sizeIndexX > sizeIndexY) {
+		var canvasRate = imgCanv.width / imgCanv.height;
+		var imageRate = imgCanv.currImg.width / imgCanv.currImg.height;
+		if (canvasRate < imageRate) {
 			imgCanv.setProperty("imageWidth", imgCanv.width - 1);
+      imgCanv.setProperty("imageHeight", null);
 		} else {
 			imgCanv.setProperty("imageHeight", imgCanv.height - 1);
+      imgCanv.setProperty("imageWidth", null);
 		}
 
 		// Drav selective rectangle
