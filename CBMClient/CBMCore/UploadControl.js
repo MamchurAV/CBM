@@ -74,13 +74,10 @@ isc.ImageCropedUploadControl.addProperties({
 
     });
     
-    this.fileUploader = new qq.azure.FineUploaderBasic({
+    this.fileUploader = new qq.FineUploaderBasic({
                 autoUpload: false,
                 request: {
-                    endpoint: AZURE_BLOB_URL
-                },
-                signature: {
-                    endpoint: '/UploadAzureBlob' // < Method of CBM server to obtain Azure SAS 
+                    endpoint: CBM_URL + 'UploadFile'
                 },
                 retry: {
                     enableAuto: true
@@ -99,7 +96,7 @@ isc.ImageCropedUploadControl.addProperties({
                   //      - request goes as GET and to /UploadAzureBlob  :-(
                   enabled: true,
                   forceConfirm: true,
-                  endpoint: '/DeleteAzureBlob'
+                  endpoint: '/DeleteUploadedFile'
                 },
                 sesion: {
                   endpoint: null

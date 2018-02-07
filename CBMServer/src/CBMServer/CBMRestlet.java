@@ -11,6 +11,7 @@ import org.restlet.Application;
 import org.restlet.Restlet;
 import org.restlet.routing.Router;
 
+import CBMFileUpload.UploadServer;
 import CBMPersistence.ConnectionPool;
 
 import org.restlet.resource.Directory;
@@ -69,6 +70,9 @@ public class CBMRestlet extends Application {
         // Route for uploaded to Azure blobs deletion functionality 
         // TODO: Investigate why DeleteAzureBlob not called by client (FineUploader)
         router.attach("/DeleteAzureBlob", CBMServer.DeleteAzureBlobService.class); 
+        // Route for uploaded to Azure blobs deletion functionality 
+        // TODO: Investigate why DeleteAzureBlob not called by client (FineUploader)
+        router.attach("/UploadFile", UploadServer.class); 
         
         // Route for static resources (as JS files, ets.)
         // (Keep this the last)
