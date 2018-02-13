@@ -2,9 +2,8 @@
 
 isc.ClassFactory.defineClass("ImageCropedUploadControl", isc.CanvasItem);
 isc.ImageCropedUploadControl.addProperties({
-  shouldSaveValue: false, 
+  shouldSaveValue: true, 
  
-  
   createCanvas: function (formParent) {
 		  var canv = isc.HLayout.create({
           border: "1px solid blue",
@@ -104,10 +103,9 @@ isc.ImageCropedUploadControl.addProperties({
                 callbacks: {
                     onComplete: function(id, name, responseJSON, xhr) {
                       if (xhr){
-                        var newName = xhr.responseURL.substring(0, xhr.responseURL.indexOf("?"));
-                        //this.iscContext.canvasItem.storeValue(newName);
-                        this.canvas.canvasItem.storeValue(newName); //<<<<<<<<<<<<<<<<<<<<<?????
-                      }
+                        var newName = xhr.responseText;
+                        this.iscContext.canvas.canvasItem.storeValue(newName);
+                       }
                     },
                     onDeleteComplete: function(id, name, responseJSON, xhr) {
                       this.canvas.canvasItem.storeValue(null);
@@ -123,18 +121,11 @@ isc.ImageCropedUploadControl.addProperties({
                     }
                 }
             });
+            // Some CBM-specific context establishing for callbacks (so that it seems buggy in usual resolving techniques) 
+            this.fileUploader.iscContext = this;
 
     return canv;
   },
-  
-  
-	// getValue: function(){
-		// this.Super("getValue", arguments);
-		// if (this.canvas.canvasItem.choiceDone) {
-      // this.upload();
-    // }
-  // }, 
-  
   
   upload: function(){
     if (this.blobToUpload){
@@ -146,7 +137,7 @@ isc.ImageCropedUploadControl.addProperties({
   }
 	
 });
-// <<< End Azure-Upload control
+// <<< End ImageCropedUploadControl
 
 
 // =============================================================================

@@ -23,25 +23,27 @@ import org.restlet.resource.ServerResource;
 public class UploadServer extends ServerResource {
 	
 	@Post
-	   public Representation handleUpload(Representation entity) throws Exception {
-	       if (entity != null 
-	    	&& MediaType.MULTIPART_FORM_DATA.equals(entity.getMediaType(), true)) {
-	           // Handle content
-	           DiskFileItemFactory factory = new DiskFileItemFactory(); 
-	           factory.setSizeThreshold(1024000); 
-	           
-	           RestletFileUpload upload = new RestletFileUpload(factory); 
-	           
-	           List<FileItem> items = upload.parseRepresentation(entity); 
-	           
-	           for(FileItem fi : items){ 
-	        	   if (fi.getName() != null){
-	                   File file = new File(fi.getName()); 
-	                   fi.write(file); 
-	        	   }
-	           } 
-	           setStatus(Status.SUCCESS_OK); 
-	       }
-	           return entity; 
-	   }
+	public String handleUpload(Representation entity) throws Exception {
+		String fName = null;
+		if (entity != null 
+	  	&& MediaType.MULTIPART_FORM_DATA.equals(entity.getMediaType(), true)) {
+	    // Handle content
+	    DiskFileItemFactory factory = new DiskFileItemFactory(); 
+	    factory.setSizeThreshold(1024000); 
+	      
+	    RestletFileUpload upload = new RestletFileUpload(factory); 
+	       
+	    List<FileItem> items = upload.parseRepresentation(entity); 
+	       
+	    for(FileItem fi : items){ 
+	 	   if (fi.getName() != null){
+	 		    fName = "../../CBM_Files/" + fi.getName();
+	            File file = new File(fName); 
+	                fi.write(file); 
+	     	   }
+	        } 
+	        setStatus(Status.SUCCESS_OK); 
+	    }
+	    return fName; //entity; 
+    }
 }
