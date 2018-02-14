@@ -137,7 +137,7 @@
         <method action="true" title="Reset Values" name="reset" 
                 icon="[SKINIMG]/actions/first.png"/>
         <method action="true" title="Validate Values" name="validate"/>
-        <method action="true" title="Item Changed" name="itemChanged" basic="true"/>
+        <method title="Item Changed" name="itemChanged" basic="true"/>
     </methods>
 
 </DataSource>

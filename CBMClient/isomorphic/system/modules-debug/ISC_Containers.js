@@ -1,7 +1,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v12.0d_2017-11-23/LGPL Deployment (2017-11-23)
+  Version SNAPSHOT_v12.0d_2018-02-13/LGPL Deployment (2018-02-13)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,9 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
 
-if (window.isc && isc.version != "SNAPSHOT_v12.0d_2017-11-23/LGPL Deployment" && !isc.DevUtil) {
+if (window.isc && isc.version != "SNAPSHOT_v12.0d_2018-02-13/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v12.0d_2017-11-23/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v12.0d_2018-02-13/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -762,7 +762,6 @@ draw : function (a,b,c,d) {
     this.fixLayout();
 
     this.invokeSuper(isc.TabBar, "draw", a,b,c,d);
-    this.bringToFront();
 
     var selectedTab = this.getButton(this.selectedTab);
     // now that the buttons have all drawn, bring the baseline in front of them, then count on
@@ -8258,28 +8257,28 @@ isc.Dialog.addClassProperties({
     // @value   OK  Dismisses dialog<smartclient> by calling +link{Dialog.okClick()}</smartclient>.
     //              Title derived from +link{Dialog.OK_BUTTON_TITLE}.
     OK         : {getTitle:function () {return isc.Dialog.OK_BUTTON_TITLE},
-                width:75, click: function () { this.topElement.okClick() } },
+                width:75, overflow: "visible", click: function () { this.topElement.okClick() } },
     // @value   APPLY Does not dismiss dialog.  <smartgwt>Handle via +link{Dialog.buttonClick()}</smartgwt>
     //          <smartclient>Calls +link{Dialog.applyClick()}</smartclient>
     //              Title derived from +link{Dialog.APPLY_BUTTON_TITLE}.
     APPLY     : {getTitle:function () {return isc.Dialog.APPLY_BUTTON_TITLE},
-                width:75, click: function () { this.topElement.applyClick() } },
+                width:75, overflow: "visible", click: function () { this.topElement.applyClick() } },
     // @value   YES Dismisses dialog<smartclient> by calling +link{Dialog.yesClick()}</smartclient>.
     //              Title derived from +link{Dialog.YES_BUTTON_TITLE}.
     YES     : {getTitle:function () {return isc.Dialog.YES_BUTTON_TITLE},
-                width:75, click: function () { this.topElement.yesClick() } },
+                width:75, overflow: "visible", click: function () { this.topElement.yesClick() } },
     // @value   NO  Dismisses dialog<smartclient> by calling +link{Dialog.noClick()}</smartclient>.
     //              Title derived from +link{Dialog.NO_BUTTON_TITLE}.
     NO         : {getTitle:function () {return isc.Dialog.NO_BUTTON_TITLE},
-                width:75, click: function () { this.topElement.noClick() } },
+                width:75, overflow: "visible", click: function () { this.topElement.noClick() } },
     // @value   CANCEL  Dismisses dialog<smartclient> by calling +link{Dialog.cancelClick()}</smartclient>.
     //                  Title derived from +link{Dialog.CANCEL_BUTTON_TITLE}.
     CANCEL     : {getTitle:function () {return isc.Dialog.CANCEL_BUTTON_TITLE},
-                width:75, click: function () { this.topElement.cancelClick() } },
+                width:75, overflow: "visible", click: function () { this.topElement.cancelClick() } },
     // @value   DONE   Dismisses dialog<smartclient> by calling +link{Dialog.doneClick()}</smartclient>.
     //                  Title derived from +link{Dialog.DONE_BUTTON_TITLE}.
     DONE    : {getTitle:function () {return isc.Dialog.DONE_BUTTON_TITLE},
-                width:75, click: function () { this.topElement.doneClick() } },
+                width:75, overflow: "visible", click: function () { this.topElement.doneClick() } },
     // @visibility external
     //<
 
@@ -8801,13 +8800,21 @@ doneClick : function () {
 //> @method Dialog.buttonClick(button)
 // Fires when any button in this Dialog's toolbar is clicked.  Default implementation does nothing.
 //
-// @param button (Button) button that was clicked
+// @param button (StatefulCanvas) button that was clicked
 // @param index (int) index of the button that was clicked
 // @group  buttons
-// @visibility external
+// @visibility smartclient
 //<
 buttonClick : function (button, index) {
 },
+
+//> @method Dialog.sgwtButtonClick(button)
+// @include buttonClick
+// @param targetCanvas (StatefulCanvas) button that was clicked
+// @param index (int) index of the button that was clicked
+// @group  buttons
+// @visibility sgwt
+//<
 
 // for Autotest APIs
 namedLocatorChildren:[
@@ -9250,6 +9257,9 @@ isc.addGlobal("showMessage", function (message, messageType, callback, propertie
         isc.Dialog.Warn._originalProperties = props;
     }
     if (!properties) properties = {};
+
+    // messages need to be centered
+    properties.autoCenter = true;
 
     // We support toolbarButtons and buttons - copy across to "buttons" attr so we can
     // easily check if they were specified on the object passed in and otherwise apply defaults.
@@ -13897,8 +13907,14 @@ fixLayout : function (deltaX, deltaY) {
     if (this._fixingLayout) return;
     this._fixingLayout = true;
 
+    // make sure the tab bar is in front of the tabbar baseline
+    if (this._tabBarBaseLine.getZIndex(true) >= tb.getZIndex(true)) {
+        tb.moveAbove(this._tabBarBaseLine);
+    }
     // make sure paneContainer is below _tabBarBaseLine
-    if (pc.getZIndex(true) >= this._tabBarBaseLine.getZIndex(true)) pc.moveBelow(this._tabBarBaseLine);
+    if (pc.getZIndex(true) >= this._tabBarBaseLine.getZIndex(true)) {
+        pc.moveBelow(this._tabBarBaseLine);
+    }
 
     if (this.showTabBar == false) {
         tb.hide();
@@ -13969,7 +13985,7 @@ fixLayout : function (deltaX, deltaY) {
     // If we're showing the control layout adjust our tab-bar size to take it into account
     if (showControls) {
         this._adjustControlClipping(vertical);
-        this.tabBarControlLayout.bringToFront();
+        this.tabBarControlLayout.moveAbove(tb);
     } else {
         tb.resizeTo(vertical ? null : "100%", vertical ? "100%" : null);
         if (this.isRTL() && !vertical) {
@@ -15169,7 +15185,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v12.0d_2017-11-23/LGPL Deployment (2017-11-23)
+  Version SNAPSHOT_v12.0d_2018-02-13/LGPL Deployment (2018-02-13)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

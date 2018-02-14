@@ -1,7 +1,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v12.0d_2017-11-23/LGPL Deployment (2017-11-23)
+  Version SNAPSHOT_v12.0d_2018-02-13/LGPL Deployment (2018-02-13)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,9 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
 
-if (window.isc && isc.version != "SNAPSHOT_v12.0d_2017-11-23/LGPL Deployment" && !isc.DevUtil) {
+if (window.isc && isc.version != "SNAPSHOT_v12.0d_2018-02-13/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v12.0d_2017-11-23/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v12.0d_2018-02-13/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -11677,8 +11677,11 @@ _applyBorderStyle : function (className) {
     var styleHandle = this.getClipHandle().style,
         properties = isc.StatefulCanvas._buildBorderStyle(this.border != null, className);
 
-    // Reset all border styling.
-    styleHandle.border = styleHandle.borderRadius = isc.emptyString;
+    // if this.border is set, we don't want the CSS style to clobber it - the first param in
+    // the call to _buildBorderStyle() above will cause it to return only border-radius styles
+    // - in that case, don't clear the border setting on the styleHandle.
+    if (!this.border) styleHandle.border = isc.emptyString;
+    styleHandle.borderRadius = isc.emptyString;
     isc.addProperties(styleHandle, properties);
 },
 
@@ -14863,15 +14866,23 @@ buttonDeselected : function (button) {
 },
 
 
-//>    @method    toolbar.itemClick() ([A])
-//    Called when one of the buttons receives a click event
-//        @group    event handling
-//        @param    item        (Button)        pointer to the button in question
-//        @param    itemNum        (number)        number of the button in question
-// @visibility external
+//> @method toolbar.itemClick() ([A])
+//  Called when one of the buttons receives a click event.
+// @param  item     (StatefulCanvas)  button in question
+// @param  itemNum  (number)          number of the button in question
+// @group  event handling
+// @visibility smartclient
 //<
 itemClick : function (item, itemNum) {
 },
+
+//> @method toolbar.sgwtItemClick() ([A])
+// @include itemClick
+// @param  targetCanvas  (StatefulCanvas)  button in question
+// @param  itemNum       (number)          number of the button in question
+// @group  event handling
+// @visibility sgwt
+//<
 
 //>    @method    toolbar.itemDoubleClick() ([A])
 //    Called when one of the buttons receives a double-click event
@@ -17088,9 +17099,11 @@ isc.defineClass("ToolStripGroup", "VLayout").addProperties({
     _updateLabel : function () {
 
         var innerWidth = this.getInnerWidth(),
-            visibleWidth =  this.body.getVisibleWidth(),
-            newWidth = (innerWidth >= 0 ? innerWidth : visibleWidth)
+            newWidth = innerWidth
         ;
+        if (newWidth < 0) {
+            newWidth =  this.body ? this.body.getVisibleWidth() : this.getVisibleWidth();
+        }
 
         if (this.label) this.label.setWidth(newWidth);
     }
@@ -20503,6 +20516,20 @@ isc._thumbProperties = {
     triggerAreaBottom: 0,
     triggerAreaLeft: 0,
 
+    _updateTriggerArea : function (scrollTarget) {
+        var vertical = this.scrollbar.vertical,
+            offset = isc.Browser.isTouch ? 8 : 0,
+            scrollTargetIsRTL = scrollTarget == null ? isc.Page.isRTL() : scrollTarget.isRTL()
+        ;
+        this.setTriggerAreaLeft(vertical && !scrollTargetIsRTL ? offset : 0);
+        this.setTriggerAreaRight(vertical && scrollTargetIsRTL ? offset : 0);
+    },
+
+    enableTouchSupport : function () {
+        this.Super("enableTouchSupport", arguments);
+        if (this.triggerArea) this._updateTriggerArea();
+    },
+
 
     showDisabled:false,
 
@@ -21038,11 +21065,8 @@ setScrollTarget : function (newTarget) {
 
     if (scrollTarget.receiveScrollbarEvents) this._redirectEvents(scrollTarget);
 
-    if (this.thumb != null) {
-        var scrollTargetIsRTL = newTarget == null ? isc.Page.isRTL() : newTarget.isRTL();
-        this.thumb.setTriggerAreaLeft(this.vertical && !scrollTargetIsRTL ? 8 : 0);
-        this.thumb.setTriggerAreaRight(this.vertical && scrollTargetIsRTL ? 8 : 0);
-    }
+    // update the thumb's trigger area to deal with new scroll target
+    if (this.thumb != null) this.thumb._updateTriggerArea(newTarget);
 
     // call setThumb to figure out how big and where the scrollbar thumb should be
     // note: this will enable and disable the scrollbar if autoEnable is true
@@ -21140,7 +21164,11 @@ makeThumb : function () {
 
     // Note: Scrollbar sets its textDirection to "ltr", so even if running in RTL mode, `this.isRTL()'
     // will be false.
-    var scrollTargetIsRTL = this.scrollTarget == null ? isc.Page.isRTL() : this.scrollTarget.isRTL();
+
+
+    var scrollTargetIsRTL = this.scrollTarget == null ? isc.Page.isRTL() : this.scrollTarget.isRTL(),
+        triggerAreaOffset = isc.Browser.isTouch ? 8 : 0
+    ;
 
     // figure out derived attributes
     var classObject = this.vertical ? this.vThumbClass : this.hThumbClass;
@@ -21157,10 +21185,10 @@ makeThumb : function () {
         // In LTR mode, the trigger area cannot extend to the right of the thumb without increasing
         // the scrollWidth of the scrollTarget. Similarly, in RTL mode the trigger area cannot
         // extend to the left of the thumb without increasing the scrollWidth.
-        triggerAreaLeft: this.vertical && !scrollTargetIsRTL ? 8 : 0,
-        triggerAreaRight: this.vertical && scrollTargetIsRTL ? 8 : 0,
+        triggerAreaLeft: this.vertical && !scrollTargetIsRTL ? triggerAreaOffset : 0,
+        triggerAreaRight: this.vertical && scrollTargetIsRTL ? triggerAreaOffset : 0,
 
-        triggerAreaTop: !this.vertical ? 8 : 0,
+        triggerAreaTop: !this.vertical ? triggerAreaOffset : 0,
 
         dragScrollDirection : this.vertical ? isc.Canvas.VERTICAL : isc.Canvas.HORIZONTAL
     });
@@ -22942,14 +22970,22 @@ applyNewStretchResizePolicy : function (sizes, totalSize, commonMinSize, modifyI
                     minSizes[i] = member.minWidth;
                     maxSizes[i] = member.maxWidth;
                 }
-                // add caller constraints; callerMinSizes array may be null
-                var callerMinSize = commonMinSize;
-                if (callerMinSizes && callerMinSizes[i] > callerMinSize) {
-                    callerMinSize = callerMinSizes[i];
-                }
                 // merge caller constraints into the member-specific minSizes
-                if (minSizes[i] == null || minSizes[i] < callerMinSize) {
-                    minSizes[i] = callerMinSize;
+                if (minSizes[i] == null || minSizes[i] < commonMinSize) {
+                    minSizes[i] = commonMinSize;
+                }
+            }
+
+            if (callerMinSizes) {
+                for (var i = 0; i < members.length; i++) {
+                    var callerMinSize = callerMinSizes[i];
+                    // clamp the minimum from callerMinSize to the maxSize, if appropriate
+                    if (stretchFields && maxSizes[i] != null && callerMinSize > maxSizes[i]) {
+                        callerMinSize = maxSizes[i];
+                    }
+
+                    // apply the minimum from callerMinSize to the minSize
+                    if (callerMinSize > minSizes[i]) minSizes[i] = callerMinSize;
                 }
             }
         }
@@ -31354,7 +31390,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v12.0d_2017-11-23/LGPL Deployment (2017-11-23)
+  Version SNAPSHOT_v12.0d_2018-02-13/LGPL Deployment (2018-02-13)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

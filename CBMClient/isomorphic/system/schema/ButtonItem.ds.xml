@@ -10,6 +10,9 @@
 		<field name="defaultValue"      inapplicable="true"/>   
         <field name="defaultDynamicValue" inapplicable="true"/>
 
+        <field name="readOnlyWhen" inapplicable="true"/>
+        <field name="enableWhen" type="AdvancedCriteria" isRuleCriteria="true" basic="true" />
+
 		<field name="redrawOnChange" inapplicable="true"/>
 
 		<field name="required" 		 inapplicable="true"/>  
@@ -23,9 +26,19 @@
         <field name="wrapTitle" inapplicable="true"/>
         <field name="titleStyle" inapplicable="true"/>
         <field name="titleOrientation" inapplicable="true"/>
+
+        <!-- buttonItem title is hidden by default -->
+        <field name="titleColSpan" basic="false"/>
         
         <field name="textBoxStyle" inapplicable="true"/>
         <field name="hintStyle" inapplicable="true"/>
+
+        <!-- both properties must be disabled to hide group -->
+        <field name="formula" inapplicable="true"/>
+        <field name="textFormula" inapplicable="true"/>
+
+        <field name="valueField" inapplicable="true"/>
+        <field name="displayField" inapplicable="true"/>
 
 		<field name="canvas" inapplicable="true"/>
 		<field name="canvasConstructor" inapplicable="true"/>

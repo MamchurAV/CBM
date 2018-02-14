@@ -1,7 +1,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v12.0d_2017-11-23/LGPL Deployment (2017-11-23)
+  Version SNAPSHOT_v12.0d_2018-02-13/LGPL Deployment (2018-02-13)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,9 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
 
-if (window.isc && isc.version != "SNAPSHOT_v12.0d_2017-11-23/LGPL Deployment" && !isc.DevUtil) {
+if (window.isc && isc.version != "SNAPSHOT_v12.0d_2018-02-13/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v12.0d_2017-11-23/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v12.0d_2018-02-13/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -880,8 +880,8 @@ isc.CalendarView.addProperties({
         autoDraw: false,
         moveWithMouse: false,
         dragAppearance: "target",
-        dragTarget: this,
         visibility: "hidden",
+        hideUsingDisplayNone: true,
         keepInParentRect: true,
         hoverMoveWithMouse: true,
         showHover: true,
@@ -911,8 +911,18 @@ isc.CalendarView.addProperties({
             var cal = this.eventCanvas.calendar;
             return cal.useDragPadding ? cal.getLanePadding(this.view) : 0;
         },
+        show : function () {
+            if (this._supressShow) return;
+            //this.logWarn("in show() - stacktrace: \n" + isc.EH.getStackTrace());
+            return this.Super("show", arguments);
+        },
         fillOverlapSlots: true,
         positionToEventCanvas : function (show) {
+            if (this._suppressShow || !this.eventCanvas) {
+                this.hide();
+                return isc.EH.STOP_BUBBLING;
+            }
+
             var canvas = this.eventCanvas,
                 cal = canvas.calendar,
                 view = this.view,
@@ -2990,7 +3000,7 @@ isc.CalendarView.addProperties({
             ;
 
 
-            event.__tabIndex = 2000 + i;
+            event.__tabIndex = i + 1;
 
             if (alreadyVisible) {
                 // if an event is already in the _drawnEvents array, remove it from the
@@ -4522,7 +4532,10 @@ isc.DaySchedule.addProperties({
     getBaseStyle : function (record, rowNum, colNum) {
         var cal = this.calendar,
             date = cal.getCellDate(rowNum, colNum, this),
-            style = date && cal.getDateStyle ? cal.getDateStyle(date, rowNum, colNum, this) : null,
+            field = this.getField(colNum),
+            // the lane is a field (column) in vertical views
+            style = (field && field.styleName) ||
+                (date && cal.getDateStyle ? cal.getDateStyle(date, rowNum, colNum, this) : null),
             isWeek = this.isWeekView()
         ;
 
@@ -5017,10 +5030,6 @@ isc.MonthSchedule.addProperties({
             dayHeaders = cal.showDayHeaders,
             dayHeaderHeight = this.dayHeaderHeight
         ;
-        // TODO: there should probably be a css style for this
-        if (isc.Canvas._currentSizeIncrease) {
-            dayHeaderHeight += isc.Canvas._currentSizeIncrease;
-        }
         if (this.rowIsHeader(rowNum)) { // header part
             return dayHeaderHeight;
         } else { // event part, should use fixedRecordHeights:false
@@ -5299,8 +5308,43 @@ isc.TimelineView.addProperties({
     },
 
     getDateLabelText : function (startDate, endDate) {
-        return "<b>" + this.formatDateForDisplay(startDate) + " - " +
-            this.formatDateForDisplay(endDate) + "</b>";
+        if (!startDate || !endDate) {
+            this.logWarn("missing dates in getDateLabelText()");
+            return "";
+        }
+        var sDate = new Date(startDate.getTime() + 1),
+            eDate = new Date(endDate.getTime() - 1)
+        ;
+        var sYear = sDate.getFullYear(),
+            sMonth = sDate.getMonth(),
+            sDay = sDate.getDate(),
+            eYear = eDate.getFullYear(),
+            eMonth = eDate.getMonth(),
+            eDay = eDate.getDate(),
+            s = ""
+        ;
+
+        if (sYear == eYear) {
+            // same year
+            if (sMonth == eMonth) {
+                // same month
+                if (sDay == eDay) {
+                    // same day
+                    s = sDate.getShortMonthName() + " " + sDay + ", " + sYear;
+                } else {
+                    // different day
+                    s = sDate.getShortMonthName() + " " + sDay + " - " + eDay + ", " + eYear;
+                }
+            } else {
+                // different month
+                s = sDate.getShortMonthName() + " " + sDay + " - " + eDate.getShortMonthName() + " " + eDay + ", " + eYear;
+            }
+        } else {
+            // different year
+            s = sDate.getShortMonthName() + " " + sDay + ", " + sYear + " - " + eDate.getShortMonthName() + " " + eDay + ", " + eYear;
+        }
+
+        return "<b>" + s + "</b>";
     },
 
     initWidget : function () {
@@ -6943,16 +6987,30 @@ isc.TimelineView.addProperties({
         return bStyle;
     },
 
+    getLaneStyleName : function (lane) {
+        if (lane && lane.styleName) return lane.styleName;
+    },
+    getLaneFieldStyleName : function (field, lane) {
+        if (field && field.styleName) return field.styleName;
+        if (lane && lane.fieldStyleName) return lane.fieldStyleName;
+        return this.labelColumnBaseStyle;
+    },
+
     // timelineView
     getBaseStyle : function (record, rowNum, colNum) {
         var cal = this.calendar;
         // for group rows, return the baseStyle
         if (record._isGroup) return this.groupNodeBaseStyle;
-        else if (this.isLabelCol(colNum)) return this.labelColumnBaseStyle;
-        else {
-            var date = cal.getCellDate(rowNum, colNum, this),
-                style = date && cal.getDateStyle ? cal.getDateStyle(date, rowNum, colNum, this) : null
-            ;
+        else if (this.isLabelCol(colNum)) {
+            return this.getLaneFieldStyleName(this.getField(colNum), record);
+        } else {
+            var style = this.getLaneStyleName(record);
+            if (!style) {
+                var date = cal.getCellDate(rowNum, colNum, this),
+                    style = date &&
+                        cal.getDateStyle ? cal.getDateStyle(date, rowNum, colNum, this) : null
+                ;
+            }
 
             return style || this.baseStyle;
         }
@@ -9373,6 +9431,21 @@ hoverDelay: 0,
 // @visibility calendar
 //<
 
+//> @attr lane.styleName  (CSSStyleName : null : IRW)
+// The base style-name for normal cells in this Lane.
+//
+// @group appearance
+// @visibility calendar
+//<
+
+//> @attr lane.fieldStyleName  (CSSStyleName : null : IRW)
+// The base style-name for +link{Calendar.laneFields, lane-fields} displayed in this Lane.
+//
+// @group appearance
+// @visibility calendar
+//<
+
+
 //> @attr calendar.canGroupLanes (Boolean : null : IRW)
 // If true, allows the lanes in a Timeline to be grouped by providing a value for
 // +link{calendar.laneGroupByField, laneGroupByField}.  The fields available for grouping on
@@ -10210,6 +10283,14 @@ dateLabelDefaults : {
 
 // initial setup of the calendar
 initWidget : function () {
+    if (this.startDate && this.endDate && this.endDate.getTime() < this.startDate.getTime()) {
+        // inverted range-dates - flip them and log a warning
+        this.logWarn("endDate (" + this.endDate + ") is before startDate (" +
+            this.startDate + ") - switching values");
+        var sDate = this.startDate.duplicate();
+        this.startDate = this.endDate.duplicate();
+        this.endDate = sDate;
+    }
     if (!this.chosenDate) {
 
         if (this.startDate) this.chosenDate = this.startDate.duplicate();
@@ -11376,26 +11457,26 @@ processSaveResponse : function (dsResponse, data, dsRequest, oldEvent) {
 
     if (dsResponse && dsResponse.status < 0) {
         var errors = dsResponse ? dsResponse.errors : null;
-        // show any validation errors inline in the appropriate UI
-        if (fromDialog) {
-            if (errors) this.eventDialog.items[0].setErrors(errors, true);
-            this.displayEventDialog();
-            return;
-        } else if (fromEditor) {
-            this.eventEditorLayout.show();
-            if (errors) this.eventEditor.setErrors(errors, true);
-            return;
-        } else if (isUpdate && oldEvent) {
-            // if the save was an update, re-add the old event back to the view's eventData array
-            var view = this.getSelectedView();
-            if (view) view.addEvent(oldEvent);
-            // if there were errors, show the message returned in response.data
-            if (errors) {
-                isc.RPCManager._handleError(dsResponse, dsRequest);
+        if (dsResponse.status == isc.RPCResponse.STATUS_VALIDATION_ERROR) {
+            // show any validation errors inline in the appropriate UI and don't fire central
+            // error handling
+            if (fromDialog) {
+                if (errors) this.eventDialog.items[0].setErrors(errors, true);
+                this.displayEventDialog(true);
+                return;
+            } else if (fromEditor) {
+                this.eventEditorLayout.show();
+                if (errors) this.eventEditor.setErrors(errors, true);
                 return;
             }
         }
-        // have RPCManager handle other errors
+        if (isUpdate && oldEvent) {
+            // if the save was an update, re-add the old event back to the view's eventData array
+            var view = this.getSelectedView();
+            if (view) view.addEvent(oldEvent);
+        }
+
+        // fire central RPCManager/DataSource error-handlers
         isc.RPCManager._handleError(dsResponse, dsRequest);
         return;
     }
@@ -13058,7 +13139,7 @@ next : function () {
         this.timelineView.nextOrPrev(true);
         return;
     }
-    this.dateChooser.setData(newDate, true);
+    this.dateChooser.setData(newDate);
     this.setChosenDate(newDate);
 },
 
@@ -13088,7 +13169,7 @@ previous : function () {
         this.timelineView.nextOrPrev(false);
         return;
     }
-    this.dateChooser.setData(newDate, true);
+    this.dateChooser.setData(newDate);
     this.setChosenDate(newDate);
 },
 
@@ -13457,9 +13538,9 @@ createChildren : function () {
         closeOnEscapeKeypress: true,
         autoHide: true,
         autoClose: true,
-        // override dateClick to change the selected day
+        // override dataChanged to change the selected day
         dataChanged : function () {
-            var nDate = this.getData();
+            var nDate = this.getData();  // this call combines data and time appropriately
             if (nDate) this.creator.setChosenDate(nDate);
             return nDate;
         },
@@ -14204,8 +14285,12 @@ measureText : function (text, minWidth) {
 hideEventDialog : function () {
     this.eventDialog.hide();
 },
-displayEventDialog : function () {
-    this.eventDialog.show();
+displayEventDialog : function (reposition) {
+    var dialog = this.eventDialog;
+    if (reposition && dialog._lastRect) {
+        dialog.placeNear(dialog._lastRect[0], dialog._lastRect[1]);
+    }
+    dialog.show();
 },
 
 addEventOrUpdateEventFields : function () {
@@ -14608,7 +14693,9 @@ _showEventDialog : function (event, isNewEvent) {
 
     // draw the dialog off-screen and measure it
     dialog.moveTo(0, -9999);
-    dialog.draw();
+    if (!dialog.isDrawn()) dialog.draw();
+    else dialog.redraw();
+
     var dHeight = dialog.getVisibleHeight();
 
     // ensure the dialog won't render off the bottom of the Calendar
@@ -14617,7 +14704,8 @@ _showEventDialog : function (event, isNewEvent) {
         dTop = thisHeight - (dHeight + 2);
     }
 
-    dialog.placeNear(cellPageRect[0], dTop);
+    dialog._lastRect = [cellPageRect[0], dTop]
+    dialog.placeNear(dialog._lastRect[0], dialog._lastRect[1]);
     dialog.show();
     dialog.bringToFront();
 
@@ -16557,6 +16645,8 @@ isc.EventCanvas.addProperties({
     minHeight: 1,
     minWidth: 1,
 
+    hideUsingDisplayNone: true,
+
     // hover properties - see also getHoverHTML()
     showHover: true,
     canHover: true,
@@ -17420,6 +17510,7 @@ isc.EventCanvas.addProperties({
 
         if (this.event.__tabIndex) {
 
+            //this.setRelativeTabPosition(this.event.__tabIndex);
             this.tabIndex = this.event.__tabIndex;
             delete this.event.__tabIndex;
         }
@@ -17470,8 +17561,23 @@ isc.EventCanvas.addProperties({
         return isc.EH.STOP_BUBBLING;
     },
 
+    rightMouseDown : function () {
+        if (this.dragTarget) {
+            this.dragTarget.eventCanvas = null;
+
+            this.dragTarget._suppressShow = true;
+            this.dragTarget.hide();
+            return false;
+        }
+    },
+
     mouseDown : function () {
-        if (this.dragTarget) this.dragTarget.eventCanvas = this;
+        if (!isc.EH.rightButtonDown()) {
+            if (this.dragTarget) {
+                this.dragTarget.eventCanvas = this;
+                delete this.dragTarget._suppressShow;
+            }
+        }
         this.calendar.eventDialog.hide();
         return isc.EH.STOP_BUBBLING;
     },
@@ -17504,6 +17610,7 @@ isc.EventCanvas.addProperties({
                 if (cache.showCloseButton) cal._eventCanvasCloseClick(this);
             }
         }
+        return this.Super("keyPress", arguments);
     },
 
     mouseOver : function () {
@@ -17851,7 +17958,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v12.0d_2017-11-23/LGPL Deployment (2017-11-23)
+  Version SNAPSHOT_v12.0d_2018-02-13/LGPL Deployment (2018-02-13)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
