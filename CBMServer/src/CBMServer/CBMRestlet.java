@@ -29,6 +29,7 @@ public class CBMRestlet extends Application {
 
 	// URI of the root directory.
 	public static final String ROOT_URI = "file:///" + CBMStart.CBM_ROOT + "/CBMClient/";
+	public static final String FS_URI = "file:///" + CBMStart.CBM_ROOT + "/../CBM_Files/";
 	private static Timer timer;
 	private static TimerTask timerTask;
 //	private String dbURL = null;
@@ -63,6 +64,8 @@ public class CBMRestlet extends Application {
         router.attach("/CBMStart", CBMServer.CBMClientStart.class); 
         // Route for static resources (as JS files, ets.)
         router.attach("/CBMClient", new Directory(getContext(), ROOT_URI));
+        // Route for file storage.
+        router.attach("/FileStorage", new Directory(getContext(), FS_URI));
         // Route for main Data proceeding requests 
         router.attach("/DataService", CBMServer.DataAccessService.class); 
         // Route for blobs upload to Azure functionality 

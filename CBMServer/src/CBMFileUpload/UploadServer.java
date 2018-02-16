@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.List;
+import java.util.UUID;
 
 import org.apache.commons.fileupload.FileItem;
 import org.apache.commons.fileupload.FileItemIterator;
@@ -19,12 +20,16 @@ import org.restlet.resource.Post;
 import org.restlet.resource.ResourceException;
 import org.restlet.resource.ServerResource;
 
+import CBMServer.CBMStart;
+
 
 public class UploadServer extends ServerResource {
 	
 	@Post
 	public String handleUpload(Representation entity) throws Exception {
+		String fPath = CBMStart.getParam("FileStoragePath");//"../../CBM_Files/";
 		String fName = null;
+		
 		if (entity != null 
 	  	&& MediaType.MULTIPART_FORM_DATA.equals(entity.getMediaType(), true)) {
 	    // Handle content
@@ -37,8 +42,8 @@ public class UploadServer extends ServerResource {
 	       
 	    for(FileItem fi : items){ 
 	 	   if (fi.getName() != null){
-	 		    fName = "../../CBM_Files/" + fi.getName();
-	            File file = new File(fName); 
+	 		    fName = UUID.randomUUID().toString() + "_" + fi.getName();
+	            File file = new File(fPath + fName); 
 	                fi.write(file); 
 	     	   }
 	        } 

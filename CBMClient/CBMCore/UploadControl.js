@@ -33,9 +33,9 @@ isc.ImageCropedUploadControl.addProperties({
 								changed: function(form, item){
 									if (item.uploadItem._dataElement.files && item.uploadItem._dataElement.files[0]) {
 										var reader = new FileReader();
-                  var thumbnailImg = this.form.parentElement.parentElement.members[0];
+										var thumbnailImg = this.form.parentElement.parentElement.members[0];
 										reader.onload = function(e){
-                    thumbnailImg.setSrc(e.target.result);
+											thumbnailImg.setSrc(e.target.result);
 										}
 										var uploadControl = this.editForm.parentElement.parentElement.parentElement.canvasItem;
 										// Mark control as changed
@@ -124,9 +124,21 @@ isc.ImageCropedUploadControl.addProperties({
             // Some CBM-specific context establishing for callbacks (so that it seems buggy in usual resolving techniques) 
             this.fileUploader.iscContext = this;
 
+ 
     return canv;
   },
-  
+
+  showValue : function () {
+           // Erlier uploaded files presentation
+            var name = this.canvas.canvasItem.getValue();
+            if (name) {
+ 				var thumbnailImg = this.canvas.members[0];
+				thumbnailImg.setSrc("http://CBModel.ru:5588/FileStorage/" + name); 
+            }
+            
+            this.Super("showValue", arguments);
+  },
+
   upload: function(){
     if (this.blobToUpload){
       this.fileUploader.addFiles(this.blobToUpload);
