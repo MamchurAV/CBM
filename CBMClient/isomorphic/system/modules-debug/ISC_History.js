@@ -1,7 +1,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v12.0d_2017-11-23/LGPL Deployment (2017-11-23)
+  Version SNAPSHOT_v12.0d_2018-02-13/LGPL Deployment (2018-02-13)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -91,9 +91,9 @@ isc._start = new Date().getTime();
 
 // versioning - values of the form ${value} are replaced with user-provided values at build time.
 // Valid values are: version, date, project (not currently used)
-isc.version = "SNAPSHOT_v12.0d_2017-11-23/LGPL Deployment";
-isc.versionNumber = "SNAPSHOT_v12.0d_2017-11-23";
-isc.buildDate = "2017-11-23";
+isc.version = "SNAPSHOT_v12.0d_2018-02-13/LGPL Deployment";
+isc.versionNumber = "SNAPSHOT_v12.0d_2018-02-13";
+isc.buildDate = "2018-02-13";
 isc.expirationDate = "";
 
 isc.scVersion = "12.0d";
@@ -288,9 +288,16 @@ isc.addGlobal("Browser", {
 
     ,_assert : function (b, message) {
         if (!b) {
-            isc.logWarn("assertion failed" +
-                        (message ? " with message: '" + message + "'" : "") +
-                        ". Stack trace:" + (isc.Class.getStackTrace()));
+            message = "assertion failed" + (message ? " with message: '" + message + "'" : "");
+
+            if (isc.logWarn) {
+                isc.logWarn(message + ". Stack trace:" + isc.Class.getStackTrace());
+
+            } else if (console) { // useful fallback crash info before logging loads
+                console.log(message);
+                console.trace();
+            }
+
 
         }
     }
@@ -380,10 +387,10 @@ isc.Browser.isWebKit = navigator.userAgent.indexOf("WebKit") != -1;
 // Are we in Apple's "Safari" browser? Note that this property will also be set for other
 // WebKit based browsers (such as Google Chrome).
 //<
-// As far as we know all "true" Safari implementations idenify themselves in the userAgent with
-// the string "Safari".
-// However the GWT hosted mode browser on OSX is also based on apple webkit and should be treated
-// like Safari but is not a Safari browser and doesn't identify itself as such in the useragent
+// As far as we know all "true" Safari implementations identify themselves in the userAgent with
+// the string "Safari", but so does Microsoft Edge, so that can't be used to identify "true"
+// Safari.  GWT hosted mode browser on OSX is also based on apple webkit and should be treated
+// like Safari but is not a Safari browser and doesn't identify itself as such in the userAgent.
 // Reported UserAgent:
 //  Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_5_5; en-us) AppleWebKit/525.18 (KHTML, like Gecko)
 isc.Browser.isSafari = isc.Browser.isAIR || navigator.userAgent.indexOf("Safari") != -1 ||
@@ -406,6 +413,13 @@ isc.Browser.isEdge = isc.Browser.isSafari && (navigator.userAgent.indexOf("Edge/
 isc.Browser.isChrome = isc.Browser.isSafari && !isc.Browser.isEdge && (navigator.userAgent.indexOf("Chrome/") != -1);
 //console.log("is Chrome?:" + isc.Browser.isChrome);
 
+//>    @classAttr    Browser.isSafariStrict (boolean : ? : R)
+// Are we in Apple's "Safari" browser? This property is only set on "true" Safari browsers.
+//<
+
+isc.Browser.isSafariStrict = isc.Browser.isSafari &&
+        !isc.Browser.isAIR && !isc.Browser.isEdge && !isc.Browser.isChrome;
+//console.log("is \"true\" Safari?:" + isc.Browser.isSafariStrict);
 
 
 if (!isc.Browser.isIE && !isc.Browser.isOpera && !isc.Browser.isMoz &&
@@ -755,8 +769,19 @@ if (isc.Browser.isSafari) {
 //        Is this a Windows computer ?
 //<
 isc.Browser.isWin = navigator.platform.toLowerCase().indexOf("win") > -1;
-// NT 5.0 is Win2k, NT5.0.1 is Win2k SP1
-isc.Browser.isWin2k = navigator.userAgent.match(/NT 5.01?/) != null;
+if (isc.Browser.isWin) {
+    // install winVersion as float
+    isc.Browser.winVersion = function() {
+        var windowsMatch = navigator.userAgent.match(/Windows NT[ ]*([0-9.]+)[^0-9.]/i);
+
+        if (windowsMatch) return parseFloat(windowsMatch[1]);
+    }();
+
+}
+
+// NT 5.0 is Win2k, NT 5.0.1 is Win2k SP1
+isc.Browser.isWin2k = isc.Browser.winVersion >= 5.0 && isc.Browser.winVersion < 5.1;
+
 
 //>    @classAttr    Browser.isMac        (boolean : ? : R)
 //        Is this a Macintosh computer ?
@@ -1448,6 +1473,19 @@ isc.Browser.isMobile = (isc.Browser.isMobileFirefox ||
                         isc.Browser.isMobileIE ||
                         isc.Browser.isMobileWebkit);
 
+//> @classAttr browser.supportsDualInput (boolean : varies : RW)
+// Does the browser support both mouse and touch input?
+//<
+
+isc.Browser.supportsDualInput = window.isc_useDualInput != false &&
+        isc.Browser.isWin && isc.Browser.winVersion >= 6.2 &&
+        (isc.Browser.isMoz ||
+         ((isc.Browser.isChrome || isc.Browser.isIE11 || isc.Browser.isEdge) &&
+          navigator.maxTouchPoints > 0));
+
+isc.Browser._useTouchMoveCSS = isc.Browser.supportsDualInput &&
+        (isc.Browser.isIE11 || isc.Browser.isEdge);
+
 //> @classAttr browser.isTouch (boolean : auto-detected based on device : RW)
 // Is the application running on a touch device (e.g. iPhone, iPad, Android device, etc.)?
 // <p>
@@ -1457,9 +1495,9 @@ isc.Browser.isMobile = (isc.Browser.isMobileFirefox ||
 // @visibility external
 //<
 
-isc.Browser.isTouch = (isc.Browser.isMobileFirefox ||
-                       isc.Browser.isMobileIE ||
-                       isc.Browser.isMobileWebkit);
+isc.Browser.isTouch = isc.Browser.isMobileFirefox || isc.Browser.isMobileIE ||
+                      isc.Browser.isMobileWebkit ||
+                      isc.Browser.supportsDualInput && !!window.isc_useDualInput;
 
 //> @classMethod browser.setIsTouch() (A)
 // Setter for +link{Browser.isTouch} to allow this global variable to be changed at runtime.
@@ -1476,22 +1514,73 @@ isc.Browser.isTouch = (isc.Browser.isMobileFirefox ||
 // @visibility external
 //<
 isc.Browser.setIsTouch = function (isTouch) {
-    isTouch = isc.Browser.isTouch = !!isTouch;
+    var Browser = this;
 
-    if (isc.Browser.isDesktop) {
-        isc.Browser.isHandset = false;
-        isc.Browser.isTablet = false;
+    isTouch = Browser.isTouch = !!isTouch;
+
+    if (Browser.isDesktop) {
+        Browser.isHandset = false;
+        Browser.isTablet = false;
     } else {
-        isc.Browser.isHandset = isTouch && !isc.Browser.isTablet;
-        isc.Browser.isTablet = !isc.Browser.isHandset;
+        Browser.isHandset = isTouch && !Browser.isTablet;
+        Browser.isTablet = !Browser.isHandset;
     }
 
-    isc.Browser.hasNativeDrag = !isTouch && "draggable" in document.documentElement && !isc.Browser.isIE;
+    Browser.hasNativeDrag = !isTouch && "draggable" in document.documentElement &&
+        !Browser.isIE;
 
-    isc.Browser.nativeMouseMoveOnCanvasScroll = !isTouch && (isc.Browser.isSafari || isc.Browser.isChrome);
+    Browser.nativeMouseMoveOnCanvasScroll = !isTouch && (Browser.isSafari || Browser.isChrome);
 
 
 };
+
+//> @classAttr browser.pointerEnabled (boolean : varies : RW)
+// Does the browser support pointer events as a means of capturing both touch and mouse
+// interactions?  This simplifies event handling for capable browsers.
+//<
+
+isc.Browser.pointerEnabled = window.PointerEvent != null &&
+        (isc.Browser.isIE || isc.Browser.isEdge) && !isc.Browser.isMobileIE;
+
+//> @classAttr browser.hasDualInput (boolean : false : RW)
+// is the browser currently sending both mouse and touch input?  For example, Microsoft Surface
+// devices are touch devices that run Windows 10 but also allow the connection of USB mice.  In
+// such an environment, we may not be able to auto-detect that touch input is present, so the
+// switch to hasDualINput: true will only happen at the moment a touch event actually arrives.
+//<
+isc.Browser.hasDualInput = !!window.isc_useDualInput;
+
+// helper called by EventHandler to switch to dual input mode if a touch event arrives
+isc.Browser.setHasDualInput = function () {
+
+    if (this.hasDualInput == true) return;
+
+
+
+    if (isc.logInfo) {
+        isc.logInfo("Switching to dual input mode to handle touch events");
+    }
+
+    this.setIsTouch(true);
+    this.hasDualInput = true;
+
+
+    if (isc.Canvas) {
+        isc.Canvas.addProperties({
+            overflowStyle: "none",
+            _browserSupportsNativeTouchScrolling: isc.Browser._getSupportsNativeTouchScrolling()
+        });
+    }
+    if (isc.ListGrid) {
+        isc.ListGrid.addProperties({
+            showRollOver: false,
+            // if a mouse event is received, switch rollover back on
+            handleMouseMove : function (event, eventInfo) {
+                return this._handleDualInputMouseMove(event, eventInfo);
+            }
+        });
+    }
+}
 
 // iPhone OS including iPad.  Search for iPad or iPhone.
 
@@ -1989,8 +2078,8 @@ isc.Browser._transitionEndEventType = ("WebkitTransition" in document.documentEl
 // This is a classMethod rather than a classAttr because it depends on isTouch, which is settable
 // by the application any time up to creation of the first widget. See setIsTouch().
 isc.Browser._getSupportsNativeTouchScrolling = function () {
-    return (this.isTouch &&
-            (!(this.isIPhone || this.isIPad) || this.iOSVersion >= 6));
+    return this.isTouch && (this.isChrome || !this.isWin) &&
+        (!(this.isIPhone || this.isIPad) || this.iOSVersion >= 6);
 };
 
 isc.Browser._supportsWebkitOverflowScrolling = isc.Browser.iOSVersion >= 6 &&
@@ -3143,7 +3232,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v12.0d_2017-11-23/LGPL Deployment (2017-11-23)
+  Version SNAPSHOT_v12.0d_2018-02-13/LGPL Deployment (2018-02-13)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

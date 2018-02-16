@@ -30,7 +30,9 @@ types (since it defines them!)
     <double inheritsFrom="float"/>
     <dateTime inheritsFrom="datetime"/>
     <datetime inheritsFrom="date"/>
-
+    
+    <uuid inheritsFrom="any"/>
+    
     <!-- Integer variants -->
     <!--===================================================================================-->
     <positiveInteger inheritsFrom="integer">
