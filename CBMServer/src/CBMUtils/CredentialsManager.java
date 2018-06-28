@@ -30,7 +30,7 @@ import org.restlet.engine.util.Base64;
 import CBMPersistence.ConnectionPool;
 import CBMServer.CBMStart;
 import CBMServer.DSRequest;
-import CBMServer.DSResponce;
+import CBMServer.DSResponse;
 import CBMServer.IDProvider;
 import CBMServer.I_ClientIOFormatter;
 import CBMServer.I_IDProvider;
@@ -170,7 +170,7 @@ public class CredentialsManager implements I_AutentificationManager {
 	 * 
 	 */
 	public String testRights(DSRequest req) {
-		DSResponce metaResponce = null;
+		DSResponse metaResponse = null;
 //		String login = null;
 		String pass = null;
 //		String clientCode = null;
@@ -231,11 +231,11 @@ public class CredentialsManager implements I_AutentificationManager {
 			return outMsg;
 		}
 		else{
-			metaResponce = new DSResponce();
-			metaResponce.retCode = -1;
-			metaResponce.retMsg = outMsg;
+			metaResponse = new DSResponse();
+			metaResponse.retCode = -1;
+			metaResponse.retMsg = outMsg;
 			try {
-				badOut = clientIOFormatter.formatResponce(metaResponce,	req);
+				badOut = clientIOFormatter.formatResponse(metaResponse,	req);
 			} catch (Exception e) {
 				e.printStackTrace();
 			}

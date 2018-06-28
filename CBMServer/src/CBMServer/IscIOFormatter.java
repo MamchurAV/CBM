@@ -160,14 +160,14 @@ public class IscIOFormatter implements I_ClientIOFormatter {
 	 * Format data output
 	 */
 	@Override
-	public String formatResponce(DSResponce dsResponce, DSRequest dsRequest)  throws Exception
+	public String formatResponse(DSResponse dsResponse, DSRequest dsRequest)  throws Exception
 	{
 		ObjectMapper JsonMapper = new ObjectMapper();
-		if (dsResponce.retCode >= 0) { // -- Successful response ---
+		if (dsResponse.retCode >= 0) { // -- Successful response ---
 			if (dsRequest.operationType.equals("fetch")) {
 				// --- Response data formatting
 				List<Map<String, String>> ret = new ArrayList<Map<String, String>>();
-				ResultSet rs = dsResponce.data;
+				ResultSet rs = dsResponse.data;
 				java.sql.ResultSetMetaData meta = rs.getMetaData();
 				int size = meta.getColumnCount();
 				int length = 0;
@@ -196,8 +196,8 @@ public class IscIOFormatter implements I_ClientIOFormatter {
 				StringWriter sw = new StringWriter();
 				JsonMapper.writeValue(sw, ret);
 				
-				if (dsResponce.totalRows==0){
-					dsResponce.totalRows = length;
+				if (dsResponse.totalRows==0){
+					dsResponse.totalRows = length;
 				}
 				
 				// --- Response meta-information surrounding 
@@ -207,29 +207,29 @@ public class IscIOFormatter implements I_ClientIOFormatter {
 				+ "   status: 0,"     
 				+ "   startRow:" + dsRequest.startRow + ","     
 				+ "   endRow:" + Integer.toString(dsRequest.startRow + length) + ","     
-				+ "   totalRows:" + Integer.toString(dsResponce.totalRows) + ","     
+				+ "   totalRows:" + Integer.toString(dsResponse.totalRows) + ","     
 				+ "   data:" 
 				+ sw.toString()
 				+ "  }"     
 				+ "}";
 			} else  { // -- Non-fetch command
-				dsResponce.retCode = 0;
-				dsResponce.retMsg = "[" + JsonMapper.writeValueAsString(dsRequest.data) + "]";
+				dsResponse.retCode = 0;
+				dsResponse.retMsg = "[" + JsonMapper.writeValueAsString(dsRequest.data) + "]";
 				String sTmp = "{"     
 						+ " response:{"     
 						+ (dsRequest.isTransaction ? "   queueStatus: 0," : "") // TODO -- Return transaction code here
-						+ "   status:" + String.valueOf(dsResponce.retCode) + ","     
-						+ "   data: " + dsResponce.retMsg  
+						+ "   status:" + String.valueOf(dsResponse.retCode) + ","     
+						+ "   data: " + dsResponse.retMsg  
 						+ "} }";
 				return sTmp; 
 			}
 		} else { // -- Error --- TODO: special for -4 ...
-			dsResponce.retMsg = "\"" + dsResponce.retMsg + "\"";
+			dsResponse.retMsg = "\"" + dsResponse.retMsg + "\"";
 			String sTmp = "{"     
 					+ " response:{"     
 					+ (dsRequest.isTransaction ? "   queueStatus: 0," : "") // TODO -- Return transaction code here
-					+ "   status:" + String.valueOf(dsResponce.retCode) + ","     
-					+ "   data: " + dsResponce.retMsg  
+					+ "   status:" + String.valueOf(dsResponse.retCode) + ","     
+					+ "   data: " + dsResponse.retMsg  
 					+ "} }";
 			return sTmp; 
 		}

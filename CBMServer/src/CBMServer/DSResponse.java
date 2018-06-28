@@ -10,9 +10,9 @@ import java.sql.Statement;
 
 /**
  * @author Alexander Mamchur
- * Represents unified client responce 
+ * Represents unified client response 
  */
-public class DSResponce {
+public class DSResponse {
 	
 //	public int startRow; 
 //	public int endRow; 

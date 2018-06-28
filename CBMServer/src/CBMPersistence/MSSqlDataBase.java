@@ -18,7 +18,7 @@ import CBMMeta.ColumnInfo;
 import CBMMeta.SelectTemplate;
 import CBMServer.CBMStart;
 import CBMServer.DSRequest;
-import CBMServer.DSResponce;
+import CBMServer.DSResponse;
 import CBMUtils.StringHelper;
 
 
@@ -57,12 +57,12 @@ public class MSSqlDataBase implements I_DataBase {
 	// -------------------------------- I_DataBase Interface implementation ---------------------------------------------
 	/**
 	 * Selects data from DB.
-	 * With data within DSResponce structure returns JDBC Connection and Statement, 
-	 * that !!! MUST BE CLOSED !!! later, after returned by RS data are utilized, by call of DSResponce.releaseDB() function.
+	 * With data within DSResponse structure returns JDBC Connection and Statement, 
+	 * that !!! MUST BE CLOSED !!! later, after returned by RS data are utilized, by call of DSResponse.releaseDB() function.
 	 */
 	// TODO Main part of all functional below maybe transferred to StorageMetaData (or some universal "SqlPrepare") class.
 	@Override
-	public DSResponce doSelect(SelectTemplate selTempl, DSRequest dsRequest)
+	public DSResponse doSelect(SelectTemplate selTempl, DSRequest dsRequest)
 		throws Exception {
 		Connection dbCon = null;
 		Statement statement = null;
@@ -78,7 +78,7 @@ public class MSSqlDataBase implements I_DataBase {
 		String havingPart = "";
 		String pagePart = "";
 	
-		DSResponce dsResponce = new DSResponce();
+		DSResponse dsResponse = new DSResponse();
 
 		// -------- Preprocess SelectTemplate and data (parameters here) to complete real SQL Select string
 		// --- Select ---
@@ -91,9 +91,9 @@ public class MSSqlDataBase implements I_DataBase {
 		}
 
 		if (selectPart.length() < 2){
-			dsResponce.retCode = -1;
-			dsResponce.retMsg = "No metadata for <" + dsRequest.dataSource + "> found.   SQL: <" + sql + ">";
-			return dsResponce;
+			dsResponse.retCode = -1;
+			dsResponse.retMsg = "No metadata for <" + dsRequest.dataSource + "> found.   SQL: <" + sql + ">";
+			return dsResponse;
 		}
 
 		sql += selectPart.substring(0, selectPart.length()-2);
@@ -172,12 +172,12 @@ public class MSSqlDataBase implements I_DataBase {
 				statement = dbCon.createStatement();
 				rsCount = statement.executeQuery(sqlCount);
 				rsCount.next();
-				dsResponce.totalRows = rsCount.getInt(1);
+				dsResponse.totalRows = rsCount.getInt(1);
 			} catch (SQLException e) {
 				e.printStackTrace();
-				dsResponce.retCode = -1;
-				dsResponce.retMsg = StringHelper.forJSON(e.toString()) + " - while pre-select request for <" + dsRequest.dataSource + "> class. SQL:<" + StringHelper.forJSON(sql) + ">";
-				return dsResponce; // Error-reporting response return
+				dsResponse.retCode = -1;
+				dsResponse.retMsg = StringHelper.forJSON(e.toString()) + " - while pre-select request for <" + dsRequest.dataSource + "> class. SQL:<" + StringHelper.forJSON(sql) + ">";
+				return dsResponse; // Error-reporting response return
 			} finally {
 			    try {
 			        if(rsCount != null) rsCount.close();
@@ -204,26 +204,26 @@ public class MSSqlDataBase implements I_DataBase {
             
 			statement = dbCon.createStatement();  
 			ResultSet rs = statement.executeQuery(sql);
-			dsResponce.data = rs;
-			dsResponce.dbStatement = statement;
-			dsResponce.dbConnection = dbCon;
+			dsResponse.data = rs;
+			dsResponse.dbStatement = statement;
+			dsResponse.dbConnection = dbCon;
 		} catch (SQLException e) {
 			e.printStackTrace();
-			dsResponce.retCode = -1;
-			dsResponce.retMsg = StringHelper.forJSON(e.toString()) + " - while selecting data of <" + dsRequest.dataSource + "> class. SQL:<" + StringHelper.forJSON(sql) + ">";
-			return dsResponce; // Error-reporting response return
+			dsResponse.retCode = -1;
+			dsResponse.retMsg = StringHelper.forJSON(e.toString()) + " - while selecting data of <" + dsRequest.dataSource + "> class. SQL:<" + StringHelper.forJSON(sql) + ">";
+			return dsResponse; // Error-reporting response return
 		}
-		dsResponce.retCode = 0;
-		return dsResponce;
+		dsResponse.retCode = 0;
+		return dsResponse;
 	}
 	
 	
 	@Override
-	public DSResponce doInsert(Map<String,String[]> insTempl, DSRequest dsRequest)// throws Exception 
+	public DSResponse doInsert(Map<String,String[]> insTempl, DSRequest dsRequest)// throws Exception 
 	{
 		Connection dbCon = null;
 		Statement statement = null;
-		DSResponce out = new DSResponce();
+		DSResponse out = new DSResponse();
 		String idValue = null;
 		
 		// ---- Discover Tables list -----
@@ -353,11 +353,11 @@ public class MSSqlDataBase implements I_DataBase {
 
 
 	@Override
-	public DSResponce doUpdate(Map<String,String[]> updTempl, DSRequest dsRequest) 
+	public DSResponse doUpdate(Map<String,String[]> updTempl, DSRequest dsRequest) 
 	{
 		Connection dbCon = null;
 		Statement statement = null;
-		DSResponce out = new DSResponce();
+		DSResponse out = new DSResponse();
 		String idValue = null;
 
 		// --- Discover Tables list ---
@@ -518,12 +518,12 @@ public class MSSqlDataBase implements I_DataBase {
 
 	
 	@Override
-	public DSResponce doDelete(List<String> tables, DSRequest dsRequest) 
+	public DSResponse doDelete(List<String> tables, DSRequest dsRequest) 
 	{
 		Connection dbCon = null;
 		Statement statement = null;
 		String id;
-		DSResponce out = new DSResponce();
+		DSResponse out = new DSResponse();
 		for (String tableRow : tables)
 		{
 			String table = tableRow.toLowerCase();
@@ -612,10 +612,10 @@ public int doCommit() throws Exception {
 
 	
 	@Override
-	public DSResponce exequteDirect(String sql){
+	public DSResponse exequteDirect(String sql){
 		Connection dbCon = null;
 		Statement statement = null;
-		DSResponce out = new DSResponce();
+		DSResponse out = new DSResponse();
 		try {
 //			dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
 			DataSource dataSource = ConnectionPool.getDataSource();

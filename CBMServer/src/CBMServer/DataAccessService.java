@@ -124,26 +124,26 @@ public class DataAccessService extends ServerResource {
 				switch (dsRequest.operationType) {
 				case "fetch": {
 					// In case of Select - we must manually free DB resources after utilized.
-					DSResponce responce = currentDB.doSelect(metaProvider.getSelect(dsRequest), dsRequest);
-					outSingleOper = clientIOFormatter.formatResponce(responce, dsRequest);
-					responce.releaseDB();
+					DSResponse response = currentDB.doSelect(metaProvider.getSelect(dsRequest), dsRequest);
+					outSingleOper = clientIOFormatter.formatResponse(response, dsRequest);
+					response.releaseDB();
 					break;
 				}
 				case "add": {
-					outSingleOper = clientIOFormatter.formatResponce(
+					outSingleOper = clientIOFormatter.formatResponse(
 							currentDB.doInsert(metaProvider.getColumnsInfo(dsRequest), dsRequest),
 							dsRequest);
 					break;
 				}
 				case "update": {
-					outSingleOper = clientIOFormatter.formatResponce(
+					outSingleOper = clientIOFormatter.formatResponse(
 							currentDB.doUpdate(metaProvider.getColumnsInfo(dsRequest), dsRequest),
 							dsRequest);
 					break;
 				}
 				case "remove": {
 					// TODO --- If "Del" property exists - switch to update set Del=true
-					outSingleOper = clientIOFormatter.formatResponce(
+					outSingleOper = clientIOFormatter.formatResponse(
 							currentDB.doDelete(metaProvider.getDelete(dsRequest), dsRequest),
 							dsRequest);
 					break;
@@ -202,7 +202,7 @@ public class DataAccessService extends ServerResource {
 	// ------- !!! ??? HERE? !!! ---------
 //	private String testRights(DSRequest req) {
 //
-//		DSResponce metaResponce = null;
+//		DSResponse metaResponse = null;
 ////		String login = null;
 //		String pass = null;
 ////		String clientCode = null;
@@ -256,11 +256,11 @@ public class DataAccessService extends ServerResource {
 //			return outMsg;
 //		}
 //		else{
-//			metaResponce = new DSResponce();
-//			metaResponce.retCode = -1;
-//			metaResponce.retMsg = outMsg;
+//			metaResponse = new DSResponse();
+//			metaResponse.retCode = -1;
+//			metaResponse.retMsg = outMsg;
 //			try {
-//				badOut = clientIOFormatter.formatResponce(metaResponce,	req);
+//				badOut = clientIOFormatter.formatResponse(metaResponse,	req);
 //			} catch (Exception e) {
 //				e.printStackTrace();
 //			}

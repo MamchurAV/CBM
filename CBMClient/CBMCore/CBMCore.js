@@ -938,7 +938,7 @@ function getRelationsForConcept(conceptId, callback) {
   function innerGetRelations(conceptId) {
     if (conceptDS.hasAllData()) {
       var record = conceptDS.getCacheData().find({ID: conceptId});
-      var relationsToThis = isc.DataSource.get("Relation").getCacheData().findAll({ForConcept: conceptId});
+      var relationsToThis = isc.DataSource.get("Relation").getCacheData().findAll({ForConcept: conceptId, Del: false });
       var i = 0;
       if (relationsToThis !== null) {
         for (i; i < relationsToThis.length; i++) {
@@ -2218,6 +2218,9 @@ isc.CBMDataSource.addProperties({
  ////// Was ucommented for edited Relatoins refresh   record.store();
               // if(context.parentElement.parentElement.canvasItem
                  // && context.parentElement.parentElement.canvasItem.needRefresh) {
+                //if(context.parentElement.parentElement.canvasItem.innerGrid) {
+                  //updateDataInCache(record.fullRecord); 
+                //} 
                 // context.parentElement.parentElement.canvasItem.showValue("", null, 
                 // context.parentElement.parentElement.parentElement, 
                 // context.parentElement.parentElement.canvasItem);
@@ -2232,6 +2235,10 @@ isc.CBMDataSource.addProperties({
              && context.parentElement.parentElement
              && context.parentElement.parentElement.canvasItem
              && context.parentElement.parentElement.canvasItem.needRefresh) {
+
+            if(context.parentElement.parentElement.canvasItem.innerGrid) {
+              updateDataInCache(record.fullRecord); 
+            } 
             context.parentElement.parentElement.canvasItem.showValue("", null, 
             context.parentElement.parentElement.parentElement, 
             context.parentElement.parentElement.canvasItem);
@@ -2394,7 +2401,7 @@ var CBMobject = {
                   }
                 );
         this.infoState = "loaded";       
-//        addDataToCache(this); // <<< uncommented - was good for relations refresh
+        addDataToCache(this); // <<< uncommented - was good for relations refresh
       } else {
         addDataToCache(this);
       }
@@ -2415,7 +2422,7 @@ var CBMobject = {
     } else if (this.infoState === "deleted") {
       if (real) {
         this.ds.removeData(this);
- //       removeDataFromCache(this); // <<< More likely redundant. Remove after tests...
+        removeDataFromCache(this); // <<< More likely redundant. Remove after tests...
       } else {
         removeDataFromCache(this);
       }
@@ -3826,12 +3833,12 @@ isc.InnerGrid.addProperties({
           //selectionAppearance:"checkbox", // Use if more "stable" selection preferred.
           canDragRecordsOut: true,
           // TODO: Set some user action to inline record editing
-          recordDoubleClick: function () {
-            if(that.grid.getSelectedRecord() != null) {
-              that.grid.callObjectsEdit("loaded");
-              return false;
-            }
-          },
+//          recordDoubleClick: function () {
+//            if(that.grid.getSelectedRecord() != null) {
+//              that.grid.callObjectsEdit("loaded");
+//              return false;
+//            }
+//          },
           canEdit: true,
           modalEditing: true,
           autoSaveEdits: false,

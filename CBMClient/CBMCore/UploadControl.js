@@ -10,7 +10,7 @@ isc.ImageCropedUploadControl.addProperties({
           height: 40,
 	      members: [
 					isc.Img.create({
-							border: "1px solid blue",
+							//border: "1px solid blue",
 							width: 120, height: 80,
 //							imageType: "stretch",
 //							imageWidth: 119, 
@@ -79,7 +79,7 @@ isc.ImageCropedUploadControl.addProperties({
                     endpoint: CBM_URL + 'UploadFile'
                 },
                 retry: {
-                    enableAuto: true
+                    enableAuto: false
                 },
                 validation: {
                     itemLimit: 1,

@@ -24,6 +24,6 @@ public interface I_ClientIOFormatter {
 	/**
 	 * Formats Server's selected data output 
 	 */
-	public String formatResponce(DSResponce dsResponce, DSRequest req) throws Exception;
+	public String formatResponse(DSResponse dsResponse, DSRequest req) throws Exception;
 
 }

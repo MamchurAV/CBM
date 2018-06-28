@@ -15,7 +15,7 @@ import java.util.Map;
 import CBMMeta.ColumnInfo;
 import CBMMeta.SelectTemplate;
 import CBMServer.DSRequest;
-import CBMServer.DSResponce;
+import CBMServer.DSResponse;
 
 
 
@@ -43,7 +43,7 @@ public class DB2DataBase implements I_DataBase {
 	 */
 	// TODO Main part of all functional below maybe transferred to StorageMetaData (or some universal "SqlPrepare") class.
 	@Override
-	public DSResponce doSelect(SelectTemplate selTempl, DSRequest dsRequest)
+	public DSResponse doSelect(SelectTemplate selTempl, DSRequest dsRequest)
 		throws Exception {
 		String sql = "SELECT ";
 		String sqlCount = "Select count(*) ";
@@ -55,7 +55,7 @@ public class DB2DataBase implements I_DataBase {
 		String havingPart = "";
 		String pagePart = "";
 	
-		DSResponce dsResponce = new DSResponce();
+		DSResponse dsResponse = new DSResponse();
 
 		// -------- Preprocess SelectTemplate and data (parameters here) to complete real SQL Select string
 		// --- Select ---
@@ -135,7 +135,7 @@ public class DB2DataBase implements I_DataBase {
 			Statement statement = dbCon.createStatement();
 			ResultSet rsCount = statement.executeQuery(sqlCount);
 			rsCount.next();
-			dsResponce.totalRows = rsCount.getInt(1);
+			dsResponse.totalRows = rsCount.getInt(1);
 
 			pagePart += String.valueOf(dsRequest.startRow) + "," + String.valueOf(dsRequest.endRow - dsRequest.startRow);
 			sql += " limit " + pagePart;
@@ -144,15 +144,15 @@ public class DB2DataBase implements I_DataBase {
 		// ------------ Execute Select
 		Statement statement = dbCon.createStatement();
 		ResultSet rs = statement.executeQuery(sql);
-		dsResponce.data = rs;
-		return dsResponce;
+		dsResponse.data = rs;
+		return dsResponse;
 	}
 	
 	
 	@Override
-	public DSResponce doInsert(Map<String,String[]> insTempl, DSRequest dsRequest) throws Exception 
+	public DSResponse doInsert(Map<String,String[]> insTempl, DSRequest dsRequest) throws Exception 
 	{
-		DSResponce out = new DSResponce();
+		DSResponse out = new DSResponse();
 		
 		// ---- Discover Tables list -----
 		List<String> tables = new ArrayList<String>();
@@ -201,9 +201,9 @@ public class DB2DataBase implements I_DataBase {
 	// TODO Provide multiply updates/Deletes
 	
 	@Override
-	public DSResponce doUpdate(Map<String,String[]> updTempl, DSRequest dsRequest)	throws Exception 
+	public DSResponse doUpdate(Map<String,String[]> updTempl, DSRequest dsRequest)	throws Exception 
 	{
-		DSResponce out = new DSResponce();
+		DSResponse out = new DSResponse();
 		
 		// ---- Discover Tables list -----
 		List<String> tables = new ArrayList<String>();
@@ -257,10 +257,10 @@ public class DB2DataBase implements I_DataBase {
 
 	
 	@Override
-	public DSResponce doDelete(List<String> tables, DSRequest dsRequest) throws Exception 
+	public DSResponse doDelete(List<String> tables, DSRequest dsRequest) throws Exception 
 	{
 		String id = "";
-		DSResponce out = new DSResponce();
+		DSResponse out = new DSResponse();
 		// First discover ID value
 		for (Map.Entry<String, Object> entry : dsRequest.data.data.entrySet())
 		{
@@ -296,8 +296,8 @@ public class DB2DataBase implements I_DataBase {
 	}
 
 	@Override
-	public DSResponce exequteDirect(String sql){
-		DSResponce out = new DSResponce();
+	public DSResponse exequteDirect(String sql){
+		DSResponse out = new DSResponse();
 		try {
 			Statement statement = dbCon.createStatement();
 			out.retCode = statement.executeUpdate(sql);

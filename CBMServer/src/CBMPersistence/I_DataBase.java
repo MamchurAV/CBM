@@ -9,7 +9,7 @@ import java.util.Map;
 
 import CBMMeta.SelectTemplate;
 import CBMServer.DSRequest;
-import CBMServer.DSResponce;
+import CBMServer.DSResponse;
 
 /**
  * Interface for DB end-point execution
@@ -18,16 +18,16 @@ public interface I_DataBase
 {
 	/**
 	 * Selects data from DB.
-	 * With data within DSResponce structure returns JDBC Connection and Statement, 
-	 * that !!! MUST BE CLOSED !!! later, after returned by RS data are utilized, by call of DSResponce.releaseDB() function.
+	 * With data within DSResponse structure returns JDBC Connection and Statement, 
+	 * that !!! MUST BE CLOSED !!! later, after returned by RS data are utilized, by call of DSResponse.releaseDB() function.
 	 */
-	 public DSResponce doSelect(SelectTemplate sql, DSRequest req) throws Exception; 
-	 public DSResponce doInsert(Map<String,String[]> sql, DSRequest req) throws Exception; 
-	 public DSResponce doUpdate(Map<String,String[]> sql, DSRequest req) throws Exception; 
-	 public DSResponce doDelete(List<String> sql, DSRequest req) throws Exception; 
+	 public DSResponse doSelect(SelectTemplate sql, DSRequest req) throws Exception; 
+	 public DSResponse doInsert(Map<String,String[]> sql, DSRequest req) throws Exception; 
+	 public DSResponse doUpdate(Map<String,String[]> sql, DSRequest req) throws Exception; 
+	 public DSResponse doDelete(List<String> sql, DSRequest req) throws Exception; 
 	 public int doStartTrans() throws Exception; 
 	 public int doCommit() throws Exception; 
-	 public DSResponce exequteDirect(String sql) throws Exception;
+	 public DSResponse exequteDirect(String sql) throws Exception;
 	 /**
 	  * Executes SQL expression
 	  * @param sql - SQL string to execute

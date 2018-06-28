@@ -16,7 +16,7 @@ import org.restlet.data.Protocol;
 import org.restlet.util.Series;
 //import org.restlet.ext.ssl.PkixSslContextFactory;
 
-public class CBMStart { 
+public class CBMStart {
 	private static Properties props = new Properties();
 	private static final String sysRoot = System.getProperty("user.dir");
 	public static final String CBM_ROOT = sysRoot.substring(0, sysRoot.lastIndexOf("/") > 0 ? sysRoot.lastIndexOf("/") : sysRoot.lastIndexOf("\\") > 0 ? sysRoot.lastIndexOf("\\") : sysRoot.length());	    
@@ -97,8 +97,7 @@ public class CBMStart {
 	    // ------ Attach the CBM application !!! --------  
 	    component.getDefaultHost().attach(new CBMRestlet());  
 
-	    
-	    // Start the component.  
+        // Start the component.
 	    component.start();  
 	} 
 	

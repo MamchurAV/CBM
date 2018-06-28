@@ -17,7 +17,7 @@ import CBMPersistence.MySQLDataBase;
 import CBMPersistence.PostgreSqlDataBase;
 import CBMServer.CBMStart;
 import CBMServer.DSRequest;
-import CBMServer.DSResponce;
+import CBMServer.DSResponse;
 
 /**
  * @author Alexander Mamchur Provide Meta-Model defined storage information (in
@@ -87,7 +87,7 @@ public class StorageMetaData implements I_StorageMetaData {
 			return out;
 		}
 
-		DSResponce metaResponce = null;
+		DSResponse metaResponse = null;
 
 		SelectTemplate mdForSelect = new SelectTemplate();
 		String forConceptId = "";
@@ -107,29 +107,29 @@ public class StorageMetaData implements I_StorageMetaData {
 		mdForSelect.columns.add(new ColumnInfo("ExprHaving", "CBM.Concept", "c.ExprHaving", "String"));
 
 		try {
-			metaResponce = metaDB.doSelect(mdForSelect, null);
+			metaResponse = metaDB.doSelect(mdForSelect, null);
 		} catch (Exception ex) {
 			ex.printStackTrace(System.err);
 		}
 
-		if (metaResponce != null && metaResponce.data != null) {
+		if (metaResponse != null && metaResponse.data != null) {
 			out = new SelectTemplate();
-			if (metaResponce.data.next()) {
-				// forConceptId = metaResponce.data.getString("IDConcept");
-				forViewId = metaResponce.data.getString("IDView");
+			if (metaResponse.data.next()) {
+				// forConceptId = metaResponse.data.getString("IDConcept");
+				forViewId = metaResponse.data.getString("IDView");
 
-				out.from = metaResponce.data.getString("ExprFrom").replaceAll("/forDate/", forDate.toString())
+				out.from = metaResponse.data.getString("ExprFrom").replaceAll("/forDate/", forDate.toString())
 						.replaceAll("/forUser/", forUser);
-				out.where = metaResponce.data.getString("ExprWhere");
-				out.orderby = metaResponce.data.getString("ExprOrder");
-				out.groupby = metaResponce.data.getString("ExprGroup");
-				out.having = metaResponce.data.getString("ExprHaving");
+				out.where = metaResponse.data.getString("ExprWhere");
+				out.orderby = metaResponse.data.getString("ExprOrder");
+				out.groupby = metaResponse.data.getString("ExprGroup");
+				out.having = metaResponse.data.getString("ExprHaving");
 			}
 		} else {
-			metaResponce.releaseDB();
+			metaResponse.releaseDB();
 			return null;
 		}
-		metaResponce.releaseDB();
+		metaResponse.releaseDB();
 
 		// ---- Get columns part of query from MetaData -------------
 		mdForSelect.from = "CBM.PrgViewField pvf "
@@ -144,26 +144,26 @@ public class StorageMetaData implements I_StorageMetaData {
 		mdForSelect.columns.add(new ColumnInfo("DBColumn", "CBM.Relation", "r.dbcolumn", "String"));
 		mdForSelect.columns.add(new ColumnInfo("RelatedConcept", "CBM.Concept", "c.SysCode", "String"));
 		try {
-			metaResponce = metaDB.doSelect(mdForSelect, null);
+			metaResponse = metaDB.doSelect(mdForSelect, null);
 		} catch (Exception ex) {
 			ex.printStackTrace(System.err);
 		}
 
-		if (metaResponce != null && metaResponce.data != null) {
+		if (metaResponse != null && metaResponse.data != null) {
 			out.columns = new ArrayList<ColumnInfo>();
 			String col;
 			String relatedConcept;
-			while (metaResponce.data.next()) {
-				col = metaResponce.data.getString("DBColumn");
-				relatedConcept = metaResponce.data.getString("RelatedConcept");
+			while (metaResponse.data.next()) {
+				col = metaResponse.data.getString("DBColumn");
+				relatedConcept = metaResponse.data.getString("RelatedConcept");
 				if (relatedConcept.equals("Boolean")) {
 					col = "(CASE WHEN " + col + "='0' then 'false' ELSE 'true' END)";
 				}
-				out.columns.add(new ColumnInfo(metaResponce.data.getString("SysCode"),
-						metaResponce.data.getString("DBTable"), col, relatedConcept));
+				out.columns.add(new ColumnInfo(metaResponse.data.getString("SysCode"),
+						metaResponse.data.getString("DBTable"), col, relatedConcept));
 			}
 		}
-		metaResponce.releaseDB();
+		metaResponse.releaseDB();
 
 		// Store loaded metadata to cache
 		selectInfo.put(forView, out);
@@ -199,7 +199,7 @@ public class StorageMetaData implements I_StorageMetaData {
 			delInfo.clear();
 		}
 
-		DSResponce metaResponce = null;
+		DSResponse metaResponse = null;
 		SelectTemplate mdForSelect = new SelectTemplate();
 
 		// ---- Get Tables and Columns updated info from Relations storage info
@@ -220,23 +220,23 @@ public class StorageMetaData implements I_StorageMetaData {
 		mdForSelect.columns.add(new ColumnInfo("versioned", "CBM.Relation", "r.Versioned", "Boolean"));
 
 		try {
-			metaResponce = metaDB.doSelect(mdForSelect, null);
+			metaResponse = metaDB.doSelect(mdForSelect, null);
 		} catch (Exception ex) {
 			ex.printStackTrace(System.err);
 		}
 
-		if (metaResponce != null && metaResponce.data != null) {
+		if (metaResponse != null && metaResponse.data != null) {
 			out = new HashMap<String, String[]>();
-			while (metaResponce.data.next()) {
-				out.put(metaResponce.data.getString("syscode"),
+			while (metaResponse.data.next()) {
+				out.put(metaResponse.data.getString("syscode"),
 						new String[] {
-								metaResponce.data.getString("dbcolumn")
-										.substring(metaResponce.data.getString("dbcolumn").indexOf(".") + 1),
-								metaResponce.data.getString("dbtable"), metaResponce.data.getString("pointedclass"),
-								metaResponce.data.getString("versioned") });
+								metaResponse.data.getString("dbcolumn")
+										.substring(metaResponse.data.getString("dbcolumn").indexOf(".") + 1),
+								metaResponse.data.getString("dbtable"), metaResponse.data.getString("pointedclass"),
+								metaResponse.data.getString("versioned") });
 			}
 		}
-		metaResponce.releaseDB();
+		metaResponse.releaseDB();
 
 		// Store loaded metadata to cache
 		updInsInfo.put(forType, out);
@@ -262,7 +262,7 @@ public class StorageMetaData implements I_StorageMetaData {
 		}
 		// ---------------------------------------
 
-		DSResponce metaResponce = null;
+		DSResponse metaResponse = null;
 
 		SelectTemplate mdForSelect = new SelectTemplate();
 
@@ -279,20 +279,20 @@ public class StorageMetaData implements I_StorageMetaData {
 		mdForSelect.columns.add(new ColumnInfo("dbtable", "CBM.Relation", "r.dbtable", "String"));
 
 		try {
-			metaResponce = metaDB.doSelect(mdForSelect, null);
+			metaResponse = metaDB.doSelect(mdForSelect, null);
 		} catch (Exception ex) {
 			ex.printStackTrace(System.err);
 		}
 
-		if (metaResponce != null && metaResponce.data != null) {
+		if (metaResponse != null && metaResponse.data != null) {
 			out = new ArrayList<String>();
-			while (metaResponce.data.next()) {
-				if (!out.contains(metaResponce.data.getString("dbtable").toLowerCase())) {
-					out.add(metaResponce.data.getString("dbtable").toLowerCase());
+			while (metaResponse.data.next()) {
+				if (!out.contains(metaResponse.data.getString("dbtable").toLowerCase())) {
+					out.add(metaResponse.data.getString("dbtable").toLowerCase());
 				}
 			}
 		}
-		metaResponce.releaseDB();
+		metaResponse.releaseDB();
 
 		// Store loaded metadata to cache
 		delInfo.put(forType, out);

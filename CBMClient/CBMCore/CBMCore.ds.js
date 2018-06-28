@@ -317,7 +317,7 @@ isc.CBMDataSource.create({
     name: "HierCode",
     type: "text",
     title: "Hirarchy Root",
- //   hidden: true,
+  //  hidden: true,
     length: 2367
   }, {
     name: "Primitive",
@@ -760,14 +760,15 @@ isc.CBMDataSource.create({
       name: "Description"
     }],
     inList: true,
-    hidden: true
-  }, {
+    //hidden: true
+  }, { // VVVVVVVVVVVV  Does ForConceptSysCode used for any purpose?
     name: "ForConceptSysCode",
     type: "text",
-    title: "Belongs to Concept",
-    length: 100
+    title: "Belongs to Concept (string Code)",
+    length: 100,
+    hidden: true
   }, {
-    // Property provide very imortant (in most cases ignored!) concept
+    // Property provide very imortant (in most cases ignored) aspect
     // of Semantic meaning of Relation.
     // In other words, it's relation's self-type, that allows to make assamptions
     // on relations meaning and similarity between different Concepts.
@@ -1434,7 +1435,7 @@ isc.CBMDataSource.create({
     pickListWidth: 450,
     inList: true,
     pickListFields: [{
-      name: "ForConceptSysCode",
+      name: "ForConcept",
       title: "Belongs to concept"
     }, {
       name: "SysCode",
