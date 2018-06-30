@@ -1,7 +1,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v12.0d_2018-02-13/LGPL Deployment (2018-02-13)
+  Version v12.0p_2018-06-28/LGPL Deployment (2018-06-28)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,9 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
 
-if (window.isc && isc.version != "SNAPSHOT_v12.0d_2018-02-13/LGPL Deployment" && !isc.DevUtil) {
+if (window.isc && isc.version != "v12.0p_2018-06-28/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v12.0d_2018-02-13/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'v12.0p_2018-06-28/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -5312,8 +5312,9 @@ isc.defineClass("Portlet", "Window").addProperties({
     closeConfirmationMessage:"Close portlet?",
 
     //>@attr portlet.closeConfirmationDialogProperties (Dialog Properties : null : IRW)
-    // If specified, this properties block will be passed to +link{isc.confirm()} as the
-    // properties parameter when the +link{closeConfirmationMessage} is shown,
+    // If specified, this properties block will be passed to <smartclient>+link{isc.confirm()}
+    // </smartclient><smartgwt>{@link com.smartgwt.client.util.SC#confirm SC.confirm()}</smartgwt>
+    // as the properties parameter when the +link{closeConfirmationMessage} is shown,
     // allowing developers to customize the appear of the confirmation
     // dialog (modifying its title, etc).
     //
@@ -5335,6 +5336,7 @@ isc.defineClass("Portlet", "Window").addProperties({
     // <smartgwt>Developers may use <code>addCloseClickHandler()</code> to provide custom
     // handling when the user clicks this button.</smartgwt>
     // Custom implementations may call <code>close()</code> to trigger the default behavior.
+    // @return (Boolean) Return false to cancel bubbling the click event
     // @visibility external
     //<
 
@@ -8041,8 +8043,11 @@ isc.defineClass("PortalLayout", "Layout").addProperties({
 // a text message or a text mesage with some standard buttons.
 // <P>
 // Many typical modal dialogs such as alerts and confirmations are built into the system with
-// convenience APIs - see +link{staticMethod:isc.say()}, +link{staticMethod:isc.warn()} and
-// +link{staticMethod:isc.askForValue}.
+// convenience APIs - see <smartclient>+link{staticMethod:isc.say()}, +link{staticMethod:isc.warn()}
+// and +link{staticMethod:isc.askForValue}</smartclient>
+// <smartgwt>{@link com.smartgwt.client.util.SC#say SC.say()},
+// {@link com.smartgwt.client.util.SC#warn SC.warn()} and
+// {@link com.smartgwt.client.util.SC#askforValue SC.askforValue()}</smartgwt>.
 // <P>
 // Dialogs can be modal or non-modal according to +link{Window.isModal,isModal}.
 // <P>
@@ -8502,7 +8507,10 @@ isc.Dialog.addProperties({
     // Array of Buttons to show in the +link{showToolbar,toolbar}, if shown.
     // <P>
     // The set of buttons to use is typically set by calling one of the shortcuts such as
-    // +link{staticMethod:isc.say()} or +link{staticMethod:isc.confirm()}.  A custom set of
+    // <smartclient>+link{staticMethod:isc.say()} or +link{staticMethod:isc.confirm()}</smartclient>
+    // <smartgwt>{@link com.smartgwt.client.util.SC#say SC.say()} or
+    // {@link com.smartgwt.client.util.SC#confirm SC.confirm()} </smartgwt>.
+    // A custom set of
     // buttons can be passed to these shortcuts methods via the "properties" argument, or to a
     // directly created Dialog.
     // <P>
@@ -9844,7 +9852,7 @@ isc.LoginDialog.addProperties({
     isModal: true,
     showMinimizeButton:false,
 
-    //> @attr loginDialog.items (Array of String : ["autoChild:loginForm"] : IR)
+    //> @attr loginDialog.items (Array of Canvas | Canvas | String : ["autoChild:loginForm"] : IR)
     // Specifies the dialog contents. By default, the dialog only contains
     // +link{LoginDialog.loginForm}. If desired, additional widgets may be placed before/after
     // the loginForm. To specify these widgets as +link{group:autoChildren}, use the syntax
@@ -13243,6 +13251,16 @@ setTabTitle : function (tab, title) {
     this.resetTabPickerMenu();
 },
 
+//>    @method    tabSet.setTabPickerTitle()    (A)
+// Changes the title of the picker menu item of a tab
+// @param    tab      (Tab | number | GlobalId | TabName)
+// @param    pickerTitle    (HTMLString)  new title
+// @visibility external
+//<
+setTabPickerTitle : function (tab, pickerTitle) {
+    this.setTabProperties(tab, {pickerTitle:pickerTitle});
+},
+
 //>    @method    tabSet.setTabIcon() (A)
 // Changes the icon for a tab
 // @param tab (Tab | number | GlobalId | TabName) tab to update
@@ -14700,8 +14718,10 @@ _tabSelected : function (tab) {
 //<
 
 //> @method tab.tabDeselected()
-// Optional handler to fire when a tab is deselected. Returning false will cancel the
-// new selection, leaving this tab selected. As with +link{TabSet.tabSelected()} this
+// Optional handler to fire when a tab is deselected. <smartclient>Returning false</smartclient>
+// <smartgwt>Calling {@link com.smartgwt.client.widgets.tab.events.TabDeselectedEvent#cancel}
+// </smartgwt> will cancel the new selection, leaving this tab selected.
+// As with +link{TabSet.tabSelected()} this
 // method only fires when the tabset is drawn.
 //
 // @param tabSet (TabSet) the tabSet containing the tab.
@@ -15185,7 +15205,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v12.0d_2018-02-13/LGPL Deployment (2018-02-13)
+  Version v12.0p_2018-06-28/LGPL Deployment (2018-06-28)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

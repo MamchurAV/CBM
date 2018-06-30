@@ -22,6 +22,7 @@ types (since it defines them!)
     -->
     <text validators="isString"/>
     <string inheritsFrom="text"/>
+    <json inheritsFrom="text"/>
     <link inheritsFrom="text"/>
     <int inheritsFrom="integer"/>
     <long inheritsFrom="integer"/>

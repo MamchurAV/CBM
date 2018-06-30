@@ -1,7 +1,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v12.0d_2018-02-13/LGPL Deployment (2018-02-13)
+  Version v12.0p_2018-06-28/LGPL Deployment (2018-06-28)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,9 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
 
-if (window.isc && isc.version != "SNAPSHOT_v12.0d_2018-02-13/LGPL Deployment" && !isc.DevUtil) {
+if (window.isc && isc.version != "v12.0p_2018-06-28/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v12.0d_2018-02-13/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'v12.0p_2018-06-28/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -13132,6 +13132,9 @@ show : function () {
         if (this._htmlText) this._htmlText.show();
         else this.drawPane.redrawBitmap();
     }
+
+    if (this.titleLabel)           this.titleLabel.show();
+    if (this.titleLabelBackground) this.titleLabelBackground.show();
 },
 
 
@@ -13155,6 +13158,9 @@ hide : function () {
         if (this._htmlText) this._htmlText.hide();
         else this.drawPane.redrawBitmap();
     }
+
+    if (this.titleLabel)           this.titleLabel.hide();
+    if (this.titleLabelBackground) this.titleLabelBackground.hide();
 },
 
 //--------------------------------------------------------------------------------
@@ -18141,7 +18147,7 @@ getCenter : function () {
 },
 
 //> @method drawLabel.getBoundingBox()
-// Returns the top, left, top + textHeight, left + textWidth
+// Returns the left, top, left + textWidth, top + textHeight
 // @return (Array of double) x1, y1, x2, y2 coordinates
 // @visibility drawing
 //<
@@ -26546,7 +26552,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v12.0d_2018-02-13/LGPL Deployment (2018-02-13)
+  Version v12.0p_2018-06-28/LGPL Deployment (2018-06-28)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

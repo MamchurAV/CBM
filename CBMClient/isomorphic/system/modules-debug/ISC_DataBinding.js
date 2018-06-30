@@ -1,7 +1,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v12.0d_2018-02-13/LGPL Deployment (2018-02-13)
+  Version v12.0p_2018-06-28/LGPL Deployment (2018-06-28)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,9 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
 
-if (window.isc && isc.version != "SNAPSHOT_v12.0d_2018-02-13/LGPL Deployment" && !isc.DevUtil) {
+if (window.isc && isc.version != "v12.0p_2018-06-28/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v12.0d_2018-02-13/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'v12.0p_2018-06-28/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -4765,19 +4765,19 @@ isc.defineClass("DataSource");
 // Supported J2SE Containers:
 // <p>
 // <table class='normal'>
-// <tr><td width=40></td><td width=400><i>Apache Tomcat 6.x, 7.x, 8.x</i></td><td></td></tr>
+// <tr><td width=40></td><td width=400><i>Apache Tomcat 6.x, 7.x, 8.x, 9.x</i></td><td></td></tr>
 // <tr><td></td><td><i>Apache Geronimo 1.x, 2.x, 3.x</i></td><td></td></tr>
 // <tr><td></td><td><i>Oracle WebLogic 6.x, 7x, 8.x, 9.x, 10.x, 11gR1 PSx, 12c Release x</i></td><td></td></tr>
-// <tr><td></td><td><i>Caucho Resin 2.1.x, 3.0.x, 3.1.x, 4.x</i></td><td></td></tr>
+// <tr><td></td><td><i>Caucho Resin 2.1.x, 3.0.x, 3.1.x, 4.x, 5.x</i></td><td></td></tr>
 // <tr><td></td><td><i>IBM WebSphere 5.x, 6.x, 7.x, 8.x</i></td><td></td></tr>
 // <tr><td></td><td><i>IBM WebSphere Community Edition 1.x, 2.x, 3.x</i></td><td></td></tr>
-// <tr><td></td><td><i>JBoss 3.2.x, 4.0.x, 4.2.x, 5.x, 6.x, 7.x; EAP 6.x</i></td><td></td></tr>
-// <tr><td></td><td><i>WildFly 8.x, 9.x, 10.x</i></td><td></td></tr>
+// <tr><td></td><td><i>JBoss 3.2.x, 4.0.x, 4.2.x, 5.x, 6.x, 7.x; EAP 6.x, 7.x</i></td><td></td></tr>
+// <tr><td></td><td><i>WildFly 8.x, 9.x, 10.x, 11.x, 12.x</i></td><td></td></tr>
 // <tr><td></td><td><i>Mortbay Jetty 4.x, 5.x, 6.x, 7.x, 8.x, 9.x</i></td><td></td></tr>
 // <tr><td></td><td><i>Oracle Containers for J2EE (OC4J) 9.x, 10.x, 11.x</i></td><td></td></tr>
 // <tr><td></td><td><i>Oracle Application Server 10g 9.x, 10.x; 11g</i></td><td></td></tr>
 // <tr><td></td><td><i>Sun Application Server 8.x, 9.x</i></td><td></td></tr>
-// <tr><td></td><td><i>Glassfish 2.x, 3.x, 4.x</i></td><td></td></tr>
+// <tr><td></td><td><i>Glassfish 2.x, 3.x, 4.x, 5.x</i></td><td></td></tr>
 // </table>
 //
 // @treeLocation Concepts
@@ -5096,13 +5096,14 @@ isc.defineClass("DataSource");
 // For a complete listing of artifacts installed in your environment, consult your repository manager.  Where no repository manager
 // is in use, a directory listing can often provide all the detail you need.  Once you've made an artifact available to your build,
 // you can use it just like you'd use any other dependency.
+// <smartclient>
 // <p />
 // That said, typical installations of the current build will include the artifacts documented
 // <a target="_blank" href="./mavendoc/maven-usage.html">here</a>, where coordinates in most cases will vary slightly by date and license.
 // A sample configuration using a few artifacts from an eval build released on November 14, 2016 follows:
 // <p/>
 //
-// <smartclient><pre>
+// <pre>
 // &lt;?xml version="1.0" encoding="UTF-8"?&gt;
 // &lt;project  xmlns="http://maven.apache.org/POM/4.0.0"
 //              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -5136,64 +5137,59 @@ isc.defineClass("DataSource");
 // &lt;/project&gt;
 // </pre></smartclient>
 //
-// <smartgwt><pre>
-// &lt;?xml version="1.0" encoding="UTF-8"?&gt;
-// &lt;project  xmlns="http://maven.apache.org/POM/4.0.0"
-//              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-//              xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd"&gt;
+// <smartgwt>
+// <p/>
+// Following execution of the plugin's install or deploy goal, your Maven repository will include a handful of archetypes meant to
+// jump start development with the SmartGWT framework.  Most users will want to start new projects with either the
+// <b>archetype-smartgwt-quickstart</b> or <b>archetype-smartgwt-quickstart-unprotected</b> archetypes.  To generate a new project
+// based on the former:
 //
-//      &lt;modelVersion&gt;4.0.0&lt;/modelVersion&gt;
+// <ol>
+// <li><a href="https://maven.apache.org/install.html">Install Maven</a>, if necessary.</li>
 //
-//      &lt;groupId&gt;com.isomorphic.smartgwt.samples&lt;/groupId&gt;
-//      &lt;artifactId&gt;builtinds&lt;/artifactId&gt;
-//      &lt;version&gt;1.0.0&lt;/version&gt;
-//      &lt;packaging&gt;war&lt;/packaging&gt;
+// <li>Install SmartGWT, if necessary.
+// <pre>
+// mvn com.isomorphic:isc-maven-plugin:1.3.0:install \
+//    -Dproduct=SMARTGWT -Dlicense=EVAL -DbuildNumber=12.0p
+// </pre>
+// </li>
 //
-//      &lt;dependencies&gt;
+// <li>
+// Generate a project (using LATEST as below, or the version installed for you in step 2)
+// <pre>
+//  mvn archetype:generate \
+//    -DartifactId=my-application -Dmodule=MyApplication \
+//    -DgroupId=com.example -Dpackage=com.example.myapplication \
+//    -DarchetypeGroupId=com.isomorphic.archetype \
+//    -DarchetypeArtifactId=archetype-smartgwt-quickstart \
+//    -DarchetypeVersion=LATEST -DinteractiveMode=false
+// </pre>
+// </li>
+// </ol>
 //
-//          &lt;!-- Standard GWT depdendency --&gt;
-//          &lt;dependency&gt;
-//              &lt;groupId&gt;com.google.gwt&lt;/groupId&gt;
-//              &lt;artifactId&gt;gwt-user&lt;/artifactId&gt;
-//              &lt;version&gt;2.7.0&lt;/version&gt;
-//              &lt;scope&gt;provided&lt;/scope&gt;
-//          &lt;/dependency&gt;
+// and refer to the README in the new 'myapplication' directory for further instructions around usage in Maven, Ant, and Eclipse environments.
+// <p/>
+// To generate a project from any of the following archetypes, provide its artifactId to the above command's archetypeArtifactId parameter:
+// <p/>
+// <ul>
+//   <li><b>archetype-smartgwt-quickstart-unprotected</b>: The recommended approach for most applications, using data access / databinding with "sql" datasources</li>
+//   <li><b>archetype-smartgwt-quickstart</b>: Like archetype-smartgwt-quickstart-unprotected, but includes integration with Spring Security</li>
+//   <p/>
+//   <li><b>archetype-smartgwt-example-builtinds</b>: Illustrates how a single databound component can be used (and re-used) with many datasources</li>
+//   <li><b>archetype-smartgwt-example-customds</b>: Illustrates setting up a DataSource accessing a servlet front controller (for example struts or Spring MVC controller) for the various DataSource operations</li>
+//   <li><b>archetype-smartgwt-example-dsdmi</b>: Illustrates setting up a DataSource that calls methods on your configured server bean in response to DataSource operations (fetch, add, update, remove)</li>
+//   <li><b>archetype-smartgwt-example-dshibernate</b>: Illustrates the use of "hibernate" datasources in 'beanless mode'</li>
+//   <li><b>archetype-smartgwt-example-dshibernatederived</b>: This example illustrates the use of "hibernate" datasources with 'autoDeriveSchema' to inherit fields from a Hibernate mapping or bean</li>
+//   <li><b>archetype-smartgwt-example-dsjpa</b>: Illustrates the use of JPA DataSources</li>
+//   <li><b>archetype-smartgwt-example-gae</b>: Illustrates an approach to running a SmartGWT application on the Google App Engine standard environment using SQL DataSources</li>
+//   <li><b>archetype-smartgwt-example-gaedatastore</b>: Illustrates an approach to running a SmartGWT application on the Google App Engine standard environment using Google Cloud Datastore as a _limited_ JPA DataSource</li>
+//   <li><b>archetype-smartgwt-example-gaejpa</b>: Illustrates an approach to running a SmartGWT application on the Google App Engine standard environment using JPA DataSources</li>
+//   <li><b>archetype-smartgwt-example-manualhibernate</b>: Illustrates setting up a DataSource that accesses your servlet controller, using Hibernate to process the requests manually via a Spring MVC Controller class (not recommended)</li>
+//   <li><b>archetype-smartgwt-example-restserver</b>: Illustrates use of the SmartClient RESTHandler servlet to easily provide data access to clients other than SmartClient / SmartGWT (mobile, Swing, native, etc).</li>
+//   <li><b>archetype-smartgwt-example-spring-hibernate3-dmi</b>: Illustrates a DataSource accessing a Spring bean using Direct Method Invocation (DMI), which then services the request manually via Hibernate.</li>
+// </ul>
 //
-//          &lt;!-- The SmartGWT Evaluation edition --&gt;
-//          &lt;dependency&gt;
-//              &lt;groupId&gt;com.isomorphic.smartgwt.eval&lt;/groupId&gt;
-//              &lt;artifactId&gt;smartgwt-eval&lt;/artifactId&gt;
-//              &lt;version&gt;6.0-p20161114&lt;/version&gt;
-//          &lt;/dependency&gt;
-//
-//          &lt;!-- Add support for SQLDataSources --&gt;
-//          &lt;dependency&gt;
-//              &lt;groupId&gt;com.isomorphic.smartgwt.eval&lt;/groupId&gt;
-//              &lt;artifactId&gt;isomorphic-sql&lt;/artifactId&gt;
-//              &lt;version&gt;6.0-p20161114&lt;/version&gt;
-//          &lt;/dependency&gt;
-//
-//      &lt;/dependencies&gt;
-//
-//      &lt;build&gt;
-//          &lt;plugins&gt;
-//              &lt;!-- Standard GWT Compile --&gt;
-//              &lt;plugin&gt;
-//                  &lt;groupId&gt;org.codehaus.mojo&lt;/groupId&gt;
-//                  &lt;artifactId&gt;gwt-maven-plugin&lt;/artifactId&gt;
-//                  &lt;version&gt;2.7.0&lt;/version&gt;
-//                  &lt;executions&gt;
-//                      &lt;execution&gt;
-//                          &lt;goals&gt;
-//                              &lt;goal&gt;compile&lt;/goal&gt;
-//                          &lt;/goals&gt;
-//                      &lt;/execution&gt;
-//                  &lt;/executions&gt;
-//              &lt;/plugin&gt;
-//          &lt;/plugins&gt;
-//     &lt;/build&gt;
-// &lt;/project&gt;
-// </pre></smartgwt>
+// </smartgwt>
 //
 // @treeLocation Concepts/Deploying SmartClient
 // @title Maven Support
@@ -7010,15 +7006,15 @@ isc.defineClass("DataSource");
 // <p>
 // <table class='normal'>
 // <tr><td width=40></td><td width=400><i>HSQLDB 1.7.x, 1.8.x, 2.0.x, 2.2.x, 2.3.x, 2.4.x</i></td><td></td></tr>
-// <tr><td></td><td><i>IBM DB2 8.x, 9.x, 10.x</i></td><td></td></tr>
+// <tr><td></td><td><i>IBM DB2 8.x, 9.x, 10.x, 11.x</i></td><td></td></tr>
 // <tr><td></td><td><i>IBM DB2 for i (formerly known as DB2 for i5/OS) V5R4M0 onwards</i></td><td></td></tr>
-// <tr><td></td><td><i>Firebird 2.5.x, 3.x</i></td><td></td></tr>
+// <tr><td></td><td><i>Firebird 2.5.x</i></td><td></td></tr>
 // <tr><td></td><td><i>Informix 11.5+, 12.1</i></td><td></td></tr>
-// <tr><td></td><td><i>MS SQL Server 2000, 2005, 2008, 2008 R2, 2012, 2014, 2016</i></td><td></td></tr>
+// <tr><td></td><td><i>MS SQL Server 2000, 2005, 2008, 2008 R2, 2012, 2014, 2016, 2017</i></td><td></td></tr>
 // <tr><td></td><td><i>MySQL 3.2.x, 4.0.x, 4.1.x, 5.0.x, 5.1.x, 5.5.x, 5.6.x, 5.7.x</i></td><td></td></tr>
 // <tr><td></td><td><i>MariaDB 5.x, 10.x</i></td><td></td></tr>
-// <tr><td></td><td><i>Oracle 8.0.5, 8i, 9i, 10g, 11g, 12c</i></td><td></td></tr>
-// <tr><td></td><td><i>PostgreSQL 7.x, 8.x, 9.x</i></td><td></td></tr>
+// <tr><td></td><td><i>Oracle 8.0.5, 8i, 9i, 10g, 11g, 12c, 18c</i></td><td></td></tr>
+// <tr><td></td><td><i>PostgreSQL 7.x, 8.x, 9.x, 10.x</i></td><td></td></tr>
 // </table>
 // <p>We also support a generic SQL92 database connection which works for basic CRUD operations
 // with any database product that supports standard SQL92 syntax and data types, plus a couple
@@ -13101,6 +13097,7 @@ firstGeneratedSequenceValue: 0,
 // For a foreignKey within the same dataSource, you can omit the <code>dataSourceId</code>
 // and just specify <code><i>fieldName</i></code>.  For example, to create a tree relationship
 // within a DataSource:
+// <smartclient>
 // <pre>
 //   isc.DataSource.create({
 //     ID:"supplyItem",
@@ -13111,6 +13108,19 @@ firstGeneratedSequenceValue: 0,
 //     ]
 //   });
 // </pre>
+// </smartclient>
+// <smartgwt>
+// <pre>
+//      DataSource supplyItem = new DataSource();
+//      DataSourceField itemId = new DataSourceField();
+//      itemId.setType(FieldType.SEQUENCE);
+//      itemId.setPrimaryKey(true);
+//      DataSourceField parentId = new DataSourceField();
+//      parentId.setType(FieldType.INTEGER);
+//      parentId.setForeignKey("itemId");
+//      supplyItem.setFields(itemId, parentId);
+// </pre>
+// </smartgwt>
 // <P>
 // <code>foreignKey</code> declarations also allow other automatic behaviors by
 // +link{DataBoundComponent,DataBoundComponents}, such as +link{listGrid.fetchRelatedData()}.
@@ -13498,17 +13508,20 @@ firstGeneratedSequenceValue: 0,
 //<
 
 //> @attr dataSourceField.useLocalDisplayFieldValue (Boolean : null : IR)
-// If this field has a specified +link{dataSourceField.displayField}, this attribute
-// allows you to explicitly tell editor components to pick up the display-field value
-// from the record currently being edited, rather than fetching against a
-// specified +link{formItem.optionDataSource}.
+// The +link{formItem.useLocalDisplayFieldValue} attribute may be specified
+// within a dataSource configuration.
 // <P>
-// See +link{formItem.useLocalDisplayFieldValue} for more detail.
+// This property governs whether, when displaying a record in an editor component,
+// the <code>displayField</code> value for this field should be picked up directly from
+// the record value (as opposed to being retrieved via an explicit fetch operation against
+// the +link{formItem.optionDataSource}). See +link{formItem.useLocalDisplayFieldValue}
+// for further details.
 // <P>
-// Note that for the common pattern described +link{dataSourceField.includeFrom,here} of
-// having an editable foreignKey field with a static display value (derived from a displayField
-// with 'includeFrom' set), the framework will automatically default this property to true
-// if not explicitly specified in the dataSource configuration file.
+// If not explicitly set, dataSources backed by the
+// +link{group:serverDataIntegration,SmartClient server} will set this property to true
+// automatically for fields where the specified +link{dataSourceField.displayField} values
+// are retrieved from another dataSource using the +link{dataSourceField.includeFrom}
+// feature.
 //
 // @serverDS allowed
 // @visibility external
@@ -15312,7 +15325,7 @@ firstGeneratedSequenceValue: 0,
 // You can use +link{DataSource.defaultStringInBrowser} to disable these behaviors.  <b>NOTE:</b> don't use this setting if
 // you are using the SmartClient Server, use the server.properties approach described above instead.
 //
-// @serverDS alowed
+// @serverDS allowed
 // @visibility external
 //<
 
@@ -15621,13 +15634,17 @@ firstGeneratedSequenceValue: 0,
 // An optional +link{FormatString} for this field, for use when
 // +link{dataBoundComponent.exportData(),exporting} data to spreadsheet formats (XLS and
 // OOXML/XLSX), XML, JSON or CSV.   You can use this property to override the normal
-// +link{dataSourceField.format,format} of this field, if any, specifically for exports.
+// +link{dataSourceField.format,format} of this field, if any, specifically for exports,
+// for both server-based and client-driven exports.
+//
 // <p>
 // Note, for server-driven exports you can specify default formats for date, time and
 // datetime fields by specifying properties <code>export.format.default.date</code>,
 // <code>export.format.default.time</code> and <code>export.format.default.datetime</code>
-// in your <code>server.properties</code> file.  These formats will be used for fields
-// that do not have a "format" or "exportFormat" property specified in the
+// in your <code>server.properties</code> file.  Similarly, default formats for float and
+// integer fields can be specified with <code>export.format.default.float</code> and
+// <code>export.format.default.integer</code>, respectively.  These formats will be used for
+// fields that do not have a "format" or "exportFormat" property specified in the
 // <code>.ds.xml</code> file.
 // <p>
 // Specifically when exporting to spreadsheet formats, the <code>FormatString</code> is
@@ -15741,6 +15758,22 @@ firstGeneratedSequenceValue: 0,
 // would require hundreds of field definitions, each defining unique
 // <code>FormatStrings</code>.  If you do hit the limit, the only workaround is to use fewer
 // unique <code>FormatStrings</code>.
+// <p>
+// <h3>Controlling number format</h3>
+// If we give Excel a formatted number like "500,000" it will not treat that value as a number,
+// so sums and other basic spreadsheet features won't work. So we use the heuristic that if your
+// formatted value parses as a number, you probably want it treated as a number in the
+// spreadsheet, so we give Excel the unformatted numeric value and tell Excel it's a numeric
+// data value.
+// <p>
+// You might expect that we would give Excel <i>both</i> the formatted value and the numeric
+// value, but this is only possible by creating what's called a "custom format" for that cell,
+// which as the section above mentions, is limited in that only a few hundred can be created.
+// <p>
+// With this Excel limitation in mind, it makes sense to just go with the default behavior. If
+// you decide otherwise, one option is to use
+// +link{dsRequest.exportNumbersAsFormattedString,exportNumbersAsFormattedString}, but see the
+// docs for that property for the drawbacks of doing this.
 //
 // @see DataSourceField.format
 // @serverDS allowed
@@ -15959,7 +15992,8 @@ firstGeneratedSequenceValue: 0,
 // (+link{ListGrid.exportData(),ListGrid} or DataSource.exportData()):
 // <ul>
 // <li> if +link{dsRequest.exportAs,exportAs} is a spreadsheet format (XLS or OOXML),
-//      +link{dataSourceField.format,dsField.format or dsField.exportFormat} will be used if
+//      +link{dataSourceField.format,dsField.format} or
+//      +link{dataSourceField.exportFormat,dsField.exportFormat} will be used if
 //      specified, otherwise, +link{dataSourceField.dateFormatter} will be used if specified,
 //      otherwise, no formatting will be applied and the date or number will be shown in the
 //      spreadsheet program's default formatting.
@@ -15977,12 +16011,16 @@ firstGeneratedSequenceValue: 0,
 // For a client-driven export (eg +link{listGrid.exportClientData()}):
 // <ul>
 // <li> if +link{dsRequest.exportAs,exportAs} is a spreadsheet format (XLS or OOXML),
-//      rules are the same as for server-driven export except that <code>dateFormatter</code>
-//      settings on client-side UI components will be used if a built-in formatter is used (for
-//      example, if +link{listGridField.dateFormatter} is set to the built-in formatter
-//      "toEuropeanShortDate")).  If you need date values to appear <b>exactly</b> as shown to
-//      the user, set +link{dsRequest.exportDatesAsFormattedString}, but see the docs for this
-//      property for the drawbacks of doing this.
+//      rules are the same as for server-driven export, except that if no
+//      +link{dataSourceField.format,dsField.format} or
+//      +link{dataSourceField.exportFormat,dsField.exportFormat} is specified,
+//      <code>dateFormatter</code> settings on client-side UI components will be used if a
+//      built-in formatter is used (for example, if +link{listGridField.dateFormatter} is set to
+//      the built-in formatter "toEuropeanShortDate").  If you need date or number values to
+//      appear <b>exactly</b> as shown to the user, set
+//      +link{dsRequest.exportDatesAsFormattedString} or
+//      +link{dsRequest.exportNumbersAsFormattedString}, respectively, but see the docs for
+//      these properties for the drawbacks of doing this.
 // <li> for CSV, XML or JSON exports, whatever is shown to the end user is used (since it's
 //      assumed the reason for calling <code>exportClientData()</code> rather than
 //      <code>exportData()</code> is precisely to create a fully formatted export).  If you
@@ -17040,6 +17078,7 @@ isc.DataSource.addMethods({
     // <P>
     // As an example, if you have a dataURL that can return paged data given URL parameters
     // "start" and "end", you could implement transformRequest like so:
+    // <smartclient>
     // <pre>
     //   isc.DataSource.create({
     //      ...
@@ -17055,6 +17094,20 @@ isc.DataSource.addMethods({
     //      }
     //   });
     // </pre>
+    // </smartclient>
+    // <smartgwt>
+    // <pre>
+    //      &#64;Override
+    //      protected Object transformRequest (DSRequest dsRequest) {
+    //          JavaScriptObject data = dsRequest.getData();
+    //          if (dsRequest.getOperationType () == DSOperationType.FETCH) {
+    //              JSOHelper.setAttribute (data, "start", dsRequest.getStartRow());
+    //              JSOHelper.setAttribute (data, "end", dsRequest.getEndRow());
+    //          }
+    //          return data;
+    //      }
+    // </pre>
+    // </smartgwt>
     // Other reasons to implement transformRequest():
     // <ul>
     // <li> transform a +link{type:Criteria} object into the custom query language of a web
@@ -20127,10 +20180,13 @@ rawData=rpcResponse.results;
     //      +link{attr:dsResponse.endRow,endRow} and +link{attr:dsResponse.totalRows,totalRows}
     //      to allow paging for a service that supports it.  For example, if an XML service
     //      returns a "resultRow" tag that contained the row number of the first row of the
-    //      returned results:<pre>
-    //    dsResponse.startRow =
-    //        isc.XMLTools.selectNumber(xmlData, "//resultRow");
-    // </pre>
+    //      returned results:
+    //    <smartclient><pre>
+    //      dsResponse.startRow = isc.XMLTools.selectNumber(xmlData, "//resultRow");
+    //    </pre></smartclient>
+    //    <smartgwt><pre>
+    //      dsResponse.setStartRow(XMLTools.selectNumber(xmlData, "//resultRow"));
+    //    </pre></smartgwt>
     // <li> setting +link{attr:dsResponse.status} to recognized ISC error values based on
     //      service-specific errors, in order to trigger standard ISC error handling.  For
     //      example, setting <code>dsResponse.status</code> to
@@ -20473,7 +20529,10 @@ rawData=rpcResponse.results;
     // with modifiable caches representing subsets of the data available from a DataSource.
     // <P>
     // See also the server-side com.isomorphic.js.JSTranslater class in the
-    // +docTreeLink{javaServerReference,Java Server Reference} for other, similar approaches
+    // <smartclient>+docTreeLink{JavaServerReference,Java Server Reference}</smartclient>
+    // <smartgwt>
+    // +externalLink{https://www.smartclient.com/smartgwtee-release/server/javadoc/,Java Server Reference}
+    // </smartgwt> for other, similar approaches
     // involving dumping data into the page during initial page load.  <b>Note:</b> care should
     // be taken when using this approach.  Large datasets degrade the basic performance of some
     // browsers, so use +link{pickList.optionDataSource,optionDataSource} and similar
@@ -20704,7 +20763,10 @@ rawData=rpcResponse.results;
         parameters.exportHeaderless = requestProperties.exportHeaderless;
         parameters.exportFooter = requestProperties.exportFooter;
         parameters.exportFieldTitles = requestProperties.exportFieldTitles;
-        parameters.exportDatesAsFormattedString = requestProperties.exportDatesAsFormattedString;
+        parameters.exportDatesAsFormattedString =
+            requestProperties.exportDatesAsFormattedString;
+        parameters.exportNumbersAsFormattedString =
+            requestProperties.exportNumbersAsFormattedString;
         parameters.exportRawValues = requestProperties.exportRawValues;
         parameters.exportCurrencySymbol = isc.NumberUtil.currencySymbol;
         if (requestProperties.exportValueFields != null) {
@@ -23065,7 +23127,7 @@ rawData=rpcResponse.results;
 // @visibility external
 //<
 
-//> @attr dsRequest.sortBy (FieldName | Array of FieldName | Array of SortSpecifiers : null : IR)
+//> @attr dsRequest.sortBy (FieldName | Array of FieldName | Array of SortSpecifier : null : IR)
 // Field name to sortBy, prefixed with optional "-" indicating descending sort.  For example, to
 // sort by the field "userName" in ascending order, set <code>sortBy</code> to just
 // "userName".  For descending sort on "userName", set <code>sortBy</code> to "-userName".
@@ -23679,6 +23741,7 @@ rawData=rpcResponse.results;
 // @value "csv"    Export data in comma-separated format
 // @value "xls"    Export data in native Microsoft Excel 97 format
 // @value "ooxml"  Export data in native Microsoft Excel 2007 format (also called XLSX)
+// @value "custom" Custom server-side logic will do the export
 //
 // @serverDS allowed
 // @visibility external
@@ -23790,9 +23853,12 @@ rawData=rpcResponse.results;
 // is set, this is the filename that will appear to the browser.
 // <p>
 // If the exportFilename that you specify does not include an extension, one will be added to
-// it based on the +link{type:ExportFormat} specified by +link{dsRequest.exportAs}.
+// it based on the +link{type:ExportFormat} specified by +link{dsRequest.exportAs}. Filename is
+// forced to have the correct extension to work around bugs in IE, but if you don't want the
+// filename to be manipulated, use "custom" +link{type:ExportFormat, exportFormat}, see example.
 //
 // @see dsRequest.exportPath
+// @example customExportCustomResponse
 // @visibility external
 //<
 
@@ -24013,6 +24079,35 @@ rawData=rpcResponse.results;
 // strings that exactly match the formatting shown in the +link{class:DataBoundComponent}.
 // As noted above, this means the spreadsheet program will not recognize the value as
 // a date.
+// @see dataSourceField.exportFormat
+// @group exportFormatting
+// @visibility external
+//<
+
+//> @attr dsRequest.exportNumbersAsFormattedString (boolean : null : IR)
+// When exporting via +link{listGrid.exportClientData()} to an <code>XLS</code> or
+// <code>OOXML</code> spreadsheet, forces numbers to export as a string rather than a true
+// numerical value.
+// <p>
+// If a number is provided to a spreadsheet as a string, Excel or other spreadsheet
+// applications may not recognize them as being numbers that are valid for use in
+// numerical formulas, filters, etc.
+// <p>
+// For this reason, the default behavior of <code>exportClientData</code> is to provide
+// numerical values to the spreadsheet as true numbers.  If
+// +link{type:FormatString,Format Strings} are provided via properties like
+// +link{dataSourceField.format,dataSourceField.format} these will be translated to Excel /
+// OpenOffice format strings and used when generating spreadsheets.  Other formatting logic,
+// such as +link{listGridField.formatCellValue,cell formatters}, will not be used since they
+// cannot be automatically translated to an Excel format string.  If no translatable format
+// string is available, numbers will be provided to the spreadsheet with no formatter and
+// the spreadsheet program's default formatting for numerical values will be used.
+// <p>
+// If <code>exportNumbersAsFormattedString</code> is set to true, numbers will appear as
+// strings that exactly match the formatting shown in the +link{class:DataBoundComponent}.
+// As noted above, this means the spreadsheet program will not recognize the value as
+// a number.
+// @see dataSourceField.exportFormat
 // @group exportFormatting
 // @visibility external
 //<
@@ -24505,6 +24600,7 @@ rawData=rpcResponse.results;
 // <P>
 // For example, this code accomplishes part of the binding to the
 // +externalLink{http://www.google.com/search?q=sforce+partner+wsdl,SalesForce partner web services}
+// <smartclient>
 // <pre>
 // isc.DataSource.create({
 //    serviceNamespace : "urn:partner.soap.sforce.com",
@@ -24517,6 +24613,30 @@ rawData=rpcResponse.results;
 //    ...
 // });
 // </pre>
+// </smartclient>
+// <smartgwt>
+// <pre>
+//      DataSource dataSource = new DataSource();
+//      dataSource.setServiceNamespace("urn:partner.soap.sforce.com");
+//      OperationBinding fetch = new OperationBinding();
+//      fetch.setOperationType(DSOperationType.FETCH);
+//      fetch.setWsOperation("query");
+//      fetch.setRecordName("sObject");
+//      OperationBinding add = new OperationBinding();
+//      add.setOperationType(DSOperationType.ADD);
+//      add.setWsOperation("create");
+//      add.setRecordName("SaveResult");
+//      OperationBinding update = new OperationBinding();
+//      update.setOperationType(DSOperationType.UPDATE);
+//      update.setWsOperation("update");
+//      update.setRecordName("SaveResult");
+//      OperationBinding remove = new OperationBinding();
+//      remove.setOperationType(DSOperationType.REMOVE);
+//      remove.setWsOperation("delete");
+//      remove.setRecordName("DeleteResult");
+//      dataSource.setOperationBindings(fetch, add, update, remove);
+// </pre>
+// </smartgwt>
 // NOTE: additional code is required to handle authentication and other details, see the
 // complete code in smartclientSDK/examples/databinding/SalesForce.
 // <P>
@@ -24532,10 +24652,9 @@ rawData=rpcResponse.results;
 // <P>
 // This also means that for a read-only DataSource, that is, a DataSource only capable of fetch
 // operations, operationBindings need not be specified, and instead all operationBinding
-// properties can be set on the DataSource itself.  An example of using OperationBinding
-// properties directly on the DataSource in order to read an RSS feed can be found here:
-// <P>
-// +standaloneExample{/examples/databinding/rss_databinding.html}
+// properties can be set on the DataSource itself. In the +explorerExample{rssFeed,RSS Feed}
+// sample, you can see an example of using OperationBinding properties directly on the
+// DataSource in order to read an RSS feed.
 //
 // @see class:OperationBinding
 // @serverDS allowed
@@ -26643,6 +26762,10 @@ rawData=rpcResponse.results;
 // with care.  With this flag set, you have no guarantee that an update will not change or
 // remove every row in a table.
 // <p>
+// Note, in the case of doing an update or delete operation with a primary key
+// <b><i>and additional criteria</i></b>, allowMultiUpdate must be set or additional criteria
+// will be dropped and just the primary key fields will be used in criteria.
+// <p>
 // Also, running <code>allowMultiUpdate</code> operations directly from the client is not
 // straightforward because it requires the ability to specify criteria and values separately
 // in the request, which is not currently supported.  This can be worked around in various
@@ -27179,7 +27302,7 @@ rawData=rpcResponse.results;
 //<
 
 //> @type VelocityExpression
-// An expression in the <a href=http://velocity.apache.org/engine/releases/velocity-1.5/user-guide.html>
+// An expression in the <a href=http://velocity.apache.org/engine/releases/velocity-1.7/user-guide.html>
 // Velocity Template Language</a> (VTL).  For more information on SmartClient's Velocity support,
 // see +link{group:velocitySupport, Velocity support}.
 // <p>
@@ -27202,8 +27325,10 @@ rawData=rpcResponse.results;
 // operations and DataSource fields, as well as create a mix of authenticated and non authenticated
 // operations for applications that support limited publicly accessible functionality.
 // <p>
-// See the <smartclient>+externalLink{/docs/SmartClient_Quick_Start_Guide.pdf,QuickStart Guide}
-// </smartclient><smartgwt>+externalLink{/docs/SmartGWT_Quick_Start_Guide.pdf,QuickStart Guide}
+// See the <smartclient>
+// +externalLink{/smartclient-release/docs/SmartClient_Quick_Start_Guide.pdf,QuickStart Guide}
+// </smartclient>
+// <smartgwt>+externalLink{/smartgwt-release/doc/SmartGWT_Quick_Start_Guide.pdf,QuickStart Guide}
 // </smartgwt>for more in depth documentation on how declarative security works and how to use
 // it in your application.
 // <p>
@@ -31257,6 +31382,7 @@ rawData=rpcResponse.results;
 isc.DataSource.addClassMethods({
 
     onRealtimeUpdate : function (dataChangedRecord) {
+        //!OBFUSCATEOK
         // FIXME: resolve serialization issue on JMS - the record here should really be an object literal
         if (isc.isA.String(dataChangedRecord)) {
             dataChangedRecord = eval("var foo = "+dataChangedRecord+";foo;");
@@ -31740,23 +31866,26 @@ isc.DataSource.addClassMethods({
         // but without installing extra outer adv-crit or flagging single criterions as advanced)
         if (!criteria || isc.isAn.emptyObject(criteria)) return null;
 
+        // bail out if no sub-criteria are present in the criteria
         if (!criteria.criteria || criteria.criteria.length == 0) return criteria;
 
-        if (!outerOp && criteria.operator) {
-            // if no outerOp was passed, and criteria.operator is set and represents a logical
-            // operator (valueType=="criteria" - AND, OR, NOT), use it as the outerOp
-            var opObj = isc.DS._operators[criteria.operator];
-            if (opObj && opObj.valueType == "criteria") outerOp = opObj.ID;
-        }
-        outerOp = outerOp || "and";
+
+        outerOp = outerOp || criteria.operator || "and";
 
         if (criteria.criteria.length == 1) {
             var c = criteria.criteria[0];
 
-            // if it's a single inner object with no subCrit, just return the inner object
-            if (isSubCrit && !c.criteria) return c;
-            // if it's got the same op as the outer crit, replace the outer crit
-            if (c.criteria && c.operator == criteria.operator) {
+            // if it's a single inner object with no subCrit, just return the inner object,
+            // except if criteria.operator is "not", since that's not a no-op in this case
+            if (isSubCrit && !c.criteria && criteria.operator != "not") return c;
+
+            // if c has sub-criteria we can just replace the outer criteria with it
+
+            if (c.criteria && (criteria.operator != "not" || c.criteria.length == 1)) {
+                if (criteria.operator == "not") {
+                    c = isc.addProperties({}, c);
+                    c.operator = c.operator == "not" ? "and" : "not";
+                }
                 criteria = c;
             }
         }
@@ -32193,7 +32322,7 @@ isc.DataSource.addClassMethods({
     //   registered recordSummaryFunction to execute. If passed in as an explicit function
     //   record, fields and summaryField parameters will be passed through to the function.
     // @param record (DataSourceRecord) Record to retrieve a summary for
-    // @param fields (Array of DataSourceFields) Set of fields to include in the summary
+    // @param fields (Array of DataSourceField) Set of fields to include in the summary
     // @param summaryField (DataSourceField) field in which this summary will be displayed.
     // @return (Any) summary value for the record
     // @visibility external
@@ -32239,6 +32368,9 @@ isc.DataSource.addClassMethods({
         ooxml: "xlsx"
     },
     addExportFilenameExtension : function (fileName, exportFormat) {
+        // skip filename manipulations for "custom" format
+        if (exportFormat == "custom") return fileName;
+
         if (!exportFormat) exportFormat = "csv";
 
         if (!this._filenameExtensions) {
@@ -32336,6 +32468,7 @@ isc.DataSource.addClassMethods({
 
         var settings = {
             exportAs: format,
+            exportClientData: true,
             exportDisplay: exportDisplay,
             exportFilename: fileName,
             exportPath: props.exportPath,
@@ -32346,6 +32479,8 @@ isc.DataSource.addClassMethods({
             exportHeader: props.exportHeader,
             exportHeaderless: props.exportHeaderless,
             exportFooter: props.exportFooter,
+            exportDatesAsFormattedString: props.exportDatesAsFormattedString,
+            exportNumbersAsFormattedString: props.exportNumbersAsFormattedString,
             exportTitleSeparatorChar: props.exportTitleSeparatorChar,
             exportDefaultBGColor: props.exportDefaultBGColor,
             exportAlternateRowBGColor: props.exportAlternateRowBGColor,
@@ -32366,7 +32501,7 @@ isc.DataSource.addClassMethods({
             settings.exportSpanTitleSeparator = props.exportSpanTitleSeparator;
         }
 
-        if (!settings.exportFieldTitles && ds && ds.clientOnly) {
+        if (!settings.exportFieldTitles && ds) {
             var wkFields = settings.exportFields || ds.getFieldNames();
             var exportFieldTitles = {};
             for (var i = 0; i < wkFields.length; i++) {
@@ -32528,6 +32663,7 @@ isc.DataSource.addClassMethods({
 isc.DataSource.addMethods({
 
     onRealtimeUpdate : function (dataChangedRecord) {
+        //!OBFUSCATEOK
         //this.logWarn("instance level realtimeUpdate: " + isc.echoFull(dataChangedRecord));
 
         // deserialize data - it's encoded in a string
@@ -35727,6 +35863,68 @@ isc.defineClass("XJSONDataSource", "DataSource").addMethods({
     dataTransport : "scriptInclude"
 });
 
+//> @groupDef typeScriptSupport
+// Isomorphic ships a TypeScript descriptor file that provides code completion and
+// inline documentation with modern IDEs.  Modern versions of Eclipse, Visual Studio, IntelliJ
+// and other IDEs allow you to add such descriptor reference as special comments at the top of
+// your .ts file.  For example:
+// <pre>
+// /// &lt;reference path="path/to/isomorphic/system/development/smartclient.d.ts"/&gt;
+// </pre>
+// As you can see above, the descriptor file resides in the isomorphic/system/development
+// directory and is called smartclient.d.ts.  You can copy this file to another location if you
+// prefer (it is fully self contained), but note that new versions of SmartClient will ship
+// with an up-to-date version of this file.
+// <p>
+// Some things to keep in mind:
+// <ul>
+// <li>This support generally works with .ts and .js files with IDEs that support descriptor
+// references like the above.
+//
+// <li>The goal is to provide autocomplete, inline docs, and spelling/type checks for
+// your code, not every TypeScript feature.  This means, for example, that you generally cannot
+// extends Isomorphic's classes using the typescript 'extends' syntax.  You should use the
+// standard +link{isc.defineClass()} call to create new class definitions.  Isomorphic
+// will likely support more built-in TypeScript features as the language matures.
+//
+// <li>There is specialized support for the instantiation +link{Class.create()} method.
+// Generally, with SmartClient, you can pass as many object literals as you want to this
+// method.  The TypeScript descriptor currently supports only 2.  The first one is a
+// type-checked property block that supports only the methods and properties declared on the
+// class you are attempting to create (or any of its superclasses or implemented interfaces).
+// The second block does no type checking.  The goal here is to make it easy for you to use
+// auto-complete, type checking, and spell checking when you intend to reference actual API
+// methods and properties, but to still allow you to pass arbitrary properties and custom
+// methods that you may be using in your specific instance of the class (via that second
+// constructor block).
+// <br>
+// <br>
+// For example:
+// <br>
+// <pre>
+// isc.ListGrid.create({
+//     // this block will be type-checked and auto-complete enabled
+//
+//     // the "false" value will be flagged as an error becuse a boolean, not a string is expected
+//     autoDraw: "false",
+//
+//     // valid, no error
+//     width: 100,
+//
+//     // the typo in the property name "height" will be flagged as an error
+//     heght: 100
+// },{
+//     // this block will not be validated in any way
+//     myCustomMethod: function () { },
+//     myFoo: "bar"
+// });
+// </pre>
+// </ul>
+//
+// @treeLocation Concepts
+// @title TypeScript Support
+// @visibility external
+//<
 
 //> @groupDef clientDataIntegration
 // SmartClient supports declarative, XPath-based binding of visual components to any server
@@ -35797,6 +35995,7 @@ isc.defineClass("XJSONDataSource", "DataSource").addMethods({
 // <P>
 // For example, the following code defines a DataSource that a ListGrid could bind to in order
 // to display an RSS 2.0 feed.
+// <smartclient>
 // <PRE>
 //    isc.DataSource.create({
 //        dataURL:feedURL,
@@ -35808,6 +36007,21 @@ isc.defineClass("XJSONDataSource", "DataSource").addMethods({
 //        ]
 //    });
 // </PRE>
+// </smartclient>
+// <smartgwt>
+// <pre>
+//    DataSource ds = new DataSource();
+//    ds.setDataURL(feedURL);
+//    ds.setRecordXPath("//item");
+//    DataSourceField titleField = new DataSourceField();
+//    titleField.setName("title");
+//    DataSourceField linkField = new DataSourceField();
+//    linkField.setName("link");
+//    DataSourceField descriptionField = new DataSourceField();
+//    descriptionField.setName("description");
+//    ds.setFields(titleField, linkField, descriptionField);
+// </pre>
+// </smartgwt>
 // A representative slice of an RSS 2.0 feed follows:
 // <pre>
 //     &lt;?xml version="1.0" encoding="iso-8859-1" ?&gt;
@@ -36235,7 +36449,7 @@ isc.defineClass("XJSONDataSource", "DataSource").addMethods({
 // &lt;/SCRIPT&gt;
 // </pre>
 // This approach is discussed in more detail in the
-// +externalLink{/docs/SmartClient_Quick_Start_Guide.pdf,QuickStart Guide}, Chapter 4, <i>Coding</i>.
+// +externalLink{/smartclient-release/docs/SmartClient_Quick_Start_Guide.pdf,QuickStart Guide}, Chapter 4, <i>Coding</i>.
 // Note that JavaScript-based component instantiation is currently the recommended approach, and
 // most examples are provided in the JavaScript format.
 // </smartclient>
@@ -38687,6 +38901,7 @@ isc.WebService.getPrototype().toString = function () {
 // For example, this code accomplishes part of the binding to the
 // +externalLink{http://www.google.com/search?q=sforce+partner+wsdl,SalesForce partner web services}
 // (additional code is required to handle authentication and other details):
+// <smartclient>
 // <pre>
 // isc.DataSource.create({
 //    serviceNamespace : "urn:partner.soap.sforce.com",
@@ -38699,6 +38914,30 @@ isc.WebService.getPrototype().toString = function () {
 //    ...
 // });
 // </pre>
+// </smartclient>
+// <smartgwt>
+// <pre>
+//      DataSource dataSource = new DataSource();
+//      dataSource.setServiceNamespace("urn:partner.soap.sforce.com");
+//      OperationBinding fetch = new OperationBinding();
+//      fetch.setOperationType(DSOperationType.FETCH);
+//      fetch.setWsOperation("query");
+//      fetch.setRecordName("sObject");
+//      OperationBinding add = new OperationBinding();
+//      add.setOperationType(DSOperationType.ADD);
+//      add.setWsOperation("create");
+//      add.setRecordName("SaveResult");
+//      OperationBinding update = new OperationBinding();
+//      update.setOperationType(DSOperationType.UPDATE);
+//      update.setWsOperation("update");
+//      update.setRecordName("SaveResult");
+//      OperationBinding remove = new OperationBinding();
+//      remove.setOperationType(DSOperationType.REMOVE);
+//      remove.setWsOperation("delete");
+//      remove.setRecordName("DeleteResult");
+//      dataSource.setOperationBindings(fetch, add, update, remove);
+// </pre>
+// </smartgwt>
 // NOTE: additional code is required to handle authentication and other details, see the
 // complete code in smartclientSDK/examples/databinding/SalesForce.
 // <P>
@@ -38762,10 +39001,14 @@ isc.WebService.getPrototype().toString = function () {
 // +link{WSDataSource} (general client-side DataSource creation is described under
 // +link{group:dataSourceDeclaration,Creating DataSources}).  To change the URL where ISC
 // expects to find the SmartClientOperations web service, use +link{WebService.setLocation()}
-// like so:<pre>
+// like so:<smartclient><pre>
 //      var service = isc.WebService.get("urn:operations.smartclient.com");
 //      service.setLocation("myURL");
-// </pre>
+// </pre></smartclient>
+// <smartgwt><pre>
+//      WebService service = WebService.get("urn:operations.smartclient.com");
+//      service.setLocation("myURL");
+// </pre></smartgwt>
 // <P>
 // To implement a web service <b>starting from a WSDL file</b>:
 // <ul>
@@ -39094,7 +39337,7 @@ isc.LoadScreenCallback.addProperties({
 // @visibility external
 //<
 
-//> @classAttr rpcRequest.useCursorTracker (boolean : false : IRW)
+//> @attr rpcRequest.useCursorTracker (boolean : false : IRW)
 //
 // If true, an image is shown to the right of the cursor when +link{rpcRequest.promptStyle} is
 // set to "cursor", otherwise the cursor itself is modified via css to the value of
@@ -39314,6 +39557,7 @@ isc.LoadScreenCallback.addProperties({
 // views and new SmartClient class definitions.
 // <p>
 // <i>Example usage with +link{RPCManager.sendRequest()}:</i>
+// <smartclient>
 // <pre>
 // isc.RPCManager.sendRequest({
 //     evalResult:true,
@@ -39321,13 +39565,33 @@ isc.LoadScreenCallback.addProperties({
 //     evalVars:{var1:"A Value"}
 // });
 // </pre>
+// </smartclient>
+// <smartgwt>
+// <pre>
+//      RPCRequest rpcRequestProperties = new RPCRequest();
+//      rpcRequestProperties.setEvalResult(true);
+//      rpcRequestProperties.setActionURL("js/loadLabel.js");
+//      Map evalVars = new HashMap();
+//      evalVars.put(var1, "A Value");
+//      rpcRequestProperties.setEvalVars(evalVars);
+//      RPCManager.sendRequest(rpcRequestProperties);
+// </pre>
+// </smartgwt>
 // This call would execute the code from <code>loadLabel.js</code>, and make the variable
 // <code>var1</code> available to that code. Therefore if the .js file contained this code:
+// <smartclient>
 // <pre>
 // isc.Label.create({
 //     contents:var1
 // })
 // </pre>
+// </smartclient>
+// <smartgwt>
+// <pre>
+//      Label label = new Label();
+//      label.setContents(var1);
+// </pre>
+// </smartgwt>
 // A label would be created with contents set to the value of <code>var1</code> - the string
 // <code>"A Value"</code>.
 //
@@ -39912,7 +40176,7 @@ isc.RPCResponse.addClassMethods({
 // You call +link{XMLTools.nativeXMLAvailable()} to check for the availability of a native XML
 // parser at runtime.
 // <p>
-// <img src="${isc.DocViewer.instance.referenceRoot}skin/ds_bindings.png" width=763 height=475>
+// <img src="skin/ds_bindings.png" width=763 height=475>
 // <p>
 // <b><u>XMLHttpRequest</u></b>
 // <p>
@@ -45257,8 +45521,10 @@ messagingStatusChanged : function () {
 // server and back.
 // <P>
 // If you are using +link{group:serverDataIntegration,server-side data integration} with the
-// SmartClient Java server, see the +docTreeLink{javaServerReference,Java Server Reference} for
-// information about how DataSource Requests arrive on the server (specifically
+// SmartClient Java server, see the <smartclient>+docTreeLink{javaServerReference,Java Server Reference}
+// </smartclient><smartgwt>
+// +externalLink{https://www.smartclient.com/smartgwtee-release/server/javadoc/,Java Server Reference}
+// </smartgwt> for information about how DataSource Requests arrive on the server (specifically
 // com.isomorphic.datasource.DSRequest) and how to provide responses
 // (specifically com.isomorphic.datasource.DSResponse.setData()).
 // <P>
@@ -47387,11 +47653,19 @@ if (isc.Browser.seleniumPresent) {
 // Hence the server can always avoid paging mode by simply returning all matching rows.
 // <P>
 // A ResultSet can be created directly with just the ID of a +link{DataSource}:
+// <smartclient>
 // <pre>
 //     isc.ResultSet.create({
 //         dataSource : "<i>dataSourceID</i>"
 //     })
 // </pre>
+// </smartclient>
+// <smartgwt>
+// <pre>
+//      ResultSet resultSet = new ResultSet();
+//      resultSet.setDataSource(dataSourceID);
+// </pre>
+// </smartgwt>
 // <P>
 // Directly created ResultSets are typically used by custom components, or as a means of
 // managing datasets that will be used by several components.
@@ -48647,6 +48921,8 @@ getFieldValue : function (record, fieldName, field, component, reason) {
 // you are looking to create a filterable, sortable subset of the current ResultSet, consider
 // creating a new ResultSet and passing the results of <code>getAllCachedRows</code> or
 // <code>getAllVisibleRows</code> as the initial value of ResultSet.allRows.
+// @return    (ResultSet)        new ResultSet sharing the same DataSource, current criteria, sort
+// direction and cache state.
 // @visibility external
 //<
 
@@ -51193,6 +51469,20 @@ getRangePaged : function (start, end, ignoreCache, fetchNow) {
     this.lastRangeStart = start;
     this.lastRangeEnd = end;
 
+
+    if (this.parallelFetchesRequireLengthKnown !== false && !lengthIsKnown) {
+        var currentIndex = this._fetchingRequest,
+            invalidIndex = this._invalidatedRequestIndex
+        ;
+        if (invalidIndex == null ? currentIndex != null : currentIndex > invalidIndex) {
+            if (this.logIsInfoEnabled("fetchTrace")) {
+                this.logInfo("getRange(" + start + ", " + end + "): parallel fetches are " +
+                             "not allowed before the ResultSet length is known - not fetching");
+            }
+            return this.fillRangeLoading(localData.slice(start, end), end - start);
+        }
+    }
+
     // determine range we don't have (i.e. remember the first and last missing row within the range)
     var firstNonLoadingRow = this._firstLoadingRow(start, end, false),
         missingRows = false,
@@ -51826,6 +52116,11 @@ setFullLength : function (length) {
 // @visibility external
 //<
 invalidateCache : function () {
+
+    // cancel any fetch already scheduled
+    this.cancelActionOnPause("fetchRemoteData");
+    this.fetchStartRow = this.fetchEndRow = null;
+
     this._invalidatedRequestIndex = this._fetchingRequest;
 
     if (this.neverDropCache) {
@@ -53376,7 +53671,7 @@ _getRelationship : function (parentNode, debugLog) {
     return relationship;
 },
 
-//> @attr resultTree.useSimpleCriteriaLOD (boolean : false IRWA)
+//> @attr resultTree.useSimpleCriteriaLOD (boolean : false : IRWA)
 // Whether or not we should skip promotion of a simple criteria to an +link{AdvancedCriteria}
 // when sending the +link{DSRequest} to load the children of a node in a +link{loadDataOnDemand}
 // or +link{resultTree.fetchMode,fetchMode:"paged"} <code>ResultTree</code>.  If the
@@ -54303,7 +54598,8 @@ _updateNodeInCache : function (tree, updateRow, matchesFilter, criteria, mismatc
     if (matchesFilter || mismatchingParents) {
         // the change may have reparented a node.
         if (updateRow[this.parentIdField] != node[this.parentIdField]) {
-            var newParentNode = tree.find(pk, updateRow[this.parentIdField]);
+
+            var newParentNode = tree.find(this.idField, updateRow[this.parentIdField]);
             if (newParentNode == null &&
                 (this.defaultNewNodesToRoot || this.rootValue == null))
             {
@@ -54323,7 +54619,8 @@ _updateNodeInCache : function (tree, updateRow, matchesFilter, criteria, mismatc
                 ;
                 // queue old parent node, if non-matching, to see if it must be removed
                 if (remove && mismatchingParents) {
-                    var oldParentNode = tree.find(pk, node[this.parentIdField]);
+
+                    var oldParentNode = tree.find(this.idField, node[this.parentIdField]);
                     if (!ds._hasMatches([oldParentNode], criteria, this.context)) {
                         mismatchingParents.add(oldParentNode);
                     }
@@ -54556,6 +54853,22 @@ getRange : function (start, end, dontFetch) {
 
     if (!this.isPaged()) {
         return this.invokeSuper(isc.ResultTree, "getRange", start, end);
+    }
+
+
+    if (!dontFetch && this.isLoading(this.root) &&
+        this.parallelFetchesRequireRootLoaded !== false)
+    {
+        var currentIndex = this.currentFetch,
+            invalidIndex = this.invalidatedFetchCount
+        ;
+        if (invalidIndex == null ? currentIndex != null : currentIndex > invalidIndex) {
+            if (this.logIsInfoEnabled()) {
+                this.logInfo("getRange(" + start + ", " + end + "): parallel fetches are " +
+                             "not allowed before the ResultTree root is loaded - not fetching");
+            }
+            dontFetch = true;
+        }
     }
 
     var loadingMarker = isc.ResultTree.getLoadingMarker(),
@@ -61568,6 +61881,9 @@ closeOperationPromptWindow : function (transaction) {
 }
 
 });
+// FE treats SCServer as a module, so duplicate what the FA would emit to register the module
+// as loaded
+isc.module_SCServer=1;
 
 
 //> @class Rule
@@ -61962,7 +62278,6 @@ isc.RulesEngine.addProperties({
                 isc.addProperties(record, values);
             }
         }
-
         return record;
     },
 
@@ -61995,8 +62310,12 @@ isc.RulesEngine.addProperties({
                 shouldApply = true
             ;
 
-            if (rule.debugLogCategory && this.logIsDebugEnabled(rule.debugLogCategory)) {
-                this.logDebug("Processing rule: " + this.echo(rule), rule.debugLogCategory);
+            if ((rule.logCategory && this.logIsInfoEnabled(rule.logCategory)) ||
+                    (!rule.logCategory && this.logIsInfoEnabled("rulesEngine")))
+            {
+                this.logInfo("Processing rule: name: " + rule.name + ", rule type: " + rule.type +
+                    ". event type: " + rule.triggerEvent + ", component: " + isc.echoLeaf(component),
+                    rule.logCategory || "rulesEngine");
             }
 
             // If rule.applyWhen is specified we can test this against the full set of values,
@@ -62017,6 +62336,13 @@ isc.RulesEngine.addProperties({
                 var matchingRows = isc.DataSource.applyFilter([values], criteria);
                 if (matchingRows.length == 0) {
                     shouldApply = false;
+                }
+                if ((rule.logCategory && this.logIsDebugEnabled(rule.logCategory)) ||
+                        (!rule.logCategory && this.logIsDebugEnabled("rulesEngine")))
+                {
+                    this.logDebug("Specified rule.applyWhen: " + isc.echoFull(criteria) +
+                            ". Rule Context: " + isc.echoFull(ruleContext),
+                            rule.logCategory || "rulesEngine");
                 }
             }
 
@@ -62165,6 +62491,8 @@ isc.RulesEngine.addProperties({
                 }
                 isc.Validator.performAction(isValid, propertyName, rule, values, component, "Canvas");
             }
+            this.logInfo("Specified rule has been processed. Result: " + (shouldApply ? "Passed." : "Failed."),
+                    rule.logCategory || "rulesEngine");
         }
         return result;
     },
@@ -64125,6 +64453,12 @@ isc.EditContext.addClassMethods({
                                 field = isc.EditContext.getTitleField(targetComponent, this.titleField),
                                 properties = {}
                             ;
+
+                            if (field == "title" && properties[field] == null &&
+                                value == widget.name)
+                            {
+                                return;
+                            }
                             properties[field] = value;
                             ctx.setNodeProperties(widget.editNode, properties);
                             if (ctx.nodeClick) ctx.nodeClick(ctx, widget.editNode);
@@ -64455,6 +64789,27 @@ isc.EditContext.addClassMethods({
             if (properties[prop] != null) result[prop] = properties[prop];
         }
         return result;
+    },
+
+    // helper to return a JavaScript identifier from text
+    _getTextAsIdentifier : function (text, idsInUse) {
+        // replace whitespace with underscores
+        text = text.replace(/\s/g, "_");
+        // bail if result is not an identifier
+        if (!String.isValidID(text)) return;
+
+        // otherwise, make sure we're not duplicating an identifier from idsInUse
+        while (idsInUse.hasOwnProperty(text)) {
+            if (text.match(/_([0-9])+$/)) {
+                text = text.replace(/_(([0-9])+)$/, function (match, suffix) {
+                    return "_" + (parseInt(suffix) + 1);
+                });
+            } else {
+                text += "_1";
+            }
+        }
+
+        return text;
     },
 
     // helper to check whether a boolean schema field property is set for any keys in the passed
@@ -65524,8 +65879,10 @@ isc.EditContext.addProperties({
             }
         }
 
-        // Don't let the hasStableID method in defaults play part in the serialization
-        if (dontAddGlobally) delete defaults.hasStableID;
+        // Don't let the hasStableID() method in defaults play part in the serialization,
+        // but serialize builderAutoID if it's set on the node so it's restored on reload.
+        if (node.builderAutoID) defaults.builderAutoID = true;
+        if (defaults.hasStableID) delete defaults.hasStableID;
 
         // parentProperty is set in defaults to indicate in which field the
         // node belongs. It doesn't need to be serialized.
@@ -66464,13 +66821,20 @@ isc.EditContext.addProperties({
                           " applying properties: " + this.echo(properties), "editing");
         }
 
-        if (!editNode.defaults) editNode.defaults = {}
+        if (!editNode.defaults) editNode.defaults = {};
+
+        // clear builderAutoID if automatic ID field is being set
+        var schema = isc.DS.getSchema(editNode);
+        if (schema && properties[schema.getAutoIdField()]) {
+            editNode.builderAutoID = false;
+        }
 
         // update the initialization / serializeable data
         isc.addProperties(editNode.defaults, properties);
 
         // update the component node with the new ID
-        if (editNode.defaults.ID != null) editNode.ID = editNode.defaults.ID;
+        var nodeID = (schema ? editNode.defaults[schema.getAutoIdField()] : null);
+        if (nodeID != null) editNode.ID = nodeID;
 
         // update the live object, unless we're skipping that
         var targetObject = editNode.liveObject;
@@ -66480,13 +66844,27 @@ isc.EditContext.addProperties({
             // parent property.
             var theTree = this.getEditNodeTree(),
                 parentComponent = theTree.getParent(editNode),
-                parentSchema = (parentComponent ? isc.DS.get(parentComponent.type) : null),
-                parentLiveObject = (parentComponent ? parentComponent.liveObject : null),
+                parentSchema = parentComponent ? isc.DS.get(parentComponent.type) : null,
+                parentLiveObject = parentComponent ? parentComponent.liveObject : null,
                 parentFieldName = isc.DS.getObjectField(parentLiveObject, editNode.type),
-                parentField = (parentFieldName ? parentSchema.getFields()[parentFieldName] : null)
+                parentField = parentFieldName ? parentSchema.getFields()[parentFieldName] : null,
+                parentClass = isc.DS.getNearestSchemaClass(parentSchema)
             ;
-            if ((properties.name != null || (isc.isA.DynamicForm(parentLiveObject) && properties.type != null)) &&
-                    parentField && parentField.rebuildOnChange && parentField.rebuildOnChange.toLowerCase() == "true")
+
+            if (isc.isA.DynamicForm(parentClass) && editNode.builderAutoID &&
+                properties.title && !properties.name)
+            {
+                var idsInUse = {}, childNodes = theTree.getChildren(parentComponent);
+                for (var i = 0; i < childNodes.length; i++) {
+                    if (childNodes[i] != editNode) idsInUse[childNodes[i].ID] = true;
+                }
+                var newName = isc.EditContext._getTextAsIdentifier(properties.title, idsInUse);
+                if (newName) editNode.defaults.name = properties.name = newName;
+            }
+            if ((properties.name != null ||
+                 (isc.isA.DynamicForm(parentLiveObject) && properties.type != null)) &&
+                parentField && parentField.rebuildOnChange &&
+                parentField.rebuildOnChange.toLowerCase() == "true")
             {
                 var index = theTree.getChildren(parentComponent).findIndex(editNode);
 
@@ -66506,15 +66884,22 @@ isc.EditContext.addProperties({
                 }
                 this.removeNode(editNode);
 
-                // update the node with the new name and add it
+
+
+                // update the node with the new name (editNode always uses "ID")
                 if (properties.name != null && editNode.type != "DynamicProperty") {
-                    editNode.name = editNode.ID = properties.name;
+                    editNode.ID = properties.name;
                     delete properties.name;
                 }
                 if (isc.isA.DynamicForm(parentLiveObject) && properties.type != null) {
 
-                    editNode.type = editNode._constructor = isc.FormItemFactory.getItemClass(isc.FormItemFactory.getItemClassName({ type: properties.type }, properties.type, parentLiveObject)).getClassName();
-                    if (editNode.defaults && editNode.defaults._constructor) editNode.defaults._constructor = editNode._constructor;
+                    editNode.type = editNode._constructor =
+                        isc.FormItemFactory.getItemClass(isc.FormItemFactory.getItemClassName({
+                            type: properties.type }, properties.type, parentLiveObject)).
+                        getClassName();
+                    if (editNode.defaults && editNode.defaults._constructor) {
+                        editNode.defaults._constructor = editNode._constructor;
+                    }
                     delete properties.type;
                 }
 
@@ -66545,14 +66930,19 @@ isc.EditContext.addProperties({
                     ancestorNode = parentNode;
                 if (parentNode != null) {
                     var parentLiveObject = parentNode.liveObject;
-                    if (parentLiveObject != null && parentLiveObject.setChildEditableProperties) {
-                        parentLiveObject.setChildEditableProperties(targetObject, properties, editNode, this);
+                    if (parentLiveObject != null && parentLiveObject.setChildEditableProperties)
+                    {
+                        parentLiveObject.setChildEditableProperties(targetObject, properties,
+                                                                    editNode, this);
                     } else {
                         var level = 1;
                         while ((ancestorNode = theTree.getParent(ancestorNode)) != null) {
                             var ancestorLiveObject = ancestorNode.liveObject;
-                            if (ancestorLiveObject != null && ancestorLiveObject.setDescendantEditableProperties) {
-                                ancestorLiveObject.setDescendantEditableProperties(targetObject, properties, editNode, this, level);
+                            if (ancestorLiveObject != null &&
+                                ancestorLiveObject.setDescendantEditableProperties)
+                            {
+                                ancestorLiveObject.setDescendantEditableProperties(targetObject,
+                                                             properties, editNode, this, level);
                                 break;
                             }
                             ++level;
@@ -68194,8 +68584,8 @@ isc.Palette.addInterfaceProperties({
         // - an ID may appear in defaults because palette-based construction is used to reload
         //   views, and in this case the palette node will be used once ever
         var defaults = paletteNode.defaults;
-        componentNode.ID = paletteNode.ID ||
-                (defaults ? isc.DS.getAutoId(defaults) : null);
+        if (defaults && defaults.builderAutoID) componentNode.builderAutoID = true;
+        componentNode.ID = paletteNode.ID || (defaults ? isc.DS.getAutoId(defaults) : null);
 
         var clobberDefaults = true;
 
@@ -68313,13 +68703,18 @@ isc.Palette.addInterfaceProperties({
         }
 
         if (this.generateNames && (schema.addGlobalId == null || schema.addGlobalId != false)) {
-            // generate an id if one wasn't specified
+            // generate an id and set builderAutoID if one wasn't specified, and
             var ID = editNode.ID || paletteNodeDefaults[schema.getAutoIdField()];
             if (ID == null) {
                 ID = this.getNextAutoId(paletteNode.idPrefix || paletteNode.type);
+                if (isc.isA.Class(classObject)) editNode.builderAutoID = true;
+            }
+            // ensure a hasStableID() override is installed for an auto-generated ID
 
-                if (isc.isA.Class(classObject)) {
-                    defaults.hasStableID = function () { return false; };
+            if (!defaults.hasStableID && editNode.builderAutoID) {
+                defaults.hasStableID = function () {
+                    var builderAutoID = this.editNode && this.editNode.builderAutoID;
+                    return builderAutoID ? false : this.Super("hasStableID", arguments);
                 }
             }
             editNode.ID = ID;
@@ -68351,6 +68746,7 @@ isc.Palette.addInterfaceProperties({
         );
         delete defaults[isc.gwtRef];
         delete defaults[isc.gwtModule];
+        delete defaults.builderAutoID;
         // An xsi:type property in defaults should be dropped to avoid serializing because
         // it won't be valid without proper includes.
         delete defaults["xsi:type"];
@@ -80491,7 +80887,8 @@ isc.WSDataSource.addMethods({
 // &lt;errors&gt; element is not used (it's specific to validation errors).  An unrecoverable
 // error causes all response processing to be skipped and +link{RPCManager.handleError} to be
 // invoked, which by default will show the provided error message as an alert using
-// +link{staticMethod:isc.warn()}.
+// <smartclient>+link{staticMethod:isc.warn()}</smartclient><smartgwt>
+// {@link com.smartgwt.client.util.SC#warn SC.warn()}</smartgwt>.
 // <p>
 // <b>JSON formatted responses:</b>
 // <P>
@@ -85919,16 +86316,11 @@ updateOperatorDefault : function (field) {
         item.defaultValue = isc.DynamicForm.getDefaultOperatorForType(field.type, item, null, field);
         var ds = this.getPrimaryDS(field);
         if (ds) {
-            var ops = ds.getFieldOperatorMap(field, null, "fieldType");
-            // add "between" and variants
-            isc.addProperties(ops, ds.getFieldOperatorMap(field, null, "valueRange"));
-            // blank/null variants
-            isc.addProperties(ops, ds.getFieldOperatorMap(field, null, "none"));
-            // regex and pattern variants
-            isc.addProperties(ops, ds.getFieldOperatorMap(field, null, "custom"));
-            if (ops[item.getValue()] == null) {
-                item.clearValue();
-            }
+            var ops = this.getFieldOperators(field);
+            if (!ops.contains(item.defaultValue)) item.defaultValue = ops[0];
+            if (!ops.contains(item.getValue())) item.clearValue();
+
+
         }
     }
 },
@@ -86051,9 +86443,13 @@ updateFields : function () {
 // @visibility external
 //<
 getFieldOperators : function (fieldName) {
-    var field = this.getField(fieldName);
     var filterBuilder = this.getFilterBuilder();
-    return filterBuilder && filterBuilder.getFieldOperators(fieldName, field);
+    if (!filterBuilder) return;
+
+    var field = this.getField(fieldName),
+        fName = field && field.name
+    ;
+    return filterBuilder.getFieldOperators(fName, field);
 },
 
 // called when the user changes the topOperator via a form - inline only.  We only implement
@@ -94575,7 +94971,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v12.0d_2018-02-13/LGPL Deployment (2018-02-13)
+  Version v12.0p_2018-06-28/LGPL Deployment (2018-06-28)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

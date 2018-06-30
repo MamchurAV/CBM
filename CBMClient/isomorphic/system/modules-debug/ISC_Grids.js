@@ -1,7 +1,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v12.0d_2018-02-13/LGPL Deployment (2018-02-13)
+  Version v12.0p_2018-06-28/LGPL Deployment (2018-06-28)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,9 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
 
-if (window.isc && isc.version != "SNAPSHOT_v12.0d_2018-02-13/LGPL Deployment" && !isc.DevUtil) {
+if (window.isc && isc.version != "v12.0p_2018-06-28/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v12.0d_2018-02-13/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'v12.0p_2018-06-28/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -1411,7 +1411,7 @@ selectOnMouseDown : function (target, recordNum) {
 
     // Pull record based on the visible records
     var record = this.data.get(recordNum),
-        recordSelected = this.isSelected(record, true),
+        recordSelected = this.isSelected(record, true) && (this.deselectOnPartialCheckboxClick || !this.isPartiallySelected(record)),
         selection // only compute this when used because it can be expensive
     ;
 
@@ -5118,12 +5118,25 @@ _getDrawRows : function () {
 
     // figure out which rows we need to draw to minimally fill the viewport
     var visibleRows = this._getViewportFillRows();
+    var totalRows = this.getTotalRows();
+
+
+    if (this._redrawScrollDrawRows != null) {
+        var currentRange = this._redrawScrollDrawRows;
+        if (currentRange[0] >= 0 &&
+            currentRange[1] < totalRows &&
+            currentRange[0] <= visibleRows[0] &&
+            currentRange[1] >= visibleRows[1])
+        {
+
+
+            return this._redrawScrollDrawRows;
+        }
+    }
 
     // detect scrolling direction: true (forward), false (backward), or null (unknown)
     var vScrollForward = (this.lastScrollTop == null ? null :
                           this.lastScrollTop < this.getScrollTop());
-
-    var totalRows = this.getTotalRows();
 
     // Note: addDrawAhead will add the draw-ahead rows (rows drawn offscreen for
     // scrolling), and clamp the ends of the drawn range to the ends of the data (ensuring
@@ -5203,6 +5216,7 @@ scrollToRatio : function (vertical, ratio, reason,a,b) {
         exactRowNum = ratio * maxRow,
         rowNum = Math.floor(exactRowNum),
         rowOffset = Math.round((exactRowNum - rowNum) * this.getRowSize(rowNum));
+
 
 
     this._targetRow = rowNum;
@@ -5318,9 +5332,9 @@ _storeTargetRow : function (scrollTop, delta) {
 
 // scroll the previously stored target row into the stored position
 _scrollToTargetRow : function (reason) {
+
     var targetRow = this._targetRow,
         offset = this._rowOffset;
-
     // If the target row is off the end of our data-set, clamp to the
     // last row we actually have.
     // This can occur if the user scrolls to the end of a tall grid, then
@@ -5337,6 +5351,7 @@ _scrollToTargetRow : function (reason) {
     this._literalScroll = true;
 
     this._scrollHeight = null;
+
     this.scrollTo(null, scrollTop, reason || "targetRow");
 
     this._literalScroll = false;
@@ -5359,6 +5374,7 @@ scrollIntoView : function (x,y, width, height, xPosition, yPosition, animated, c
 scrollTo : function (left, top, reason, animating) {
     if (isc._traceMarkers) arguments.__this = this;
 
+
     if (this._isVirtualScrolling && top != null && reason != "nativeScroll") {
         var oldScrollTop = this.getScrollTop(),
             delta = top - oldScrollTop;
@@ -5367,6 +5383,16 @@ scrollTo : function (left, top, reason, animating) {
             this._storeTargetRow(oldScrollTop, delta);
             top = Math.min(top, this.getRowTop(this.getTotalRows()-1));
         }
+    }
+
+
+    if (this._scrollFromRedraw) {
+        this._redrawScrollDrawRows = this._initialDrawRows;
+
+
+    // detect scroll
+    } else {
+        delete this._redrawScrollDrawRows;
     }
 
 
@@ -6959,12 +6985,17 @@ getTableHTML : function (colNum, startRow, endRow, discreteCols, asyncCallback, 
                 // table written into it already has padding / border for each cell.
                 // Ditto if suppressRowPaddingBorder is true
 
-                if (
-                    //>Animation
-                    isAnimationRow ||
-                    //<Animation
-                    this._suppressRowPaddingBorder) {
-                    var nopad = "padding:0px;border:0px;";
+                var nopad;
+                //>Animation
+                if (isAnimationRow) {
+                    nopad = "padding:0px;border:0px;";
+                } else
+                //<Animation
+                if (this._suppressRowVPaddingBorder) {
+                    nopad = "padding-bottom:0px;padding-top:0px;border-bottom:0px;border-top:0px;";
+                }
+                if (nopad != null) {
+
                     if (customCSSText) customCSSText += ";" + nopad
                     else customCSSText = nopad;
                 }
@@ -6995,7 +7026,6 @@ getTableHTML : function (colNum, startRow, endRow, discreteCols, asyncCallback, 
                     var styleText = this._getEscapedStyleText(cellStyle);
                     cellHTML[cssStartSlot] = styleText;
                     cellHTML[cssStartSlot + 1] = customCSSText == null ? null : String.asAttValue(customCSSText);
-
 
                 }
 
@@ -9006,8 +9036,9 @@ getCellStyleIndex : function (record, rowNum, colNum) {
 
         // if we're over the row or cell - add 1 to get the Over style
 
-        if (this.shouldShowRollOver(rowNum, colNum) && !this.isPrinting &&
-            rowNum == this.lastOverRow &&
+
+        if (rowNum == this.lastOverRow &&
+            this.shouldShowRollOver(rowNum, colNum) && !this.isPrinting &&
             (!this.useCellRollOvers || colNum == this.lastOverCol))
         {
             styleIndex += 1;
@@ -10018,12 +10049,12 @@ getScrollWidth : function (calculateNewValue) {
         scrollWidth = this.invokeSuper(isc.GridRenderer, "getScrollWidth", calculateNewValue);
 
     if (this.isDrawn && !isCached &&
-        (isc.Browser.isIE || isc.Browser.isEdge) &&
+       (isc.Browser.isIE || isc.Browser.isEdge) &&
         (!this.autoFit && this.fixedColumnWidths && this._fieldWidths))
     {
         var tableWidth = this._fieldWidths.sum();
         if (tableWidth == scrollWidth-1) {
-            scrollWidth = tableWidth;
+             scrollWidth = tableWidth;
         }
     }
     return scrollWidth;
@@ -10089,7 +10120,9 @@ _getCellHBorderPad : function (recalc) {
 //<
 getRowTop : function (rowNum) {
     // undrawn rows before or after the drawn area are treated as having fixed height
-    if (rowNum < this._firstDrawnRow) return this.getAvgRowHeight() * rowNum;
+    if (rowNum < this._firstDrawnRow) {
+        return this.getAvgRowHeight() * rowNum;
+    }
 
     var undrawnHeight = this._getUndrawnHeight(),
         drawnHeights = this._getDrawnRowHeights();
@@ -10214,7 +10247,6 @@ _getDrawnRowHeights : function () {
         isRTL = this.isRTL();
     for (var rowNum = 0; rowNum <= drawnRows; rowNum++) {
         var row = this.cacheDOM ? this.getTableElement(rowNum + this._firstDrawnRow) : table.rows[rowNum];
-
         if (row == null) {
             /*empty*/
 
@@ -10317,7 +10349,6 @@ _getDrawnRowHeights : function () {
 
 
     if (isc.Browser.isSafari && !isc.Page.isLoaded()) this._rowHeights = null;
-
     return heights;
 },
 
@@ -10615,8 +10646,8 @@ _getViewportFillRows : function () {
     // viewport based on the target row that needs to be scrolled into view (scrollTop is
     // irrelevant)
 
-    //this.logWarn("calculating viewport based on targetRow: " + this._targetRow +
-    //             ", row offset: " + this._rowOffset);
+    // this.logWarn("_getViewportFillRows(): calculating viewport based on targetRow: " + this._targetRow +
+    //              ", row offset: " + this._rowOffset);
 
     var startCoord = this._targetRow;
     // if we have a large negative offset (targetRow will be well below viewport), ensure
@@ -10624,6 +10655,7 @@ _getViewportFillRows : function () {
     if (this._rowOffset < 0) startCoord += Math.floor(this._rowOffset / this.cellHeight);
     if (startCoord < 0) startCoord = 0;
     var endCoord = startCoord + Math.ceil(viewportHeight / this.cellHeight);
+
     return [startCoord, endCoord];
 
 },
@@ -10773,13 +10805,15 @@ updateRollOver : function (rowNum, colNum) {
 // mouseOver of specific cells etc.
 startHover : function () { },
 
+
+//preserveFocusStylingOnMouseOut:false,
+
 //>    @method    gridRenderer.mouseMove()    ([A])
 //        @group    events
 //            Generate cell/row over/out events
 //        @return    (boolean)    false if same cell/row as before
 //<
 mouseMove : function (arg1, arg2) {
-
     if (this._suppressEventHandling(isc.EH.lastEvent)) return;
 
     // check for keyboard-navigation-induced scrolls
@@ -10790,7 +10824,6 @@ mouseMove : function (arg1, arg2) {
 
     var rowNum = this.getEventRow(),
         colNum = this.getEventColumn();
-
     // If we're pending a redraw from scroll, and the mouse is currently over an
     // undrawn part of the table, suppress standard mouseMove handling.
     // We don't want to fetch data which is just being scrolled through, or attempt to
@@ -10806,10 +10839,15 @@ mouseMove : function (arg1, arg2) {
         return;
     }
 
-
     // On rollOver of cells we do a couple of things:
     // - highlight the cell by applying "Over" styling
     // - fire cell level events ("rowOver", "rowOut", and also hover events if appropriate).
+
+
+    var clearOldStyling  = this.showRollOver,
+        showNewStyling = this.showRollOver && this.shouldShowRollOver(rowNum, colNum);
+
+
     // The "Over" styling subsystem is also coopted at the ListGrid level for visual feedback with
     // keyboard navigation.
     // Track the current "Over" styled cell separately from the last "cellOver" event cell - this
@@ -10822,7 +10860,6 @@ mouseMove : function (arg1, arg2) {
         lastStyleCol = this.lastOverCol,
         lastMouseCol = this.lastMouseOverCol;
 
-    //this.logWarn("row: " + rowNum + ", col: " + colNum);
     var validRowCol = (rowNum >= 0 && colNum >= 0),
         notSameStyleRowCol = !(rowNum == lastStyleRow && colNum == lastStyleCol),
         notSameMouseRowCol = !(rowNum == lastMouseRow && colNum == lastMouseCol),
@@ -10834,33 +10871,33 @@ mouseMove : function (arg1, arg2) {
 
         hasNewCell = (validRowCol && requireRecord && this.cellIsEnabled(rowNum, colNum, record));
 
+        //this.logWarn("row: " + rowNum + ", col: " + colNum);
+
     // Styling:
     if (notSameStyleRowCol) {
 
-        // If we were showing "over" styling for another row/cell, clear it.
+        // Clear old style on row-change or cell change if styling by cell.
+        // If we're not over a valid column (we're too far to the right of the listGrid)
+        // consider this a row change, for the purposes of restyling correctly
+        if (clearOldStyling && lastStyleRow != null && lastStyleCol != null
+            && (rowNum != lastStyleRow || colNum < 0 || this.useCellRollOvers) )
+        {
 
-        if (lastStyleRow != null && lastStyleCol != null) {
             this.lastOverRow = null;
             this.lastOverCol = null;
 
-            // If we're not over a valid column (we're too far to the right of the listGrid)
-            // consider this a row change, for the purposes of restyling correctly
-            if (rowNum != lastStyleRow || colNum < 0 || this.useCellRollOvers) {
 
-
-                this.updateRollOver(lastStyleRow, lastStyleCol, hasNewCell);
-            }
+            this.updateRollOver(lastStyleRow, lastStyleCol, hasNewCell);
         }
 
         // And show the over style for the new cell:
         if (hasNewCell) {
 
-            this.lastOverRow = rowNum;
-            this.lastOverCol = colNum;
-
             if (lastStyleRow != rowNum || this.useCellRollOvers) {
                 // show rollover hiliting
-                if (this.shouldShowRollOver(rowNum, colNum)) {
+                if (showNewStyling) {
+                    this.lastOverRow = rowNum;
+                    this.lastOverCol = colNum;
                     this.updateRollOver(rowNum, colNum);
                 }
             }
@@ -11005,17 +11042,33 @@ mouseOut : function () {
         var lastOverRow = this.lastOverRow,
             lastOverCol = this.lastOverCol;
 
-        this.lastOverRow = null;
-        this.lastOverCol = null;
+        if (this.showRollOver) {
 
-        // clear rollover hiliting
-        if (this.shouldShowRollOver(lastOverRow, lastOverCol)) {
+            this.lastOverRow = null;
+            this.lastOverCol = null;
             this.updateRollOver(lastOverRow, lastOverCol);
+
+            // Special case - if we're showing hilite row styling, reapply
+            // rollover styling to the hilite row on mouseOut
+
+            if (this.preserveFocusStylingOnMouseOut &&
+                this._lastHiliteRow != null &&
+                this._lastHiliteRow != lastOverRow)
+            {
+                this.lastOverRow=this._lastHiliteRow;
+                this.lastOverCol=0;
+                if (this.shouldShowRollOver(this.lastOverRow, this.lastOverCol)) {
+                    this.updateRollOver(this.lastOverRow, this.lastOverCol, false);
+                }
+            }
         }
+        // If showRollOver is generally false, no need to update rollOver styling
+        // on mouseOut even if it is currently applied to some row.
+
+
     }
 
     if (this.lastMouseOverRow != null && this.lastMouseOverCol != null) {
-
         var lastOverRow = this.lastMouseOverRow,
             lastOverCol = this.lastMouseOverCol,
             lastOverRecord = this.getCellRecord(lastOverRow, lastOverCol);
@@ -11085,18 +11138,15 @@ _getHoverProperties : function (record, rowNum, colNum) {
             field = colNum != null ? this.grid.fields[colNum + frozenLength] : null
         ;
         if (field) {
-            return {
-                align: field.hoverAlign != null ? field.hoverAlign : this.hoverAlign,
-                baseStyle: field.hoverStyle != null ? field.hoverStyle : this.hoverStyle,
-                height: field.hoverHeight != null ? field.hoverHeight : this.hoverHeight,
-                hoverDelay: field.hoverDelay != null ? field.hoverDelay : this.hoverDelay,
-                opacity: field.hoverOpacity != null ? field.hoverOpacity : this.hoverOpacity,
-                moveWithMouse: field.hoverMoveWithMouse != null ? field.hoverMoveWithMouse :
-                                this.hoverMoveWithMouse,
-                valign: field.hoverVAlign != null ? field.hoverVAlign : this.hoverVAlign,
-                width: field.hoverWidth != null ? field.hoverWidth : this.hoverWidth,
-                wrap: field.hoverWrap != null ? field.hoverWrap : this.hoverWrap
-            };
+            // Use same hover properties from canvas on field
+            var result = {};
+            for (var hoverProp in this._hoverPropertyMap) {
+                var widgetProp = this._hoverPropertyMap[hoverProp];
+                result[hoverProp] = field[widgetProp] != null
+                                        ? field[widgetProp]
+                                        : this[widgetProp];
+            }
+            return result;
         }
     }
     return this.Super("_getHoverProperties");
@@ -11113,11 +11163,10 @@ _showHover : function (record, rowNum, colNum, cellValueIsClipped) {
             var grid = this.grid,
                 gridCol = grid.getFieldNumFromLocal(colNum, this),
                 field = grid.getField(gridCol);
-            useStandardCellHover = (grid.canHover ||
-                                    (field.showHover && grid.canHover != false) ||
-                                    grid.cellHoverHTML != grid.getClass().getInstanceProperty("cellHoverHTML") ||
-                                    (grid.canHover == null && field.showHover)) &&
-                                   field.showHover != false;
+            useStandardCellHover = field && (grid.canHover ||
+                (field.showHover && grid.canHover != false) ||
+                grid.cellHoverHTML != grid.getClass().getInstanceProperty("cellHoverHTML") ||
+                (grid.canHover == null && field.showHover)) && field.showHover != false;
             isCellHoverSuppressed = grid._isCellHoverSuppressed(rowNum, gridCol);
         }
 
@@ -12032,9 +12081,11 @@ modifyContent : function () {
 
     if (this._targetRow != null) {
 
-        this._scrollFromRedraw = true;
 
         this._initialDrawRows = this._getDrawRows();
+
+
+        this._scrollFromRedraw = true;
 
         this._scrollToTargetRow("scrollToRow in modifyContent");
 
@@ -13838,7 +13889,8 @@ isc.defineClass("GridBody", isc.GridRenderer).addProperties({
         }
 
 
-        return [Math.max(startCol, 1), endCol];
+        var checkboxFieldPos = this.grid.getCheckboxFieldPosition()+1;
+        return [Math.max(startCol, checkboxFieldPos), endCol];
     },
 
     // Cell ClipDiv overflow
@@ -13846,6 +13898,8 @@ isc.defineClass("GridBody", isc.GridRenderer).addProperties({
     // Should we write "text-overflow:ellipsis" into our clip-div? Return false
     // for boolean fields / fields which show valueIconOnly
     _clipDiv_writeTextOverflowEllipsis:function (field) {
+        if (this.grid.showEllipsisWhenClipped == false) return false;
+        if (field != null && field.showEllipsisWhenClipped != null) return field.showEllipsisWhenClipped;
         if (field != null && this.grid.showValueIconOnly(field)) return false;
         return true;
     },
@@ -13900,7 +13954,7 @@ isc.defineClass("GridBody", isc.GridRenderer).addProperties({
             var rowHTML;
             var otherBody = this.frozen ? grid.body : grid.frozenBody;
             if (otherBody != null) {
-                otherBody._suppressRowPaddingBorder = true;
+                otherBody._suppressRowVPaddingBorder = true;
                 otherBody._suppressMinHeightCSSText = true;
 
                 // We want to pick up inactive cell values
@@ -13910,7 +13964,7 @@ isc.defineClass("GridBody", isc.GridRenderer).addProperties({
                                                 rowNum, rowNum+1, true);
 
                 otherBody._gettingRowHeightSpacerHTML = false;
-                otherBody._suppressRowPaddingBorder = false;
+                otherBody._suppressRowVPaddingBorder = false;
                 otherBody._suppressMinHeightCSSText = false;
 
             }
@@ -13927,7 +13981,7 @@ isc.defineClass("GridBody", isc.GridRenderer).addProperties({
 
                 if (cols.length > 0) {
 
-                    this._suppressRowPaddingBorder = true;
+                    this._suppressRowVPaddingBorder = true;
                     this._suppressMinHeightCSSText = true;
 
                     // We want to pick up inactive cell values
@@ -13944,7 +13998,7 @@ isc.defineClass("GridBody", isc.GridRenderer).addProperties({
                     }
 
                     this._gettingRowHeightSpacerHTML = false;
-                    this._suppressRowPaddingBorder = false;
+                    this._suppressRowVPaddingBorder = false;
                     this._suppressMinHeightCSSText = false;
                 }
             }
@@ -13995,10 +14049,23 @@ isc.defineClass("GridBody", isc.GridRenderer).addProperties({
     // drawAllMaxCells threshold isn't hit.
     getDrawAllMaxCells : function () {
         var grid = this.grid;
-        if (grid && grid.frozenFields != null && this._isVirtualScrolling) {
+        if (grid && grid.frozenFields != null && grid.virtualScrolling) {
             return 0
         }
         return this.drawAllMaxCells;
+    },
+
+    // helper to check whether event is in a drag handle field
+    _shouldAllowRecordDrag : function () {
+        if (!isc.Browser.isTouch) return true;
+
+        var grid = this.grid;
+        if (!grid || !grid._shouldUseDragHandles()) return true;
+
+        var fieldNum = this.getEventColumn(),
+            field = this.getField(fieldNum)
+        ;
+        return field && field.isDragHandle;
     },
 
     // doneFastScrolling: ensure *both* bodies redraw without draw-ahead direction
@@ -14226,6 +14293,7 @@ isc.defineClass("GridBody", isc.GridRenderer).addProperties({
         // since we're doing a full redraw, cancel pending refreshCell() calls
         if (this._pendingCellRefreshTimer) this.cancelPendingCellRefresh();
 
+
         // flag to note we're redrawing - this is used by getDrawnFields()
         this._redrawing = true;
 
@@ -14243,6 +14311,7 @@ isc.defineClass("GridBody", isc.GridRenderer).addProperties({
         // editable cells in view.
         // See if we can start editing now in this case
         var lg = this.grid;
+
         if (lg.alwaysShowEditors && !lg._editorShowing) {
             // pull stashed value for target edit cell if provided
             // by scrollCellIntoView
@@ -14662,7 +14731,6 @@ isc.defineClass("GridBody", isc.GridRenderer).addProperties({
 
 
     _storeFocusForRedraw : function () {
-
         var lg = this.grid,
             editForm = lg.getEditForm(),
             editColNum = lg.getEditCol();
@@ -14827,6 +14895,7 @@ isc.defineClass("GridBody", isc.GridRenderer).addProperties({
     // without requiring the normal rollOver effects.
     shouldShowRollOver : function (rowNum, colNum,a,b) {
 
+
         //if (!this.invokeSuper(isc.GridBody, "shouldShowRollOver", rowNum,colNum,a,b)) return false;
 
         var hiliteOnFocus = this.grid.hiliteRowOnFocus;
@@ -14835,7 +14904,6 @@ isc.defineClass("GridBody", isc.GridRenderer).addProperties({
         }
 
         var lg = this.grid;
-
         if ((!lg.showRollOver &&
              (!hiliteOnFocus || (this._lastHiliteRow != rowNum)))
             || this._rowAnimationInfo)
@@ -15016,7 +15084,21 @@ isc.defineClass("GridBody", isc.GridRenderer).addProperties({
                 this.grid._lastKeyboardHiliteBody = this;
                 this.grid._hiliteCell(rowNum, colNum);
             }
+        } else {
+            // If showRollOver is false and hiliteRowOnFocus is true we may be
+            // showing a rollOver from keyboard navigation on another cell
+            // Clear this now to avoid confusing styling.
+            if (this._lastHiliteRow != null && this._lastHiliteRow != rowNum) {
+                if (this.lastOverRow  == this._lastHiliteRow) {
+                    var lastRow = this.lastOverRow,
+                        lastCol = this.lastOverCol;
+                    this.lastOverRow = null;
+                    this.lastOverCol = null;
+                    this.updateRollOver(lastRow, lastCol);
+                }
+            }
         }
+        this._lastHiliteRow = rowNum;
     },
 
     // When showing the edit clickMask, a mouseDown will clear the mask and end editing
@@ -15163,10 +15245,10 @@ isc.defineClass("GridBody", isc.GridRenderer).addProperties({
         // including re-focus due to clickMask blur).
         var editCell,
             parent = this.grid;
-        if (hasFocus && parent.isEditable()) {
+        if (hasFocus && parent.canEdit != false) {
 
             // editOnFocus enabled, but not currently editing
-            if (parent.editOnFocus && parent.isEditable() &&
+            if (parent.editOnFocus && parent.canEdit != false &&
                 parent.getEditRow() == null)
             {
                 if (this.logIsInfoEnabled("gridEdit")) {
@@ -15994,6 +16076,8 @@ isc.ListGrid.addClassProperties({
         "hoverStyle",
         "hoverOpacity",
         "hoverMoveWithMouse",
+        "hoverAutoFitWidth",
+        "hoverAutoFitMaxWidth",
 
         "hoverByCell",
         "keepHoverActive",
@@ -16022,6 +16106,7 @@ isc.ListGrid.addClassProperties({
         "baseStyle",
         "recordCustomStyleProperty",
         "showSelectedStyle",
+        "preserveFocusStylingOnMouseOut",
 
         // whether to use rowSpan-oriented cell styling behaviors
         "useRowSpanStyling",
@@ -16911,6 +16996,13 @@ isc.ListGrid.addProperties( {
     //<
     showDetailFields:true,
 
+    //> @attr listGrid.showEllipsisWhenClipped (boolean : true : IRW)
+    // Should ellipses be displayed when cell content is clipped? May be overridden at the field
+    // level via +link{listGridField.showEllipsisWhenClipped}
+    // @visibility external
+    //<
+    showEllipsisWhenClipped:true,
+
     //> @attr ListGrid.titleField (String : see below : IRW)
     // Best field to use for a user-visible title for an individual record from this grid.
     // If +link{ListGrid.dataSource} is non null, this property may be specified on the
@@ -17064,6 +17156,12 @@ isc.ListGrid.addProperties( {
         return this.groupTitleField;
     },
 
+    _isGroupTitleField : function (field) {
+        var groupTitleField = this.getGroupTitleField();
+        return groupTitleField == null ? field._isGroupTitleColumn :
+                                         field.name == groupTitleField;
+    },
+
     //> @attr listGrid.showGroupTitleColumn (Boolean : true : IR)
     // If this grid is +link{listGrid.groupBy(),grouped} and +link{listGrid.showGroupSummaryInHeader}
     // is true, instead of group header nodes showing up with a single cell value spanning the full
@@ -17162,9 +17260,10 @@ isc.ListGrid.addProperties( {
 
 
         var pos = 0;
-        if (this.shouldShowRowNumberField()) pos++;
-        if (this.shouldShowCheckboxField()) pos++;
-        if (this.shouldShowExpansionField()) pos++;
+        if (this.shouldShowRowNumberField())  pos++;
+        if (this.shouldShowDragHandleField()) pos++;
+        if (this.shouldShowCheckboxField())   pos++;
+        if (this.shouldShowExpansionField())  pos++;
         return pos;
     },
 
@@ -18827,6 +18926,12 @@ isc.ListGrid.addProperties( {
     // @visibility external
     //<
 
+    //> @attr listGridField.showEllipsisWhenClipped (Boolean : null : IRW)
+    // Should ellipses be displayed when this field's cell content is clipped? To set this
+    // property at the grid level, use +link{listGrid.showEllipsisWhenClipped}
+    // @visibility external
+    //<
+
     //> @attr listGridField.format (FormatString : null : IR)
     // +link{FormatString} for numeric or date formatting.  See +link{dataSourceField.format}.
     // @group exportFormatting
@@ -19472,17 +19577,18 @@ isc.ListGrid.addProperties( {
     // ----------------------------------------------------------------------------------------
 
     //> @attr listGridField.canEdit (boolean : null : [IRW])
-    // Can this field be edited?  May be overridden by setting the 'canEdit' property at the
-    // listGrid level. If not explicitly set and this grid is bound to a dataSource, the
-    // +link{listGrid.canEditFieldAttribute} may be used to set default editability at the field level.
+    // This property establishes default editability for the field.  May be overridden by setting
+    // the 'canEdit' property at the listGrid level. If not explicitly set and this grid is bound
+    // to a dataSource, the +link{listGrid.canEditFieldAttribute} may be used to set default
+    // editability at the field level.
     // <p>
-    // For more dynamic control over whether fields can be edited, see
-    // +link{listGrid.canEditCell}.
+    // An override of +link{listGrid.canEditCell} can be used for more dynamic control over whether
+    // fields can be edited.
     //
     // <smartgwt><P>Note that this property may validly be <code>null</code> as a distinct state
     // from <code>false</code>.  See +link{listGrid.fieldIsEditable()} for an API that will
-    // always return <code>true</code> or <code>false</code> and give a definitive answer as to
-    // whether editing is possible.</smartgwt>
+    // always return <code>true</code> or <code>false</code> as to whether editing is possible
+    // by default.</smartgwt>
     //
     // @group  editing
     // @see attr:listGrid.canEdit
@@ -19805,6 +19911,19 @@ isc.ListGrid.addProperties( {
     // be left unset.
     // @see listGrid.canRemoveRecords
     // @visibility external
+    //<
+
+    //> @attr listGridField.isDragHandle (boolean : null : [IRA])
+    // If set to true and +link{listGrid.useDragHandles} is true, this field will be treated as
+    // the +link{listGrid.dragHandleField, drag handle field} for records in this grid with
+    // respect to touch interaction.  However, visibility and field order for this field won't
+    // be managed automatically by the Framework, as it is for the
+    // +link{listGrid.dragHandleField} autochild.
+    // <P>
+    // Note that this is only fully supported for fields of +link{type}: "icon", for which we
+    // can easily generate the necessary HTML and CSS to ensure proper behavior across browsers.
+    // @see listGrid.showDragHandles()
+    // @group dragHandleField
     //<
 
     //> @method listGridField.recordClick()
@@ -20774,6 +20893,12 @@ isc.ListGrid.addProperties( {
     // @example emptyValues
     //<
     emptyCellValue:"&nbsp;",
+
+    //> @attr listGrid.minimumCellHeight (number : 20 : IR)
+    // The minimum height of each row in pixels.
+    // @visibility external
+    //<
+    minimumCellHeight:20,
 
     //> @attr listGrid.cellHeight (number : 20 : [IRW])
     // @include gridRenderer.cellHeight
@@ -22755,6 +22880,9 @@ isc.ListGrid.addProperties( {
     // achievable via CSS on the cells themselves.
 
 
+
+    //preserveFocusStylingOnMouseOut:false,
+
     //>Animation
 
     //> @attr listGrid.animateRollOver (Boolean : false : IRWA)
@@ -22965,9 +23093,19 @@ isc.ListGrid.addProperties( {
     // This has an impact in grouped grids where +link{canSelectGroups} is true. The
     // partial icon will show up for the group header node when a group is partially
     // selected.
+    // @group selection
     // @visibility external
     //<
 
+    //> @attr listGrid.deselectOnPartialCheckboxClick (Boolean : false : [IRW])
+    // Should partially selected checkbox be deselected or selected on click? This setting
+    // affects +link{canSelectAll, header selection checkbox}, +link{canSelectGroups, group
+    // checkboxes} and folder checkbox selection in a Tree data set.
+    // <p>
+    // By default clicking a partially selected checkbox selects it.
+    // @group selection
+    // @visibility external
+    //<
 
     //> @attr listGrid.selectionType (SelectionStyle : null : [IRW])
     // Defines a listGrid's clickable-selection behavior.
@@ -23816,7 +23954,8 @@ defaultFilterOperatorSuffix: "(default)",
     //      If 'canEdit' is false at the listGrid level, fields can never be edited - in this case
     //      the canEdit property on individual fields will be ignored.<br>
     //      If 'canEdit' is set to true at the listGrid level, setting the 'canEdit' property to
-    //      false at the field level will prevent the field from being edited inline.<br>
+    //      false at the field level will prevent the field from being edited inline unless a
+    //      custom override of +link{canEditCell} allows it.<br>
     //      If 'canEdit' is not set at the listGrid level, setting 'canEdit' to true at the field
     //      level enables the field to be edited inline.
     //      @visibility external
@@ -24704,7 +24843,10 @@ defaultFilterOperatorSuffix: "(default)",
 
         canSelectText:true,
         autoDraw:false,
-
+        // gotcha: if the user has e.g. enabled implicitSave on all DynamicForms, disable it
+        // here because the various endEdit actions will then fire a duplicate save
+        implicitSave: false,
+        implicitSaveOnBlur: false,
         // disable tabbing to icons by default
         // Overridden in the MiniDateRangeItem at the item level as there's no
         // focusable element except the picker for that item type
@@ -24760,6 +24902,7 @@ defaultFilterOperatorSuffix: "(default)",
         if (isc.Browser.isMoz && item && item.multiple &&
             isc.isA.NativeSelectItem(item) && keyName == "Enter")
         {
+            item._selectedOnEnterKeydownSet = true;
             item._selectedOnEnterKeydown = item.getValue();
         }
     },
@@ -24806,9 +24949,10 @@ defaultFilterOperatorSuffix: "(default)",
             if (isMultiLineEditor && isc.EH.altKeyDown() == false) {
                 return returnValue;
             }
-            if (item._selectedOnEnterKeydown != null) {
+            if (item._selectedOnEnterKeydownSet) {
                 var oldVal = item._selectedOnEnterKeydown;
                 delete item._selectedOnEnterKeydown;
+                delete item._selectedOnEnterKeydownSet;
                 item.setValue(oldVal);
             }
             editEvent = isc.ListGrid.ENTER_KEYPRESS;
@@ -25012,8 +25156,12 @@ defaultFilterOperatorSuffix: "(default)",
 
     //> @attr listGrid.canTabToHeader (boolean : null : IR)
     // Should the header be included in the tab-order for the page? If not explicitly specified,
-    // the header will be included in the tab order for the page if +link{isc.setScreenReaderMode,isc.setScreenReaderMode()} is
-    // called.
+    // the header will be included in the tab order for the page if
+    // <smartclient>+link{isc.setScreenReaderMode,isc.setScreenReaderMode()}</smartclient>
+    // <smartgwt>
+    // {@link com.smartgwt.client.util.SC#setScreenReaderMode SC.setScreenReaderMode()}
+    // </smartgwt>
+    // is called.
     // @group accessibility
     // @visibility external
     //<
@@ -25151,9 +25299,43 @@ defaultFilterOperatorSuffix: "(default)",
     // this ListGrid.
     // Note that, depending on the +link{listGrid.headerButtonConstructor, Class} of the header
     // buttons, you may also need to set +link{listGrid.headerTitleStyle}.
-    // @group   gridHeader, appearance
+    // <P>
+    // <h4>Rotated Titles</h4>
+    // <p>
+    // The Framework doesn't have built-in support for rotating header button titles in a
+    // fashion similar to +link{Facetchart.rotateLabels}.  However, you can manually configure
+    // a grid to render with rotated labels by applying a fixed +link{listGridField.width} to
+    // each button, a large +link{headerHeight} to the grid, and custom CSS via this property.
+    // <P>
+    // For example, given a grid with a header height of 120 and field widths of 48, if you
+    // copied the existing headerButtonXXX style declarations from skin_styles.css as new,
+    // customHeaderButtonXXX declarations, and then added the lines:
+    // <pre>
+    //     -ms-transform:     translate(-32px,0px) rotate(270deg);
+    //     -webkit-transform: translate(-32px,0px) rotate(270deg);
+    //     transform:         translate(-32px,0px) rotate(270deg);
+    //     width:110px;</pre>
+    // in the declaration section beginning:
+    // <pre>
+    // .customHeaderButton,
+    // .customHeaderButtonSelected,
+    // .customHeaderButtonSelectedOver,
+    // .customHeaderButtonSelectedDown,
+    // .customHeaderButtonSelectedDisabled,
+    // .customHeaderButtonOver,
+    // .customHeaderButtonDown,
+    // .customHeaderButtonDisabled {</pre>
+    // you'd get vertically rendered titles with overflow via ellipsis as expected, and also
+    // wrap with +link{wrapHeaderTitles}.  The explicit width applied via CSS is needed because
+    // rotated elements don't inherit dimensions in their new orientation from the DOM - the
+    // transform/rotation occurs independently of layout.
+    // @group gridHeader, appearance
+    // @see group:skins
+    // @see clipHeaderTitles
+    // @see wrapHeaderTitles
     // @visibility external
     //<
+
 
     //> @attr listGrid.headerTitleStyle (CSSStyleName : null : IR)
     // +link{StretchImgButton.titleStyle} to apply to the buttons in the header, and the sorter,
@@ -25249,6 +25431,7 @@ defaultFilterOperatorSuffix: "(default)",
     // Note that this feature is incompatible with +link{listGridField.wrap}, and will
     // automatically be disabled for wrapping fields.
     //
+    // @see headerBaseStyle
     // @group gridHeader, appearance
     // @visibility external
     //<
@@ -25264,6 +25447,7 @@ defaultFilterOperatorSuffix: "(default)",
     // determined.
     //
     // @see minFieldWidth
+    // @see headerBaseStyle
     // @visibility external
     //<
 
@@ -25904,6 +26088,7 @@ defaultFilterOperatorSuffix: "(default)",
     // @group  dragging
     // @see ListGridRecord.canDrag
     // @see ListGridRecord.canAcceptDrop
+    // @see showDragHandles()
     // @example dragListMove
     // @example recordsAcrossWindows
     //<
@@ -25933,6 +26118,7 @@ defaultFilterOperatorSuffix: "(default)",
     // @group  dragging
     // @see ListGridRecord.canDrag
     // @see ListGridRecord.canAcceptDrop
+    // @see showDragHandles()
     // @example dragListMove
     // @example gridsDragReorder
     // @visibility external
@@ -26212,6 +26398,218 @@ defaultFilterOperatorSuffix: "(default)",
     //<
     mozBodyNoHeaderOutlineColor:"red",
 
+// -----------------------------------------------------------------------------------------
+// drag handles
+//
+
+    //> @method listGrid.showDragHandles()
+    // Shows an additional field near the beginning of the field list (after any
+    // +link{showRowNumbers,row number} field) that can be dragged to drag the current
+    // selection.  This feature is useful in +link{Browser.isTouch,touch environments} where
+    // both touch scrolling and dragging are needed on the same grid, and allows scrolling to
+    // be triggered on the other fields so that both operations are available.  Targeted touch
+    // environments include both mobile devices, and Windows hardware that supports
+    // +link{Browser.supportsDualInput,Dual Input Mode} such as Microsoft Surface.
+    // <P>
+    // Note that the +link{dragHandleField,drag handle field} will never be shown unless
+    // +link{canReorderRecords} or +link{canDragRecordsOut} are true.
+    // <P>
+    // In IE11 or Microsoft Edge, dragging a record in a grid may not be possible using a touch
+    // device without enabling drag handles, or disabling native touch scrolling by setting
+    // &nbsp;<code>window.isc_useNativeTouchScrolling = false</code>&nbsp; before SmartClient
+    // is loaded.
+    // <P>
+    // <h4>Background</h4>
+    // <P>
+    // One alternative to adding a drag handle field would be to use long touch to start a drag
+    // (with normal touch triggering scrolling).  However, this is unsupportable in IE11 or Edge
+    // on Microsoft Surface (with native scrolling) because native scrolling cannot be canceled
+    // on the fly using Event.preventDefault(), but instead must be disabled by applying the
+    // appropriate CSS at rendering time.  (Such limitations are not present elsewhere, such as
+    // on Android or IPhone browsers.)
+    // <P>
+    // For more details, some links are provided below.  Note that while IE10 is mentioned in
+    // some of the links, the reasoning is still relevant now for IE11 and Edge as the
+    // limitations remain:
+    // <ul>
+    // <li>+externalLink{https://quirksmode.org/mobile/default.html,Cross-browser support of touchMove}
+    // <li>+externalLink{https://stackoverflow.com/questions/26218146/pointer-events-ie11-surface,preventDefault() doesn't work in IE11 on MS Surface}
+    // <li>+externalLink{https://stackoverflow.com/questions/49299496/html5-pointermove-touchmove-not-working-in-microsoft-edge,preventDefault() doesn't work in Edge on MS Surface}
+    // <li>+externalLink{https://web.archive.org/web/20160309214328/https://connect.microsoft.com/IE/feedback/details/767646/ms-touch-action-does-not-allow-a-way-to-programmatically-prevent-default-touch-behavior,preventDefault() failure reported to Microsoft against IE10}
+    // </ul>
+    // @see hideDragHandles()
+    // @see dragHandleField
+    // @see dragHandleIcon
+    // @see dragHandleIconSize
+    // @example gridsTouchDrag
+    // @group dragHandleField
+    // @visibility external
+    //<
+    showDragHandles : function() {
+        this._showDragHandles = true;
+        this.refreshFields();
+    },
+
+    //> @method listGrid.hideDragHandles()
+    // Hides the +link{dragHandleField,drag handle field}, if currently shown.
+    // @see showDragHandles()
+    // @group dragHandleField
+    // @visibility external
+    //<
+    hideDragHandles : function() {
+        this._showDragHandles = false;
+        this.refreshFields();
+    },
+
+    //> @attr listGrid.showInitialDragHandles (boolean : null : IRA)
+    // When set to true, shows the +link{dragHandleField,drag handle field} on initial draw.
+    // @see showDragHandles()
+    // @see hideDragHandles()
+    // @see dragHandleField
+    // @group dragHandleField
+    // @visibility external
+    //<
+
+    //> @attr listGrid.dragHandleFieldTitle (String : "&nbsp;" : IRWA)
+    // The title to use for the +link{listGrid.dragHandleField, drag handle field}.
+    // <P>
+    // By default this title is not displayed in the drag column header button as the
+    // autochild defaults for the field set +link{listGridField.showTitle} to
+    // <code>false</code>.
+    // @see showDragHandles()
+    // @group dragHandleField
+    // @visibility external
+    //<
+    dragHandleFieldTitle: isc.nbsp,
+
+    //> @attr listGrid.dragHandleIcon (SCImgURL : "[SKIN]/actions/drag.png" : IR)
+    // Default icon to show in the +link{dragHandleField,drag handle field}..
+    // @see showDragHandles()
+    // @group dragHandleField
+    // @visibility external
+    //<
+    dragHandleIcon:"[SKIN]/actions/drag.png",
+
+    //> @attr listGrid.dragHandleIconSize (Number : 16 : IRW)
+    // Default width and height of +link{dragHandleIcon,drag handle icons} for this ListGrid.
+    // @see showDragHandles()
+    // @group dragHandleField
+    // @visibility external
+    //<
+    dragHandleIconSize: 16,
+
+    //> @attr listGrid.dragHandleField (AutoChild ListGridField : null : IR)
+    // An automatically generated field that can be dragged to drag the current selection
+    // (where otherwise the grid itself might be scrolled).  Visibility is controlled by
+    // +link{showInitialDragHandles}, +link{showDragHandles()}, and +link{hideDragHandles()}.
+    // @group dragHandleField
+    // @visibility external
+    //<
+    dragHandleFieldDefaults: {
+        type:"icon",
+        width:24,
+        name: "_dragHandleField",
+        isDragHandle: true,
+
+        canEdit: false,
+        canHide: false,
+        canSort: false,
+        canGroupBy: false,
+        canFilter:false,
+        showTitle:false,
+        canExport: false,
+        autoFitWidth: false,
+        canAutoFitWidth: false,
+        canDragResize: false,
+        excludeFromState:true,
+        showDefaultContextMenu: false,
+        selectCellTextOnClick:false,
+        ignoreKeyboardClicks:true,
+        keyboardFiresRecordClick: false,
+        showGroupSummary:false,
+        showGridSummary:false,
+        summaryValue: "&nbsp;",
+        // specifically disable filterOperators for this builtin field
+        allowFilterOperators: false,
+        autoFreeze: true,
+        // disable this from ever being assigned as the treeField
+        treeField:false
+    },
+
+    //> @attr listGrid.useDragHandles (Boolean : false : [IRA])
+    // Whether this grid should assume drag handles are present when deciding how to
+    // handle touch interactions.  The primary use case is to set this property true if the
+    // +link{listGrid.dragHandleField} autochild is not being shown, but one or more user
+    // fields have been marked as +link{listGridField.isDragHandle,isDragHandle}: true.
+    // <P>
+    // Note that <code>useDragHandles</code> has no impact if the +link{dragHandleField,drag
+    // handle field} autochild is being shown due to +link{showInitialDragHandles} or
+    // +link{showDragHandles()}.
+    // @see showDragHandles()
+    // @group dragHandleField
+    //<
+
+    // helper to check whether drag interaction should assume drag handles are present
+    _shouldUseDragHandles : function () {
+        if (this.fieldSourceGrid) return this.fieldSourceGrid._shouldUseDragHandles();
+        return (this._showDragHandles || this.useDragHandles) &&
+            (this.canReorderRecords || this.canDragRecordsOut);
+    },
+
+    // should the drag handle field autochild be added by setFields()
+    shouldShowDragHandleField : function () {
+        if (this.fieldSourceGrid) return this.fieldSourceGrid.shouldShowDragHandleField();
+        return this._showDragHandles && (this.canReorderRecords || this.canDragRecordsOut);
+    },
+
+    // return the autogenerated drag handle field, if it's already been created
+    getCurrentDragField : function () {
+        var fields = this.completeFields || this.fields;
+        if (!fields) return null;
+        var dragHandleFields = fields.find(this.fieldIdProperty, "_dragHandleField");
+        if (!dragHandleFields) return null;
+        return isc.isAn.Array(dragHandleFields) ? dragHandleFields[0] : dragHandleFields;
+    },
+
+    // return desired position of drag handle field autochild; should be after row number field
+    getDragFieldPosition : function () {
+        if (this.fieldSourceGrid) return this.fieldSourceGrid.getDragFieldPosition();
+        if (!this.shouldShowDragHandleField()) return -1;
+
+        var pos = 0;
+        if (this.shouldShowRowNumberField()) pos++;
+        return pos;
+    },
+
+    // create the drag handle field autochild
+    getDragField : function () {
+        var grid = this,
+        dragHandleField = {
+            title: this.dragHandleFieldTitle,
+            cellIcon: this.dragHandleIcon,
+            iconSize: this.dragHandleIconSize,
+            getAutoFreezePosition: function () {return grid.getDragFieldPosition();}
+        };
+        isc.addProperties(dragHandleField, this.dragHandleFieldDefaults,
+                                           this.dragHandleFieldProperties);
+        return dragHandleField;
+    },
+
+    // helper to check whether event is in a drag handle field
+    _shouldAllowRecordDrag : function () {
+        if (!isc.Browser.isTouch || !this._shouldUseDragHandles()) {
+            return true;
+        }
+        var body = this.body;
+        if (!body || !body._usingNativeTouchScrolling()) return true;
+
+
+        var fieldX = this.getOffsetX(isc.EH.mouseDownEvent),
+            fieldNum = this.getEventColumn(fieldX),
+            field = this.getField(fieldNum)
+        ;
+        return field && field.isDragHandle;
+    },
 
 
 // -----------------------------------------------------------------------------------------
@@ -26320,7 +26718,18 @@ defaultFilterOperatorSuffix: "(default)",
         return groupCount;
     },
 
-    // helper method to get the true row-number for a grouped record, whether or not prior groups are closed
+    //> @method listGrid.getGroupedRecordIndex()
+    // Returns the true row index for a grouped record excluding group and
+    // summary records. Records in closed groups are included in number.
+    // <p>
+    // Function is not applicable for non-grouped grids and will return -1
+    // if called.
+    //
+    // @param record (ListGridRecord) record to number
+    // @return (int) row index for record or -1 for group or summary records
+    // @group rowNumberField
+    // @visibility external
+    //<
     getGroupedRecordIndex : function (record) {
         // bail if we're not grouped
         if (!this.isGrouped) return -1;
@@ -26658,7 +27067,7 @@ defaultFilterOperatorSuffix: "(default)",
         allowFilterOperators: false,
 
         cellMouseDown : function (viewer, record, rowNum, colNum) {
-            if (!viewer.canExpandRecords) return;
+            if (!viewer.canExpandRecords || record._isGroup) return;
             if (!viewer._canExpandRecord(record, viewer.getRecordIndex(record))) return;
             if (viewer.isExpanded(record)) viewer.collapseRecord(record);
             else viewer.expandRecord(record);
@@ -26854,8 +27263,9 @@ defaultFilterOperatorSuffix: "(default)",
         if (!this.shouldShowExpansionField()) return -1;
 
         var pos = 0;
-        if (this.shouldShowRowNumberField()) pos++;
-        if (this.shouldShowCheckboxField()) pos++;
+        if (this.shouldShowRowNumberField())  pos++;
+        if (this.shouldShowDragHandleField()) pos++;
+        if (this.shouldShowCheckboxField())   pos++;
         return pos;
     },
 
@@ -27862,28 +28272,29 @@ initWidget : function () {
         // flip the default to true.
         // This gives us the most intuitive behavior - if the developer specifies per-field
         // editability we'll respect it, otherwise we'll default to canEdit true
-        if (!this.isEditable()) {
-            this.logInfo("alwaysShowEditors has been set for this grid but canEdit is unset and " +
-              "no fields are explicitly marked as editable. Defaulting this.canEdit to true. " +
-              "Note that to avoid this override developers can explicitly specify canEdit " +
-              "at the grid or field level", "inactiveEditorHTML");
-            this.canEdit = true;
+        if (this.canEdit == null) {
+            var fields = this.getFields() || [],
+                hasEditableFields = false
+            ;
+            for (var i = 0; i < fields.length; i++) {
+                if (fields[i].canEdit == true) {
+                    hasEditableFields = true;
+                    break;
+                }
+            }
+
+            if (!hasEditableFields) {
+                this.logInfo("alwaysShowEditors has been set for this grid but canEdit is unset and " +
+                  "no fields are explicitly marked as editable. Defaulting this.canEdit to true. " +
+                  "Note that to avoid this override developers can explicitly specify canEdit " +
+                  "at the grid or field level", "inactiveEditorHTML");
+                this.canEdit = true;
+            }
         }
 
     }
 
-    // if we have variable record heights and virtualScrolling is unset, switch it on
-
-    if (this.canExpandRecords ||
-        (this.fixedRecordHeights == false && this.virtualScrolling == null))
-    {
-        // the _specifiedFixedRecordHeights flag is used by shouldShowAllColumns - we know
-        // that even though a row may exceed its cell height this isn't due to any cell's content
-        // in the row, so we don't need to render out every column to get correctly sized rows.
-        if (this.fixedRecordHeights) this._specifiedFixedRecordHeights = this.fixedRecordHeights;
-        this.fixedRecordHeights = false;
-        this.virtualScrolling = true;
-    }
+    this.updateFixedRecordHeights();
 
     // disable canAddFormulaField if the required component isn't present
     if (this.canAddFormulaFields && isc.FormulaBuilder == null) {
@@ -27935,6 +28346,9 @@ initWidget : function () {
 
     this._setUpDragProperties();
 
+    // set initial visibility of drag handles used for dragging records on touch devices
+    if (this.showInitialDragHandles) this._showDragHandles = this.showInitialDragHandles;
+
     if(!this.canResizeFields) this.canAutoFitFields=false;
 
 
@@ -27954,12 +28368,66 @@ initWidget : function () {
     delete this._initializing;
 },
 
+// Ensure that properties related to variable row heights are set correclty
+// This method is lazily called on body.draw() / redraw()
+
+// if we have variable record heights and virtualScrolling is unset, switch it on
+
+updateFixedRecordHeights : function () {
+
+    var variableRowHeights = (this.canExpandRecords || (this.fixedRecordHeights == false));
+    if (variableRowHeights != this._hasVariableRowHeights) {
+        this._hasVariableRowHeights = variableRowHeights;
+        if (variableRowHeights && this.virtualScrolling == null) {
+            // the _specifiedFixedRecordHeights flag is used by shouldShowAllColumns - we know
+            // that even though a row may exceed its cell height this isn't due to any cell's content
+            // in the row, so we don't need to render out every column to get correctly sized rows.
+            if (this.fixedRecordHeights) this._specifiedFixedRecordHeights = this.fixedRecordHeights;
+            this.fixedRecordHeights = false;
+            this.virtualScrolling = true;
+        }
+        if (this.body) {
+            this.body.fixedRowHeights = this.fixedRecordHeights;
+            this.body.virtualScrolling = this.virtualScrolling;
+        }
+        if (this.frozenBody) {
+            this.frozenBody.fixedRowHeights = this.fixedRecordHeights;
+            this.frozenBody.virtualScrolling = this.virtualScrolling;
+        }
+    }
+
+},
+
+//> @method listGrid.setFixedRecordHeights()
+// Setter for +link{listGrid.fixedRecordHeights}
+// @param fixedRecordHeights (boolean) New fixedRecordHeights value
+// @visibility external
+//<
+setFixedRecordHeights : function (fixedRecordHeights) {
+    this.fixedRecordHeights = fixedRecordHeights;
+    this.updateFixedRecordHeights();
+    if (this.isDrawn()) this.markForRedraw();
+},
+
+//> @method listGrid.setWrapCells()
+// Setter for +link{listGrid.wrapCells}
+// @param wrapCells (boolean) New wrapCells value
+// @visibility external
+//<
+setWrapCells : function (wrapCells) {
+    if (this.wrapCells == wrapCells) return;
+
+    this.wrapCells = wrapCells;
+    if (this.body) this.body.wrapCells = wrapCells;
+    if (this.frozenBody) this.frozenBody.wrapCells = wrapCells;
+    if (this.isDrawn()) this.markForRedraw();
+},
+
 
 _handleDualInputMouseMove : function (event, eventInfo) {
     if (event && event.DOMevent) {
         var domEvent = event.DOMevent,
-        mouseEvent = isc.Browser.pointerEnabled ? domEvent && domEvent.pointerType == "mouse" :
-            isc.EH.isMouseEvent(domEvent.type, true)
+            mouseEvent = isc.EH.isMouseEvent(domEvent.type, true, domEvent)
         ;
         if (mouseEvent) {
             isc.ListGrid.addProperties({ showRollOver: true});
@@ -27967,6 +28435,10 @@ _handleDualInputMouseMove : function (event, eventInfo) {
         }
     }
     return this.invokeSuper(isc.ListGrid, "handleMouseMove", event, eventInfo);
+},
+
+enableTouchSupport : function () {
+    isc.ListGrid.addProperties({ showRollOver: false});
 },
 
 _getHeaderButtonAutoChildConfig : function (property, isSpan) {
@@ -28129,6 +28601,13 @@ setData : function (newData, clearGroupBy) {
         // if the data was autoCreated, destroy it to clean up RS<->DS links
         if (this.data._autoCreated && isc.isA.Function(this.data.destroy))
             this.data.destroy();
+    }
+    if (this.originalData) {
+        this._ignoreData(this.originalData);
+        if (this.originalData != newData && this.originalData._autoCreated && isc.isA.Function(this.originalData.destroy)) {
+            this.originalData.destroy();
+        }
+        delete this.originalData;
     }
 
 
@@ -28621,9 +29100,7 @@ hasInherentWidth : function (a,b,c,d) {
 setAutoFitData : function (autoFitData) {
     this.autoFitData = autoFitData;
 
-    if (this._autoDerivedCanFreeze && (autoFitData == "both" || autoFitData == "horizontal"
-
-                                       || autoFitData == "vertical")) {
+    if (this._autoDerivedCanFreeze && (autoFitData == "both" || autoFitData == "horizontal")) {
         delete this._autoDerivedCanFreeze;
         delete this.canFreezeFields;
     }
@@ -28636,6 +29113,10 @@ setAutoFitData : function (autoFitData) {
     if (this.body) {
         this.body.autoFitData = this.autoFitData;
         this.body.adjustOverflow();
+    }
+    if (this.frozenBody) {
+        this.frozenBody.autoFitData = this.autoFitData;
+        this.frozenBody.adjustOverflow();
     }
 },
 
@@ -28922,6 +29403,15 @@ autoFitFields : function (fields) {
     // This will adjust header heights if necessary to account for differently wrapped
     // content
     if (this.header) this.header._sizeSpans();
+
+    // We always mark fieldWidths as dirty. If a redraw wasn't required
+    // we can assume the size was unchanged. Clear this flag now or it'll have other
+    // impacts such as suppressing scrolling
+    if (this.body && this.body._fieldWidthsDirty &&
+        !this.isDirty() && !this.body.isDirty())
+    {
+        delete this.body._fieldWidthsDirty;
+    }
 
 },
 
@@ -30020,7 +30510,7 @@ dataChanged : function (type, originalRecord, rowNum, updateData, filterChanged,
         var baton = this._asyncRegroupBaton,
             fields;
         if (baton) {
-            fields = baton.gropuByFields || baton.groupByField;
+            fields = baton.groupByFields || baton.groupByField;
         } else {
             fields = this.groupByFields || this._groupByFields;
         }
@@ -31649,6 +32139,28 @@ setFields : function (newFields) {
         if (rnField) this.completeFields.remove(rnField);
     }
 
+    // dragHandleField for forcing a drag over a scroll
+    if (this.shouldShowDragHandleField()) {
+        var dragHandleField = this.getCurrentDragField(),
+            shouldAdd = !dragHandleField
+        ;
+        if (shouldAdd && newFields && newFields.find(this.fieldIdProperty, "_dragHandleField"))
+        {
+            shouldAdd = false;
+        }
+        if (shouldAdd) dragHandleField = this.getDragField();
+
+        // avoid adding the drag handle field at position 1 when there's nothing at position 0
+        var dragPos = this.getDragFieldPosition();
+        if (dragPos > this.completeFields.length) dragPos = this.completeFields.length;
+
+        if (shouldAdd) this.completeFields.addAt(dragHandleField, dragPos);
+        else this.completeFields.slideList([dragHandleField], dragPos);
+    } else {
+        var dragHandleField = this.getCurrentDragField();
+        if (dragHandleField) this.completeFields.remove(dragHandleField);
+    }
+
     // checkboxField for selection
     if (this.shouldShowCheckboxField()) {
         var cbField = this.getCurrentCheckboxField(),
@@ -32416,7 +32928,8 @@ getCheckboxFieldPosition : function () {
     if (this.selectionAppearance != "checkbox" || isc.isA.TreeGrid(this)) return -1;
 
     var pos = 0;
-    if (this.shouldShowRowNumberField()) pos++;
+    if (this.shouldShowRowNumberField())  pos++;
+    if (this.shouldShowDragHandleField()) pos++;
     return pos;
 },
 
@@ -35216,7 +35729,7 @@ redrawHeader : function(rightNow) {
 // <smartgwt><p>
 // <b>Note: This is an override point.</b></smartgwt>
 //
-// @param   [record] (ListGridRecord) Record associated with this cell. May be <code>null</code>
+// @param   record (ListGridRecord) Record associated with this cell. May be <code>null</code>
 //                                  for a new edit row at the end of this grid's data set.
 // @param   rowNum  (number)    row number for the cell
 // @param   colNum  (number)    column number of the cell
@@ -35287,8 +35800,14 @@ getCellCSSText : function (record, rowNum, colNum) {
     // per-record cssText
     if (record) {
 
-        if (!record._isGroup && this.fieldSourceGrid == null && field != null && this.showValueIconOnly(field)) {
-            cssText = "line-height:0px;";
+        if (this.fieldSourceGrid == null && field != null && this.showValueIconOnly(field)) {
+
+            if (!record._isGroup || this.canCollapseGroup ||
+                !this._shouldUseGroupNodeHTML(this.getFieldBody(colNum), colNum,
+                                              this._isGroupTitleField(field)))
+            {
+                cssText = "line-height:0px;";
+            }
         }
 
         var recordCSSText = record[this.recordCSSTextProperty];
@@ -35302,7 +35821,7 @@ getCellCSSText : function (record, rowNum, colNum) {
         cssText = cssText != null ? cssText + removedCSSText : removedCSSText;
     } else {
 
-        if (this.isEditable()) {
+        if (this.hasBeenEdited(rowNum)) {
             var editCSSText;
             if (this.editFailedBaseStyle == null && (editCSSText = this.editFailedCSSText) &&
                 this.cellHasErrors(rowNum, colNum))
@@ -35662,14 +36181,8 @@ getCellValue : function (record, recordNum, fieldNum, gridBody) {
         if (record._isGroup && fieldNum != null) {
 
             var currentField = this.fields[fieldNum],
-                groupTitleField = this.getGroupTitleField(),
-                isGroupTitleField;
-            if (groupTitleField == null) {
-                isGroupTitleField = currentField._isGroupTitleColumn;
-            } else {
-                isGroupTitleField = currentField.name == groupTitleField;
-            }
-
+                isGroupTitleField = this._isGroupTitleField(currentField)
+            ;
             if (this.showGroupSummaryInHeader && this.showGroupSummary &&
                 currentField.name == record.groupName)
             {
@@ -35684,15 +36197,13 @@ getCellValue : function (record, recordNum, fieldNum, gridBody) {
             // If we're showing multiple fields and we're not showing a summary in the
             // header, explicitly empty all fields except the groupTitleField
             var isCheckboxField = this.isCheckboxField(this.getField(fieldNum));
+            var isRowNumberField = this.isRowNumberField(this.getField(fieldNum));
 
-            if ((!this.canSelectGroups || !isCheckboxField) &&
-                ((this.singleCellGroupHeaders() && !gridBody._gettingAutoSizeHTML)
-                    || isGroupTitleField))
-            {
+            if (this._shouldUseGroupNodeHTML(gridBody, fieldNum, isGroupTitleField)) {
                 return this.getGroupNodeHTML(record, gridBody);
-            } else if (isCheckboxField ?
-                        !this.canSelectGroups :
-                        !this.showGroupSummaryInHeader)
+
+            } else if (isCheckboxField ? !this.canSelectGroups :
+                        (isRowNumberField || !this.showGroupSummaryInHeader))
             {
                 return isc.nbsp;
             }
@@ -35924,7 +36435,7 @@ getCellValue : function (record, recordNum, fieldNum, gridBody) {
 
             // Only show error icon HTML if we're not showing an editor for the cell - otherwise
             // we'd get doubled error icons.
-            if (this.isEditable() && this.showErrorIcons && this.cellHasErrors(recordNum, fieldNum)) {
+            if (this.hasBeenEdited(recordNum) && this.showErrorIcons && this.cellHasErrors(recordNum, fieldNum)) {
                 value = this.getErrorIconHTML(record, recordNum, fieldNum) + value;
             }
 
@@ -35933,7 +36444,9 @@ getCellValue : function (record, recordNum, fieldNum, gridBody) {
             var hilites = this.getFieldHilites(record, field);
             // Note that hilites can == 0, so if(hilites) won't work
             if (hilites != null) {
-                if (!record || (record && !record.isGroupSummary) || (this.showHilitesInGroupSummary && field.showHilitesInGroupSummary != false)) {
+                if (!record || (record && !record.isGroupSummary) ||
+                    (this.showHilitesInGroupSummary && field.showHilitesInGroupSummary != false))
+                {
                     value = this.applyHiliteIcon(hilites, field, value);
                 }
             }
@@ -35998,7 +36511,7 @@ getRawValue : function (record, fieldName) {
     return this.getRawCellValue(record, recordIndex, fieldName, true);
 },
 
-getFormattedValue : function (record, fieldName, value, alwaysFormatValue) {
+getFormattedValue : function (record, fieldName, value, alwaysFormatValue, forExport) {
     var recordIndex = this.getRecordIndex(record),
         field = this.getSpecifiedField(fieldName),
         fieldNum = this.getFieldNum(fieldName);
@@ -36028,7 +36541,8 @@ getFormattedValue : function (record, fieldName, value, alwaysFormatValue) {
             }
         }
     }
-    var ret = this._formatCellValue(value, record, field, recordIndex, fieldNum, alwaysFormatValue);
+    var ret = this._formatCellValue(value, record, field, recordIndex, fieldNum,
+                                    alwaysFormatValue, forExport);
     return ret;
 
 },
@@ -36709,8 +37223,8 @@ _handleErrorIconOut : function (rowNum, colNum) {
 // _formatCellValue: Helper method to format the static cell value using developer defined
 // formatCellValue() methods.
 _$text:"text",
-_formatCellValue : function (value, record, field, rowNum, colNum, alwaysFormatValue) {
-
+_formatCellValue : function (value, record, field, rowNum, colNum, alwaysFormatValue, forExport)
+{
     if (field && field.userSummary) {
         value = this.getSummaryFieldValue(field, record);
 
@@ -36780,14 +37294,17 @@ _formatCellValue : function (value, record, field, rowNum, colNum, alwaysFormatV
             // listGrid-wide formatter
             } else if (this.formatCellValue != null) {
                 value = this.formatCellValue(value, record, rowNum, colNum);
-            } else if (field && field.format && (isc.isA.Number(value) || isc.isA.Date(value))) {
-                value = isc.isA.Number(value) ? isc.NumberUtil.format(value, field.format)
-                                              : isc.DateUtil.format(value, field.format);
+
+            } else if ((valueFormat = forExport ? this.getDeclarativeFormat(field) :
+                                                  field && field.format) &&
+                       (isc.isA.Number(value) || isc.isA.Date(value)))
+            {
+                value = isc.isA.Number(value) ? isc.NumberUtil.format(value, valueFormat)
+                                              :   isc.DateUtil.format(value, valueFormat);
 
             } else if (isc.CubeGrid && isc.isA.CubeGrid(this) &&
                        (isc.isA.Number(value) || isc.isA.Date(value)) &&
-                       (valueFormat = this.getValueFormat(rowNum, colNum)) != null)
-
+                       (valueFormat = this.getValueFormat(rowNum, colNum, forExport)) != null)
             {
                 value = isc.isA.Number(value) ? isc.NumberUtil.format(value, valueFormat)
                                               :   isc.DateUtil.format(value, valueFormat);
@@ -36839,7 +37356,7 @@ _gettingInactiveCellHTML : function (rowNum, colNum) {
     if (body && body._gettingAutoSizeHTML) return true;
 
     // row height spacer HTML
-    if (body._gettingRowHeightSpacerHTML) return true;
+    if (body && body._gettingRowHeightSpacerHTML) return true;
 
     return false;
 },
@@ -37078,7 +37595,13 @@ getEditItemCellValue : function (record, rowNum, colNum) {
 
     // Ensure the item.canEdit flag is correct
 
-    if (item.canEdit != null) item.canEdit = this.canEditCell(rowNum, colNum);
+    if (item.canEdit != null) {
+        var field = this.getUnderlyingField(itemName);
+        if (!field || !field.editorProperties || !isc.propertyDefined(field.editorProperties, "canEdit")) {
+            // the field's editorProperties do not specify a canEdit value - use cell editability
+            item.canEdit = this.canEditCell(rowNum, colNum);
+        }
+    }
 
     var body = item.containerWidget;
 
@@ -37235,13 +37758,7 @@ _editItemsDrawingNotification : function (item, fireMoved, gr) {
         } else if (isDrawn) {
             // newly drawn
 
-            if (isCanvasItem) {
-                if (currentItem.canvas.parentElement != currentItem.form) {
-                    // add the canvas to the form as a child, so it's offsets are correct
-                    currentItem.form.addChild(currentItem.canvas);
-                }
-                currentItem.placeCanvas(true);
-            }
+            if (isCanvasItem) currentItem.placeCanvas();
             currentItem.drawn(true);
         // Sanity check only - if we have a hidden / undrawn canvasItem, with a drawn
         // canvas, clear it.
@@ -39679,7 +40196,10 @@ rowClick : function (record, recordNum, fieldNum, keyboardGenerated) {
 
     // if the cell is editable on click, edit it now
     // We also start editing if editOnFocus is true.
-    var editOnClick = this.isEditable() && (this.editEvent == isc.EH.CLICK || this.editOnFocus);
+    var editOnClick = this.canEdit != false && (this.editEvent == isc.EH.CLICK || this.editOnFocus);
+    // Exception - if the user clicked the checkbox field we don't want to start editing
+
+    if (this.isCheckboxField(field)) editOnClick = false;
 
     // one-click toggling of boolean/valueMapped fields.
     // Note: also allows entering of editing if editEvent is click.
@@ -39821,7 +40341,7 @@ rowDoubleClick : function (record, recordNum, fieldNum, keyboardGenerated) {
 
     // if the cell is editable, edit it now
     //  (editCell will return true if we've brought up the cell editor)
-    if (this.isEditable() && this.editEvent == isc.EH.DOUBLE_CLICK) {
+    if (this.canEdit != false && this.editEvent == isc.EH.DOUBLE_CLICK) {
         if (this.handleEditCellEvent(recordNum, fieldNum, isc.ListGrid.DOUBLE_CLICK) == true) return true;
         // If this was a keyboard event, and the keyboard click field is not editable, iterate
         // through the other fields, and edit the first editable one we find
@@ -40620,7 +41140,7 @@ selectOnExpandRecord: true,
 //  <td><code>false</code></td>
 //      <td><code>true</code>, <code>false</code> or <i>unset</i></td>
 //          <td>Cell contents will not be natively selected on click.</td>
-// </tr><table>
+// </tr></table>
 // <P>
 // This is related to the +link{listGrid.canDragSelectText} attribute which enables
 // native text selection of grid content by standard browser interactions (drag
@@ -40823,7 +41343,7 @@ bodyKeyPress : function (event, eventInfo) {
             keyName = event.keyName;
 
         // for arrow keys, navigate to the appropriate record
-        var editOnKeyPress = this.editOnKeyPress && this.isEditable();
+        var editOnKeyPress = this.editOnKeyPress && this.canEdit != false;
         if (editOnKeyPress && this._editOnKeyPress(event, eventInfo)) return false;
 
         var focusCell = this.getFocusCell();
@@ -40930,7 +41450,7 @@ bodyKeyPress : function (event, eventInfo) {
 
         // Start editing on f2 keypress if editOnF2Keypress is true.
         } else if (keyName == this._$f2 && this.editOnF2Keypress &&
-                    this.isEditable() && this.editEvent != "none")
+                    this.canEdit != false && this.editEvent != "none")
         {
             var rowNum, colNum;
             if (this.canSelectCells && this.editByCell) {
@@ -41133,7 +41653,7 @@ focusInCell : function (row, col) {
 
     this._hiliteCell(row, col);
 
-    if (!body.hasFocus()) body.focus();
+    if (!body.hasFocus) body.focus();
 
 },
 
@@ -41297,7 +41817,8 @@ _navigateToNextRecord : function (step, checkFirst, navStyle, suppressScroll) {
 
     // By default we want the last row that had keyboard focus
 
-    newSelectionIndex = this.getFocusRow(step > 0, isc.EH.shiftKeyDown());
+
+    newSelectionIndex = this.getFocusRow(step > 0, isc.EH.shiftKeyDown() && navStyle != this._$focus);
 
     // Otherwise, get the last record clicked
     if (newSelectionIndex == null) newSelectionIndex = this._lastRecordClicked;
@@ -41494,6 +42015,9 @@ getFocusRow : function (last, hiliteOnly) {
     // If neither of these are true, we can assume a subsequent mouse event has occurred over
     // a different row, effectively invalidating the _lastHiliteRow property, so should be
     // ignored and deleted
+    // (Note that if showRollOver is false but hiliteFocusRow is true we never change the
+    // "lastOverRow" on mouse move events, so we would only expect to see a mismatch
+    // between lastOverRow and _lastHiliteRow if showRollOver is true)
     if (this.body._lastHiliteRow != null &&
         ((this.body._lastHiliteRow == this.body.lastOverRow) ||
          (this.body._lastHiliteRow == this._lastRecordClicked)) )
@@ -43894,7 +44418,11 @@ getFieldFilterEditorProperties : function (field) {
                 // fieldName to be considered editable
                 if (criterion.fieldName != null && criterion.fieldName == this.getCriteriaFieldName()) {
                     // get the ops for the criteriaField, which might not be the actual field
-                    var ops = this.grid.getFieldUIOperatorList(criterion.fieldName, null, true);
+                    var ds = this.grid.getDataSource();
+                    var field = this.grid.getUnderlyingField(criterion.fieldName);
+                    // allowed if valid for the field's type
+                    var ops = ds.getTypeOperatorMap(field.type, true);
+
                     return ops[criterion.operator] != null;
                 }
                 return this.Super("canEditCriterion", arguments);
@@ -43903,7 +44431,15 @@ getFieldFilterEditorProperties : function (field) {
 
             _getInlineLeftPadding : function (style) { return 1; },
             _getInlineRightPadding : function (style) { return 1; },
-            showContextMenu : function () {
+            showContextMenu : function (form, item, event) {
+
+                if (event && isc.Browser.isTouch) {
+                    var nativeTarget = event.nativeTarget,
+                        textBox = this._getTextBoxElement();
+                    if (textBox && textBox.contains && textBox.contains(nativeTarget)) {
+                        return;
+                    }
+                }
 
                 var grid = this.grid.sourceWidget,
                     items = grid.getFilterOperatorMenuItems(this.lgField, true),
@@ -43915,6 +44451,7 @@ getFieldFilterEditorProperties : function (field) {
                 menu.setItems(items);
                 var button = grid.getFieldHeaderButton(grid.getFieldNum(this.lgField));
                 menu.showContextMenu(button);
+
                 return false;
             }
         });
@@ -44297,6 +44834,7 @@ _adjustSpecialPeers : function (newIndex) {
 // @visibility external
 //<
 canEditCell : function (rowNum, colNum) {
+    if (this.canEdit == false) return false;
     // just return if passed bad colNum
     if (colNum < 0 || colNum >= this.fields.length) return false;
 
@@ -44326,11 +44864,6 @@ canEditCell : function (rowNum, colNum) {
     if (field && field.type == "summary") return false;
     // otherwise check the cascaded canEdit property
     if (
-        // Note: the isEditable() check is required as 'getCellBooleanProperty' will not return
-        // false if the record's "_canEdit" property is set to 'true', but canEdit is unset at
-        // the field and listGrid level, and we don't allow editing cells when canEdit is
-        // not set at both the listGrid and field level.
-        !this.isEditable() ||
         this.getCellBooleanProperty(
                 "canEdit",
                 rowNum,
@@ -44346,39 +44879,12 @@ canEditCell : function (rowNum, colNum) {
     return true;
 },
 
-//> @method listGrid.isEditable()   (A)
-//  Looks at the 'canEdit' property on both the listGrid and the set of fields to
-//  determine whether any cells in this listGrid can be edited.
-//  @return (boolean)   true if any fields in this listGrid can be edited.
-//<
-_$true:"true",
-isEditable : function () {
-    // A field can be edited if:
-    // listGrid.canEdit is true, and field.canEdit is not set to false
-    // listGrid.canEdit is unset, and field.canEdit is set to true
-    // No field can be edited if listGrid.canEdit is set to false.
-
-    if (this.canEdit == false) return false;
-
-    if (this.canEdit == true || this.canEdit == this._$true) {
-        var fields = this.getFields() || [];
-        for (var i = 0; i < fields.length; i++) {
-            if (fields[i].canEdit != false) return true;
-        }
-        return false;
-    } else {
-        // this.canEdit is null
-        var fields = this.getFields() || [];
-        for (var i = 0; i < fields.length; i++) {
-            if (fields[i].canEdit == true) return true;
-        }
-        return false;
-    }
-},
-
 //> @method listGrid.fieldIsEditable()
 // Can the field be edited?  This method looks at +link{canEdit} for the grid as well as the
-// +link{listGridField.canEdit} value, to determine whether editing is actually allowed.
+// +link{listGridField.canEdit} value, to determine whether editing is allowed. This method's
+// return value is not authoritative for editibility since +link{canEditCell} could return
+// a more specific value.
+// <p>
 // For a detailed discussion, see the documentation at +link{canEdit}.
 //
 // @param field (ListGridField | number | FieldName) field object, number, or name
@@ -44387,9 +44893,22 @@ isEditable : function () {
 // @group editing
 // @visibility external
 //<
+_$true:"true",
 fieldIsEditable : function (field) {
-    var colNum = this.getFieldNum(field);
-    return this.canEditCell(null, colNum);
+    // A field can be edited if:
+    // listGrid.canEdit is true, and field.canEdit is not set to false
+    // listGrid.canEdit is unset, and field.canEdit is set to true
+    // No field can be edited if listGrid.canEdit is set to false.
+
+    if (this.canEdit == false) return false;
+
+    if (!isc.isAn.Object(field)) field = this.getField(field);
+    if (this.canEdit == true || this.canEdit == this._$true && field.canEdit != false) {
+        return true;
+    } else if (this.canEdit == null && field.canEdit == true) {
+        return true;
+    }
+    return false;
 },
 
 //> @method listGrid.setCanEdit()
@@ -44533,6 +45052,23 @@ handleEditCellEvent : function (rowNum, colNum, event, newValue) {
 
     // startEditing will save out the value in the previous edit cell if necessary...
     return this.startEditing(rowNum, colNum, null, event);
+},
+
+//> @method listGrid.hasBeenEdited()
+// Returns true if record has been edited. That is, either the row editors
+// have been shown or edit values have been saved.
+// <p>
+// Can be used in high-call methods because the response is instantanious.
+//
+// @param rowNum (Number | Object) rowNum or record to check
+//<
+hasBeenEdited : function (rowNum) {
+    if (rowNum == null) return false;
+    rowNum = (isc.isAn.Object(rowNum) ? this.getRecordIndex(rowNum) : rowNum);
+    if (rowNum == null) return false;
+    var editSession = this.getEditSession(rowNum);
+    if (editSession == null) return false;
+    return (editSession._editorsShown || editSession._editValuesSaved);
 },
 
 // Show/Hide Inline Editor
@@ -44889,7 +45425,6 @@ _shouldParkFocus : function (editItem, currentRowNum, newRowNum, newColNum) {
 // o Does not save / modify pending edit values for some other cell/row
 _startEditing : function (rowNum, colNum, suppressFocus) {
 
-
     if (rowNum == "delayed") {
         // we're firing from a timer for a delayed edit
 
@@ -44950,7 +45485,6 @@ _startEditing : function (rowNum, colNum, suppressFocus) {
         this.getEditForm().focusInItem(this.getEditorName(rowNum, colNum));
         return;
     }
-
     //>DEBUG
     this.logInfo("Starting editing at row " + rowNum + ", colNum " + colNum, "gridEdit");
     //<DEBUG
@@ -45051,6 +45585,13 @@ _startEditing : function (rowNum, colNum, suppressFocus) {
 
     // When showing editor the first time or when changing rows update rule context
     if (changingRow && !suppressFocus) this._provideEditRecordToRuleContext();
+
+    // Set flag on row editSession to indicate editors have been shown for this record.
+    // Used by ListGrid.hasBeenEdited().
+    var editSession = this.getEditSession(rowNum, colNum);
+    if (editSession) {
+        editSession._editorsShown = true;
+    }
 
     return true;
 
@@ -45364,7 +45905,6 @@ showInlineEditor : function (rowNum, colNum, newCell, newRow, suppressFocus) {
         if (newRow) focusItem._rowEnterOnFocus = true;
         // focus in the field being edited if appropriate
         if (!suppressFocus) {
-
             if (isc.Browser.isMoz) {
 
                 var handle = this.body.getClipHandle(),
@@ -45884,6 +46424,8 @@ hideInlineEditor : function (focusInBody, suppressCMHide, shiftFocus) {
 
     // Editor is hidden so it cannot have focus
     this._provideEditFocusToRuleContext(null);
+
+    this.markForRedraw();
 
     return true;
 },
@@ -46874,7 +47416,11 @@ getEditItem : function (editField, record, editedRecord, rowNum, colNum, width, 
     // (fields derived from other DSs etc) but we have custom logic to allow editing
     // so should override this setting at the component level...
     if (editField.canEdit != null) {
-        item.canEdit = this.canEditCell(rowNum, colNum);
+        var field = editField;
+        if (!field || !field.editorProperties || !isc.propertyDefined(field.editorProperties, "canEdit")) {
+            // the field's editorProperties do not specify a canEdit value - use cell editability
+            item.canEdit = this.canEditCell(rowNum, colNum);
+        }
     }
 
     if (editField.disabled != null) item.disabled = editField.disabled;
@@ -47367,7 +47913,6 @@ cancelPendingCellRefresh : function () {
 // - if the item had focus, re-set focus (and selection).
 
 refreshCellValue : function (rowNum, colNum, refreshingRow, allowEditCellRefresh) {
-
     if (!this.isDrawn() || !this.body) return;
 
     var body = this.getFieldBody(colNum),
@@ -47459,9 +48004,6 @@ refreshCellValue : function (rowNum, colNum, refreshingRow, allowEditCellRefresh
 
         this._editItemsDrawingNotification(editItem, null, body);
         if (cellWillShowEditor) {
-            // restore the element value (since it's not written out with the element)
-
-            editItem.setValue(this.getEditDisplayValue(rowNum, colNum));
             delete this._drawingItem;
             // restore focus if it had focus
 
@@ -48402,6 +48944,12 @@ _storeEditValues : function (rowNum, colNum, editValues, editValuesId) {
         this._provideEditRecordToRuleContext(editValues);
     }
 
+    // Set flag on row editSession to indicate editValues have been saved for this record.
+    // Used by ListGrid.hasBeenEdited().
+    var editSession = this.getEditSession(rowNum, colNum);
+    if (editSession) {
+        editSession._editValuesSaved = true;
+    }
 },
 
 // Helper method - gets the default value to show in an editor for a field (if no explicit value
@@ -48499,14 +49047,14 @@ setEditValue : function (rowNum, colNum, newValue, suppressDisplay, suppressChan
         dataPath;
 
     if (isc.isA.Number(colNum)) {
-        field = this.getField(colNum);
+        field = this.getUnderlyingField(colNum);
         fieldName = field ? field[this.fieldIdProperty] : null
 
         dataPath = this.getEditorName(rowNum, field, true);
     } else {
         // Passed a field name - find the associated field
         var fieldName = colNum,
-            field = this.getField(fieldName);
+            field = this.getUnderlyingField(fieldName);
         if (field != null) {
             // convert to datapath for values management if necessary
             dataPath = this.getEditorName(rowNum, field, true);
@@ -48549,7 +49097,7 @@ setEditValue : function (rowNum, colNum, newValue, suppressDisplay, suppressChan
             this.fieldValuesAreEqual(field, editForm.getValue(fieldName), newValue))
         {
             hasDisplayValue = true;
-            displayValue = editItem.mapValueToDisplay(newValue);
+            displayValue = editItem._getDisplayValue(newValue);
         }
         // Otherwise, if we're looking at data from our own dataSource, reach into our
         // data array and see if we can find a record to lazily perform a mapping with
@@ -51444,22 +51992,34 @@ saveEdits : function (editCompletionEvent, callback, rowNum, colNum, validateOnl
     // NOTE: we always save, and validate the whole row, even if saveByCell is true
     // as saveByCell really governs when the save is kicked off rather than what is
     // to be saved.
+    if (!skipValidation && this._validationEnabled()) {
 
-    if (haveChanges && !skipValidation && this._validationEnabled()) {
+        // if changes are present, we must perform validation
+        if (haveChanges) {
 
-        this._skipServerValidation = (validateOnly || haveChanges);
+            this._skipServerValidation = (validateOnly || haveChanges);
 
-        var validationFailed;
-        if (this.useCellRecords) {
-            validationFailed = !this.validateCell(rowNum, colNum);
+            var validationFailed;
+            if (this.useCellRecords) {
+                validationFailed = !this.validateCell(rowNum, colNum);
+            } else {
+                validationFailed = !this.validateRow(rowNum);
+            }
+            this._skipServerValidation = null;
+
+            if (validationFailed) {
+                if (!validateOnly) this._editFailedCallback(editInfo, callback);
+                return false;
+            }
+
+        // no changes - clear any validation errors if present
+
         } else {
-            validationFailed = !this.validateRow(rowNum);
-        }
-        this._skipServerValidation = null;
-
-        if (validationFailed) {
-            if (!validateOnly) this._editFailedCallback(editInfo, callback);
-            return false;
+            if (this.useCellRecords) {
+                if (this.cellHasErrors(rowNum, colNum)) this.clearFieldError(rowNum, colNum);
+            } else {
+                if (this.rowHasErrors(rowNum)) this.clearRowErrors(rowNum);
+            }
         }
     }
     // If we're only validating return true here to indicate that validation passed.
@@ -51470,8 +52030,7 @@ saveEdits : function (editCompletionEvent, callback, rowNum, colNum, validateOnl
         // been made.
         // In this case, retain the edit values.
         // Otherwise they are basically empty / match the record values, so remove 'em
-        // But NOT if there are errors - the editSession stores the error state as well as the values!
-        if (!this.hasSubmittedEditValues(editValuesID, colNum) && !this.rowHasErrors(rowNum, colNum)) {
+        if (!this.hasSubmittedEditValues(editValuesID, colNum)) {
             this._clearEditValues(editValuesID, colNum);
         }
         // fire the saveCallback to finish flow (eg move to next cell, end editing..)
@@ -51598,15 +52157,12 @@ recordHasChanges : function (rowNum, colNum, checkEditor) {
         if (fields[i].name == this.removeRecordProperty) continue;
         var dataPath = fields[i].dataPath || fields[i].name;
         if (dataPath != null) {  // If null, field has neither a name nor a dataPath - ignore it
-            if (pathsProcessed[dataPath]) continue;
+            if (pathsProcessed[dataPath] && !isc.isA.FormItem(fields[i])) {
+                continue;
+            }
             pathsProcessed[dataPath] = fields[i];
-
-            var oldFieldValue = isc.DataSource ?
-                                    isc.DataSource.getFieldValue(null, testValues, dataPath, null, "compare") :
-                                    testValues[dataPath];
-            var newFieldValue = isc.DataSource ?
-                                    isc.DataSource.getFieldValue(null, newValues, dataPath, null, "compare") :
-                                    newValues[dataPath];
+            var oldFieldValue = isc.Canvas._getFieldValue(dataPath, null, testValues, null, true, "compare", true);
+            var newFieldValue = isc.Canvas._getFieldValue(dataPath, null, newValues, null, true, "compare", true);
             var partialPaths = dataPath.split('/');
             if (partialPaths.length > 1) {
                 var pPath = "";
@@ -54056,10 +54612,13 @@ removeRecord : function (rowNum, record) {
                               this.body &&
                               rowNum >= this.body._firstDrawnRow &&
                               rowNum <= this.body._lastDrawnRow;
-
+    // Avoid attempting to do animatedResize when we have variable row heights and frozen
+    // fields. The rowHeightSpacerHTML breaks the appearance during the resize
+    if (this.fixedRecordHeights == false && this.frozenFields != null) {
+        animateRemoveRecord = false;
     // Don't attempt to animate remove rows with embedded components. Since the components
     // won't be clipped by the animation it'll look funky.
-    if (this._hasEmbeddedComponents(record)) {
+    } else if (this._hasEmbeddedComponents(record)) {
         animateRemoveRecord = false;
     }
 
@@ -54091,6 +54650,7 @@ removeRecord : function (rowNum, record) {
     if (animateRemoveRecord) {
         callback = this.getID() + ".showRemoveCompleteAnimation(" + rowNum + ", data,dsResponse);";
     }
+
     this.removeData(record, callback, {showPrompt:false}, true);
 },
 
@@ -54303,6 +54863,9 @@ _suppressLayoutDrag:true,
 dragStart : function () {
     // if dragging means drag-selection, we do nothing until dragMove
     if (this.canDragSelect) return true;
+
+
+    if (!this._shouldAllowRecordDrag()) return false;
 
     // get the records to be dragged
     var dragData = this.getDragData();
@@ -54887,6 +55450,7 @@ getCellField : function (rowNum, colNum) {
 // specified implicitly, use +link{getAllFields()}.
 //
 // @return (Array of ListGridField) Array of all currently visible fields
+// @visibility external
 //<
 getFields : function () {
     return this.fields;
@@ -59293,7 +59857,7 @@ headerClick : function (fieldNum, header) {
     var field = this.fields[fieldNum];
     // check if the checkbox column header was clicked
     if (this.isCheckboxField(field) && this.selectionType != "single" && this.canSelectAll != false) {
-        if (field._allSelected) {
+        if (field._allSelected || (field._partialSelected && this.deselectOnPartialCheckboxClick)) {
             this.deselectAllRecords();
             this._setCheckboxHeaderState(false);
         } else {
@@ -60828,16 +61392,18 @@ setFieldSearchOperator : function (field, operator) {
     ;
 
     if (item) {
-        // clear the value if the valueType changed or there's a valueMap that no longer
-        // contains the value
+        // clear the value if the valueType changed, if there's a valueMap that no longer
+        // contains the value, or if the new op requires no value
         if (!sameValueType && this.allowFilterExpressions != true) {
             // different types - only clear the value if allowFilterExpressions is false
             item.clearValue();
         } else if (item.optionDataSource || item.getValueMap() &&
                 (item._valueInValueMap && !item._valueInValueMap(item.getValue())))
         {
+            // value is no longer in ODS or valueMap
             item.clearValue();
-        } else if (oldOp && oldOp.valueType == "none" && operator && operator.valueType != "none") {
+        } else if (operator && operator.valueType == "none") {
+            // if the new operator requires no value, clear the value
             item.clearValue();
         }
     }
@@ -60866,12 +61432,11 @@ setFieldSearchOperator : function (field, operator) {
         if (!item.getCanEdit()) {
             item.setCanEdit(true);
         }
-        if (this.filterOnKeypress && item) {
-            if (oldOp && oldOp.valueType == "none" && operator && operator.valueType != "none") {
-                // if filterOnKeypress is true and the old operator has valueType: "none", kick
-                // off a filter here - otherwise, the user would have to click the filter-button
-                this.getFilterEditor().editorChanged(item);
-            }
+        if (item && (this.filterOnKeypress || (oldOp && oldOp.valueType == "none"))) {
+            // if filterOnKeypress is true, or the old operator has valueType: "none", kick
+            // off a filter here - otherwise, the user would have to click the filter-button
+            // or press Enter
+            this.getFilterEditor().editorChanged(item);
         }
         this.focusInFilterEditor(field.name);
     }
@@ -65202,10 +65767,17 @@ clearGroupBy : function (setAsyncFinalConfig) {
         this.preserveEditsOnSetData = pose;
         delete this.originalData;
 
-        // Clear our pointer to this.groupTree if we have one.
-        // Note: setData will actually destroy the groupTree if it's currently being shown
-        // (As it destroys this.data)
-        delete this.groupTree;
+        // If we have a groupTree, destroy it
+
+        if (this.groupTree) {
+
+            isc.Tree.removeNodeMetaData(isc.isA.ResultSet(this.data) ? this.data.allRows : this.data, false, false, this.groupTree);
+
+            this.ignore(this.groupTree, "changeDataVisibility");
+            this.groupTree.destroy();
+            delete this.groupTree;
+        }
+
     }
 
     // in the case where showGroupSummaryInHeader is true we may have created a
@@ -65362,6 +65934,12 @@ getGroupNodeHTML : function (node, gridBody) {
                                         : groupIndent) +
                  iconIndent + groupTitle;
     return retStr;
+},
+
+_shouldUseGroupNodeHTML : function (gridBody, fieldNum, isGroupTitleField) {
+    var checkboxFieldPos = this.getCheckboxFieldPosition();
+    return (!this.canSelectGroups || fieldNum > checkboxFieldPos) &&
+        (this.singleCellGroupHeaders() && !gridBody._gettingAutoSizeHTML || isGroupTitleField);
 },
 
 // Override shouldCascadeSelection - if we're grouped we want cascading selection
@@ -66162,6 +66740,7 @@ propertyChanged : function (propName, value) {
     }
     if (this._$gridPropertyRenames[propName] != null) {
         this.body.setProperty(this._$gridPropertyRenames[propName], value);
+
         // markForRedraw to display the changes
 
         this.markForRedraw();
@@ -67430,6 +68009,7 @@ isc.ListGrid.classInit();
 // </ul>
 // If unset, default behavior is to identify by primary key (if available), otherwise by
 // titleField (if available), otherwise by cell value (if available), and lastly by index.
+// @see locatorStrategy
 // @visibility external
 // @group autoTest
 //<
@@ -67447,7 +68027,7 @@ isc.ListGrid.classInit();
 // <li><code>"index"</code> Attempt to identify by colNum (index in the fields array).</li>
 // </ul>
 // If unset, default behavior is to identify by fieldName (if available), otherwise by index.
-//
+// @see locatorStrategy
 // @visibility external
 // @group autoTest
 //<
@@ -68540,7 +69120,7 @@ isc.TreeGrid.addProperties({
     // @see TreeNode.canAcceptDrop
     //  @group    dragdrop
     // @visibility external
-    // @example dragReparent
+    // @example treeDragReparent
     //<
     //canAcceptDroppedRecords:false,
 
@@ -68550,7 +69130,7 @@ isc.TreeGrid.addProperties({
     // @see TreeNode.canAcceptDrop
     // @group dragdrop
     // @visibility external
-    // @example dragReparent
+    // @example treeDragReparent
     //<
     //canReorderRecords:false,
 
@@ -70084,6 +70664,25 @@ bodyKeyPress : function (event) {
                 }
             }
         }
+    // Otherwise, support left/right arrow closing/opening of folders only
+    } else {
+        var node = this.getRecord(this.getFocusRow());
+
+        // Left/right arrow key interaction if we can expand records:
+        // - allow right arrow to open a folder
+        // - allow left arrow to close a folder
+        if (event.keyName == "Arrow_Left") {
+            if (this.data.isFolder(node) && this.data.isOpen(node)) {
+                this.closeFolder(node);
+                return false;
+            }
+
+        } else if (event.keyName == "Arrow_Right") {
+            if (this.data.isFolder(node) && !this.data.isOpen(node)) {
+                this.openFolder(node);
+                return false;
+            }
+        }
     }
 
     return this.Super("bodyKeyPress", arguments);
@@ -70278,7 +70877,7 @@ recordDoubleClick : function (viewer, record, recordNum, field, fieldNum, value,
     if (this.clickInOpenArea(record) || this.clickInCheckboxArea(record)) return false;
     // If this is an editable grid, don't toggle the folder, but do return true to allow
     // editing to proceed.
-    if (this.isEditable() && this.editEvent == isc.EH.DOUBLE_CLICK &&
+    if (this.canEdit != false && this.editEvent == isc.EH.DOUBLE_CLICK &&
         this.canEditCell(recordNum,fieldNum))
     {
         return true;
@@ -70990,7 +71589,7 @@ drop : function () {
 // The default behavior is to simply delegate to the +link{transferNodes()} method; thus, the
 // correct way to perform a programmatic folder drop, with all the built-in behaviors described
 // below, is to call <code>transferNodes()</code>
-//<P>
+// <P>
 // If this is a self-drop, nodes are simply reordered. An "update" operation will
 // be submitted to update the +link{tree.parentIdField,parentId} field of the moved node(s).
 // <P>
@@ -74200,7 +74799,7 @@ dataBoundComponent : null,
 //> @method fieldPicker.callback
 // Callback invoked when picker changes are committed, if a disposable
 // +link{dataBoundComponent} is present.
-// @param fields (Array of ListGridFields) committed fields from disposable component
+// @param fields (Array of ListGridField) committed fields from disposable component
 // @param hilites (Array of Hilite) Array of hilite objects
 // @see fieldPicker.dataSource
 // @visibility external
@@ -75329,6 +75928,12 @@ isc.RecordEditor.addProperties({
     //<
     baseStyle:"recordEditorCell",
 
+    //> @attr recordEditor.recordSummaryBaseStyle (CSSStyleName : "recordEditorCell" : [IR])
+    // @include listGrid.recordSummaryBaseStyle
+    // @visibility external
+    //<
+    recordSummaryBaseStyle:"recordEditorCell",
+
     // Don't show the header for the list
     showHeader:false,
 
@@ -75670,12 +76275,20 @@ isc.RecordEditor.addMethods({
         }
     },
 
-    setFields : function () {
+    setFields : function (fields) {
         var form = this.getEditForm();
         if (this.isAFilterEditor()) {
             // for FilterEditors, if the form exists, remember it's criteria before
             // calling Super(), which will re-create it - re-apply this criteria later
             this._formCrit = form ? this.getValuesAsCriteria() : null;
+
+            // also transform any TextAreaItems into TextItems because TextAreaItems don't make
+            // sense as filters (since the return key inserts a linefeed instead of performing
+            // a search)
+            for (var i = 0; fields && i < fields.length; i++) {
+                var field = fields[i];
+                if (field.editorType == "TextAreaItem") field.editorType = "TextItem";
+            }
         }
         this.Super("setFields", arguments);
 
@@ -75974,6 +76587,35 @@ isc.RecordEditor.addMethods({
    },
 
 
+    _performOrScheduleFilter : function (fromTimer) {
+        var sourceWidget = this.sourceWidget,
+            data = sourceWidget.data
+        ;
+        if (isc.isA.ResultSet(data) && !data.lengthIsKnown() ||
+            isc.ResultTree && isc.isA.ResultTree(data) && data.isLoading(data.root))
+        {
+            if (!this._delayedFilter || fromTimer) {
+                if (fromTimer == null) {
+                    this.logInfo("Deferring filter request from " + sourceWidget.ID +
+                        " until the component's outstanding server request completes");
+                }
+                this._delayedFilter = this.delayCall("_performOrScheduleFilter", [true], 100);
+            }
+        } else {
+            if (this._delayedFilter) {
+                if (fromTimer != null) {
+                    this.logInfo("Making deferred filter request from " + sourceWidget.ID);
+                }
+                if (!fromTimer) isc.Timer.clear(this._delayedFilter);
+                delete this._delayedFilter;
+            }
+            var recordEditor = this;
+            this.performFilter(true, function () {
+                if (recordEditor._delayedFilter) recordEditor._performOrScheduleFilter(false);
+            });
+        }
+    },
+
     // Add the record to the source widget's data object
     // This method is not completely functional yet - see comments within the method body
     performSave : function (suppressPrompt, callback) {
@@ -76084,11 +76726,14 @@ isc.RecordEditor.addMethods({
         var actOnKeypress = item.actOnKeypress != null ? item.actOnKeypress : this.actOnKeypress;
         if (actOnKeypress) {
             // check whether the value of the item is a partially entered filterExpression
-            if (this.sourceWidget.allowFilterExpressions && !item.enteredCompleteExpression()) return;
-            // if this is a filterEditor, filters caused by keypress events should not select
-            // the value on refocus, since subsequent keypresses would then clear the value
-            if (this.isAFilterEditor()) this._editorCursorAtEnd = true;
-            this.performAction(true);
+            if (this.sourceWidget.allowFilterExpressions &&
+                item.enteredCompleteExpression() == false)
+            {
+                return;
+            }
+            // perform a filter if a fetch isn't already in progress - otherwise, defer it
+
+            this._performOrScheduleFilter();
         }
     },
 
@@ -77941,7 +78586,7 @@ initWidget : function () {
     }
 
     // set up key listening if necessary
-    if (this.useKeys) this.setUpKeyListening();
+    if (this.useKeys && this.data && this.data.length > 0) this.setUpKeyListening();
 
     // tree mode
     if (this._treeData) {
@@ -78989,7 +79634,6 @@ _treeContains : function (node) {
 // @visibility external
 //<
 setData : function (data,b,c,d) {
-
     var rv;
     if (isc.Tree && isc.isA.Tree(data)) {
 
@@ -78998,6 +79642,17 @@ setData : function (data,b,c,d) {
         rv = this.invokeSuper(isc.Menu, "setData", data,b,c,d);
     }
     delete this._heightCalculated;
+
+    // set up key listening if necessary
+    if (this.useKeys && data && data.length > 0) {
+        if (this.registeredKeys) {
+            for (var i = 0; i < this.registeredKeys.length; i++) {
+                isc.Page.unregisterKey(this.registeredKeys[i], this);
+            }
+        }
+        this.setUpKeyListening();
+    }
+
     return rv;
 },
 
@@ -79893,12 +80548,16 @@ getCheckmarkImage : function (item) {
 // Note: this could be done in a more desirable manner by making them ctrl+key handlers
 // (for example)
 setUpKeyListening : function () {
+
     var output = "";
 
     // iterate through the items, checking for keys property
     var item,
         keys,
         length = this.data.length;
+
+    // keep track of the keys we registered so we can unregister on destroy()
+    this.registeredKeys = [];
 
     for(var i = 0; i < length; i++) {
          // get the menu item and it's keys
@@ -79913,18 +80572,16 @@ setUpKeyListening : function () {
          if (!isc.isAn.Array(keys)) keys = [keys];
          // for each item in the array
          for (var key, k = 0, klen = keys.length; k < klen; k++) {
-         key = keys[k];
+             key = keys[k];
 
-         // if this key is null, skip this
-         // this lets us work cleanly with special menu keys, set up above
-         if (key == null) continue;
+             // if this key is null, skip this
+             // this lets us work cleanly with special menu keys, set up above
+             if (key == null) continue;
 
-         // register the event with the Page
-         isc.Page.registerKey(key, "target.menuKey(" + i + ");", this);
+             // register the event with the Page
+             isc.Page.registerKey(key, "target.menuKey(" + i + ");", this);
 
-            // keep track of the keys we registered so we can unregister on destroy()
-            if (!this.registeredKeys) this.registeredKeys = [];
-            this.registeredKeys.add(key);
+             this.registeredKeys.add(key);
          }
          // set up the keyTitle if it hasn't been set up already to the first key
          if (! item.keyTitle) this.setItemKeyTitle(item, keys[0]);
@@ -82743,6 +83400,12 @@ autoFetchTextMatchStyle:"substring",
 
 //> @attr TileGrid.initialCriteria   (Criteria : null :IR)
 // @include dataBoundComponent.initialCriteria
+// @group searchCriteria
+// @visibility external
+//<
+
+//> @attr TileGrid.implicitCriteria (Criteria : null : IRW)
+// @include dataBoundComponent.implicitCriteria
 // @visibility external
 //<
 
@@ -85644,6 +86307,12 @@ isc.ColumnTree.addProperties({
 
     //> @attr columnTree.initialCriteria   (Criteria : null :IR)
     // @include dataBoundComponent.initialCriteria
+    // @group searchCriteria
+    // @visibility external
+    //<
+
+    //> @attr columnTree.implicitCriteria (Criteria : null : IRW)
+    // @include dataBoundComponent.implicitCriteria
     // @visibility external
     //<
 
@@ -95119,7 +95788,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v12.0d_2018-02-13/LGPL Deployment (2018-02-13)
+  Version v12.0p_2018-06-28/LGPL Deployment (2018-06-28)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

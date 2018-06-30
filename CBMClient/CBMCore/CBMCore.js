@@ -938,13 +938,13 @@ function getRelationsForConcept(conceptId, callback) {
   function innerGetRelations(conceptId) {
     if (conceptDS.hasAllData()) {
       var record = conceptDS.getCacheData().find({ID: conceptId});
-      var relationsToThis = isc.DataSource.get("Relation").getCacheData().findAll({ForConcept: conceptId, Del: false });
+      var relationsToThis = isc.DataSource.get("Relation").getCacheData().findAll({ForConcept: conceptId});
       var i = 0;
       if (relationsToThis !== null) {
         for (i; i < relationsToThis.length; i++) {
           var exists = false;
           for (j = 0; j < relations.length; j++) {
-            if (relations[j].SysCode === relationsToThis[i].SysCode) {
+            if (relations[j].SysCode === relationsToThis[i].SysCode && !relations[j].Del) {
               exists = true;
               if (!relations[j]._inherited) {
                 relations[j]._modified = true;
@@ -4242,6 +4242,11 @@ isc.InnerGrid.addProperties({
               click: function (context) {
                 context.currentInnerGrid.addFilter("Del", {"Del": true}, true);
                 context.currentInnerGrid.applyFilters();
+                if(context.currentInnerGrid.canvasItem.showValue) {
+                  context.currentInnerGrid.canvasItem.showValue("", null, 
+                                                  context.currentInnerGrid.topElement, 
+                                                  context.currentInnerGrid.canvasItem);
+                }
                 // Adjust menus to "bin-mode"
                 context.currentInnerGrid.grid.contextMenu = innerGridBinContextMenu;
                 context.currentInnerGrid.grid.showContextMenu = function () {
@@ -4313,6 +4318,12 @@ isc.InnerGrid.addProperties({
           click: function (context) {
             this.parentElement.parentElement.parentElement.addFilter("Del", {"Del": false}, true);
             this.parentElement.parentElement.parentElement.applyFilters();
+            if(this.parentElement.parentElement.parentElement.canvasItem.showValue) {
+              this.parentElement.parentElement.parentElement.canvasItem.showValue("", null, 
+                                                    this.parentElement.parentElement.parentElement.topElement, 
+                                                    this.parentElement.parentElement.parentElement.canvasItem);
+            }
+            context.currentInnerGrid
             // Return menus to normal innerGrid mode
             this.parentElement.parentElement.parentElement.grid.contextMenu = innerGridContextMenu;
             this.parentElement.parentElement.parentElement.grid.showContextMenu = function () {
@@ -4632,10 +4643,26 @@ isc.RelationsAggregateControl.addProperties({
         this.mainID = form.valuesManager.getValue(this.mainIDProperty);
         var that = this;
         if (typeof(this.mainID) != "undefined") {
+          var that = this;
           getRelationsForConcept(this.mainID,
             function (data) {
-              that.innerGrid.grid.setData(data);
-            }
+              var filter = that.innerGrid.filters.getCriteria();
+              var filteredData = data.findAll(filter);
+              that.innerGrid.grid.setData(filteredData);
+             //     that.innerGrid.getDataSource().setCacheData(data);
+
+              //if (!that.innerGrid.getDataSource) {
+                //if (!that.innerGrid.hasAllData()) {
+                  //that.innerGrid.setCacheData(data);
+                //}
+              //} else {
+                //if (!that.innerGrid.getDataSource().hasAllData()) {
+                  //that.innerGrid.getDataSource().setCacheData(data);
+                //}
+              //}
+
+            },
+            this.innerGrid.filters
           );
         }
       }

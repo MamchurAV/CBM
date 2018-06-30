@@ -1,7 +1,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v12.0d_2018-02-13/LGPL Deployment (2018-02-13)
+  Version v12.0p_2018-06-28/LGPL Deployment (2018-06-28)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,9 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
 
-if (window.isc && isc.version != "SNAPSHOT_v12.0d_2018-02-13/LGPL Deployment" && !isc.DevUtil) {
+if (window.isc && isc.version != "v12.0p_2018-06-28/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v12.0d_2018-02-13/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'v12.0p_2018-06-28/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -2982,6 +2982,11 @@ isc.DateChooser.addMethods({
             if (this.timeLayout && !this.timeLayoutIsVisibleWidth && this.timeLayoutIsVisibleMinFieldWidth) {
                 this.timeLayout.setWidth(Math.max(bodyWidth, navWidth));
             }
+        }
+
+        if (this.navigationLayout.getVisibleWidth() < this.getVisibleWidth()) {
+            // if the grid or button-sizes made the chooser wider, resize the top nav bar
+            this.navigationLayout.setWidth("100%");
         }
     },
 
@@ -6383,6 +6388,9 @@ isc.ScrollingTreeMenu.changeDefaults("bodyDefaults", {
 // <code>setDataSource()</code>.  In this case, FormItems are
 // chosen based on the data type of the field - see +link{type:FormItemType}.  You can override
 // the automatically chosen FormItem via +link{DataSourceField.editorType}.
+// <P>
+// FormItem lifecycle is managed by the DynamicForm itself. FormItem instances are created
+// and destroyed automatically when new fields are added to the form.
 // <P>
 // When using DataSource binding, you can also add additional FormItems not specified in the
 // DataSource, or override any properties on the automatically generated FormItems, without
@@ -10408,15 +10416,15 @@ setValuesAsCriteria : function (criteria, advanced, dropExtraCriteria, dropCrite
 },
 
 _saveValuesAsCriteria : function(criteria, dropExtraCriteria, dropCriteriaFields) {
-    // if dropExtraCriteria is true, clear all field values before saving out the
-    // new criteria.
+    // if dropExtraCriteria is true, clear all field values that aren't defined in the criteria
+    // before saving out the new criteria.
     if (dropExtraCriteria) {
         var undef;
         for (var key in this.values) {
             // Option to specify what extra fields we actually drop
 
             if (dropCriteriaFields && !dropCriteriaFields.contains(key)) continue;
-            if (criteria[this.values[key]] == undef) {
+            if (criteria[key] === undef && this.values[key] !== undef) {
                 this.clearValue(key);
             }
         }
@@ -10562,8 +10570,7 @@ getItemById : function (itemID) {
 
 
 //>    @method    dynamicForm.getValue()  ([])
-//  Returns the value stored in the form for some field.
-//  Shorthand for dynamicForm.getValues()[fieldName];
+// Returns the value stored in the form for some field.
 //      @visibility external
 //        @group formValues
 //
@@ -10576,6 +10583,9 @@ getValue : function (fieldName, reason) {
 
      var item = this.getItem(fieldName);
      if (item) {
+         if (item.shouldSaveValue == false) {
+             return item.getValue();
+         }
          var fieldName = item.getTrimmedDataPath() || item.name;
      }
     return this._getValue(fieldName, reason);
@@ -11002,7 +11012,9 @@ getSerializeableFields : function(removeFields, keepFields) {
 // If true, the headers for any +link{SectionStackSection.items,SectionItems} will be included in the page's tab
 // order for accessibility. May also be set at the item level via +link{SectionItem.canTabToHeader}
 // <P>
-// If unset, section headers will be focusable if +link{isc.setScreenReaderMode} has been called.
+// If unset, section headers will be focusable if <smartclient>+link{isc.setScreenReaderMode}</smartclient>
+// <smartgwt>{@link com.smartgwt.client.util.SC#setScreenReaderMode SC.setScreenReaderMode()}</smartgwt>
+// has been called.
 // See +link{group:accessibility}.
 //
 // @visibility external
@@ -11208,12 +11220,19 @@ addFieldErrors : function (fieldName, errors, showErrors) {
 //<
 setFieldErrors : function (fieldName, errors, showErrors) {
     if (this.errors == null) this.errors = {};
+
+    // if we'd just be re-applying the same errors, then bail out now
+    if (isc.DynamicForm.compareValues(this.errors[fieldName], errors)) {
+        return false;
+    }
     this.errors[fieldName] = errors;
 
     // Don't bother updating hiddenErrors - this will be updated by
     // showErrors() / showFieldErrors()
 
     if (showErrors) this.showFieldErrors(fieldName);
+
+    return true;
 },
 
 //> @method dynamicForm.clearFieldErrors()
@@ -11338,32 +11357,6 @@ draw : function (a,b,c,d) {
 
     if (this.position == isc.Canvas.RELATIVE) {
         isc.Page.setEvent(isc.EH.LOAD, this, isc.Page.FIRE_ONCE, "_placeCanvasItems");
-    }
-
-    if (!this._setValuesPending) {
-        if (this.ruleScope || this.isRuleScope) {
-            this._createItemWhenRules(this.getItems());
-
-            var ruleScopeComponent = this.getRuleScopeComponent(),
-                values = this.getValues(),
-                ds = this.getDataSource(),
-                hasStableID = this.hasStableLocalID()
-            ;
-            if (hasStableID && this.editNode && this.editNode.defaults && this.editNode.defaults.hasStableID) {
-                hasStableID = this.editNode.defaults.hasStableID();
-            }
-
-            if (ds && this._populateSharedRuleContext != false) ruleScopeComponent.provideRuleContext(ds.getID(), values, this, hasStableID);
-            if (hasStableID) {
-                ruleScopeComponent.provideRuleContext(this.getLocalId() + ".values", values, this, true);
-                if (!this._settingValues) {
-                    ruleScopeComponent.provideRuleContext(this.getLocalId() + ".hasChanges", values, this, this.valuesHaveChanged());
-                }
-            }
-        }
-
-        // If we have a specified rulesEngine, notify it that we're editing a new set of values
-        if (this.rulesEngine != null) this.rulesEngine.processEditStart(this);
     }
 
     return this;
@@ -11628,7 +11621,22 @@ _delayedSetValues : function () {
     this._createItemWhenRules(this.getItems());
 
     this.setItemValues(null, true);
-    this.rememberValues();
+
+
+    //this.rememberValues();
+
+
+
+
+    if (this.ruleScope || this.isRuleScope) {
+        var ds = this.getDataSource(),
+            hasStableID = this.hasStableLocalID() || this.editNode != null
+        ;
+        if (hasStableID) {
+            this.provideRuleContext(this.getLocalId() + ".hasChanges", false, this);
+        }
+    }
+
     delete this._setValuesPending;
 
     // If we have a specified rulesEngine, notify it that we're editing a new set of values
@@ -11666,6 +11674,9 @@ redraw : function () {
     this._itemsRedrawn();
 
     this._redrawInProgress = false;
+
+
+    this.setItemValues(null, true);
 
 
     var scrollLeft, scrollTop, clipHandle;
@@ -11927,8 +11938,16 @@ setItemValues : function (values, onRedraw, initTime, items, validating) {
     var undef,
         haveValues = values != null && !isc.isAn.emptyObject(values);
     for (var itemNum = 0; itemNum < items.length; itemNum++) {
-        var item = items[itemNum],
-            fieldName = item.getFieldName(),
+        var item = items[itemNum];
+
+
+        if (item._skipSetFromForm) {
+            delete item._skipSetFromForm;
+
+            continue;
+        }
+
+        var fieldName = item.getFieldName(),
             dataPath = item.getTrimmedDataPath(),
             isSetToDefault = item.isSetToDefaultValue(),
 
@@ -13993,7 +14012,7 @@ _handleNativeSubmit : function () {
 
 
 validate : function (validateHiddenFields, ignoreDSFields, typeValidationsOnly,
-                    checkValuesOnly, skipServerValidation, suppressShowErrors, callerContext)
+                     checkValuesOnly, skipServerValidation, suppressShowErrors, callerContext)
 {
     if (this.disableValidation) return true;
 
@@ -14290,7 +14309,8 @@ checkForValidationErrors : function (callback, validateHiddenFields, skipServerV
     if (errors === true) errors = null;
 
     // return immediately if errors detected or skipping server-side validation
-    if (errors || skipServerValidation) {
+    var dataSource = this.getDataSource();
+    if (errors || skipServerValidation || !dataSource) {
         if (callback != null) this.fireCallback(callback, "errorMap", [errors]);
         return errors;
     }
@@ -14306,7 +14326,6 @@ checkForValidationErrors : function (callback, validateHiddenFields, skipServerV
         context = this.buildRequest(null, "validate");
     context.editor = this;
 
-    var dataSource = this.getDataSource();
     dataSource.validateData(values, function (response, data) {
         var errors = response.status == isc.RPCResponse.STATUS_VALIDATION_ERROR &&
                      response.errors ? response.errors : null;
@@ -16950,7 +16969,8 @@ compareValues : function (value1, value2, field, exactEquality) {
         if (isc.isA.Date(value1) && isc.isA.Date(value2)) {
             if ((isc.SimpleType.inheritsFrom(field.type, "date") &&
                 !isc.SimpleType.inheritsFrom(field.type, "datetime")) ||
-                value1.logicalDate || value2.logicalDate) {
+                value1.logicalDate || value2.logicalDate)
+            {
                 return (isc.DateUtil.compareLogicalDates(value1, value2) == 0);
             } else if (isc.SimpleType.inheritsFrom(field.type, "time") || value1.logicalTime || value2.logicalTime) {
                 return (isc.Time.compareLogicalTimes(value1, value2) == 0);
@@ -17046,25 +17066,13 @@ valuesHaveChanged : function (form, returnChangedVals, values, oldValues, rootPa
     // Process properties mapped to fields first, since this allows us to quickly deal with
     // items with dataPaths like "topLevel/someSubPath/anEvenDeeperPath" without blind mining
 
-    // Merge in any DS fields that do not have corresponding FormItems
-    for (var key in dsFields) {
-        var dsField = dsFields[key];
-         if (dsField.dataPath) {
-            if (!fields.find("dataPath", dsField.dataPath)) {
-                fields.add(dsField);
-            }
-        } else if (dsField.name) {
-            if (!fields.find("name", dsField.name)) {
-                fields.add(dsField);
-            }
-
-        }
-    }
-
     var pathsProcessed = {};
 
     // Compare the merged set of fields.
-    for (var i = 0; i < fields.length; i++) {
+    for (var i = 0;
+             i < fields.length || this._mergeDSFields(fields, dsFields, pathsProcessed);
+             i++)
+    {
         var dataPath = fields[i].dataPath || fields[i].name;
         if (dataPath != null) {  // If null, field has neither a name nor a dataPath - ignore it
             if (pathsProcessed[dataPath]) continue;
@@ -17183,6 +17191,29 @@ valuesHaveChanged : function (form, returnChangedVals, values, oldValues, rootPa
     return (returnChangedVals ? changedVals : changed);
 },
 
+
+_mergeDSFields : function (fields, dsFields, pathsProcessed) {
+
+    if (isc.isAn.emptyObject(dsFields)) return false;
+
+    var startLen = fields.length;
+
+    // Merge in any DS fields that do not have corresponding FormItems
+    for (var key in dsFields) {
+        var dsField = dsFields[key];
+        if (dsField.dataPath) {
+            if (!pathsProcessed[dsField.dataPath]) fields.add(dsField);
+
+        } else if (dsField.name) {
+            if (!pathsProcessed[dsField.name]) fields.add(dsField);
+        }
+    }
+
+    dsFields = isc.emptyObject;
+
+    return fields.length > startLen;
+},
+
 // get filter criteria for a list of filter components (passed as arguments)
 getFilterCriteria : function () {
     var criteria = {};
@@ -17248,7 +17279,7 @@ _getTitleInnerTableTemplate : function () {
 _doublingStringsChanged:function () {
     this._$topRowCellStart = null;
     this._titleInnerTableTemplate = null;
-}
+},
 
 
 //> @attr dynamicForm.allowExpressions (boolean : null : IRW)
@@ -17268,6 +17299,12 @@ _doublingStringsChanged:function () {
 // @visibility external
 //<
 
+//> @attr dynamicForm.suppressBrowserClearIcons (boolean : false : IRW)
+// Default +link{textItem.suppressBrowserClearIcon} value for TextItems within this
+// form.
+// @visibility external
+//<
+suppressBrowserClearIcons:false
 
 });
 // InlineForms: embedding SmartClient FormItems into native HTML forms.
@@ -17616,6 +17653,7 @@ isc.FormItem.addClassMethods({
 
 
     _aboutToFireNativeElementFocus : function (item) {
+
         if (!isc.Browser.isIE) return;
         var activeElement = this.getActiveElement();
 
@@ -17758,6 +17796,7 @@ isc.FormItem.addClassMethods({
                 isc.Log._reportJSError(e);
             }
         }
+
         isc.EH._clearThread();
         return result;
     },
@@ -21437,6 +21476,16 @@ isc.FormItem.addMethods({
         return value;
     },
 
+
+
+    //> @attr formItem.destroyed (Boolean : null : RA)
+    // The destroyed attribute will be set to true if this item has been destroyed()
+    // Note that FormItem lifecycle is managed by the DynamicForm itself.
+    // FormItem instances are created and destroyed automatically when new fields are
+    // added to the form.
+    // @visibility external
+    //<
+
     destroy : function (a,b,c,d,e) {
         // If we get called twice just return. This could have unpredictable results
         // otherwise (for example this.form being unset below, etc)
@@ -22230,18 +22279,7 @@ isc.FormItem.addMethods({
         if (this.fitWidthToValueIcon() && this.showValueIconOnly) {
             var width = this._getValueIconAndPadWidth();
 
-            if (this._pickerIconVisible()) {
-                width += this.getPickerIconWidth();
-                var iconProps = this.getPickerIcon();
-                if (iconProps.hspace != null) width += iconProps.hspace;
-
-                if (this.pickerIconStyle)
-                    width += isc.Element._getHBorderPad(this.getPickerIconStyle());
-
-                if (this.controlStyle) {
-                    width += isc.Element._getHBorderPad(this.getControlStyle());
-                }
-            }
+            width += this.getPickerIconHSpace();
 
             return width;
         }
@@ -22252,6 +22290,24 @@ isc.FormItem.addMethods({
         width -= this.getTotalIconsWidth();
 
         return (isc.isA.Number(width) ? Math.max(width, 1) : null);
+    },
+
+    getPickerIconHSpace : function () {
+        var width = 0;
+        if (this._pickerIconVisible()) {
+            width += this.getPickerIconWidth();
+            // Additional horizontal space required due to hspace / border/padding on style
+            var iconProps = this.getPickerIcon();
+            if (iconProps.hspace != null) width += iconProps.hspace;
+
+            if (this.pickerIconStyle)
+                width += isc.Element._getHBorderPad(this.getPickerIconStyle());
+
+            if (this.controlStyle) {
+                width += isc.Element._getHBorderPad(this.getControlStyle());
+            }
+        }
+        return width;
     },
 
 
@@ -23634,6 +23690,7 @@ isc.FormItem.addMethods({
     // or null if we're not showing a valueIcon
     _$valueIcon:"valueIcon",
     _getValueIconHTML : function (value) {
+
         var valueIcon = this._getValueIcon(value);
         if (valueIcon == null) {
             return isc.emptyString;
@@ -23845,7 +23902,7 @@ isc.FormItem.addMethods({
         }
 
         var vAlign = this.iconVAlign,
-            displayValue = this.mapValueToDisplay(value),
+            displayValue = this._getDisplayValue(value),
             writeOuterTable = this._writeOuterTable(includeHint, showErrors),
             writeControlTable = this._writeControlTable()
         ;
@@ -23903,7 +23960,14 @@ isc.FormItem.addMethods({
             if (this._inlineIconsMarkupApproach === "absolutePositioning") {
                 var leftBorderPad = isc.Element._getLeftBorderSize(textBoxStyle) + leftPad,
                     rightBorderPad = isc.Element._getRightBorderSize(textBoxStyle) + rightPad;
-                elementHTML = "<div id='" + this._getInlineIconsWrapperID() + "' style='position:relative;display:inline-block'>" + elementHTML;
+
+                var logicalTextBoxWidth = this.getElementWidth() - this.getPickerIconHSpace();
+
+                elementHTML = "<div id='" + this._getInlineIconsWrapperID() +
+                    "' style='position:relative;display:block;width:"
+                    + logicalTextBoxWidth + "px;'>"
+                     + elementHTML;
+
                 elementHTML += this.getIconsHTML(false, isRTL ? this._rightInlineIcons : this._leftInlineIcons, "position:absolute;top:0px;left:" + leftBorderPad + "px;height:" + basicHeight + "px");
                 elementHTML += this.getIconsHTML(false, isRTL ? this._leftInlineIcons : this._rightInlineIcons, "position:absolute;top:0px;right:" + rightBorderPad + "px;height:" + basicHeight + "px");
                 elementHTML += "</div>";
@@ -24146,7 +24210,9 @@ isc.FormItem.addMethods({
 
         var style;
 
-        var showFocused = this.showFocused && this.hasFocus && !this.isInactiveHTML();
+        // call isFocused() rather than checking this.hasFocus - ContainerItem at least
+        // overrides isFocused() to return true when child items have focus
+        var showFocused = this.showFocused && this.isFocused() && !this.isInactiveHTML();
         if (which == this._$pickerIcon && showFocused) {
             showFocused = this.showFocusedPickerIcon;
         }
@@ -24390,7 +24456,10 @@ isc.FormItem.addMethods({
 
     _$pickerIcon: "pickerIcon",
     getPickerIconStyle : function () {
-        if (this.pickerIconStyle != null) return this._getCellStyle(this.pickerIconStyle, this._$pickerIcon);
+        var pickerIcon = this.getPickerIcon();
+        if (pickerIcon && pickerIcon.visible && this.pickerIconStyle != null) {
+            return this._getCellStyle(this.pickerIconStyle, this._$pickerIcon);
+        }
         // allow styling to be inherited from our parent table
         return null;
     },
@@ -24745,7 +24814,16 @@ isc.FormItem.addMethods({
         tbTemplate[tbOffset + 10] = textBoxFocusAttributes; // Will be null if appropriate
 
         // Pre-pend the value with the valueIconHTML [will be null if appropriate]
-        tbTemplate[tbOffset + 12] = this._getValueIconHTML(dataValue);
+
+        var valueIconHTML;
+        if (this.multiple && isc.isAn.Array(dataValue)) {
+            if (dataValue.length == 1) {
+                valueIconHTML = this._getValueIconHTML(dataValue[0]);
+            }
+        } else {
+            valueIconHTML = this._getValueIconHTML(dataValue);
+        }
+        tbTemplate[tbOffset + 12] = valueIconHTML;
         tbTemplate[tbOffset + 13] = (this.showValueIconOnly ? null : value);
 
         output.append(tbTemplate);
@@ -25135,6 +25213,7 @@ isc.FormItem.addMethods({
            this.form.elementChanged(this);
        }
 
+
         if (this._hasRedrawFocus(true)) {
 
             this._storeFocusForRedraw();
@@ -25182,6 +25261,11 @@ isc.FormItem.addMethods({
         // clear the redraw in progress flag (re-enables updateValue)
         delete this._redrawInProgress;
 
+        if (this._changingValue) {
+            this._redrawnDuringChange = true;
+        }
+
+
     },
 
     // After item draw or redraw, explicitly "show" our current value
@@ -25204,8 +25288,9 @@ isc.FormItem.addMethods({
             this.setValue();
         } else {
 
-
             this._showValue(this._value);
+
+            if (redrawing && this.form._redrawInProgress) this._skipSetFromForm = true;
         }
     },
 
@@ -25254,7 +25339,6 @@ isc.FormItem.addMethods({
     // If the item had focus when the redraw occurred, put focus back in it (without firing any
     // focus handlers) now.
     _refocusAfterRedraw : function () {
-
         // Sanity checks - don't refocus if
         // - we're not visible or drawn
         // - focus is marked as being elsewhere on the page
@@ -25465,6 +25549,7 @@ isc.FormItem.addMethods({
     // @visibility internal
     //<
     cleared : function () {
+
         //>DEBUG
         if (this.logIsInfoEnabled("drawing")) {
             this.logInfo("Form item cleared " +
@@ -25476,11 +25561,6 @@ isc.FormItem.addMethods({
         }
         //<DEBUG
 
-
-        if (isc.FormItem._pendingEditorExitCheck == this) {
-            isc.FormItem._pendingEditorExitCheck.checkForEditorExit(true, true);
-        }
-
         if (this._needHideUsingDisplayNone()) {
             var widget = this.containerWidget;
             while (widget != null) {
@@ -25488,13 +25568,17 @@ isc.FormItem.addMethods({
                 widget = widget.parentElement;
             }
         }
-
         this.form.clearingElement(this);
-
         this._clearCachedHandles();
         this._wroteOutHint = false;
         this._gotHintHTML = false;
         this._drawn = false;
+
+
+        if (isc.FormItem._pendingEditorExitCheck == this) {
+            isc.FormItem._pendingEditorExitCheck.checkForEditorExit(true, true);
+        }
+
     },
 
     _clearCachedHandles : function () {
@@ -26162,6 +26246,7 @@ isc.FormItem.addMethods({
 
             template[13] = itemID;
             template[17] = iconID;
+
             template[19] = this._getIconImgHTML(
                                 this._getIconImgId(iconID),
                                 width,
@@ -26172,7 +26257,7 @@ isc.FormItem.addMethods({
                                 backgroundColor,
                                 iconSrc,
 
-                                true,
+                                !isc.Browser.isDOM || !isc.Browser.isIE,
                                 classText
                            );
             return template.join(isc.emptyString);
@@ -26257,6 +26342,7 @@ isc.FormItem.addMethods({
 
 
         if (displayBlock) template[9] = "display:block;";
+        else template[9] = ""
 
         var extraCSSText = template.join(isc._emptyString);
 
@@ -27079,7 +27165,6 @@ isc.FormItem.addMethods({
                 this.redraw();
                 return;
             }
-
             if (isShow) {
                 // Skip the case where the icon is disabled and we aren't
                 // showing disabled icons on focus
@@ -27187,7 +27272,7 @@ isc.FormItem.addMethods({
             var iconImg = this._getIconImgElement(icon);
             if (iconImg != null) {
                 var src = this.getIconURL(icon, over, null, focused);
-                isc.Canvas._updateImage(iconImg, src,null,null,styleName);
+                isc.Canvas._updateImage(iconImg, src, null, null, styleName);
             }
         }
     },
@@ -27395,6 +27480,19 @@ isc.FormItem.addMethods({
         // effect on a DynamicForm, but will affect inline editing by redrawing the grid body
         if (!this.isDrawn()) return;
 
+        // If we're reacting synchronously to mouseDown or mouseUp, we've seen an
+        // immediate redraw interfere with focus (even with our logic to remember the
+        // current focus target and reset focus post redraw)
+        // Delay the redraw in this case
+
+        if (isc.EH._handlingMouseDown || isc.EH._handlingMouseUp) {
+
+            this.logDebug("Delaying call to formItem.redraw() during mouseDown/mouseUp sequence",
+                     "nativeFocus");
+            this.delayCall("redraw", [reason], null);
+            return;
+        }
+
         // Note - We record whether we had focus before the redraw.
         // This is required because the form will blur the focus item during redraw, and then
         // refocus when redraw is complete.
@@ -27503,7 +27601,6 @@ isc.FormItem.addMethods({
     _resetWidths : function () {
         if (!this.isDrawn()) return;
         var shouldClip = this._getClipValue();
-
 
 
         if (this._writeControlTable()) {
@@ -27771,11 +27868,14 @@ isc.FormItem.addMethods({
     //<
 
     getDisplayValue : function (value) {
+        return this._getDisplayValue(value, true);
+    },
+    _getDisplayValue : function (value, canUseCurrentValue) {
         var undef;
         if (this.multiple) {
             var useCurrentValue = false;
 
-            if (value === undef) {
+            if (canUseCurrentValue && value === undef) {
                 value = this.getValue();
                 useCurrentValue = true;
             }
@@ -27803,7 +27903,7 @@ isc.FormItem.addMethods({
             }
         }
 
-        return this.mapValueToDisplay(value !== undef ? value : this.getValue());
+        return this.mapValueToDisplay((!canUseCurrentValue || value !== undef) ? value : this.getValue());
     },
 
     //>    @method    formItem.mapValueToDisplay()
@@ -28427,6 +28527,9 @@ isc.FormItem.addMethods({
                 var isDate = isc.SimpleType.inheritsFrom(type,"date"),
                     isTime = isc.SimpleType.inheritsFrom(type,"time"),
                     isDatetime = isDate && isc.SimpleType.inheritsFrom(type, "datetime"),
+                    isNumeric = !isDate && !isTime && (
+                        isc.SimpleType.inheritsFrom(type, "integer") ||
+                        isc.SimpleType.inheritsFrom(type, "float")),
                     isEmptyString = (value == "")
                 ;
 
@@ -28457,6 +28560,11 @@ isc.FormItem.addMethods({
                         var dateVal = isc.DateUtil.parseInput(value, inputFormat,
                                           this.centuryThreshold, false, !logicalDate);
                         if (isc.isA.Date(dateVal)) value = dateVal;
+                    }
+                } else if (isNumeric) {
+                    // as with dates, clear number fields if the value is an empty string
+                    if (isEmptyString && this.allowEmptyValue) {
+                        value = null;
                     }
                 }
             }
@@ -28858,11 +28966,13 @@ isc.FormItem.addMethods({
                     record[valueField] = vals[fieldName];
                     record[remoteDisplayField] = vals[displayField];
                 } else {
-                    record =  isc.addProperties({}, vals);
+                    record = isc.addProperties({}, vals);
                 }
-                this._addDataToDisplayFieldCache([record]);
-                // Update the valueMap to include the new record
-                this.updateDisplayValueMap(true);
+                if (record) {
+                    this._addDataToDisplayFieldCache([record]);
+                    // Update the valueMap to include the new record
+                    this.updateDisplayValueMap(true);
+                }
             }
         }
     },
@@ -29206,7 +29316,7 @@ isc.FormItem.addMethods({
         }
 
         // map the value passed to the visible value as necessary
-        var displayValue = this.getDisplayValue(newValue);
+        var displayValue = this._getDisplayValue(newValue);
         // set the value of the item
 
 
@@ -30297,9 +30407,19 @@ isc.FormItem.addMethods({
         var textBox = this._getTextBoxElement();
         if (textBox != null) {
             if (this.showValueIconOnly) newValue = isc.emptyString;
-            var valueIconHTML = this._getValueIconHTML(dataValue);
-            if (valueIconHTML != null)
+
+
+            var valueIconHTML;
+            if (this.multiple && isc.isAn.Array(dataValue)) {
+                if (dataValue.length == 1) {
+                    valueIconHTML = this._getValueIconHTML(dataValue[0]);
+                }
+            } else {
+                valueIconHTML = this._getValueIconHTML(dataValue);
+            }
+            if (valueIconHTML != null) {
                 newValue = valueIconHTML + (newValue != null ? newValue :  isc.emptyString);
+            }
 
 
             if (isc.Browser.isIE) {
@@ -30378,6 +30498,7 @@ isc.FormItem.addMethods({
     // _updateValueIcon
     // Explicitly updates the valueIcon image src based on the data value passed in.
     _updateValueIcon : function (value) {
+
         if (this.suppressValueIcon || !this.isDrawn()) return;
 
         var src = this._getValueIcon(value),
@@ -30400,7 +30521,8 @@ isc.FormItem.addMethods({
 
                 var imgDir = this.imageURLPrefix || this.baseURL || this.imgDir;
 
-                isc.Canvas._updateImage(valueIconHandle, src, imgDir, this._getValueIconStyle(value));
+                isc.Canvas._updateImage(valueIconHandle, src, imgDir, null,
+                                        this._getValueIconStyle(value));
 
             // In this case the valueIcon has never been written out.
             // Positioning of the valueIcon will vary by form item.
@@ -30825,6 +30947,9 @@ isc.FormItem.addMethods({
         //   handling to be performed.
         var returnVal = this.handleChange(newValue, this._value);
 
+        var redrawnDuringChange = this._redrawnDuringChange;
+        delete this._redrawnDuringChange;
+
         // bail if handleChange() returned false
         if (!returnVal) return false;
 
@@ -30856,7 +30981,8 @@ isc.FormItem.addMethods({
         this.handleChanged(this._value);
 
         // If updated value should be shown, do that now
-        if (showValue) this._showValue(newValue);
+
+        if (showValue || redrawnDuringChange) this._showValue(newValue);
 
         return returnVal;
     },
@@ -31547,7 +31673,11 @@ isc.FormItem.addMethods({
 
         if (this._shouldAllowExpressions()) {
             var crit = this.parseValueExpressions(value, fieldName, operator);
-            if (crit != null) result = crit;
+            if (crit != null) {
+
+                if (!this.canEditCriterion(crit)) result = null;
+                else result = crit;
+            }
         }
 
         return result;
@@ -31696,11 +31826,12 @@ isc.FormItem.addMethods({
     //                   otherwise.
     // @visibility external
     //<
-    validate : function () {
+    validate : function (deferServerValidation) {
         var hadErrorsBefore = this.hasErrors(),
             fieldErrors = [],
             allErrors = null,
-            stopOnError = false
+            stopOnError = false,
+            form = this.form
         ;
 
         // Wrap field validation in a queue so that server validators are
@@ -31711,11 +31842,12 @@ isc.FormItem.addMethods({
         // Note that validateFieldAndDependencies may modify the record so we pass
         // a copy of our current values.
         var value = this.getValue(),
-            record = this.form._getRecordForValidation(true),
-            validationOptions = {unknownErrorMessage: this.form.unknownErrorMessage,
-                                typeValidationsOnly:this.form.validateTypeOnly}
+            record = form._getRecordForValidation(true),
+            validationOptions = {unknownErrorMessage: form.unknownErrorMessage,
+                                typeValidationsOnly:form.validateTypeOnly,
+                                deferServerValidation:deferServerValidation}
         ;
-        var fieldResult = this.form.validateFieldAndDependencies(this, this.validators, value,
+        var fieldResult = form.validateFieldAndDependencies(this, this.validators, value,
                                                                  record, validationOptions);
 
         var storeErrorAs = this.name;
@@ -31749,18 +31881,22 @@ isc.FormItem.addMethods({
         }
 
         // If any errors are set or cleared, mark that a redraw is needed.
+
         var redrawRequired = false;
 
         // If we failed validation or validation is clearing previous errors,
-        // update the errors on the field
+        // update the errors on the field.
         if (fieldErrors.length > 0 || hadErrorsBefore) {
+            // set current validation errors on the item
             if (fieldErrors.length > 0) {
-                this.form.setFieldErrors(storeErrorAs, fieldErrors, false);
+                if (form.setFieldErrors(storeErrorAs, fieldErrors)) {
+                    redrawRequired = true;
+                }
             // otherwise clear old errors if there were any
             } else {
-                this.form.clearFieldErrors(storeErrorAs, false);
+                form.clearFieldErrors(storeErrorAs, false);
+                redrawRequired = true;
             }
-            redrawRequired = true;
 
             // If validation failed and we shouldn't leave field, force focus back.
             if (stopOnError) this.focusInItem();
@@ -31772,11 +31908,12 @@ isc.FormItem.addMethods({
             for (var errorFieldName in allErrors) {
                 if (errorFieldName != storeErrorAs) {
                     var errors = allErrors[errorFieldName];
-                    if ((errors != null && !isc.isAn.emptyObject(errors)) ||
-                        this.form.hasFieldErrors(errorFieldName))
+                    if ((errors != null && !isc.isAn.emptyArray(errors)) ||
+                        form.hasFieldErrors(errorFieldName))
                     {
-                        this.form.setFieldErrors(errorFieldName, errors, false);
-                        redrawRequired = true;
+                        if (form.setFieldErrors(errorFieldName, errors)) {
+                            redrawRequired = true;
+                        }
                     }
                 }
             }
@@ -32534,7 +32671,6 @@ isc.FormItem.addMethods({
         var oldErrors = this.form.getFieldErrors(this.name);
 
         if (this._changingValue && this.compareValues(value, this._changeValue)) return true;
-
 
         // Set the flag to indicate that we're performing a change
         this._changingValue = true;
@@ -33699,12 +33835,22 @@ isc.FormItem.addMethods({
     // @visibility external
     //<
     setTabIndex : function (tabIndex) {
+
+        // If we already have the appropriate tabIndex assigned, no-op
+        if (this.tabIndex == tabIndex) return;
+
         this.globalTabIndex = null;
         this.tabIndex = tabIndex;
 
         // Tell the form to reassign tab order of items - this may impact the
         // tab position or tab index of other items as well.
-        this.form.assignItemsTabPosition();
+        //
+        // Exceptions: If the new tabIndex is -1 we won't change the order of any other items.
+        // If we're in the middle of adding items, the form will call assignItemsTabPosition()
+        // after building the items list.
+        if (tabIndex != -1 && this.form && !this.form.addingItems) {
+            this.form.assignItemsTabPosition();
+        }
 
         this._setElementTabIndex(this.getGlobalTabIndex());
     },
@@ -34104,13 +34250,21 @@ isc.FormItem.addMethods({
                              (this.logIsDebugEnabled("traceFocus") ? this.getStackTrace() : ""),
                              "nativeFocus");
                 //<DEBUG
-                // Fire a notification function centrally so we know a programmatic focus
-                // change has been triggered
-                isc.FormItem._aboutToFireNativeElementFocus(this);
-                isc.EventHandler._unconfirmedFocus = this;
 
-                element.focus();
 
+                isc.EH._clearThread();
+                element = this.getFocusElement();
+
+                if (element && element.focus) {
+                    // Fire a notification function centrally so we know a programmatic focus
+                    // change has been triggered
+                    isc.FormItem._aboutToFireNativeElementFocus(this);
+                    isc.EventHandler._unconfirmedFocus = this;
+                    element.focus();
+
+                } else {
+
+                }
 
 
                 //if (isc.Browser.isIE) {
@@ -35964,7 +36118,9 @@ isc.FormItem.addMethods({
     // @visibility external
     //<
 
+    // the default "between" operator to use when the expression-symbol is "..."
     defaultBetweenOperator: "iBetweenInclusive",
+
 
     parseValueExpressions : function (value, fieldName, operator) {
         var type = this.getType(),
@@ -36103,12 +36259,14 @@ isc.FormItem.addMethods({
                 }
             }
 
-            for (var key in opIndex) {
-                if (!key) continue;
-                if (exactMatchKey && key != exactMatchKey) continue;
-                var ops = opIndex[key],
+            for (var symbol in opIndex) {
+                if (!symbol) continue;
+                if (exactMatchKey && symbol != exactMatchKey) continue;
+
+                // "ops" is the array of operators that use the associated symbol
+                var ops = opIndex[symbol].duplicate(),
                     wildCard = false,
-                    op
+                    op = null
                 ;
 
                 if (key == "==" && isc.isA.String(valuePart) && valuePart.startsWith("=") &&
@@ -36117,13 +36275,35 @@ isc.FormItem.addMethods({
                     wildCard = true;
                 }
 
-                if (ops && ops.length) {
-                    var finalOps = ops.findAll("caseInsensitive", insensitive);
-                    if (finalOps == null || finalOps.length == 0) finalOps = ops;
-                    if (finalOps.length > 1) {
 
+                if (ops && ops.length) {
+                    // at least one operator associated with this "symbol"
+                    if (ops.length == 1) {
+                        // only one op for this symbol - use it
+                        op = ops[0];
+                    } else {
+                        var localOps = [];
+                        for (var kk = 0; kk < ops.length; kk++) {
+                            var opt = ops[kk];
+                            // ensure there's a value for the caseInsensitive flag
+                            if (!isc.propertyDefined(opt, "caseInsensitive")) opt.caseInsensitive = false;
+                            // add the operator
+                            localOps.add(opt);
+                        }
+
+                        if (localOps.length == 1) {
+                            op = localOps[0];
+                        } else if (localOps.length > 1) {
+                            for (var jj = 0; jj < localOps.length; jj++) {
+                                if (localOps[jj].caseInsensitive == insensitive) {
+                                    //return if correct case-sensitivity
+                                    op = localOps[jj];
+                                    break;
+                                }
+                            }
+                            if (!op) op = localOps[0];
+                        }
                     }
-                    op = finalOps[0];
                 }
 
                 if (!op || !op.symbol || skipTheseOps.contains(op.symbol)) {
@@ -36311,11 +36491,8 @@ isc.FormItem.addMethods({
         ;
 
         if (!validOps) {
-            validOps = [];
-            for (var j=0; j< opList.length; j++) {
-                var opSymbol = opIndex[opList[j]];
-                validOps.addList(opSymbol.getProperty("ID"));
-            }
+            // if no item.validOperators, all ops for the type are considered valid
+            validOps = ds.getTypeOperators(this.type, true);
         }
 
         var defOpName = this.getOperator();
@@ -36461,19 +36638,7 @@ isc.FormItem.addMethods({
     },
 
     enteredCompleteExpression : function () {
-        var opIndex = isc.DynamicForm.getOperatorIndex(),
-            opList = isc.getKeys(opIndex),
-            validOps = this.validOperators,
-            value = this._value
-        ;
-
-        if (!validOps) {
-            validOps = [];
-            for (var j=0; j< opList.length; j++) {
-                var opSymbol = opIndex[opList[j]];
-                validOps.addList(opSymbol.getProperty("symbol"));
-            }
-        }
+        var value = this._value;
 
         if (!isc.isA.String(value)) {
             // not a string, can't be parsed as an expression - return true
@@ -36487,7 +36652,9 @@ isc.FormItem.addMethods({
             return true;
         }
 
-        var needsAValue = !["#", "!#"].contains(value),
+        var ds = isc.DS.get(this.form.expressionDataSource || this.form.dataSource),
+            validOps = this.validOperators || (ds ? ds.getTypeOperators(this.type, true) : []),
+            needsAValue = !["$", "!$", "#", "!#"].contains(value),
             hasExpression = true
         ;
 
@@ -36502,9 +36669,10 @@ isc.FormItem.addMethods({
         }
 
         if (hasExpression && needsAValue) {
+            var opList = isc.DS._operators;
             for (var j=0; j<validOps.length; j++) {
-                var op = validOps[j];
-                if (op.startsWith(value)) {
+                var op = opList[validOps[j]];
+                if (op.symbol && op.symbol.startsWith(value)) {
                     // this will deal with, for instance, "=", which is not a recognized op in
                     // itself, but is the beginning of many different ones
                     hasExpression = false;
@@ -40018,8 +40186,10 @@ isc.Validator.addClassProperties({
                     formulaResult = undef;
                 }
 
-                if (validator.debugLogCategory && isc.Log.logIsDebugEnabled(validator.debugLogCategory)) {
-                    isc.Log.logDebug("Perform rule action with formula result: " + formulaResult, validator.debugLogCategory);
+                if ((validator.logCategory && isc.Log.logIsDebugEnabled(validator.logCategory)) ||
+                        (!validator.logCategory && isc.Log.logIsDebugEnabled("rulesEngine")))
+                {
+                    isc.Log.logDebug("Perform rule action with formula result: " + formulaResult, validator.logCategory || "rulesEngine");
                 }
 
                 if (componentType == "FormItem") {
@@ -40165,8 +40335,10 @@ isc.Validator.addClassProperties({
 
                 var formulaResult = validator._summaryFunction(record, name, (componentType == "Canvas" ? null : component));
 
-                if (validator.debugLogCategory && isc.Log.logIsDebugEnabled(validator.debugLogCategory)) {
-                    isc.Log.logDebug("Perform rule action with formula result: " + formulaResult, validator.debugLogCategory);
+                if ((validator.logCategory && isc.Log.logIsDebugEnabled(validator.logCategory)) ||
+                        (!validator.logCategory && isc.Log.logIsDebugEnabled("rulesEngine")))
+                {
+                    isc.Log.logDebug("Perform rule action with formula result: " + formulaResult, validator.logCategory || "rulesEngine");
                 }
 
                 if (componentType == "FormItem") {
@@ -40312,8 +40484,10 @@ isc.Validator.addClassProperties({
 
                 var formulaResult = validator._formulaFunction(record, component);
 
-                if (validator.debugLogCategory && isc.Log.logIsDebugEnabled(validator.debugLogCategory)) {
-                    isc.Log.logDebug("Perform rule action with formula result: " + formulaResult, validator.debugLogCategory);
+                if ((validator.logCategory && isc.Log.logIsDebugEnabled(validator.logCategory)) ||
+                        (!validator.logCategory && isc.Log.logIsDebugEnabled("rulesEngine")))
+                {
+                    isc.Log.logDebug("Perform rule action with formula result: " + formulaResult, validator.logCategory || "rulesEngine");
                 }
 
                 if (item.setValue) {
@@ -40421,8 +40595,10 @@ isc.Validator.addClassProperties({
                     formulaResult = isc.Canvas._getFieldValue(path, null, record)
                 ;
 
-                if (validator.debugLogCategory && isc.Log.logIsDebugEnabled(validator.debugLogCategory)) {
-                    isc.Log.logDebug("Perform rule action with formula result: " + formulaResult, validator.debugLogCategory);
+                if ((validator.logCategory && isc.Log.logIsDebugEnabled(validator.logCategory)) ||
+                        (!validator.logCategory && isc.Log.logIsDebugEnabled("rulesEngine")))
+                {
+                    isc.Log.logDebug("Perform rule action with formula result: " + formulaResult, validator.logCategory || "rulesEngine");
                 }
 
                 if (componentType == "FormItem") {
@@ -41442,6 +41618,43 @@ getTitleHTML : function(){
         return title;
     }
     return isc.SB.concat("<LABEL FOR=", focusableItem.getDataElementId(), ">", title, "</LABEL>");
+},
+
+isFocused : function () {
+    // return true if this item or any of it's children have focus
+    return (this.hasFocus || this.childIsFocused());
+},
+
+childIsFocused : function () {
+    // return true if any of the item's children have focus
+    var focusChild = this._getFocusChild();
+    return focusChild && focusChild != this;
+},
+
+_getFocusChild : function () {
+    var focusItem = this.form && this.form._focusItem;
+    if (focusItem != null) {
+        // if we're in the middle of a child blur(), it's hasFocus flag will have been cleared,
+        // but this.form._focusItem will still refer to it at this point - bail if
+        // this.form._focusItem.hasFocus is no longer set
+        if (focusItem.hasFocus == false) return null;
+        if (focusItem == this) return this;
+
+        var focusSubItem = focusItem,
+            isDescendant = false;
+
+        while (focusSubItem.parentItem != null) {
+            if (focusSubItem.parentItem == this) {
+                isDescendant = true;
+                break;
+            }
+            focusSubItem = focusSubItem.parentItem;
+        }
+
+        // Focus is on a sub-item - return it
+        if (isDescendant) return focusItem;
+    }
+    return null;
 },
 
 
@@ -43080,11 +43293,15 @@ isc.CanvasItem.addMethods({
         }
         resizeHeight = policyHeight;
 
+
         // TableResizePolicy doesn't consider the specified width of items when determining
         // column widths.  Hence only apply the width if our width is unset or "*"
-        var specifiedWidth = canvas._userWidth || this.width;
-        resizeWidth = (specifiedWidth == null || specifiedWidth == "*" || specifiedWidth == "100%"
-                       ? policyWidth : specifiedWidth);
+        var specifiedWidth = !this._appliedWidthToCanvas ? canvas._userWidth : null;
+        var applyPolicyWidth = specifiedWidth == null
+                                || specifiedWidth == "*" || specifiedWidth == "100%";
+
+        resizeWidth = (applyPolicyWidth ? policyWidth : specifiedWidth);
+
 
         var percentWidth = canvas._percent_width,
             percentHeight = canvas._percent_height;
@@ -43093,14 +43310,20 @@ isc.CanvasItem.addMethods({
         if (policyWidth != null && percentWidth != null && percentWidth.endsWith("%") &&
             !window.isNaN(parsedPercentWidth = parseInt(percentWidth)))
         {
+            // We're driving the width of the canvas in this case
+            // even though we're doing it as a percentage
+            applyPolicyWidth = true;
             resizeWidth = Math.round(policyWidth * (parsedPercentWidth/100));
         }
+
+        this._appliedWidthToCanvas = applyPolicyWidth;
 
         // if width is not increasing past the current overflowed size, don't try to reduce the
         // height of an height-overflowed Canvas to less than the overflowed size, because
         // there's no reason to expect it to shrink (unless it's dirty, in which case we assume
         // it might change size)
 
+        var applyPolicyHeight = true;
         if (!canvas.isDirty() &&
             (resizeWidth == null || resizeWidth <= canvas.getVisibleWidth()) &&
             canvas.getHeight() < canvas.getVisibleHeight() &&
@@ -43110,11 +43333,14 @@ isc.CanvasItem.addMethods({
                           " to overflowed Canvas with height: " + canvas.getVisibleHeight(),
                           "canvasItemSizing");
             resizeHeight = null;
+            applyPolicyHeight = false;
         }
+        this._appliedHeightToCanvas = applyPolicyHeight;
 
 
         if (!isc.isA.Number(resizeWidth)) resizeWidth = null;
         if (!isc.isA.Number(resizeHeight)) resizeHeight = null;
+
         // actually call 'resizeTo' on the canvas
         this._setCanvasSize(resizeWidth,resizeHeight,percentWidth,percentHeight);
 
@@ -43169,6 +43395,16 @@ isc.CanvasItem.addMethods({
         this._resizingCanvas = false;
     },
 
+    getInnerHTML : function () {
+        // size the Canvas to the final size determined by the resize policy - our
+        // element HTML includes a spacer sized to match this
+
+        if (this.canvas) this.sizeCanvas();
+
+        return this.Super("getInnerHTML", arguments);
+    },
+
+
     // Rather than embedding HTML for the canvas into the form, we write out a spacer of the
     // appropriate size, and float the Canvas over it.
     getElementHTML : function (value) {
@@ -43176,8 +43412,6 @@ isc.CanvasItem.addMethods({
         if (!canvas) return null;
 
 
-        // size the Canvas to the final size determined by the resize policy
-        this.sizeCanvas();
 
 
 
@@ -43230,11 +43464,28 @@ isc.CanvasItem.addMethods({
     // an item in the FilterEditor of a ListGrid where a user can resize columns
     setWidth : function (width) {
         this.Super("setWidth", arguments);
-        this.canvas.setWidth(Math.max(1, this.getInnerWidth() - this.getTotalIconsWidth()));
+        if (this.canvas) {
+            var value = this.getValue(),
+                policyWidth = this.sizeCanvasAsTextBox ? this.getTextBoxWidth(value)
+                                                        : this.getInnerWidth();
+            this.canvas.setWidth(Math.max(1, policyWidth));
+            this._appliedWidthToCanvas = true;
+        }
     },
     setHeight : function (height) {
         this.Super("setHeight", arguments);
-        this.canvas.setHeight(this.getInnerHeight());
+        var value = this.getValue(),
+            policyHeight = this.sizeCanvasAsTextBox ? this.getTextBoxHeight(value)
+                                                    : this.getInnerHeight();
+
+
+        if (this.heightIncludesTitle &&
+            this.showTitle && this.getTitleOrientation() == isc.Canvas.TOP)
+        {
+            policyHeight -= this.form.getTitleHeight(this);
+        }
+        this.canvas.setHeight(policyHeight);
+        this._appliedHeightToCanvas = true;
     },
 
     //> @attr CanvasItem.minHeight (Integer : null : IRW)
@@ -43557,6 +43808,7 @@ isc.CanvasItem.addMethods({
     // whose canvas property was set to a DynamicForm showing items capable of editing the 2
     // inner criteria, and whose operator was specified as "or".<br>
     // For example:
+    // <smartclient>
     // <pre>
     //  isc.DynamicForm.create({
     //      items:[
@@ -43572,7 +43824,27 @@ isc.CanvasItem.addMethods({
     //          }
     //      ]
     //  });
-    //  </pre>
+    // </pre>
+    // </smartclient>
+    // <smartgwt>
+    // <pre>
+    //  DynamicForm form = new DynamicForm();
+    //
+    //  DynamicForm innerForm = new DynamicForm();
+    //  innerForm.setOperator(OperatorId.OR);
+    //  TextItem innerField1 = new TextItem();
+    //  innerField1.setOperator(OperatorId.EQUALS);
+    //  TextItem innerField2 = new TextItem();
+    //  innerForm.setFields(innerField1, innerField2);
+    //
+    //  TextItem field1 = new TextItem();
+    //  CanvasItem nestedItem = new CanvasItem();
+    //  nestedItem.setShouldSaveValue(true);
+    //  nestedItem.setCanvas(innerForm);
+    //
+    //  form.setFields(field1, nestedItem);
+    // </pre>
+    // </smartgwt>
     // This form would be able to edit the above advanced criteria object via
     // +link{dynamicForm.setValuesAsCriteria()}. Edited values would be retrieved via
     // +link{dynamicForm.getValuesAsCriteria()}.
@@ -43745,7 +44017,41 @@ isc.TextItem.addClassProperties({
 
     _needNegativeMargins: isc.Browser.isIE &&
                           isc.Browser.version <= 9 &&
-                          (isc.Browser.version <= 7 || !isc.Browser.isStrict)
+                          (isc.Browser.version <= 7 || !isc.Browser.isStrict),
+
+    //> @classAttr TextItem.suppressClearIconClassName (String : "isc_suppressClearIcon" : IRA)
+    // Reserved css className applied to TextItem <i>&lt;input &gt;</i> elements where
+    // +link{textItem.suppressBrowserClearIcon} is true.
+    // <P>
+    // Note that this is an advanced property and in most cases developers do not need to
+    // be aware of it. The style definition for this style-name will be
+    // generated automatically with appropriate css content to suppress the browser
+    // clear icon. It is documented only so that developers are aware that this css className
+    // (and can choose a different name in the extremely rare case where this name has
+    // meaning within their application code).
+    // @visibility external
+    //<
+    // This property is documented as read-only. It is technically writeable but only
+    // before any TextItems with the suppressBrowserClearIcon flag have been created
+    suppressClearIconClassName:"isc_suppressClearIcon",
+
+    createClearIconCSSDefinition : function () {
+        if (this._clearIconCSSElement == null) {
+            this._clearIconCSSElement = isc.Canvas.create({
+                visibility:"hidden",
+                width:1, height:1,
+                top:1,
+                _generated:true,
+                autoDraw:false,
+                getInnerHTML : function () {
+                    return "<style>."
+                        + isc.TextItem.suppressClearIconClassName
+                        + "::-ms-clear {width:0;height:0;}</style>"
+                }
+            });
+            this._clearIconCSSElement.draw();
+        }
+    }
 
 });
 
@@ -44696,6 +45002,14 @@ isc.TextItem.addMethods({
         return inputType;
     },
 
+    drawing : function () {
+
+        if (this._shouldSuppressBrowserClearIcon()) {
+            isc.TextItem.createClearIconCSSDefinition();
+        }
+        this.Super("drawing", arguments);
+    },
+
     getElementHTML : function (value, dataValue) {
         var valueIconHTML = this._getValueIconHTML(dataValue);
         if (this.showValueIconOnly) return valueIconHTML;
@@ -44831,6 +45145,48 @@ isc.TextItem.addMethods({
         return result;
     },
 
+    //> @attr textItem.suppressBrowserClearIcon (Boolean : null : IRW)
+    // This attribute currently only has an effect in Internet Explorer.
+    // That browser will dynamically add a native "clear" icon to
+    // <i>&lt;input type="text" &gt;</i> elements when the user enters a value.
+    // Setting <code>suppressBrowserClearIcon</code> to <code>true</code>
+    // will write out HTML to suppress this icon. This can be particularly useful for
+    // items which define their own clear icon as in
+    // +explorerExample{inlineFormIcons, this sample}.
+    // <P>
+    // If this property is not set at the item level,
+    // +link{dynamicForm.suppressBrowserClearIcons} will be used instead.
+    // <P>
+    // Note that as an alternative to using this feature, the icon may also be suppressed
+    // (or have other styling applied to it) directly via CSS, using the
+    // <code>::-ms-clear</code> css pseudo-element (proprietary Internet Explorer feature).
+    // <P>
+    // Implementation note: This feature makes use of the automatically generated
+    // +link{TextItem.suppressClearIconClassName} css class.
+    //
+    // @visibility external
+    //<
+
+    suppressBrowserClearIcon:null,
+
+    //> @method textItem.setSuppressBrowserClearIcon()
+    // Setter for the +link{suppressBrowserClearIcon}
+    // @param newValue (Boolean) new value for suppressBrowserClearIcon
+    // @visibility external
+    //<
+    setSuppressBrowserClearIcon : function (newValue) {
+        if (this.suppressBrowserClearIcon != newValue) {
+            this.suppressBrowserClearIcon = newValue;
+            this.redraw();
+        }
+    },
+
+    _shouldSuppressBrowserClearIcon : function () {
+        return isc.Browser.isIE &&
+            (this.suppressBrowserClearIcon != null
+                     ? this.suppressBrowserClearIcon : this.form.suppressBrowserClearIcons);
+    },
+
     _elementIsReadOnly:function () {
         return this.isInactiveHTML() || this.isReadOnly();
     },
@@ -44923,14 +45279,20 @@ isc.TextItem.addMethods({
     },
 
     getTextBoxStyle : function () {
+        var textBoxStyle;
         if ((!this.hasFocus && this._getShowHintInField() && !this._getUsePlaceholderForHint() &&
              this._value == null) ||
             (this._showingLoadingDisplayValue))
         {
-            return this._getInFieldHintStyle();
+            textBoxStyle = this._getInFieldHintStyle();
         } else {
-            return this.Super("getTextBoxStyle", arguments);
+            textBoxStyle = this.Super("getTextBoxStyle", arguments);
         }
+        if (this._shouldSuppressBrowserClearIcon()) {
+            textBoxStyle += " " + isc.TextItem.suppressClearIconClassName;
+        }
+        return textBoxStyle;
+
     },
 
     //>    @method    textItem.getElementStyleHTML()    (I)
@@ -45659,7 +46021,9 @@ isc.TextItem.addMethods({
 
                     // Validate against the mask filter
 
-                    if (filter.filter.test(c) || c === this.maskPromptChar) {
+                    if (filter.filter.test(c) || (c === this.maskPromptChar &&
+                                                  filter.filter.test(this.maskPromptChar)))
+                    {
                         return true;
                     }
                 }
@@ -45699,7 +46063,9 @@ isc.TextItem.addMethods({
 
                     // Validate against the mask filter
 
-                    if (filter.filter.test(c) || c === this.maskPromptChar) {
+                    if (filter.filter.test(c) || (c === this.maskPromptChar &&
+                                                  filter.filter.test(this.maskPromptChar)))
+                    {
                         if (!this.maskOverwriteMode && !replayingCharacters) {
                             this._shiftMaskBufferRight(p);
                         }
@@ -47149,7 +47515,10 @@ isc._ScrollingPickerProperties = {
         isc.Element._updateTransformStyle(this, "translateY(100%)");
         // shrink the _fillScreenContainer, so that showing it later correctly animates it's
         // resize and redraws it
-        if (this._fillScreenContainer) this._fillScreenContainer.resizeTo(1,1);
+        if (this._fillScreenContainer) {
+            this._fillScreenContainer.resizeTo(1,1);
+            this._fillScreenContainer.hide();
+        }
     },
 
     // Pick up valueIcons from this form item, if specified
@@ -47506,6 +47875,9 @@ isc._ScrollingPickerProperties = {
     _$_backgroundColor:"background-color:",
     _$_color:"color:",
     getCellCSSText : function (record, rowNum, colNum) {
+
+        var customCSSText = this.Super("getCellCSSText", arguments);
+
         // if it's selected apply the hilite color, if specified
         // Otherwise we rely on regular css class type styling.
         if (this.selectionManager != null &&
@@ -47523,7 +47895,13 @@ isc._ScrollingPickerProperties = {
                 cssText[4] = this.hiliteTextColor;
                 cssText[5] = isc.semi;
             }
+            if (customCSSText != null) {
+                if (!customCSSText.endsWith(isc.semi)) customCSSText += isc.semi;
+                return cssText.join(isc.emptyString) + customCSSText;
+            }
             return cssText.join(isc.emptyString);
+        } else if (customCSSText != null) {
+            return customCSSText;
         }
     },
 
@@ -47541,13 +47919,13 @@ isc._ScrollingPickerProperties = {
     // Override _formatCellValue to call formatPickListValue() if defined (allowing for customized
     // formatting within the pickList).
 
-    _formatCellValue : function (value, record, field, rowNum, colNum) {
+    _formatCellValue : function (value, record, field, rowNum, colNum, a, b, c) {
         if (this.formItem == null) return this.Super("_formatCellValue", arguments);
 
         var fieldName = this.getFieldName(colNum);
         value = this.formItem.formatPickListValue(value, fieldName, record);
 
-        return this.Super("_formatCellValue", [value,record,field,rowNum,colNum]);
+        return this.Super("_formatCellValue", [value, record, field, rowNum, colNum, a, b, c]);
     },
 
     // override keyPress to allow for navigation to different items by typing
@@ -49565,40 +49943,51 @@ isc.PickList.addInterfaceMethods({
             }
         }
 
-        if (!fieldsChanged) return;
 
-        // Ensure that all fields are visible by default. This avoids the gotcha where
-        // detail fields
-        // would otherwise fail to show up in pickLists.
-        for (var i = 0; i < fields.length; i++) {
-            if (fields[i].showIf == null) {
-                fields[i].showIf = this._$true;
-            }
-        }
-
-        // For the display field (which will display the valueIcons specified for this item)
-        // pick up valueIcon sizing etc from this item unless it was explicitly overridden
-        if (this.valueIcons != null || this.getValueIcon != null) {
+        if (fieldsChanged) {
+            // Ensure that all fields are visible by default. This avoids the gotcha where
+            // detail fields
+            // would otherwise fail to show up in pickLists.
             for (var i = 0; i < fields.length; i++) {
-                var field = fields[i];
-                if (field[this.form.fieldIdProperty] == this.getValueFieldName()) {
-                    if (field.valueIconHeight == null)
-                        field.valueIconHeight = this.valueIconHeight;
-                    if (field.valueIconWidth == null)
-                        field.valueIconWidth = this.valueIconWidth;
-                    if (field.valueIconSize == null)
-                        field.valueIconSize = this.valueIconSize;
-                    if (field.imageURLPrefix == null)
-                        field.imageURLPrefix = this.imageURLPrefix || this.baseURL || this.imgDir;
-                    if (field.imageURLSuffix == null)
-                        field.imageURLSuffix = this.imageURLSuffix;
+                if (fields[i].showIf == null) {
+                    fields[i].showIf = this._$true;
                 }
             }
+
+            // For the display field (which will display the valueIcons specified for this item)
+            // pick up valueIcon sizing etc from this item unless it was explicitly overridden
+            if (this.valueIcons != null || this.getValueIcon != null) {
+                for (var i = 0; i < fields.length; i++) {
+                    var field = fields[i];
+                    if (field[this.form.fieldIdProperty] == this.getValueFieldName()) {
+                        if (field.valueIconHeight == null) {
+                            field.valueIconHeight = this.valueIconHeight;
+                        }
+                        if (field.valueIconWidth == null) {
+                            field.valueIconWidth = this.valueIconWidth;
+                        }
+                        if (field.valueIconSize == null) {
+                            field.valueIconSize = this.valueIconSize;
+                        }
+                        if (field.imageURLPrefix == null) {
+                            field.imageURLPrefix = this.imageURLPrefix || this.baseURL ||
+                                                   this.imgDir;
+                        }
+                        if (field.imageURLSuffix == null) {
+                            field.imageURLSuffix = this.imageURLSuffix;
+                        }
+                    }
+                }
+            }
+            pickList.setFields(fields);
         }
-        pickList.setFields(fields);
 
 
         var showHeader = pickList.showHeader;
+
+
+        if (showHeader != null && !fieldsChanged) return;
+
         if (this.pickListHeaderHeight == 0) showHeader = false;
         else if (this.pickListProperties) {
             if (this.pickListProperties.showHeader != null) {
@@ -50498,8 +50887,11 @@ isc.PickList.addInterfaceMethods({
     },
 
     _isPickListVisible : function () {
-        var list = this.pickList;
-        return (list == null ? false : list.isDrawn() && list.isVisible());
+        var target = this.pickList;
+        if (target == null) return false;
+
+        if (target._fillScreenContainer) target = target._fillScreenContainer;
+        return target.isDrawn() && target.isVisible();
     },
 
     // Position / sizing
@@ -53176,7 +53568,9 @@ isc.SelectItem.addMethods({
         if (this.isVisible() && this.containerWidget.isDrawn()) {
 
             if (value == null) value = null;
-            this._setElementValue(this.mapValueToDisplay(value), value);
+
+            var displayValue = this._getDisplayValue(value);
+            this._setElementValue(displayValue, value);
         }
         this._markValueAsDirty();
     },
@@ -54086,7 +54480,7 @@ isc.SelectItem.addMethods({
             // Even if the value is unchanged, its display value is likely to be different, so
             // do a setElementValue.
 
-            this._setElementValue(this.mapValueToDisplay(value), value);
+            this._setElementValue(this._getDisplayValue(value), value);
         }
         if (reShowPickList) this.showPicker();
     },
@@ -56221,16 +56615,13 @@ isc.LinkItem.addProperties({
     //<
     iconVAlign: "center",
 
-    // Don't set a height on LinkItems by default
 
-    height:null,
+    //height:null,
 
-    // No visual border around the text-box so let it fit content. This makes vertical
-    // alignment behave intuitively
-    applyHeightToTextBox:false,
 
-    // default to canEdit: false - an editable link is a possibility, but it doesn't seem
-    // that most users would want/expect this to be the default state
+    applyHeightToTextBox:null,
+
+
     canEdit: false,
 
     // apply "static type format" to LinkItems in read-only mode
@@ -56391,6 +56782,7 @@ isc.LinkItem.addMethods({
         delete this._retrievingInactiveHTML;
         return template.join(isc.emptyString);
     },
+
     updateDisabled : function () {
         this.Super("updateDisabled", arguments);
         this.redraw();
@@ -56443,20 +56835,39 @@ isc.LinkItem.addMethods({
             extraStuffTemplate[5] = null;
         }
 
+        var styleCSS = "";
+
         if (isc.Browser.isMobileWebkit) {
             // Don't allow the link to be bookmarked or opened in a new tab if target is "javascript".
             if (targetIsJavaScript) {
-                extraStuffTemplate[10] = " style='-webkit-touch-callout:none'";
+                styleCSS += "-webkit-touch-callout:none;"
 
             // Otherwise, use the default '-webkit-touch-callout' (overrides any inherited value).
             } else {
-                extraStuffTemplate[10] = " style='-webkit-touch-callout:default'";
+                styleCSS += "-webkit-touch-callout:default;"
             }
-        } else {
-            extraStuffTemplate[10] = null;
         }
 
+        var style = this.getTextBoxStyle(),
+            height = this.getTextBoxHeight("a"),
+            isRTL = this.isRTL(),
+            logicalLeftInlineIconsWidth = isRTL ? this._rightInlineIconsWidth : this._leftInlineIconsWidth,
+            logicalLeftPadding = isc.Element._getLeftPadding(style) + logicalLeftInlineIconsWidth,
+            logicalRightInlineIconsWidth = isRTL ? this._leftInlineIconsWidth : this._rightInlineIconsWidth,
+            logicalRightPadding = isc.Element._getRightPadding(style) + logicalRightInlineIconsWidth
+        ;
+        if (!height) height = this.getPixelHeight(true);
+
+
+
+        styleCSS += "position:relative;height:" + height + "px;line-height:" + height + "px;";
+        if (isRTL) styleCSS += "padding-right:" + logicalRightPadding + "px;";
+        else styleCSS += "padding-left:" + logicalLeftPadding + "px;";
+
+        extraStuffTemplate[10] = " style='" + styleCSS + "'";
+
         var extraStuff = extraStuffTemplate.join(isc.emptyString);
+        if (this.linkTextClass) extraStuff += " class='" + this.linkTextClass + "'";
 
         if (!this.renderAsDisabled()) {
             text = isc.Canvas.linkHTML(text, title, target,
@@ -56516,7 +56927,21 @@ isc.LinkItem.addMethods({
         // case to prevent some warnings from _applyHandlersToElement() later.
         if (this.renderAsDisabled()) return false;
         return this.Super("_canFocusInTextBox", arguments);
-     }
+    },
+
+    _needTextBoxTable : function () {
+        // always need the textBox table to ensure height/v-centering and icons (in grids)
+        return true;
+    },
+
+    shouldApplyHeightToTextBox : function () {
+        if (this.applyHeightToTextBox != null) return this.applyHeightToTextBox;
+        if (this.renderAsStatic()) return !!this.clipStaticValue;
+        // if canEdit is set, return it - in edit mode, we want the outer box like other items
+        if (this.canEdit != null) return this.canEdit;
+        return this.Super("shouldApplyHeightToTextBox", arguments);
+    }
+
 
 });
 
@@ -59880,9 +60305,16 @@ isc.DateItem.addMethods({
 
         if (!this.hasFocus) this.focusInItem();
 
-        // if we were already in a bad state, revalidate now
-        var errors = this.getErrors();
-        if (errors && errors.length > 0) this.validate();
+        if (this.useTextField) {
+
+
+            // if we were already in a bad state, revalidate now
+            var errors = this.getErrors();
+            if (errors && errors.length > 0) {
+                // validate field but defer server validations
+                this.validate(true);
+            }
+        }
 
         // if validateOnEditorExit is true we can get confused by the fact that we updated
         // the value and then shifted focus into the item and so assume there was no change and
@@ -60937,6 +61369,10 @@ isc.TextAreaItem.addMethods({
 
             (isc.Browser.isChrome ? "display:block;" : ""),
 
+
+            (isc.Browser._supportsWebkitOverflowScrolling &&
+             this._useNativeTouchScrollingCSS() ? "-webkit-overflow-scrolling:touch;" : null),
+
             // We write white-space:nowrap onto the containing cell in order to
             // have valueIcons appear on the same line as the textarea.
             // This is inherited by the textarea element by default, essentially breaking
@@ -60956,6 +61392,14 @@ isc.TextAreaItem.addMethods({
                                                                         : "ignore;") :
                     "")
         );
+    },
+
+    _useNativeTouchScrollingCSS : function () {
+        var container = this.containerWidget;
+
+        return container._browserSupportsNativeTouchScrolling &&
+            //!container._usingNativeTouchScrolling() &&
+            container.useNativeTouchScrolling;
     },
 
     getStandaloneItemWrapCSS : function () {
@@ -61275,7 +61719,7 @@ isc.AutoFitTextAreaItem.addProperties({
     // and measure the scrollHeight / scrollWidth of that element
     getTestBox : function (forceResize) {
         var dataValue = this.getValue();
-        var value = this.mapValueToDisplay(dataValue);
+        var value = this._getDisplayValue(dataValue);
         var AFTAI = isc.AutoFitTextAreaItem;
         if (!AFTAI._testBoxCanvas) {
             AFTAI._testBoxCanvas = isc.Canvas.create({
@@ -61349,6 +61793,10 @@ isc.AutoFitTextAreaItem.addProperties({
         var txt = this.Super("getElementCSSText", arguments);
         txt += "overflow:hidden;"
         return txt;
+    },
+
+    _useNativeTouchScrollingCSS : function () {
+        return false;
     },
 
     // These methods are required to determine the delta between the specified size of the
@@ -62135,10 +62583,11 @@ isc.TimeItem.addProperties({
     invalidTimeStringMessage:"Invalid time",
 
     //> @attr timeItem.use24HourTime (Boolean : null : IRW)
-    // Whether to enforce 24-hour time in the UI.
+    // Whether to enforce 24-hour time in the UI.  If unset, assumes to the
+    // +link{Time.use24HourTime, global default}.
     // @visibility external
     //<
-    use24HourTime: true
+    use24HourTime: null
 });
 
 isc.TimeItem.addMethods({
@@ -63384,6 +63833,11 @@ isc.TimeItem.addMethods({
 
         toShortPaddedTime:{mask:"[0-1]#:[0-6]# [ap]m"},
         toShortPadded24HourTime:{mask:"[0-2]#:[0-6]#"}
+    },
+
+    init : function () {
+        if (this.use24HourTime == null) this.use24HourTime = isc.Time.use24HourTime;
+        this.Super("init", arguments);
     },
 
     _getTimeFormatter : function () {
@@ -64748,7 +65202,7 @@ isc.ComboBoxItem.addMethods({
         // Allow an Escape keypress to reset the display value to match the underlying
         // data value again.
         if (keyName == this._$Escape && this.addUnknownValues == false) {
-            var displayValue = this.getDisplayValue(value);
+            var displayValue = this._getDisplayValue(value);
             if (isc.isAn.emptyString(displayValue) &&
                 this._getShowHintTextInDataElement())
             {
@@ -65072,7 +65526,7 @@ isc.ComboBoxItem.addMethods({
                     !this.shouldFetchMissingValue(value))))
                 {
                     // map the value passed to the visible value as necessary
-                    var displayValue = this.mapValueToDisplay(value);
+                    var displayValue = this._getDisplayValue(value);
                     if (displayValue != value) {
                         if (isc.isAn.emptyString(displayValue) &&
                             this._getShowHintTextInDataElement())
@@ -66217,7 +66671,7 @@ isc.ComboBoxItem.addMethods({
         // Make sure in-field hint is hidden
         this._hideInFieldHint();
 
-        var displayValue = this.mapValueToDisplay(value);
+        var displayValue = this._getDisplayValue(value);
         this.setElementValue(displayValue);
         // If we're focused, select the value so the user can single-click edit it.
         if (this.hasFocus) this.selectValue();
@@ -66925,7 +67379,6 @@ comboBoxDefaults: {
     _autoAssignedName: true,
     showTitle: false,
     width: "*",
-    hint: isc.MultiComboBoxItem.defaultHint,
     showHintInField: true,
     completeOnTab: false,
     completeOnEnter: false,
@@ -68048,7 +68501,9 @@ _createCanvas : function () {
     }
 
 
-    var comboBoxProperties = isc.addProperties({ ID: this.ID + isc._underscore + "comboBox" }, this.comboBoxDefaults, this.comboBoxProperties, {
+    var comboBoxProperties = isc.addProperties({ ID: this.ID + isc._underscore + "comboBox",
+                                                hint: isc.MultiComboBoxItem.defaultHint },
+                                               this.comboBoxDefaults, this.comboBoxProperties, {
         creator: this,
         optionDataSource: this.optionDataSource,
         optionOperationId: this.optionOperationId,
@@ -68763,6 +69218,13 @@ isc.FileItem.addProperties({
 
     //> @attr fileItem.accept (String : null : [IR])
     // A comma-separated list of valid MIME types, used as a filter for the file picker window.
+    // <P>
+    // Note that this property makes use of the HTML <code>accept</code> attribute, and so
+    // relies on the browser to perform the desired filtering.  For further study, see:<ul>
+    // <li>+externalLink{https://www.w3schools.com/TAGS/att_input_accept.asp,HTML &lt;input&gt; accept Attribute}
+    // <li>+externalLink{https://developer.mozilla.org/en-US/docs/Web/HTML/Element/Input,The Input (Form Input) element}
+    // <li>+externalLink{https://stackoverflow.com/questions/181214/file-input-accept-attribute-is-it-useful,File input 'accept' attribute - is it useful?}
+    // </ul>
     // @visibility external
     //<
 
@@ -71890,7 +72352,7 @@ isc.ColorItem.addMethods({
             value = this.getElementValue();
 
         // unmap the value if necessary
-        value = this.mapDisplayToValue(value);
+        value = this._getDisplayValue(value);
 
         if (value == this._value) return;
 
@@ -71978,12 +72440,15 @@ isc.ColorItem.addMethods({
         this.updateValue();
     },
 
-    //>    @method    colorItem.pickerColorSelected()
-    //  Store the color value selected by the user from the color picker.  You will need to
-    //  override this method if you wish to capture opacity information from the +link{ColorPicker}
-    //  @param  color (String)   the selected color as a string
-    //  @param  opacity (int)  the selected opacity, from 0 (transparent) to 100 (opaque).
-    //                            Only applicable if +link{supportsTransparency} is true.
+    //> @method colorItem.pickerColorSelected()
+    // Store the color value selected by the user from the color picker.  You will need to
+    // override this method if you wish to capture opacity information from the
+    // +link{ColorPicker}.
+    // @param color   (String)  The selected color as a string.
+    // @param opacity (Integer) The selected opacity, from 0 (transparent) to 100 (opaque),
+    //                          or null if +link{supportsTransparency} is false or the
+    //                          +link{ColorPicker,color picker} selected a color while in
+    //                          +link{ColorPickerMode,simple mode}.
     // @visibility external
     //<
     pickerColorSelected : function (color, opacity) { },
@@ -74431,7 +74896,7 @@ isc.ValuesManager.addMethods({
                 this._synchronizingMembers = true;
                 for (var i = 0; i < fields.length; i++) {
                     if (fields[i].form == member) continue;
-                    fields[i].saveValue(value);
+                    fields[i].storeValue(value, true);
                 }
                 delete this._synchronizingMembers;
             }
@@ -74887,6 +75352,9 @@ isc.ValuesManager.addMethods({
     // occur asynchronously.  Developers can use +link{ValuesManager.isPendingAsyncValidation()}
     // and +link{valuesManager.handleAsyncValidationReply()} to detect and respond to
     // asynchronous validation.
+    // <P>
+    // Note that for silent validation, +link{valuesAreValid()} (client-side) and
+    // +link{checkForValidationErrors()} (client and server-side) can be used instead.
     //
     // @return  (Boolean)   true if all validation passed
     // @visibility external
@@ -74895,7 +75363,7 @@ isc.ValuesManager.addMethods({
     //<
 
     validate : function (validateHiddenFields, ignoreDSFields, typeValidationsOnly,
-            checkValuesOnly, skipServerValidation, suppressShowErrors)
+                         checkValuesOnly, skipServerValidation, suppressShowErrors)
     {
         // Just bail if client-side validation is disabled.
         // Note that we'll still show the errors returned from a failed server save due to
@@ -74985,6 +75453,15 @@ isc.ValuesManager.addMethods({
                         // VM.showErrors
                         form.validate(true, true, typeValidationsOnly, checkValuesOnly,
                                       skipServerValidation, true, pendingMembers);
+
+                // if checkValuesOnly is set, formSuccess may be an error object
+                if (checkValuesOnly) {
+                    if (formSuccess != true) {
+                        if (returnVal == true) returnVal = formSuccess;
+                        else this._combineErrors(returnVal, formSuccess);
+                    }
+                    continue;
+                }
                 returnVal = (returnVal && formSuccess);
 
                 if (!disableValidation) {
@@ -75047,8 +75524,18 @@ isc.ValuesManager.addMethods({
 
             // for consistency with forms - if we got a single error, store as a string, not
             // a single element array
-            if (errors[fieldName] && errors[fieldName].length == 1) errors[fieldName] = errors[fieldName][0];
+            if (errors[fieldName] && errors[fieldName].length == 1) {
+                errors[fieldName] = errors[fieldName][0];
+            }
+        }
 
+        // if checkValuesOnly is set, return an error object like DF.validate()
+        if (checkValuesOnly) {
+            if (!isc.isAn.emptyObject(errors)) {
+                if (returnVal == true) returnVal = errors;
+                else this._combineErrors(returnVal, errors);
+            }
+            return returnVal;
         }
 
         // add hidden errors from fields that are not associated with any form.
@@ -75064,6 +75551,98 @@ isc.ValuesManager.addMethods({
         if (isc.getKeys(errors).length > 0)  returnVal = false;
 
         return returnVal;
+    },
+
+    // combine a new set of errors with an old one
+    _combineErrors : function (oldErrors, newErrors) {
+        for (var fieldName in newErrors) {
+            var oldFieldErrs = oldErrors[fieldName],
+                newFieldErrs = newErrors[fieldName]
+            ;
+            oldErrors[fieldName] = oldFieldErrs ?
+                this._addFieldErrors(oldFieldErrs, newFieldErrs) : newFieldErrs;
+        }
+    },
+
+    //> @method ValuesManager.valuesAreValid()
+    // Method to determine whether the current set of values for this values manager would pass
+    // validation by the validators defined in the member forms.  This method operates
+    // client-side, without contacting the server, running validators on the forms' values and
+    // returning a value indicating whether validation was successful.
+    // <P>
+    // Note that, like +link{validate()}, this method will perform value validation even if:<ul>
+    // <li>A datasource field has no corresponding item in any member form</li>
+    // <li>The item in question is hidden</li>
+    // <li>The member form containing the item is hidden</li></ul>
+    // <P>
+    // Unlike +link{ValuesManager.validate()} this method will not store the errors on the forms
+    // or display them to the user.
+    // @param [returnErrors] (boolean) If unset, this method returns a simple boolean value indicating
+    // success or failure of validation. If this parameter is passed, this method will return
+    // an object mapping each field name to the errors(s) encountered on validation failure, or null
+    // if validation was successful.
+    // @return (boolean | Map) Boolean value indicating validation success, or if
+    // <code>returnErrors</code> was specified, <smartclient>an object mapping</smartclient>
+    // <smartgwt>a map of</smartgwt> field names to the associated errors, for those fields that
+    // failed validation, or null if validation succeeded.
+    // @visibility external
+    // @group validation
+    //<
+    valuesAreValid : function (returnErrors) {
+        var errors = this.validate(true, null, null, true, true);
+        if (errors === true) {
+            return returnErrors ? null   : true;
+        } else {
+            return returnErrors ? errors : false;
+        }
+    },
+
+    //> @method ValuesManager.checkForValidationErrors
+    // Performs silent validation of the value manager values, like +link{valuesAreValid()}.  In
+    // contrast to +link{valuesAreValid()}, this method allows checking for server-side errors, and
+    // finding out what the errors are.
+    // <P>
+    // The callback must be passed unless server-side validation is being skipped, and If passed,
+    // it always fires, errors or not, firing synchronously if server validation is skipped.
+    //
+    // @param callback (ValidationStatusCallback) callback to invoke after validation is complete
+    // @param [skipServerValidation] (boolean) whether to skip doing server-side validation
+    //
+    // @return (Map) null if server-side validation is required, or no errors are present;
+    // otherwise, <smartclient>an object mapping</smartclient><smartgwt>a Map of</smartgwt> field
+    // names to the associated errors, for those fields that failed validation.
+    //
+    // @visibility external
+    // @group validation
+    //<
+    checkForValidationErrors : function (callback, skipServerValidation) {
+
+        var errors = this.validate(true, null, null, true, true);
+        if (errors === true) errors = null;
+
+        // return immediately if errors detected or skipping server-side validation
+        var dataSource = this.getDataSource();
+        if (errors || skipServerValidation || !dataSource) {
+            if (callback != null) this.fireCallback(callback, "errorMap", [errors]);
+            return errors;
+        }
+
+        if (!callback) {
+            this.logWarn("checkForValidationErrors(): no callback has been provided, but not " +
+                         "skipping server-side validation - this is invalid usage");
+            return;
+        }
+
+        // validate the data on the server
+        var values = this.getValues(),
+        context = this.buildRequest(null, "validate");
+        context.editor = this;
+
+        dataSource.validateData(values, function (response, data) {
+            var errors = response.status == isc.RPCResponse.STATUS_VALIDATION_ERROR &&
+                response.errors ? response.errors : null;
+            this.fireCallback(callback, "errorMap", [errors]);
+        }, context);
     },
 
     buildDataPathsRecursively : function(dataPaths, parentDP, dataSource) {
@@ -76015,7 +76594,8 @@ isc.ValuesManager.addMethods({
     //   value
     // - the user modifying values in a field
     // - calls to 'setValue()' [not setValues as that will re-remember the values after setting]
-    rememberValues : function () {
+
+    rememberValues : function (skipRememberMembers) {
 
         var values = this.getValues();
 
@@ -76035,6 +76615,16 @@ isc.ValuesManager.addMethods({
         // value is at this moment.
         // [still store the current val for valuesHaveChanged() checks]
         this._rememberedDefault = rememberedDefault;
+
+
+        if (!skipRememberMembers && this.members) {
+            for (var i = 0; i < this.members.length; i++) {
+                var form = this.members[i];
+                if (isc.isA.DynamicForm(form) && form.valuesHaveChanged()) {
+                    form.rememberValues();
+                }
+            }
+        }
 
         return this._oldValues;
     },
@@ -76404,10 +76994,13 @@ isc.ValuesManager.addMethods({
         member._valuesManagerFromDataPath = fromDataPath;
 
         // We have directly manipulated the values object, so we should re remember it.
-        this.rememberValues();
+        this.rememberValues(true);
 
-        // set up observation for async validation on the member
         if (isc.isA.DynamicForm(member)) {
+            // remember values on the new member being added
+            if (member.valuesHaveChanged()) member.rememberValues();
+
+            // set up observation for async validation on the member
             this.observe(member, "handleAsyncValidationReply",
                          "observer._handleFormAsyncValidationReply(this,success,errors,context)");
         }
@@ -79153,8 +79746,10 @@ isc.ColorPicker.registerStringMethods({
     // call this method. The <code>ColorPicker</code> may automatically hide
     // itself after calling this method depending on +link{autoHide} and
     // +link{defaultPickMode}.
-    // @param color (String)    The color selected, in HTML format
-    // @param opacity (Number)  The opacity selected, from 0-100.
+    // @param color   (String)  The color selected, in HTML format.
+    // @param opacity (Integer) The selected opacity, from 0 (transparent) to 100 (opaque),
+    //                          or null if +link{supportsTransparency} is false or the picker
+    //                          selected a color while in +link{ColorPickerMode,simple mode}.
     // @see ColorPicker.colorChanged()
     // @visibility external
     //<
@@ -85446,7 +86041,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v12.0d_2018-02-13/LGPL Deployment (2018-02-13)
+  Version v12.0p_2018-06-28/LGPL Deployment (2018-06-28)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

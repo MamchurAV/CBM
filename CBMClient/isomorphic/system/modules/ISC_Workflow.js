@@ -1,6 +1,6 @@
 /*
  * Isomorphic SmartClient
- * Version SNAPSHOT_v12.0d_2018-02-13 (2018-02-13)
+ * Version v12.0p_2018-06-28 (2018-06-28)
  * Copyright(c) 1998 and beyond Isomorphic Software, Inc. All rights reserved.
  * "SmartClient" is a trademark of Isomorphic Software, Inc.
  *
@@ -32,7 +32,7 @@ _6=_4[_3[i]]}
 _4=_6}
 _4[_3[i]]=_2}},isc.A.getStateVariable=function isc_Process_getStateVariable(_1){if(_1.indexOf(".")<0||this.state[_1]){return this.state[_1]}else{var _2=_1.split(".");var _3=this.state;for(var i=0;i<_2.length-1;i++){_3=_3[_2[i]];if(_3==null){isc.logWarn("Unable to get state variable: "+_1+" no such path")
 return}}
-return _3[_2[i]]}},isc.A.setState=function isc_Process_setState(_1){this.state=_1});isc.B._maxIndex=isc.C+14;isc.Process.registerStringMethods({finished:"state"});isc.defineClass("ServiceTask","Task");isc.A=isc.ServiceTask.getPrototype();isc.B=isc._allFuncs;isc.C=isc.B._maxIndex;isc.D=isc._funcClasses;isc.D[isc.C]=isc.A.Class;isc.A.operationType="fetch";isc.B.push(isc.A.executeElement=function isc_ServiceTask_executeElement(_1){var _2=this.dataSource;if(_2.getClassName==null||_2.getClassName()!="DataSource"){_2=isc.DataSource.get(_2)}
+return _3[_2[i]]}});isc.B._maxIndex=isc.C+13;isc.Process.registerStringMethods({finished:"state"});isc.defineClass("ServiceTask","Task");isc.A=isc.ServiceTask.getPrototype();isc.B=isc._allFuncs;isc.C=isc.B._maxIndex;isc.D=isc._funcClasses;isc.D[isc.C]=isc.A.Class;isc.A.operationType="fetch";isc.B.push(isc.A.executeElement=function isc_ServiceTask_executeElement(_1){var _2=this.dataSource;if(_2.getClassName==null||_2.getClassName()!="DataSource"){_2=isc.DataSource.get(_2)}
 var _3={};if(this.inputFieldList){for(var i=0;i<this.inputFieldList.length;i++){var _5=this.inputFieldList[i];var _6=_5.lastIndexOf(".");if(_6>0){_5=_5.substring(_6+1)}
 _3[_5]=_1.getStateVariable(this.inputFieldList[i])}}
 if(this.inputField){var _5=this.inputField;var _6=_5.lastIndexOf(".");if(_6>0){_5=_5.substring(_6+1)}

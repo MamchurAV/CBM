@@ -1,7 +1,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v12.0d_2018-02-13/LGPL Deployment (2018-02-13)
+  Version v12.0p_2018-06-28/LGPL Deployment (2018-06-28)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,9 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
 
-if (window.isc && isc.version != "SNAPSHOT_v12.0d_2018-02-13/LGPL Deployment" && !isc.DevUtil) {
+if (window.isc && isc.version != "v12.0p_2018-06-28/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v12.0d_2018-02-13/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'v12.0p_2018-06-28/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -4382,7 +4382,9 @@ handleMouseDown : function (event, eventInfo) {
         rv = this.mouseDown(event, eventInfo);
         if (rv == false) return false;
     }
-    if (this.showDown) this.setState(isc.StatefulCanvas.STATE_DOWN);
+    if (this.showDown && !this.isDisabled()) {
+            this.setState(isc.StatefulCanvas.STATE_DOWN);
+        }
     return rv;
 },
 
@@ -5467,6 +5469,7 @@ isc.Layout.addProperties({
     // <P>
     // If you want to dynamically create a component to be added to the Layout in response to a
     // drop event you can do so as follows:
+    // <smartclient>
     // <pre>
     // isc.VLayout.create({
     //   ...various layout properties...
@@ -5483,6 +5486,27 @@ isc.Layout.addProperties({
     //   }
     // });
     // </pre>
+    // </smartclient>
+    // <smartgwt>
+    // <pre>
+    //  final VLayout vLayout = new VLayout();
+    //  //...various layout properties...
+    //  vLayout.setCanDropComponents(true);
+    //  vLayout.addDropHandler(new DropHandler() {
+    //      &#64;Override
+    //      public void onDrop(DropEvent event) {
+    //          // create the new component
+    //          Canvas newMember = new Canvas();
+    //          // add to the layout at the current drop position
+    //          // (the dropLine will be showing here)
+    //          vLayout.addMember(newMember, vLayout.getDropPosition());
+    //          // hide the dropLine that was automatically shown
+    //          // by builtin SmartGWT methods
+    //          vLayout.hideDropLine();
+    //      }
+    //  });
+    // </pre>
+    // </smartgwt>
     // If you want to completely suppress the builtin drag and drop logic, but still receive drag
     // and drop events for your own custom implementation, set +link{Canvas.canAcceptDrop} to
     // <code>true</code> and <code>canDropComponents</code> to <code>false</code> on your Layout.
@@ -7399,7 +7423,6 @@ applyStretchResizePolicy : function (sizes, totalSize, minSize, modifyInPlace) {
         return policy.call(thisClass, sizes, totalSize, minSize, modifyInPlace, this);
 },
 
-_$adaptMembers: "adaptMembers",
 adaptMembersToSpace : function (sizes, totalSpace, overflowAsFixed, layoutInfo) {
 
     var adapted = false,
@@ -10256,7 +10279,9 @@ titleClipped : function (startAfterNode) {
     if (titleClipperHandle == null) return false;
 
 
-    if (this.getScrollHeight() > this.getViewportHeight()) return true;
+    if (this.getScrollHeight() > this.getViewportHeight()) {
+        return true;
+    }
 
 
     if (isc.Browser.isChrome ||
@@ -10559,7 +10584,6 @@ getInnerHTML : function () {
                         (isRTL && ((this.ignoreRTL && this.iconOrientation == isc.Canvas.LEFT) ||
                                    (!this.ignoreRTL && this.iconOrientation == isc.Canvas.RIGHT)))),
             b = (isRTL || opposite) && !(isRTL && opposite);
-
         var beforePadding = 0,
             afterPadding = 0,
             iconHTML = null;
@@ -10717,7 +10741,8 @@ __adjustOverflow : function (reason) {
     this.Super("__adjustOverflow", arguments);
 
 
-    if (isc.Browser.isSafari && !isc.Browser.isChrome && this.icon != null &&
+    if (isc.Browser.isSafari && !isc.Browser.isChrome && !isc.Browser.isEdge &&
+        this.icon != null &&
         !(this.isPrinting || !this._explicitlySizeTable()))
     {
         var isRTL = this.isRTL(),
@@ -10735,7 +10760,6 @@ __adjustOverflow : function (reason) {
 
             var beforePadding = extraWidth,
                 afterPadding = 0;
-
             // Reset the title clipper's left and right padding to "normal" before checking whether
             // the title is clipped.
             titleClipperStyle[isRTL ? "paddingRight" : "paddingLeft"] = beforePadding + "px";
@@ -10751,7 +10775,6 @@ __adjustOverflow : function (reason) {
                     beforePadding -= (beforePadding / 2) << 0;
                     afterPadding = iconWidth;
                 }
-
                 titleClipperStyle[isRTL ? "paddingRight" : "paddingLeft"] = beforePadding + "px";
                 titleClipperStyle[isRTL ? "paddingLeft" : "paddingRight"] = afterPadding + "px";
             }
@@ -11595,8 +11618,11 @@ setIcon : function (icon) {
 
     // Make sure that we're drawn before trying to set the image src or redraw().
     if (this.isDrawn()) {
-        if (hadIcon && (icon != null)) {
-            this.setImage(this._$icon, this._getIconURL(), null, this._iconIsSprite());
+        var src = this._getIconURL(),
+            isSprite = this._iconIsSprite()
+        ;
+        if (hadIcon && (icon != null) && this._canSetImage(this._$icon, src, isSprite)) {
+            this.setImage(this._$icon, src, null, isSprite);
         } else {
             this.redraw();
         }
@@ -12258,10 +12284,12 @@ setSrc : function (URL) {
 resetSrc : function () {
     if (!this.isDrawn()) return;
 
+    var src = this.getURL();
+
     // depending on how the image was originally drawn,
     //    we may be able to simply reset the image
-    if (this.imageType != isc.Img.TILE) {
-        this.setImage(this.name, this.getURL());
+    if (this.imageType != isc.Img.TILE && this._canSetImage(this.name, src)) {
+        this.setImage(this.name, src);
         // The new image might have different intrinsic dimensions. Need to call adjustOverflow()
         // to refresh the scrollWidth/Height.
         this.adjustOverflow("setImage() called");
@@ -12270,8 +12298,6 @@ resetSrc : function () {
         this.markForRedraw("setSrc on tiled image");
     }
 },
-
-
 
 //> @method img.stateChanged()
 //        Update the visible state of this image by changing the URL
@@ -13184,7 +13210,8 @@ stateChanged : function (whichPart) {
 
                 if (!whichPart || item.name == whichPart) {
                     // set the image to the new state image
-                    if (!this._$blankRE.test(item.name)) {
+
+                    if (!item.src && !this._$blankRE.test(item.name)) {
                         this.setImage(item.name, this._getItemURL(item));
                     }
 
@@ -15532,7 +15559,10 @@ isc.defineClass("ImgButton", "Img").addProperties({
     //>    @attr ImgButton.overflow      (String : "hidden" : IRW)
     // Clip by default, because expanding to the label (if present) is likely to distort image
     //<
-    overflow:isc.Canvas.HIDDEN
+    overflow:isc.Canvas.HIDDEN,
+
+
+    useImageForSVG:isc.Browser.isEdge
 
 });
 
@@ -17869,7 +17899,10 @@ isc.SectionStack.addProperties({
     // order for accessibility.
     // May be overridden at the Section level via +link{SectionStackSection.canTabToHeader}
     // <P>
-    // If unset, section headers will be focusable if +link{isc.setScreenReaderMode} has been called.
+    // If unset, section headers will be focusable if <smartclient>+link{isc.setScreenReaderMode}
+    // </smartclient>
+    // <smartgwt>{@link com.smartgwt.client.util.SC#setScreenReaderMode SC.setScreenReaderMode()}
+    // </smartgwt> has been called.
     // See +link{group:accessibility}.
     // @visibility external
     //<
@@ -29960,6 +29993,8 @@ isc.SplitPane.addProperties({
     // @visibility external
     //<
     showNavigationPane : function (direction, fromHistoryCallback, forceUIRefresh) {
+        if (!this.navigationPane || !this.navigationPane.isVisible()) forceUIRefresh = true;
+
         var changed = this.currentPane != null && this.currentPane !== "navigation";
         this.currentPane = "navigation";
         // If coming from the history callback, then we need to refresh the UI because the
@@ -30037,11 +30072,15 @@ isc.SplitPane.addProperties({
     // is <code>true</code>, this is the direction passed to +link{NavigationBar.setViewState()}.
     // @visibility external
     //<
-    showListPane : function (listPaneTitle, backButtonTitle, direction, fromHistoryCallback, forceUIRefresh) {
+    showListPane : function (listPaneTitle, backButtonTitle, direction, fromHistoryCallback,
+                             forceUIRefresh)
+    {
         if (!this._hasListPane()) {
             this.logWarn("Attempted to show the list pane, but this SplitPane does not have a list pane. Ignoring.");
             return;
         }
+
+        if (!this.listPane || !this.listPane.isVisible()) forceUIRefresh = true;
 
         var changed = (this.currentPane !== "list");
         if (listPaneTitle != null) this.listTitle = listPaneTitle;
@@ -30049,7 +30088,8 @@ isc.SplitPane.addProperties({
         this.currentPane = "list";
         // If coming from the history callback, then we need to refresh the UI because the
         // list title might be different or there might be an overridden back button title.
-        this.updateUI(listPaneTitle != null || backButtonTitle != null || fromHistoryCallback || forceUIRefresh, direction);
+        this.updateUI(listPaneTitle != null || backButtonTitle != null ||
+                      fromHistoryCallback || forceUIRefresh, direction);
 
         if (changed) {
             if (!fromHistoryCallback) {
@@ -30121,14 +30161,19 @@ isc.SplitPane.addProperties({
     // is <code>true</code>, this is the direction passed to +link{NavigationBar.setViewState()}.
     // @visibility external
     //<
-    showDetailPane : function (detailPaneTitle, backButtonTitle, direction, fromHistoryCallback, forceUIRefresh) {
+    showDetailPane : function (detailPaneTitle, backButtonTitle, direction, fromHistoryCallback,
+                               forceUIRefresh)
+    {
+        if (!this.detailPane || !this.detailPane.isVisible()) forceUIRefresh = true;
+
         var changed = (this.currentPane !== "detail");
         if (detailPaneTitle != null) this.detailTitle = detailPaneTitle;
         if (backButtonTitle != null) this._overriddenBackButtonTitle = backButtonTitle;
         this.currentPane = "detail";
         // If coming from the history callback, then we need to refresh the UI because the
         // detail title might be different or there might be an overridden back button title.
-        this.updateUI(detailPaneTitle != null || backButtonTitle != null || fromHistoryCallback || forceUIRefresh, direction);
+        this.updateUI(detailPaneTitle != null || backButtonTitle != null ||
+                      fromHistoryCallback || forceUIRefresh, direction);
 
         if (changed) {
             if (!fromHistoryCallback) {
@@ -31390,7 +31435,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v12.0d_2018-02-13/LGPL Deployment (2018-02-13)
+  Version v12.0p_2018-06-28/LGPL Deployment (2018-06-28)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
