@@ -935,46 +935,54 @@ function getRelationsForConcept(conceptId, callback) {
   var conceptDS = isc.DataSource.get("Concept"); // <<<<<<<<<<<<<<<<<<< var 
   var relations = [];
   var inherited = false;
-  function innerGetRelations(conceptId) {
+  function innerGetRelations(conceptId, callbackBound) {
     if (conceptDS.hasAllData()) {
       var record = conceptDS.getCacheData().find({ID: conceptId});
-      var relationsToThis = isc.DataSource.get("Relation").getCacheData().findAll({ForConcept: conceptId});
-      var i = 0;
-      if (relationsToThis !== null) {
-        for (i; i < relationsToThis.length; i++) {
-          var exists = false;
-          for (j = 0; j < relations.length; j++) {
-            if (relations[j].SysCode === relationsToThis[i].SysCode && !relations[j].Del) {
-              exists = true;
-              if (!relations[j]._inherited) {
-                relations[j]._modified = true;
+      isc.DataSource.get("Relation").fetchData({ForConcept: conceptId}, 
+        function(relationsFetched) {
+          var relationsToThis = relationsFetched.data;
+          var i = 0;
+          if (relationsToThis !== null) {
+            
+            for (i; i < relationsToThis.length; i++) {
+              var exists = false;
+              var j = 0;
+              for (j; j < relations.length; j++) {
+                if (relations[j].SysCode === relationsToThis[i].SysCode && !relations[j].Del) {
+                  exists = true;
+                  if (!relations[j]._inherited) {
+                    relations[j]._modified = true;
+                  }
+                }
+              }
+              if (!exists || !inherited) {
+                relationsToThis[i]._inherited = inherited;
+                if (inherited) {
+                  relationsToThis[i]._modified = false;
+                }
+                relationsToThis[i].ForConceptSysCode = record.SysCode;
+                relations.add(relationsToThis[i]);
               }
             }
           }
-          if (!exists) {
-            relationsToThis[i]._inherited = inherited;
-            relationsToThis[i].ForConceptSysCode = record.SysCode;
-            relations.add(relationsToThis[i]);
+          if (record && record.BaseConcept && record.BaseConcept !== "null") {
+            // Initialize relations for discovered Concept
+            inherited = true;  
+            innerGetRelations(record.BaseConcept, callbackBound);
+          } else {
+          if (record && relations){
+            record.relations = relations.sortByProperty("Odr", true); 
+          }
+          if (callbackBound) {
+            callbackBound(relations.sortByProperty("Odr", true));
           }
         }
-      }
-    }
-    if (record && record.BaseConcept && record.BaseConcept !== "null") {
-      inherited = true;  
-      innerGetRelations(record.BaseConcept);
-    } else {
-      // Initialize relations for discovered Concept
-      if (record && relations){
-        record.relations = relations.sortByProperty("Odr", true); //<<<<<<<<<<<
-      }
-      if (callbackBound) {
-        callbackBound(relations.sortByProperty("Odr", true));
-      }
+      });
     }
   }
-  
+ 
   var callbackBound = callback.bind(this); // <<< TODO: in main cases "this" here is just "window", so bind() looks abused
-  innerGetRelations(conceptId);
+  innerGetRelations(conceptId, callbackBound);
 }
 
 
@@ -1165,10 +1173,7 @@ TransactionManager.close = function (transact) {
 var addDataToCache = function (rec) {
   currentDS = isc.DataSource.get(rec.Concept);
   if (currentDS) {
-    // if (currentDS.cacheData == undefined) { !!! Needs to test against cacheResultSet existence
-    // currentDS.setCacheAllData(true);
-    // }
-    if (currentDS.cacheResultSet == undefined) {
+      if (currentDS.cacheResultSet == undefined) {
       currentDS.setCacheAllData(true);
     }
     var dsResponse = {
@@ -3639,6 +3644,12 @@ function deleteSelectedRecords(innerGrid, mode) {
             cbmRecord.currentTransaction = innerGrid.context.valuesManager.getValues().currentTransaction;
           }
           deleteRecord(cbmRecord, mode, innerGrid);
+          if (mode === "restore" || mode === "delete") {
+            updateDataInCache(cbmRecord);
+          } else if (mode === "deleteForce") {
+            removeDataFromCache(cbmRecord);
+          }
+          innerGrid.refresh();
         }
       }
     }
@@ -3777,6 +3788,11 @@ isc.InnerGrid.addProperties({
   refresh: function () {
  	this.grid.setCriteria(this.grid.getFilterEditorCriteria());
     this.grid.invalidateCache();
+    if(this.canvasItem && this.canvasItem.showValue) {
+      this.canvasItem.showValue("", null, 
+                                this.topElement, 
+                                this.canvasItem);
+    }
     // this.grid.refreshData();
     // var that = this.grid;
     // this.fetchData( function(responce, data) {
@@ -4597,7 +4613,7 @@ isc.RelationsAggregateControl.addProperties({
     [
       {
         fieldName: ["SysCode", "Description", "ForConcept", "RelatedConcept", "PrgNotes", "DBTable", "DBColumn"],
-        cssText: "background-color:#BBCCFF;", 
+        cssText: "background-color:#C8E0F0;", 
         criteria: {
           fieldName: "_inherited", 
           operator: "equals", 
@@ -4605,7 +4621,7 @@ isc.RelationsAggregateControl.addProperties({
         }
       }, {
         fieldName: ["SysCode", "Description", "ForConcept", "RelatedConcept", "PrgNotes", "DBTable", "DBColumn"],
-        cssText: "background-color:#CCEEDD;", 
+        cssText: "background-color:#E5F5FF;", 
         criteria: {
           fieldName: "_modified", 
           operator: "equals", 
@@ -4648,6 +4664,9 @@ isc.RelationsAggregateControl.addProperties({
             function (data) {
               var filter = that.innerGrid.filters.getCriteria();
               var filteredData = data.findAll(filter);
+              if (filteredData === null) {
+                filteredData = [];
+              }
               that.innerGrid.grid.setData(filteredData);
              //     that.innerGrid.getDataSource().setCacheData(data);
 
