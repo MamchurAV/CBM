@@ -10,6 +10,10 @@ package CBMServer;
 import org.restlet.Application;
 import org.restlet.Restlet;
 import org.restlet.routing.Router;
+
+import CBMFileUpload.UploadServer;
+import CBMPersistence.ConnectionPool;
+
 import org.restlet.resource.Directory;
 
 import java.sql.Connection;
@@ -19,26 +23,30 @@ import java.sql.Statement;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import javax.sql.DataSource;
+
 public class CBMRestlet extends Application {
 
 	// URI of the root directory.
 	public static final String ROOT_URI = "file:///" + CBMStart.CBM_ROOT + "/CBMClient/";
+	public static final String FS_URI = "file:///" + CBMStart.CBM_ROOT + "/../CBM_Files/";
 	private static Timer timer;
 	private static TimerTask timerTask;
-	private String dbURL = null;
-	private String dbUs = null;
-	private String dbCred = null;
+//	private String dbURL = null;
+//	private String dbUs = null;
+//	private String dbCred = null;
+	private static DataSource dataSource = ConnectionPool.getDataSource();
 	
 	public CBMRestlet() {
 		super();
-		try {
-		Class.forName(CBMStart.getParam("primaryDBDriver"));
-		dbURL = CBMStart.getParam("primaryDBUrl");
-		dbUs = CBMStart.getParam("primaryDBUs");
-		dbCred = CBMStart.getParam("primaryDBCred");
-		} catch (Exception ex) {
-	        ex.printStackTrace();
-		}
+//		try {
+//		Class.forName(CBMStart.getParam("primaryDBDriver"));
+//		dbURL = CBMStart.getParam("primaryDBUrl");
+//		dbUs = CBMStart.getParam("primaryDBUs");
+//		dbCred = CBMStart.getParam("primaryDBCred");
+//		} catch (Exception ex) {
+//	        ex.printStackTrace();
+//		}
 		timer = new Timer(true);
 		timerTask = new RemindTask();
         timer.scheduleAtFixedRate(timerTask, 20*1000, 300*1000);
@@ -52,12 +60,26 @@ public class CBMRestlet extends Application {
         // ----------- Create a router Restlet that routes each call to a new instance of HelloWorldResource. --------------
         Router router = new Router(getContext());
         //--------------- Defines all necessary routes -----------------------
-        // Route for main Data proceeding requests 
+        // Route for application start requests 
         router.attach("/CBMStart", CBMServer.CBMClientStart.class); 
         // Route for static resources (as JS files, ets.)
         router.attach("/CBMClient", new Directory(getContext(), ROOT_URI));
+        // Route for file storage.
+        router.attach("/FileStorage", new Directory(getContext(), FS_URI));
         // Route for main Data proceeding requests 
         router.attach("/DataService", CBMServer.DataAccessService.class); 
+        // Route for blobs upload to Azure functionality 
+        router.attach("/UploadAzureBlob", CBMServer.UploadAzureBlobService.class); 
+        // Route for uploaded to Azure blobs deletion functionality 
+        // TODO: Investigate why DeleteAzureBlob not called by client (FineUploader)
+        router.attach("/DeleteAzureBlob", CBMServer.DeleteAzureBlobService.class); 
+        // Route for uploaded to Azure blobs deletion functionality 
+        // TODO: Investigate why DeleteAzureBlob not called by client (FineUploader)
+        router.attach("/UploadFile", UploadServer.class); 
+        
+        // Route for static resources (as JS files, ets.)
+        // (Keep this the last)
+        router.attach("/", new Directory(getContext(), ROOT_URI));
         return router;
     }
     
@@ -69,26 +91,28 @@ public class CBMRestlet extends Application {
     		Statement statement = null;
     		String inact = CBMStart.getParam("inactivityInterval");
     		if (inact == null) {
-    			inact = "4h";
+    			inact = "4";
     		}
 			try {
 				// --- Central Metadata-hosting database connection
-				dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+//				dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
 				// 	
+                dbCon = dataSource.getConnection();
+				
 				statement = dbCon.createStatement();
 				String dbType = CBMStart.getParam("primaryDBType");
 				switch (dbType){
-				case "PosgreSQL":
-					statement.executeUpdate("DELETE FROM cbm.startsession WHERE Moment <= localtimestamp - interval '" + inact + "'");
+				case "PostgreSql":
+					statement.executeUpdate("DELETE FROM cbm.startsession WHERE Moment <= localtimestamp - interval '" + inact + "h'");
 					break;
 				case "DB2":	
 					statement.executeUpdate("DELETE FROM cbm.startsession WHERE Moment <= sysdate() - 0.0283");
 					break;
 				case "MySQL":	
-					statement.executeUpdate("DELETE FROM cbm.startsession WHERE Moment <= date_sub(sysdate(), INTERVAL 30 minute)");
+					statement.executeUpdate("DELETE FROM cbm.startsession WHERE Moment <= date_sub(sysdate(), INTERVAL 50 minute)");
 					break;
 				case "MSSQL":	
-					statement.executeUpdate("DELETE FROM cbm.startsession WHERE Moment <= GETDATE() - 0.0283");
+					statement.executeUpdate("DELETE FROM cbm.startsession WHERE Moment <= DATEADD(\"hh\", -" + inact + ", GETDATE())");
 					break;
 				}
 				statement.close();

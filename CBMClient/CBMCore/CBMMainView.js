@@ -27,14 +27,14 @@ var loadStaticDataSources = function () {
   // Commented while not used
   var scriptDS = document.createElement("script");
   scriptDS.type = "text/javascript";
-  scriptDS.src = "CBMCore/CBMApply.ds.js";
+  scriptDS.src = "CBMClient/CBMCore/CBMApply.ds.js";
   document.head.appendChild(scriptDS);
 };
 
 // --- Create dynamically from Metadata apply (non-system) Data Sources ---
 //     May be done with appropriate localization
 // Called to run asyncroniously
-
+// TODO - Switch from this to [re]generate CBM apply DataSources as static resources
 var createDataSources = function () {
   var views = viewRS.getAllVisibleRows();
   if (!views || views == null) return;
@@ -42,11 +42,19 @@ var createDataSources = function () {
   var recursiveDS = function () {
     i += 1;
     if (i + 1 < views.length) {
-      testCreateDS(views[i].SysCode, recursiveDS);
+      setTimeout(testCreateDS(views[i].SysCode, recursiveDS), 0);
     }
   }
   recursiveDS();
 };
+/*
+var createDataSources = function () {
+  var views = viewRS.getAllVisibleRows();
+  if (!views || views == null) return;
+  for (var i = 0; i < views.length; i++) {
+    setTimeout(testCreateDS(views[i].SysCode), 100);
+  }
+};*/
 
 
 // ------  --------------
@@ -94,7 +102,8 @@ if (typeof(curr_Date) == "undefined" || curr_Date == null || (typeof(curr_Date) 
   curr_Date = moment().utc();
 }
 var extra_Info = "";
-var default_DB = "PostgreSQL.CBM"; //"MSSQL.CBM"; // dbName: "MySQL.CBM", //    dbName : "DB2.CBM",
+// TODO !!!!!!! Switch to Server-based definition of default DB !!!!!!
+//var default_DB = "PostgreSQL.CBM"; //"MSSQL.CBM"; // dbName: "MySQL.CBM", // dbName : "DB2.CBM",
 
 // ----------------- Anonymous initial loadings zone --------------------
 //curr_User =	"anonymous";
@@ -113,21 +122,18 @@ var loadCommonData = function () {
       window.conceptRS = isc.ResultSet.create({
         dataSource: "Concept",
         allRows: data,
-        //fetchMode: "local",
       });
       isc.DataSource.get("Relation").fetchData(null,
         function (dsResponce, data, dsRequest) {
           window.relationRS = isc.ResultSet.create({
             dataSource: "Relation",
             allRows: data,
-            //fetchMode: "local"
           });
           isc.DataSource.get("RelationKind").fetchData(null,
             function (dsResponce, data, dsRequest) {
               window.relationKindRS = isc.ResultSet.create({
                 dataSource: "RelationKind",
                 allRows: data,
-                //fetchMode: "local"
               });
               // --- Program aspects metadata
               // Presentation aspects metadata
@@ -136,7 +142,6 @@ var loadCommonData = function () {
                   window.viewRS = isc.ResultSet.create({
                     dataSource: "PrgView",
                     allRows: data,
-                    //fetchMode: "local",
                     updatePartialCache: true
                   });
                   isc.DataSource.get("PrgViewField").fetchData(null,
@@ -144,12 +149,12 @@ var loadCommonData = function () {
                       window.viewFieldRS = isc.ResultSet.create({
                         dataSource: "PrgViewField",
                         allRows: data,
-                        //fetchMode: "local",
                         updatePartialCache: true
                       });
                       // Create all dynamic (metadata-based) DS-es on start,
                       // so that it's no profit to spend time during work.
-                      createDataSources();
+                      // TODO - switch to semi-static DS generation. Till now - let it be lazy.
+                      setTimeout(createDataSources(), 0);  //commented for lazy generation 
                     });
                 });
             });
@@ -226,11 +231,11 @@ isc.Window.create({
         {
           type: "button", width: "100", endRow: false,
           click: function () {
-            if (this.form.items[4].isVisible()) {
-              this.form.items[4].hide();
-            }
-            else {
+            if (!this.form.items[4].isVisible()) {
               this.form.items[4].show();
+              this.button.setIcon(isc.Page.getAppImgDir() + "arrow_right_long.png");
+              this.setTitle("");
+              this.disable();
             }
           },
           hoverWidth: "250"
@@ -324,7 +329,7 @@ var loginClose = function () {
   // TODO: - Test for locale-file existence
   var scriptCBM = document.createElement("script");
   scriptCBM.type = "text/javascript";
-  scriptCBM.src = "locales/strings_" + curr_Lang.substr(0, 2) + ".properties";
+  scriptCBM.src = "CBMClient/locales/strings_" + curr_Lang.substr(0, 2) + ".properties";
   document.head.appendChild(scriptCBM);
 
   // --- Load CBM DataSources, using choosen localization
@@ -334,16 +339,17 @@ var loginClose = function () {
   if (curr_Lang !== "en-GB") {
     var script = document.createElement("script");
     script.type = "text/javascript";
-    script.src = "isomorphic/locales/frameworkMessages_" + curr_Lang.substr(0, 2) + ".properties";
+    script.src = "CBMClient/isomorphic/locales/frameworkMessages_" + curr_Lang.substr(0, 2) + ".properties";
     document.head.appendChild(script);
   }
 
   // --- TODO - switch to locale format
   var dateTimeFormat = "ddd DD-MM-YYYY HH:mm";
+  // var dateTimeFormat = "DD-MM-YYYY HH:mm"; <<< Remooving ddd part leads to ignore day-month order, no matter that format  is DD:MM
   isc.Date.setShortDatetimeDisplayFormat(function () {
     return moment(this.toString()).format(dateTimeFormat)
   });
-  isc.Date.setNormalDatetimeDisplayFormat("toEuropeanShortDatetime");
+//  isc.Date.setNormalDatetimeDisplayFormat("toEuropeanShortDatetime");
   isc.Date.setInputFormat("DMY");
   isc.Date.setDefaultDateSeparator("/");
   mainControlPanel.getFields()[0].setValue(curr_Date.local().format(dateTimeFormat));
@@ -394,10 +400,10 @@ var setUser = function () {
 
     // userRights result set plays special role - first authorized data request that do test credentials
     if (userRightsRS.allRows === null) {
-      userRightsRS.getRange(0, 1000);
+      userRightsRS.getRange(0, 10000);
     } else {
       userRightsRS.invalidateCache();
-      userRightsRS.getRange(0, 1000);
+      userRightsRS.getRange(0, 10000);
     }
     return true;
   }
@@ -424,7 +430,15 @@ isc.TreeGrid.create({
   ID: "navigationTree",
   dataSource: "PrgMenuItem",
   nodeClick: function (viewer, node, recordNum) {
-    createTable(node.SysCode);
+    if (node.SysCode) {
+      if (node.SysCode.indexOf('.') === -1) {
+        createTable(node.SysCode);
+      } else {
+        eval(node.SysCode);
+      }
+    } else if (node.CalledMethod){
+      eval(node.CalledMethod);
+    }
     return false;
   },
   showHeader: false,

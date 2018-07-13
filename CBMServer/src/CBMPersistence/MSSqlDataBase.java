@@ -12,10 +12,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import javax.sql.DataSource;
+
+import CBMMeta.ColumnInfo;
 import CBMMeta.SelectTemplate;
 import CBMServer.CBMStart;
 import CBMServer.DSRequest;
-import CBMServer.DSResponce;
+import CBMServer.DSResponse;
+import CBMUtils.StringHelper;
 
 
 
@@ -24,41 +28,41 @@ import CBMServer.DSResponce;
  */
 public class MSSqlDataBase implements I_DataBase {
 
-	static String dbURL;
-	private  String dbUs;
-	private  String dbCred;
+//	static String dbURL;
+//	private  String dbUs;
+//	private  String dbCred;
 	private static final String ID = "id";
 	
-	static {
-		try 
-		{
-			Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
-	
-	public MSSqlDataBase(){
-		dbURL = CBMStart.getParam("primaryDBUrl");
-		dbUs = CBMStart.getParam("primaryDBUs");
-		dbCred = CBMStart.getParam("primaryDBCred");
-	}
-	
-	public MSSqlDataBase(String a_dbUrl, String a_dbUs, String a_dbCred){
-		dbURL = a_dbUrl;
-		dbUs = a_dbUs;
-		dbCred = a_dbCred;
-	}
+//	static {
+//		try 
+//		{
+//			Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//	}
+//	
+//	public MSSqlDataBase(){
+//		dbURL = CBMStart.getParam("primaryDBUrl");
+//		dbUs = CBMStart.getParam("primaryDBUs");
+//		dbCred = CBMStart.getParam("primaryDBCred");
+//	}
+//	
+//	public MSSqlDataBase(String a_dbUrl, String a_dbUs, String a_dbCred){
+//		dbURL = a_dbUrl;
+//		dbUs = a_dbUs;
+//		dbCred = a_dbCred;
+//	}
 
 	// -------------------------------- I_DataBase Interface implementation ---------------------------------------------
 	/**
 	 * Selects data from DB.
-	 * With data within DSResponce structure returns JDBC Connection and Statement, 
-	 * that !!! MUST BE CLOSED !!! later, after returned by RS data are utilized, by call of DSResponce.releaseDB() function.
+	 * With data within DSResponse structure returns JDBC Connection and Statement, 
+	 * that !!! MUST BE CLOSED !!! later, after returned by RS data are utilized, by call of DSResponse.releaseDB() function.
 	 */
 	// TODO Main part of all functional below maybe transferred to StorageMetaData (or some universal "SqlPrepare") class.
 	@Override
-	public DSResponce doSelect(SelectTemplate selTempl, DSRequest dsRequest)
+	public DSResponse doSelect(SelectTemplate selTempl, DSRequest dsRequest)
 		throws Exception {
 		Connection dbCon = null;
 		Statement statement = null;
@@ -74,22 +78,22 @@ public class MSSqlDataBase implements I_DataBase {
 		String havingPart = "";
 		String pagePart = "";
 	
-		DSResponce dsResponce = new DSResponce();
+		DSResponse dsResponse = new DSResponse();
 
 		// -------- Preprocess SelectTemplate and data (parameters here) to complete real SQL Select string
 		// --- Select ---
-		for (Map.Entry<String, String> entry : selTempl.columns.entrySet())
+		for (ColumnInfo entry : selTempl.columns)
 		{
-			if (!entry.getValue().equals("null"))
+			if (!entry.dbColumn.equals("null"))
 			{
-				selectPart += entry.getValue() + " as \"" + entry.getKey() + "\", ";
+				selectPart += entry.dbColumn + " as \"" + entry.sysCode + "\", ";
 			}
 		}
 
 		if (selectPart.length() < 2){
-			dsResponce.retCode = -1;
-			dsResponce.retMsg = "No metadata for <" + dsRequest.dataSource + "> found.   SQL: <" + sql + ">";
-			return dsResponce;
+			dsResponse.retCode = -1;
+			dsResponse.retMsg = "No metadata for <" + dsRequest.dataSource + "> found.   SQL: <" + sql + ">";
+			return dsResponse;
 		}
 
 		sql += selectPart.substring(0, selectPart.length()-2);
@@ -104,24 +108,8 @@ public class MSSqlDataBase implements I_DataBase {
 			wherePart = selTempl.where;
 		}
 		// --- Where (User filtering)---
-		if (dsRequest!= null && dsRequest.data != null && dsRequest.data.size()>0)
-		{
-			for (Map.Entry<String, Object> entry : dsRequest.data.entrySet())
-			{
-				String col = selTempl.columns.get(entry.getKey());
-				if (col != null)
-				{	
-					if (!entry.getValue().equals("null"))
-					{
-						wherePart += " and " + col + "='" + entry.getValue().toString() + "'"; // TODO leave brackets for strings only
-					}
-					else
-					{
-						wherePart += " and " + col + " is null ";
-					}
-				}
- 			}
-		}
+		wherePart += SqlFormatter.prepareWhere(selTempl, dsRequest);
+
 		sql += " where " + wherePart;
 
 		// --- Group by ---
@@ -139,45 +127,57 @@ public class MSSqlDataBase implements I_DataBase {
 		}
 		
 		// --- Order by (Client defined)---
+		// --- Order by (Client defined)---
 		if (dsRequest!= null && dsRequest.sortBy != null  && dsRequest.sortBy.size()>0)
 		{
 			for (int i = 0; i < dsRequest.sortBy.size(); i++)
 			{
-				String col = selTempl.columns.get(dsRequest.sortBy.get(i));
+				String odrCol = dsRequest.sortBy.get(i);
+				String desc = "";
+				if (odrCol.startsWith("-"))
+				{
+					desc = " desc";
+					odrCol = odrCol.substring(1);
+				}
+				final String odrColName = odrCol;
+				String col = selTempl.columns.stream().filter(c -> c.sysCode.equals(odrColName)).findFirst().get().dbColumn;
+						//get(odrCol);
 				if (col != null)
 				{	
-					String odr = col;
-					if (odr.startsWith("-"))
-					{
-						odr = odr.substring(1) + " desc";
-					}
-					orderPart += odr + ", ";
+					orderPart += col + desc + ", ";
 				}
 			}
 		}
 		
 		// --- After(!) user-defined sort - add MetaModel defined default order ---
-		if (selTempl.orderby != null)
+		if (orderPart.equals("") && !StringHelper.IsNullOrWhiteSpace(selTempl.orderby))
 		{
 			orderPart += selTempl.orderby; // MetaModel defined <inTempl.orderby> MUST ends with ID.
+		} else {
+//            orderPart += "Id";    
+            String firstTableAlias= fromPart.split(" ")[1];
+            orderPart += firstTableAlias + ".Id";    
 		}
-		sql += orderPart.equals("") ? " ORDER BY id " : " order by " + orderPart;
+		// sql += StringHelper.IsNullOrWhiteSpace(orderPart) ? " ORDER BY id " : " order by " + orderPart;
+		sql += " order by " + orderPart;
 
 		// --- Paging pre-request ---
 		if (dsRequest!= null && dsRequest.endRow != 0) {
 			// TODO To think on optimization of count(*) calls 
 			sqlCount += " from " + fromPart + (wherePart.equals("") ? "" : " where " + wherePart);
 			try{
-				dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+//				dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+				DataSource dataSource = ConnectionPool.getDataSource();
+	            dbCon = dataSource.getConnection();
 				statement = dbCon.createStatement();
 				rsCount = statement.executeQuery(sqlCount);
 				rsCount.next();
-				dsResponce.totalRows = rsCount.getInt(1);
+				dsResponse.totalRows = rsCount.getInt(1);
 			} catch (SQLException e) {
 				e.printStackTrace();
-				dsResponce.retCode = -1;
-				dsResponce.retMsg = e.toString();
-				return dsResponce; // Error-reporting responce return
+				dsResponse.retCode = -1;
+				dsResponse.retMsg = StringHelper.forJSON(e.toString()) + " - while pre-select request for <" + dsRequest.dataSource + "> class. SQL:<" + StringHelper.forJSON(sql) + ">";
+				return dsResponse; // Error-reporting response return
 			} finally {
 			    try {
 			        if(rsCount != null) rsCount.close();
@@ -196,31 +196,34 @@ public class MSSqlDataBase implements I_DataBase {
 			sql += pagePart;
 		}
 		
-		// ------------ Execute Select
+		// ----- Execute Select -----
 		try{
-			dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+//			dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+			DataSource dataSource = ConnectionPool.getDataSource();
+            dbCon = dataSource.getConnection();
+            
 			statement = dbCon.createStatement();  
 			ResultSet rs = statement.executeQuery(sql);
-			dsResponce.data = rs;
-			dsResponce.dbStatement = statement;
-			dsResponce.dbConnection = dbCon;
+			dsResponse.data = rs;
+			dsResponse.dbStatement = statement;
+			dsResponse.dbConnection = dbCon;
 		} catch (SQLException e) {
 			e.printStackTrace();
-			dsResponce.retCode = -1;
-			dsResponce.retMsg = e.toString() + " while selecting data of <" + dsRequest.dataSource + "> class. SQL:<" + sql + ">";
-			return dsResponce; // Error-reporting responce return
-		} 
-		dsResponce.retCode = 0;
-		return dsResponce;
+			dsResponse.retCode = -1;
+			dsResponse.retMsg = StringHelper.forJSON(e.toString()) + " - while selecting data of <" + dsRequest.dataSource + "> class. SQL:<" + StringHelper.forJSON(sql) + ">";
+			return dsResponse; // Error-reporting response return
+		}
+		dsResponse.retCode = 0;
+		return dsResponse;
 	}
 	
 	
 	@Override
-	public DSResponce doInsert(Map<String,String[]> insTempl, DSRequest dsRequest)// throws Exception 
+	public DSResponse doInsert(Map<String,String[]> insTempl, DSRequest dsRequest)// throws Exception 
 	{
 		Connection dbCon = null;
 		Statement statement = null;
-		DSResponce out = new DSResponce();
+		DSResponse out = new DSResponse();
 		String idValue = null;
 		
 		// ---- Discover Tables list -----
@@ -244,10 +247,9 @@ public class MSSqlDataBase implements I_DataBase {
 			sql += table + " (";
 
 			// -------- Update list and Where ---------------
-			// -------- Update list and Where ---------------
-			if (dsRequest != null && dsRequest.data != null && dsRequest.data.size()>0)
+			if (dsRequest != null && dsRequest.data != null && dsRequest.data.data.size()>0)
 			{
-				for (Map.Entry<String, Object> entry : dsRequest.data.entrySet())
+				for (Map.Entry<String, Object> entry : dsRequest.data.data.entrySet())
 				{
 					// --- Get collumn info for request field key
 					String[] colInfo = insTempl.get(entry.getKey());
@@ -274,8 +276,8 @@ public class MSSqlDataBase implements I_DataBase {
 								{
 									if (val.equals("true")) { val = "1";}
 									else if (val.equals("false")){ val = "0";}
-								}
-								if (val.equalsIgnoreCase("null")
+									valuesPart += val + ", ";
+								} else if (val.equalsIgnoreCase("null")
 										|| colInfo[2].equals("Integer")
 										|| colInfo[2].equals("Bigint")
 										|| colInfo[2].equals("Decimal")
@@ -284,9 +286,14 @@ public class MSSqlDataBase implements I_DataBase {
 										)
 								{
 									valuesPart += val + ", ";
-								}
-								else
-								{
+								} else if (colInfo[2].equals("GUID")
+										||colInfo[2].equals("Date")
+										|| colInfo[2].equals("DateTime")
+										|| colInfo[2].equals("Time")){
+									valuesPart += "'" + val + "', "; 
+								} else {
+									val = val.replaceAll("'", "''");
+									// For String types - unicode prefix (no matter if column is not unicode-aware)
 									valuesPart += "N'" + val + "', "; 
 								}
 							}
@@ -308,7 +315,7 @@ public class MSSqlDataBase implements I_DataBase {
 			}
 			
 			// For inherited-part tables, with no explicitly-defined ID
-			if (!columnsPart.toUpperCase().startsWith("ID, ")){
+			if (!columnsPart.toUpperCase().startsWith("ID,")){
 				columnsPart = "ID, " + columnsPart;
 				valuesPart = "'" + idValue + "', " + valuesPart;
 			}
@@ -316,15 +323,18 @@ public class MSSqlDataBase implements I_DataBase {
 			sql += columnsPart.substring(0, columnsPart.length()-2) + ") VALUES (" + valuesPart.substring(0, valuesPart.length()-2) + ")";
 
 			try {
-				dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+//				dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+				DataSource dataSource = ConnectionPool.getDataSource();
+	            dbCon = dataSource.getConnection();
+	            
 				statement = dbCon.createStatement();
 				out.retCode = statement.executeUpdate(sql);
 			}
 			catch (SQLException e) {
 				e.printStackTrace();
 				out.retCode = -1;
-				out.retMsg = e.toString() + " while <" + dsRequest.dataSource + "> inserting.    SQL: <" + sql + ">";
-				return out;// Error-reporting responce return
+				out.retMsg = StringHelper.forJSON(e.toString()) + " while <" + dsRequest.dataSource + "> inserting.    SQL: <" + StringHelper.forJSON(sql) + ">";
+				return out;// Error-reporting response return
 			} finally {
 			    try {
 			        if(statement != null) statement.close();
@@ -343,11 +353,11 @@ public class MSSqlDataBase implements I_DataBase {
 
 
 	@Override
-	public DSResponce doUpdate(Map<String,String[]> updTempl, DSRequest dsRequest) 
+	public DSResponse doUpdate(Map<String,String[]> updTempl, DSRequest dsRequest) 
 	{
 		Connection dbCon = null;
 		Statement statement = null;
-		DSResponce out = new DSResponce();
+		DSResponse out = new DSResponse();
 		String idValue = null;
 
 		// --- Discover Tables list ---
@@ -357,11 +367,11 @@ public class MSSqlDataBase implements I_DataBase {
 			// --- Filter only fields that changes!
 			String sysCode = entry.getKey();
 			// --- If column not exists in input data - don't use its Table 
-			if (!(dsRequest.data.containsKey(sysCode))) {
+			if (!(dsRequest.data.data.containsKey(sysCode))) {
 				continue;
 			}
 			// --- If value not changed - don't use its Table
-			Object v1 = dsRequest.data.get(sysCode);
+			Object v1 = dsRequest.data.data.get(sysCode);
 			Object v2 = null;
 			if(dsRequest.oldValues != null)	{
 				v2 = dsRequest.oldValues.get(sysCode);
@@ -397,9 +407,9 @@ public class MSSqlDataBase implements I_DataBase {
 
 			
 			// -------- Update list and Where ---------------
-			if (dsRequest!= null && dsRequest.data != null && dsRequest.data.size()>0)
+			if (dsRequest!= null && dsRequest.data != null && dsRequest.data.data.size()>0)
 			{
-				for (Map.Entry<String, Object> entry : dsRequest.data.entrySet())
+				for (Map.Entry<String, Object> entry : dsRequest.data.data.entrySet())
 				{
 					String[] colInfo = updTempl.get(entry.getKey());
 					// ---- Include columns of this table only
@@ -427,8 +437,8 @@ public class MSSqlDataBase implements I_DataBase {
 									{
 										if (val.equals("true")) { val = "1";}
 										else if (val.equals("false")){ val = "0";}
-									}
-									if (val.equalsIgnoreCase("null")
+										updatePart += colInfo[0] + "=" + val + ", ";
+									} else if (val.equalsIgnoreCase("null")
 											|| colInfo[2].equals("Integer")
 											|| colInfo[2].equals("Bigint")
 											|| colInfo[2].equals("Decimal")
@@ -437,9 +447,15 @@ public class MSSqlDataBase implements I_DataBase {
 											)
 									{
 										updatePart += colInfo[0] + "=" + val + ", ";
+									} else if (colInfo[2].equals("GUID")
+											||colInfo[2].equals("Date")
+											|| colInfo[2].equals("DateTime")
+											|| colInfo[2].equals("Time")) {
+										updatePart += colInfo[0] + "= '" + val + "', ";
 									}
 									else
 									{
+										val = val.replaceAll("'", "''");
 										updatePart += colInfo[0] + "= N'" + val + "', ";
 									}
 								}
@@ -469,9 +485,11 @@ public class MSSqlDataBase implements I_DataBase {
 			sql += updatePart.substring(0, updatePart.length()-2) + " where " + wherePart;
 
 			try {
-				dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+//				dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+				DataSource dataSource = ConnectionPool.getDataSource();
+	            dbCon = dataSource.getConnection();
+	            
 				statement = dbCon.createStatement();
-// MySQL feature				statement.executeUpdate("SET NAMES 'utf8'");
 				out.retCode = statement.executeUpdate(sql);
 				
 				statement.close();
@@ -480,8 +498,8 @@ public class MSSqlDataBase implements I_DataBase {
 			catch (SQLException e) {
 				e.printStackTrace();
 				out.retCode = -1;
-				out.retMsg = e.toString() + " while <" + dsRequest.dataSource + "> updating.    SQL: <" + sql + ">";
-				return out;// Error-reporting responce return
+				out.retMsg = StringHelper.forJSON(e.toString()) + " while <" + dsRequest.dataSource + "> updating.    SQL: <" + StringHelper.forJSON(sql) + ">";
+				return out;// Error-reporting response return
 			} finally {
 			    try {
 			        if(statement != null) statement.close();
@@ -500,18 +518,18 @@ public class MSSqlDataBase implements I_DataBase {
 
 	
 	@Override
-	public DSResponce doDelete(List<String> tables, DSRequest dsRequest) 
+	public DSResponse doDelete(List<String> tables, DSRequest dsRequest) 
 	{
 		Connection dbCon = null;
 		Statement statement = null;
 		String id;
-		DSResponce out = new DSResponce();
+		DSResponse out = new DSResponse();
 		for (String tableRow : tables)
 		{
 			String table = tableRow.toLowerCase();
 			// First discover ID value for table
 			id = "";
-			for (Map.Entry<String, Object> entry : dsRequest.data.entrySet())
+			for (Map.Entry<String, Object> entry : dsRequest.data.data.entrySet())
 			{
 				if (entry.getKey().toLowerCase().equals(table.substring(table.indexOf(".") + 1) + ID))
 				{
@@ -521,7 +539,7 @@ public class MSSqlDataBase implements I_DataBase {
 			}
 			if(id.equals(""))
 			{
-				for (Map.Entry<String, Object> entry : dsRequest.data.entrySet())
+				for (Map.Entry<String, Object> entry : dsRequest.data.data.entrySet())
 				{
 					if (entry.getKey().toLowerCase().equals(ID))
 					{
@@ -534,15 +552,16 @@ public class MSSqlDataBase implements I_DataBase {
 			String sql = "DELETE FROM " + table + " WHERE id='" + id + "'";
 
 			try {
-				dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+				DataSource dataSource = ConnectionPool.getDataSource();
+	            dbCon = dataSource.getConnection();
+	            
 				statement = dbCon.createStatement();
-// 	MySQL feature			statement.executeUpdate("SET NAMES 'utf8'");
 				out.retCode = statement.executeUpdate(sql);
 			}
 			catch (SQLException e) {
 				e.printStackTrace();
 				out.retCode = -1;
-				out.retMsg = e.toString() + " while <" + dsRequest.dataSource + "> deleting. SQL:<" + sql + ">";
+				out.retMsg = StringHelper.forJSON(e.toString()) + " while <" + dsRequest.dataSource + "> deleting. SQL:<" + StringHelper.forJSON(sql) + ">";
 				return out;
 			} finally {
 			    try {
@@ -550,7 +569,7 @@ public class MSSqlDataBase implements I_DataBase {
 			        if(dbCon != null) dbCon.close();
 			    } catch(SQLException sqlee) {
 			        sqlee.printStackTrace();
-			    } finally {  // Just to make sure that both con and stat are "garbage collected"
+			    } finally {  // Just to make sure that both dbCon and statement are "garbage collected"
 			    	statement = null;
 			    	dbCon = null;
 			    }
@@ -574,14 +593,34 @@ public class MSSqlDataBase implements I_DataBase {
 		// TODO Auto-generated method stub
 		return 0;
 	}
+
+	/* TODO Implementation from MySQL - revise and apply!!!
+ 	@Override
+public int doStartTrans() throws Exception {
+	Statement statement = dbCon.createStatement();
+	return statement.executeUpdate("START TRANSACTION");
+}
+
+
+@Override
+public int doCommit() throws Exception {
+	Statement statement = dbCon.createStatement();
+	return statement.executeUpdate("COMMIT");
+}
+*/
+
+
 	
 	@Override
-	public DSResponce exequteDirect(String sql){
+	public DSResponse exequteDirect(String sql){
 		Connection dbCon = null;
 		Statement statement = null;
-		DSResponce out = new DSResponce();
+		DSResponse out = new DSResponse();
 		try {
-			dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+//			dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+			DataSource dataSource = ConnectionPool.getDataSource();
+            dbCon = dataSource.getConnection();
+            
 			statement = dbCon.createStatement();
 			out.retCode = statement.executeUpdate(sql);
 		}
@@ -612,7 +651,10 @@ public class MSSqlDataBase implements I_DataBase {
 		Statement statement = null;
 	    try {	
 			int out = -1;
-			dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+//			dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+			DataSource dataSource = ConnectionPool.getDataSource();
+            dbCon = dataSource.getConnection();
+            
 			statement = dbCon.createStatement();
 			out = statement.executeUpdate(sql);
 			return out;

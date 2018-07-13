@@ -1,8 +1,7 @@
-
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v11.1d_2017-03-13/LGPL Development Only (2017-03-13)
+  Version v12.0p_2018-06-28/LGPL Development Only (2018-06-28)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

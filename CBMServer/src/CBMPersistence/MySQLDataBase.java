@@ -13,9 +13,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import CBMMeta.ColumnInfo;
 import CBMMeta.SelectTemplate;
 import CBMServer.DSRequest;
-import CBMServer.DSResponce;
+import CBMServer.DSResponse;
 
 
 
@@ -44,7 +45,7 @@ public class MySQLDataBase implements I_DataBase {
 	 */
 	// TODO Main part of all functional below maybe transferred to StorageMetaData (or some universal "SqlPrepare") class.
 	@Override
-	public DSResponce doSelect(SelectTemplate selTempl, DSRequest dsRequest) //throws Exception 
+	public DSResponse doSelect(SelectTemplate selTempl, DSRequest dsRequest) //throws Exception 
 	{
 		String sql = "SELECT ";
 		String sqlCount = "Select count(*) ";
@@ -56,22 +57,22 @@ public class MySQLDataBase implements I_DataBase {
 		String havingPart = "";
 		String pagePart = "";
 	
-		DSResponce dsResponce = new DSResponce();
+		DSResponse dsResponse = new DSResponse();
 
 		// -------- Preprocess SelectTemplate and data (parameters here) to complete real SQL Select string
 		// --- Select ---
-		for (Map.Entry<String, String> entry : selTempl.columns.entrySet())
+		for (ColumnInfo entry : selTempl.columns)
 		{
-			if (!entry.getValue().equals("null"))
+			if (!entry.dbColumn.equals("null"))
 			{
-				selectPart += entry.getValue() + " as \"" + entry.getKey() + "\", ";
+				selectPart += entry.dbColumn + " as \"" + entry.sysCode + "\", ";
 			}
 		}
 
 		if (selectPart.length() < 2){
-			dsResponce.retCode = -1;
-			dsResponce.retMsg = "No metadata for <" + dsRequest.dataSource + "> found.   SQL: <" + sql + ">";
-			return dsResponce;
+			dsResponse.retCode = -1;
+			dsResponse.retMsg = "No metadata for <" + dsRequest.dataSource + "> found.   SQL: <" + sql + ">";
+			return dsResponse;
 		}
 
 		sql += selectPart.substring(0, selectPart.length()-2);
@@ -86,24 +87,8 @@ public class MySQLDataBase implements I_DataBase {
 			wherePart = selTempl.where;
 		}
 		// --- Where (User filtering)---
-		if (dsRequest!= null && dsRequest.data != null && dsRequest.data.size()>0)
-		{
-			for (Map.Entry<String, Object> entry : dsRequest.data.entrySet())
-			{
-				String col = selTempl.columns.get(entry.getKey());
-				if (col != null)
-				{	
-					if (!entry.getValue().equals("null"))
-					{
-						wherePart += " and " + col + "='" + entry.getValue().toString() + "'"; // TODO leave brackets for strings only
-					}
-					else
-					{
-						wherePart += " and " + col + " is null ";
-					}
-				}
- 			}
-		}
+		wherePart += SqlFormatter.prepareWhere(selTempl, dsRequest);
+
 		sql += " where " + wherePart;
 
 		// --- Group by ---
@@ -121,19 +106,24 @@ public class MySQLDataBase implements I_DataBase {
 		}
 		
 		// --- Order by (Client defined)---
+		// --- Order by (Client defined)---
 		if (dsRequest!= null && dsRequest.sortBy != null  && dsRequest.sortBy.size()>0)
 		{
 			for (int i = 0; i < dsRequest.sortBy.size(); i++)
 			{
-				String col = selTempl.columns.get(dsRequest.sortBy.get(i));
+				String odrCol = dsRequest.sortBy.get(i);
+				String desc = "";
+				if (odrCol.startsWith("-"))
+				{
+					desc = " desc";
+					odrCol = odrCol.substring(1);
+				}
+				final String odrColName = odrCol;
+				String col = selTempl.columns.stream().filter(c -> c.sysCode.equals(odrColName)).findFirst().get().dbColumn;
+						//get(odrCol);
 				if (col != null)
 				{	
-					String odr = col;
-					if (odr.startsWith("-"))
-					{
-						odr = odr.substring(1) + " desc";
-					}
-					orderPart += odr + ", ";
+					orderPart += col + desc + ", ";
 				}
 			}
 		}
@@ -154,12 +144,12 @@ public class MySQLDataBase implements I_DataBase {
 				Statement statement = dbCon.createStatement();
 				ResultSet rsCount = statement.executeQuery(sqlCount);
 				rsCount.next();
-				dsResponce.totalRows = rsCount.getInt(1);
+				dsResponse.totalRows = rsCount.getInt(1);
 			} catch (SQLException e) {
 				e.printStackTrace();
-				dsResponce.retCode = -1;
-				dsResponce.retMsg = e.toString();
-				return dsResponce;
+				dsResponse.retCode = -1;
+				dsResponse.retMsg = e.toString();
+				return dsResponse;
 			}
 
 			pagePart += String.valueOf(dsRequest.startRow) + "," + String.valueOf(dsRequest.endRow - dsRequest.startRow);
@@ -171,22 +161,22 @@ public class MySQLDataBase implements I_DataBase {
 			Statement statement = dbCon.createStatement();
 			statement.executeUpdate("SET NAMES 'utf8'");
 			ResultSet rs = statement.executeQuery(sql);
-			dsResponce.data = rs;
+			dsResponse.data = rs;
 		} catch (SQLException e) {
 			e.printStackTrace();
-			dsResponce.retCode = -1;
-			dsResponce.retMsg = e.toString() + " while selecting data of <" + dsRequest.dataSource + "> class. SQL:<" + sql + ">";
-			return dsResponce;
+			dsResponse.retCode = -1;
+			dsResponse.retMsg = e.toString() + " while selecting data of <" + dsRequest.dataSource + "> class. SQL:<" + sql + ">";
+			return dsResponse;
 		}
-		dsResponce.retCode = 0;
-		return dsResponce;
+		dsResponse.retCode = 0;
+		return dsResponse;
 	}
 	
 	
 	@Override
-	public DSResponce doInsert(Map<String,String[]> insTempl, DSRequest dsRequest) //throws Exception 
+	public DSResponse doInsert(Map<String,String[]> insTempl, DSRequest dsRequest) //throws Exception 
 	{
-		DSResponce out = new DSResponce();
+		DSResponse out = new DSResponse();
 		
 		// ---- Discover Tables list -----
 		List<String> tables = new ArrayList<String>();
@@ -209,9 +199,9 @@ public class MySQLDataBase implements I_DataBase {
 			sql += table + " (";
 
 			// -------- Update list and Where ---------------
-			if (dsRequest != null && dsRequest.data != null && dsRequest.data.size()>0)
+			if (dsRequest != null && dsRequest.data != null && dsRequest.data.data.size()>0)
 			{
-				for (Map.Entry<String, Object> entry : dsRequest.data.entrySet())
+				for (Map.Entry<String, Object> entry : dsRequest.data.data.entrySet())
 				{
 					// --- Get collumn info for request field key
 					String[] colInfo = insTempl.get(entry.getKey());
@@ -286,9 +276,9 @@ public class MySQLDataBase implements I_DataBase {
 
 
 	@Override
-	public DSResponce doUpdate(Map<String,String[]> updTempl, DSRequest dsRequest) 
+	public DSResponse doUpdate(Map<String,String[]> updTempl, DSRequest dsRequest) 
 	{
-		DSResponce out = new DSResponce();
+		DSResponse out = new DSResponse();
 
 		// --- Discover Tables list ---
 		List<String> tables = new ArrayList<String>();
@@ -297,11 +287,11 @@ public class MySQLDataBase implements I_DataBase {
 			// --- Filter only fields that changes!
 			String sysCode = entry.getKey();
 			// --- If column not exists in input data - don't use its Table 
-			if (!(dsRequest.data.containsKey(sysCode))) {
+			if (!(dsRequest.data.data.containsKey(sysCode))) {
 				continue;
 			}
 			// --- If value not changed - don't use its Table
-			Object v1 = dsRequest.data.get(sysCode);
+			Object v1 = dsRequest.data.data.get(sysCode);
 			Object v2 = null;
 			if(dsRequest.oldValues != null)	{
 				v2 = dsRequest.oldValues.get(sysCode);
@@ -326,9 +316,9 @@ public class MySQLDataBase implements I_DataBase {
 			sql += table + " SET ";
 
 			// -------- Update list and Where ---------------
-			if (dsRequest!= null && dsRequest.data != null && dsRequest.data.size()>0)
+			if (dsRequest!= null && dsRequest.data != null && dsRequest.data.data.size()>0)
 			{
-				for (Map.Entry<String, Object> entry : dsRequest.data.entrySet())
+				for (Map.Entry<String, Object> entry : dsRequest.data.data.entrySet())
 				{
 					String[] colInfo = updTempl.get(entry.getKey());
 					// ---- Include columns of this table only
@@ -409,15 +399,15 @@ public class MySQLDataBase implements I_DataBase {
 
 	
 	@Override
-	public DSResponce doDelete(List<String> tables, DSRequest dsRequest) //throws Exception 
+	public DSResponse doDelete(List<String> tables, DSRequest dsRequest) //throws Exception 
 	{
 		String id;
-		DSResponce out = new DSResponce();
+		DSResponse out = new DSResponse();
 		for (String table : tables)
 		{
 			// First discover ID value for table
 			id = "";
-			for (Map.Entry<String, Object> entry : dsRequest.data.entrySet())
+			for (Map.Entry<String, Object> entry : dsRequest.data.data.entrySet())
 			{
 				if (entry.getKey().equals(table.substring(table.indexOf(".") + 1)  +"ID"))
 				{
@@ -427,7 +417,7 @@ public class MySQLDataBase implements I_DataBase {
 			}
 			if(id.equals(""))
 			{
-				for (Map.Entry<String, Object> entry : dsRequest.data.entrySet())
+				for (Map.Entry<String, Object> entry : dsRequest.data.data.entrySet())
 				{
 					if (entry.getKey().toUpperCase().equals("ID"))
 					{
@@ -472,8 +462,8 @@ public class MySQLDataBase implements I_DataBase {
 
 	
 	@Override
-	public DSResponce exequteDirect(String sql){
-		DSResponce out = new DSResponce();
+	public DSResponse exequteDirect(String sql){
+		DSResponse out = new DSResponse();
 		try {
 			Statement statement = dbCon.createStatement();
 			out.retCode = statement.executeUpdate(sql);

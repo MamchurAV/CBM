@@ -16,7 +16,7 @@ import org.restlet.data.Protocol;
 import org.restlet.util.Series;
 //import org.restlet.ext.ssl.PkixSslContextFactory;
 
-public class CBMStart { 
+public class CBMStart {
 	private static Properties props = new Properties();
 	private static final String sysRoot = System.getProperty("user.dir");
 	public static final String CBM_ROOT = sysRoot.substring(0, sysRoot.lastIndexOf("/") > 0 ? sysRoot.lastIndexOf("/") : sysRoot.lastIndexOf("\\") > 0 ? sysRoot.lastIndexOf("\\") : sysRoot.length());	    
@@ -26,7 +26,6 @@ public class CBMStart {
 	    Component component = new Component();  
 	    
 		try {
-//			props.load(new FileInputStream(CBM_ROOT + "/CBMClient/CBMServer.properties"));
 			props.load(new FileInputStream(sysRoot + "/CBMServer.properties"));
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
@@ -34,15 +33,31 @@ public class CBMStart {
 			e.printStackTrace();
 		}
 
+		String sss = "\t            {\n" +
+				"\t \t\t       \"operator\":\"or\", \n" +
+				"\t       \t\t \"_constructor\":\"AdvancedCriteria\", \n" +
+				"\t   \t\t     \"criteria\":[\n" +
+				"\t \t\t\t\t\t{\n" +
+				"\t \t\t\t\t\t\t\"fieldName\":\"Code\", \n" +
+				"\t \t\t\t\t\t\t\"operator\":\"iStartsWith\", \n" +
+				"\t \t\t               \t\"value\":\"ZuZU\"\n" +
+				"\t            \t\t}, \n" +
+				"\t            \t\t{\n" +
+				"\t \t\t\t\t\t\t\"operator\":\"equals\", \n" +
+				"\t \t\t\t\t\t\t\"fieldName\":\"Del\", \n" +
+				"\t \t\t\t\t\t\t\"value\":false\n" +
+				"\t        \t\t    }\n" +
+				"\t        \t\t], \n" +
+				"\t            }, \n";
 	  
-	    // Add a new HTTP server listening on configured port
 		int port = Integer.parseInt(getParam("port"));
-	    Server server = component.getServers().add(Protocol.HTTP, port); 
+	    // Add a new HTTP server listening on configured port
+		Server server = component.getServers().add(Protocol.HTTP, port); 
+	    // Add a new HTTPS server listening on configured port
+//		component.getServers().add(Protocol.HTTP, port);
+		// Add file protocol
 	    component.getClients().add(Protocol.FILE);
 
-	    // Add a new HTTPS server listening on port 8183
-//	    Server server = component.getServers().add(Protocol.HTTPS, 8183);
-	    
 	    Series<Parameter> parameters = server.getContext().getParameters();
 	    parameters.add("maxThreads", "40");
 
@@ -82,8 +97,7 @@ public class CBMStart {
 	    // ------ Attach the CBM application !!! --------  
 	    component.getDefaultHost().attach(new CBMRestlet());  
 
-	    
-	    // Start the component.  
+        // Start the component.
 	    component.start();  
 	} 
 	

@@ -1,7 +1,6 @@
 ﻿//======================= Technological DataSources ===========================
 isc.CBMDataSource.create({
   ID: "UserRights",
-  dbName: Window.default_DB,
   fields: [{
     name: "ForUser",
     type: "text",
@@ -16,8 +15,9 @@ isc.CBMDataSource.create({
     name: "ActionType",
     type: "text",
     title: "Action",
+    valueMap: ["Read", "Insert", "Update", "Delete"],
+    editorType: "select",
     length: 200
-
   }, {
     name: "Creteria",
     type: "text",
@@ -34,7 +34,6 @@ isc.CBMDataSource.create({
 
 isc.CBMDataSource.create({
   ID: "WindowSettings",
-  dbName: Window.default_DB,
   fields: [{
     name: "ForType",
     type: "text",
@@ -83,7 +82,6 @@ isc.CBMDataSource.create({
 
 isc.CBMDataSource.create({
   ID: "ListSettings",
-  dbName: Window.default_DB,
   fields: [{
     name: "ForType",
     type: "text",
@@ -109,11 +107,11 @@ isc.CBMDataSource.create({
   }]
 });
 
+
 // ----- Concept DS ----------------------------
 isc.CBMDataSource.create({
   ID: "Concept",
   title: "Concept",
-  dbName: Window.default_DB,
   titleField: "SysCode",
   infoField: "Description",
   isHierarchy: true,
@@ -129,9 +127,19 @@ isc.CBMDataSource.create({
       icon: isc.Page.getAppImgDir() + "view.png",
       click: function () {
         var ds = this.context.getSelectedRecord()["SysCode"];	
-        createTable(ds);
+        if (ds) {
+          createTable(ds);
+        }
         return false;
       },
+    }, {
+      title: "Migrate to other known CBM instance",
+      icon: isc.Page.getAppImgDir() + "copyOne.png",
+      click: "exportConcept(this.context.getSelectedRecord())"
+    }, {
+      title: "Export to file for migration",
+      icon: isc.Page.getAppImgDir() + "download.png",
+      click: "exportConcept(this.context.getSelectedRecord())"
     }, {
       title: "Generate default Program View",
       icon: isc.Page.getAppImgDir() + "add.png",
@@ -238,6 +246,11 @@ isc.CBMDataSource.create({
     defaultValue: false,
     hidden: true
   }, {
+    name: "Concept",
+    type: "text",
+    defaultValue: "Concept",
+    hidden: true
+  }, {
     name: "SysCode",
     type: "text",
     title: "System Code",
@@ -280,15 +293,6 @@ isc.CBMDataSource.create({
         return record.SysCode ? record.SysCode : "[no Code]";
       }
     },
-//    inList: true,
-    /*        changed: function() {
-     // TODO: In form - isn't variant here!!! Temporary choice... (Really? - Think more!)
-     var newCode =  conceptRS.find({
-     "ID": (this.form.values["BaseConcept"])})["HierCode"]
-     + "," + this.getValue();
-     this.form.setValue("HierCode", newCode);
-     }*/
-    //   ^^^^^^ TO INVESTIGATE PROGRAMMING FACILITIES vvvv
     changed: function () {
       var fld = this;
       var frm = this.form;
@@ -313,8 +317,8 @@ isc.CBMDataSource.create({
     name: "HierCode",
     type: "text",
     title: "Hirarchy Root",
-    length: 2367,
-    hidden: true
+  //  hidden: true,
+    length: 2367
   }, {
     name: "Primitive",
     type: "boolean",
@@ -333,7 +337,7 @@ isc.CBMDataSource.create({
   }, {
     name: "Source",
     type: "PrgComponent", // TODO : Substitute with Party DS when possible
-    title: "Author of Concept",
+    title: "Source (author) of Concept",
     foreignKey: "Concept.ID",
     editorType: "LinkControl"
 //        editorType: "comboBox" // ,
@@ -359,11 +363,14 @@ isc.CBMDataSource.create({
     relatedConcept: "Relation",
     backLinkRelation: "ForConcept",
     mainIDProperty: "ID",
+    kind: "BackAggregate",
     copyLinked: true,
     deleteLinked: true,
     showTitle: true, //,
     titleOrientation: "top",
-    colSpan: 6
+    colSpan: 6,
+    endRow: true,
+    startRow: true
 //        UIPath: "Properties"
   }, {
     name: "Actuality",
@@ -406,19 +413,23 @@ isc.CBMDataSource.create({
     }, {
       name: "ExprToString",
       type: "text",
-      UIPath: "Information System aspects"
+      UIPath: "Information System aspects",
+	  colSpan: 2
     }, {
       name: "ExprToStringDetailed",
       type: "text",
-      UIPath: "Information System aspects"
+      UIPath: "Information System aspects",
+	  colSpan: 2
     }, {
       name: "ExprFrom",
       type: "text",
-      UIPath: "Information System aspects"
+      UIPath: "Information System aspects",
+	  colSpan: 5
     }, {
       name: "ExprWhere",
       type: "text",
-      UIPath: "Information System aspects"
+      UIPath: "Information System aspects",
+	  colSpan: 5
     }, {
       name: "ExprOrder",
       type: "text",
@@ -440,14 +451,6 @@ isc.CBMDataSource.create({
       type: "text",
       UIPath: "Information System aspects"
     }, {
-      name: "MenuAdditions",
-      type: "text",
-      UIPath: "Information System aspects"
-    }, {
-      name: "CreateFromMethods",
-      type: "text",
-      UIPath: "Information System aspects"
-    }, {
       name: "IsHierarchy",
       type: "boolean",
       defaultValue: false,
@@ -458,6 +461,7 @@ isc.CBMDataSource.create({
       type: "PrgView",
       title: "Interface presentations",
       canSave: true,
+      kind: "BackAggregate",
       copyLinked: true,
       copyFilter: ", \"Role\":\"Default\"", // Copied only default View
       deleteLinked: true,
@@ -485,6 +489,20 @@ isc.CBMDataSource.create({
       titleOrientation: "top",
       colSpan: 6,
       UIPath: "Information System aspects"
+    }, {
+      name: "MenuAdditions",
+      type: "text",
+      UIPath: "Functions",
+      titleOrientation: "top",
+      colSpan: 6,
+      length: 4000
+    }, {
+      name: "CreateFromMethods",
+      type: "text",
+      UIPath: "Functions",
+      titleOrientation: "top",
+      colSpan: 6,
+      length: 4000
     }, {
       name: "Functions",
       type: "PrgFunction",
@@ -531,13 +549,18 @@ isc.DataSource.create({
 // --- Functions (methods) and even functional blocks for Conjcept
 isc.CBMDataSource.create({
   ID: "PrgFunction",
-  dbName: Window.default_DB,
+  cacheAllData: true, // <<<<
   titleField: "SysCode",
   infoField: "Description",
   fields: [{
     name: "Del",
     type: "boolean",
     defaultValue: false,
+    hidden: true
+  }, {
+    name: "Concept",
+    type: "text",
+    defaultValue: "PrgFunction",
     hidden: true
   }, {
     name: "SysCode",
@@ -550,15 +573,12 @@ isc.CBMDataSource.create({
     name: "ForConcept",
     type: "Concept",
     title: "Belongs to Concept",
-    editorType: "LinkControl", //"comboBox",
+    editorType: "LinkControl",
     optionDataSource: "Concept",
     valueField: "ID",
     displayField: "SysCode",
     pickListWidth: 450,
     pickListFields: [{
-      name: "ID",
-      width: 30
-    }, {
       name: "SysCode"
     }, {
       name: "Description"
@@ -584,13 +604,17 @@ isc.CBMDataSource.create({
 
 isc.CBMDataSource.create({
   ID: "PrgVersion",
-  dbName: Window.default_DB,
   titleField: "SysCode",
   infoField: "Description",
   fields: [{
     name: "Del",
     type: "boolean",
     defaultValue: false,
+    hidden: true
+  }, {
+    name: "Concept",
+    type: "text",
+    defaultValue: "PrgVersion",
     hidden: true
   }, {
     name: "SysCode",
@@ -636,16 +660,20 @@ isc.CBMDataSource.create({
     length: 4000
   }]
 });
-
+// VVV TODO VVV Drop or make static DataSource, DataLocation and DataField DS-es.
 isc.CBMDataSource.create({
   ID: "DBStorage",
-  dbName: Window.default_DB,
   titleField: "SysCode",
   infoField: "Description",
   fields: [{
     name: "Del",
     type: "boolean",
     defaultValue: false,
+    hidden: true
+  }, {
+    name: "Concept",
+    type: "text",
+    defaultValue: "DBStorage",
     hidden: true
   }, {
     name: "SysCode",
@@ -679,61 +707,19 @@ isc.CBMDataSource.create({
 // ----- Relation group ----------------------------
 isc.CBMDataSource.create({
   ID: "Relation",
-  dbName: Window.default_DB,
 //  	cacheAllData: true, 
   titleField: "SysCode",
   infoField: "Description",
-
-  onSave: function (record) {
-    if (record.infoState === "new" || record.infoState === "changed") {
-      var currConcept = conceptRS.find("ID", record.ForConcept);
-      var val = currConcept.HierCode + "," + record.ForConcept;
-      if (currConcept) {
-
-        var cretin = {
-          _constructor: "AdvancedCriteria",
-          operator: "and",
-          criteria: [{fieldName: "HierCode", operator: "startsWith", value: val}]
-        }
-        var concepts = conceptRS.findAll(cretin);
-
-        for (var i = 0; i < concepts.length; i++) {
-          cretin = {
-            _constructor: "AdvancedCriteria",
-            operator: "and",
-            criteria: [{fieldName: "SysCode", operator: "equals", value: record.SysCode},
-              {fieldName: "ForConcept", operator: "equals", value: concepts[i].ID}]
-          }
-          var eqRelation = relationRS.find(cretin);
-
-          if (!eqRelation /*|| record.infoState === "new"*/) {
-            var ds = isc.DataSource.getDataSource("Relation");
-            record.notShow = true; // <<< To mark cloned record not to be shown in context grid
-            var newRecord = ds.cloneInstance(record);
-            newRecord.ForConcept = concepts[i].ID;
-            // newRecord.InheritedFrom = record.ForConcept;
-            TransactionManager.add(newRecord, record.currentTransaction);
-            newRecord.currentTransaction = record.currentTransaction;
-            newRecord.store();
-            if (record.notShow) {
-              delete record.notShow;
-            }
-          } else if (record.infoState === "changed") {
-            var childRecord = createFromRecord(eqRelation);
-            syncronize(record, childRecord, ["ID", "Concept", "ForConcept"]);
-            childRecord.currentTransaction = record.currentTransaction;
-            TransactionManager.add(childRecord, record.currentTransaction);
-            childRecord.store();
-          }
-        }
-      }
-    }
-  },
 
   fields: [{
     name: "Del",
     type: "boolean",
     defaultValue: false,
+    hidden: true
+  }, {
+    name: "Concept",
+    type: "text",
+    defaultValue: "Relation",
     hidden: true
   }, {
     name: "Odr",
@@ -760,6 +746,7 @@ isc.CBMDataSource.create({
     name: "ForConcept",
     type: "Concept",
     title: "Belongs to Concept",
+    required: true,
     foreignKey: "Concept.ID",
     editorType: "LinkControl",
     optionDataSource: "Concept",
@@ -767,22 +754,21 @@ isc.CBMDataSource.create({
     displayField: "SysCode",
     pickListWidth: 450,
     pickListFields: [{
-      name: "ID",
-      width: 30
-    }, {
-      name: "SysCode"
+      name: "SysCode",
+      width: 100
     }, {
       name: "Description"
     }],
     inList: true,
-    hidden: true
-  }, {
+    //hidden: true
+  }, { // VVVVVVVVVVVV  Does ForConceptSysCode used for any purpose?
     name: "ForConceptSysCode",
     type: "text",
-    title: "Belongs to Concept",
-    length: 100
+    title: "Belongs to Concept (string Code)",
+    length: 100,
+    hidden: true
   }, {
-    // Property provide very imortant (in most cases ignored!) concept
+    // Property provide very imortant (in most cases ignored) aspect
     // of Semantic meaning of Relation.
     // In other words, it's relation's self-type, that allows to make assamptions
     // on relations meaning and similarity between different Concepts.
@@ -797,10 +783,8 @@ isc.CBMDataSource.create({
     displayField: "SysCode",
     pickListWidth: 450,
     pickListFields: [{
-      name: "ID",
-      width: 30
-    }, {
-      name: "SysCode"
+      name: "SysCode",
+      width: 100
     }, {
       name: "Description"
     }]
@@ -816,10 +800,8 @@ isc.CBMDataSource.create({
     displayField: "SysCode",
     pickListWidth: 450,
     pickListFields: [{
-      name: "ID",
-      width: 30
-    }, {
-      name: "SysCode"
+      name: "SysCode",
+      width: 100
     }, {
       name: "Description"
     }],
@@ -866,9 +848,6 @@ isc.CBMDataSource.create({
     displayField: "SysCode",
     pickListWidth: 550,
     pickListFields: [{
-      name: "ID",
-      width: 30
-    }, {
       name: "ForConcept"
     }, {
       name: "SysCode"
@@ -891,10 +870,8 @@ isc.CBMDataSource.create({
     displayField: "SysCode",
     pickListWidth: 450,
     pickListFields: [{
-      name: "ID",
-      width: 30
-    }, {
-      name: "SysCode"
+      name: "SysCode",
+      width: 100
     }, {
       name: "Description"
     }]
@@ -909,9 +886,6 @@ isc.CBMDataSource.create({
     displayField: "SysCode",
     pickListWidth: 550,
     pickListFields: [{
-      name: "ID",
-      width: 30
-    }, {
       name: "ForConcept"
     }, {
       name: "SysCode"
@@ -979,7 +953,8 @@ isc.CBMDataSource.create({
     titleOrientation: "top",
     colSpan: 2,
     length: 2000,
-    UIPath: "Information System aspects"
+    UIPath: "Information System aspects",
+    inList: true
   }, {
     name: "ExprValidate",
     type: "text",
@@ -1083,6 +1058,9 @@ isc.CBMDataSource.create({
     this.fields["BackLinkRelation"].optionCriteria = {
       ForConcept: record["RelatedConcept"]
     };
+    this.fields["CrossRelation"].optionCriteria = {
+      ForConcept: record["RelatedConcept"]
+    };
     this.Super("edit", arguments);
   }
 
@@ -1132,7 +1110,6 @@ isc.DataSource.create({
 // ----- Presentation Views group ----------------------------
 isc.CBMDataSource.create({
   ID: "PrgView",
-  dbName: Window.default_DB,
 //  	cacheAllData: true, 
   titleField: "SysCode",
   infoField: "Description",
@@ -1204,6 +1181,11 @@ isc.CBMDataSource.create({
     defaultValue: false,
     hidden: true
   }, {
+    name: "Concept",
+    type: "text",
+    defaultValue: "PrgView",
+    hidden: true
+  }, {
     name: "SysCode",
     type: "text",
     title: "Code Sys",
@@ -1272,6 +1254,11 @@ isc.CBMDataSource.create({
     valueMap: [null, "related", "detailField", "details", "detailRelated", "editor"],
     editorType: "select"
   }, {
+    name: "MainTabName",
+    type: "multiLangText",
+    title: "Name for main (first) tab",
+    Prompt: "Optional substitution for localized config-based tab title"
+  }, {
     name: "Fields",
     type: "PrgViewField",
     copyLinked: true,
@@ -1281,13 +1268,14 @@ isc.CBMDataSource.create({
     relatedConcept: "PrgViewField",
     backLinkRelation: "ForPrgView",
     mainIDProperty: "ID",
-    showTitle: false
+    showTitle: false,
+    colSpan: 6
   }]
 });
 
+
 isc.CBMDataSource.create({
   ID: "PrgViewField",
-  dbName: Window.default_DB,
  	//cacheAllData: true, 
   titleField: "SysCode",
   infoField: "Description",
@@ -1346,40 +1334,47 @@ isc.CBMDataSource.create({
       dstRec["Title"] = srcRec["Description"];
       dstRec["Hint"] = srcRec["Notes"];
       dstRec["Mandatory"] = false;
-      dstRec["Hidden"] = false;
-      dstRec["InList"] = true;
       dstRec["ViewOnly"] = false;
-      dstRec["ShowTitle"] = true;
-      dstRec["Editable"] = true;
       dstRec["ColSpan"] = 1;
       dstRec["RowSpan"] = 1;
       dstRec["PickListWidth"] = 400;
-/*    if(srcRec.RelationKind.SysCode !== "Value") {
-		switch (record["RelationKind"]) {
-		  case "Link":
-			dstRec["ControlType"] = "LinkControl";
-			break;
-		  case "BackLink":
-			dstRec["ControlType"] = "CollectionControl";
-			break;
-//		  case "Aggregate":
-//			dstRec["ControlType"] = "LinkControl";
-//			break;
-		  case "BackAggregate":
-			dstRec["ControlType"] = "CollectionAggregateControl";
-			break;
-		  case "CrossLink":
-			dstRec["ControlType"] = "CrossLinkControl";
-			break;
-		  case "Command":
-			dstRec["ControlType"] = "Button";
-			break;
-		};
-		  dstRec["DataSourceView"] = srcRec.RelatedConcept;
-		  dstRec["ValueField"] = ;
-		  dstRec["DisplayField"] = ;
-		  dstRec["PickListFields"] = ;
-      }*/
+      
+      if(srcRec.SysCode === "ID") {
+        dstRec["Hidden"] = true;
+        dstRec["InList"] = false;
+        dstRec["ShowTitle"] = false;
+        dstRec["Editable"] = false;
+      } else {
+        dstRec["Hidden"] = false;
+        if(srcRec.RelationKind !== "Value" && srcRec.RelationKind !== "Link") {
+          dstRec["InList"] = false;
+        } else {
+          dstRec["InList"] = true;
+        }
+        dstRec["ShowTitle"] = true;
+        dstRec["Editable"] = true;
+      }
+      // Below section not nessesary due to all that made by default in dynamic CBM DS generation functon
+      // if(srcRec.RelationKind.SysCode !== "Value") {
+        // switch (record["RelationKind"]) {
+          // case "Link":
+          // dstRec["ControlType"] = "LinkControl";
+          // break;
+          // case "BackLink":
+          // dstRec["ControlType"] = "CollectionControl";
+          // break;
+          // case "BackAggregate":
+          // dstRec["ControlType"] = "CollectionAggregateControl";
+          // break;
+          // case "CrossLink":
+          // dstRec["ControlType"] = "CrossLinkControl";
+          // break;
+          // case "Command":
+          // dstRec["ControlType"] = "Button";
+          // break;
+        // }
+        // dstRec["DataSourceView"] = srcRec.RelatedConcept;
+      // }
     }
   }],
 
@@ -1387,6 +1382,11 @@ isc.CBMDataSource.create({
     name: "Del",
     type: "boolean",
     defaultValue: false,
+    hidden: true
+  }, {
+    name: "Concept",
+    type: "text",
+    defaultValue: "PrgViewField",
     hidden: true
   }, {
     name: "Odr",
@@ -1427,15 +1427,15 @@ isc.CBMDataSource.create({
     name: "ForRelation",
     type: "Relation",
     title: "Represents Relation",
-    foreignKey: "Relation.ID",
+ //   foreignKey: "Relation.ID", // <<<?
     editorType: "LinkControl",
-//0    optionDataSource: "Relation",
+    optionDataSource: "Relation", // <<<?
     valueField: "ID",
     displayField: "SysCode",
     pickListWidth: 450,
     inList: true,
     pickListFields: [{
-      name: "ForConceptSysCode",
+      name: "ForConcept",
       title: "Belongs to concept"
     }, {
       name: "SysCode",
@@ -1458,7 +1458,7 @@ isc.CBMDataSource.create({
     type: "boolean",
     defaultValue: true,
     title: "Show in List",
-    //       inList: true
+    inList: true
   }, {
     name: "ViewOnly",
     type: "boolean",
@@ -1483,12 +1483,14 @@ isc.CBMDataSource.create({
     name: "ColSpan",
     type: "integer",
     title: "Spread to columns",
-    defaultValue: 1
+    defaultValue: 1,
+    inList: true
   }, {
     name: "RowSpan",
     type: "integer",
     title: "Spread to rows",
-    defaultValue: 1
+    defaultValue: 1,
+    inList: true
   }, {
     name: "ControlType",
     type: "text",
@@ -1500,9 +1502,10 @@ isc.CBMDataSource.create({
     title: "ToolTip message",
     titleOrientation: "top",
     colSpan: 2,
-    length: 1000
+    length: 1000,
+    inList: true
   },
-    // Below fields that describe properties of complicated relation controls
+    // Below are the fields that describe properties of complicated relation controls
     {
       name: "DataSourceView",
       type: "text",
@@ -1520,8 +1523,7 @@ isc.CBMDataSource.create({
     }, {
       name: "PickListWidth",
       type: "integer",
-      title: "List width",
-      defaultValue: 400
+      title: "List width"
     }, {
       name: "PickListFields",
       type: "text",
@@ -1542,12 +1544,16 @@ isc.CBMDataSource.create({
 //--- Menu metadata DS ---
 isc.CBMDataSource.create({
   ID: "PrgMenu",
-  dbName: Window.default_DB,
   titleField: "SysCode",
   infoField: "Description",
   fields: [{
     name: "Del",
     type: "boolean",
+    hidden: true
+  }, {
+    name: "Concept",
+    type: "text",
+    defaultValue: "PrgMenu",
     hidden: true
   }, {
     name: "SysCode",
@@ -1570,6 +1576,8 @@ isc.CBMDataSource.create({
     copyLinked: true,
     deleteLinked: true,
     canSave: true,
+    colSpan: 6,
+    startRow: true,
     editorType: "CollectionAggregateControl",
     relatedConcept: "PrgMenuItem",
     backLinkRelation: "ForMenu",
@@ -1580,11 +1588,15 @@ isc.CBMDataSource.create({
 
 isc.CBMDataSource.create({
   ID: "PrgMenuItem",
-  dbName: Window.default_DB,
   titleField: "Description",
   infoField: "SysCode",
   isHierarchy: true,
   fields: [{
+    name: "Concept",
+    type: "text",
+    defaultValue: "PrgMenuItem",
+    hidden: true
+  }, {
     name: "Odr",
     type: "integer",
     title: "Order",
@@ -1653,6 +1665,15 @@ isc.CBMDataSource.create({
    displayField: "Description",
    hidden: true
    },*/ {
+    name: "MenuItemActionType", // TODO: substitute with Method link
+    type: "MenuItemActionType",
+    title: "Item Action Type",
+    editorType: "ComboBoxItem",
+    foreignKey: "MenuItemActionType.SysCode",
+    optionDataSource: "MenuItemActionType",
+    valueField: "SysCode",
+    displayField: "Description"
+  }, {
     name: "CalledMethod", // TODO: substitute with Method link
     type: "PrgFunction",
     title: "Called method",
@@ -1670,14 +1691,74 @@ isc.CBMDataSource.create({
   }]
 });
 
+
+isc.CBMDataSource.create({
+  ID: "MenuItemActionType",
+  clientOnly: true,
+  titleField: "SysCodeDescription",
+  infoField: "Description",
+  fields: [{
+    name: "Odr",
+    type: "integer",
+    title: "Order",
+    length: 4,
+    //hidden: true,
+    required: true,
+    inList: true
+  }, {
+    name: "SysCode",
+    type: "text",
+    primaryKey: true,
+    title: "Code of Concept called by this Item",
+    length: 400,
+    required: true,
+    inList: true
+  }, {
+    name: "Description",
+    type: "multiLangText",
+    title: "Description of Item",
+    //      titleOrientation: "top",
+    colSpan: 5,
+    length: 400,
+    inList: true
+  }],
+  
+   testData: [{
+    Odr: 0,
+    SysCode: 'Empty',
+    Description: 'Empty information'
+  }, {
+    Odr: 1,
+    SysCode: 'List',
+    Description: 'List'
+  }, {
+    Odr: 2,
+    SysCode: 'SingleInstance',
+    Description: 'Existing instance of some concept selected by some filter'
+  }, {
+    Odr: 3,
+    SysCode: 'Form',
+    Description: 'Some singleton form - wide variants of use'
+  }, {
+    Odr: 4,
+    SysCode: 'Command',
+    Description: 'Command'
+  }]
+
+});
+
 //========================================================================
 //============ CBM actual Domain Model Classes (DataSources) =============
 //========================================================================
 isc.CBMDataSource.create({
   ID: "PrgComponent",
-  dbName: Window.default_DB,
   titleField: "SysCode",
   fields: [{
+    name: "Concept",
+    type: "text",
+    defaultValue: "PrgComponent",
+    hidden: true
+  }, {
     name: "SysCode",
     type: "text",
     title: "Code Sys",
@@ -1740,6 +1821,3 @@ isc.CBMDataSource.create({
 });
 
 // =====^^^===== END Core DS definitions =====^^^=====
-
-	
-

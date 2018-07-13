@@ -1,6 +1,7 @@
 package CBMServer;
 
 
+import org.restlet.data.CacheDirective;
 import org.restlet.data.CookieSetting;
 import org.restlet.data.MediaType;
 import org.restlet.representation.FileRepresentation;
@@ -29,18 +30,16 @@ public class CBMClientStart extends ServerResource
 	@Get("html") 
 	public FileRepresentation ProceedGet()
 	{ 
-		// TODO: universalize file path below 
-		FileRepresentation fr = new FileRepresentation("file:///c:/CBM/CBM/CBMClient/index.html", MediaType.TEXT_HTML);  
+		FileRepresentation fr = new FileRepresentation("file:///" + CBMStart.CBM_ROOT + "/CBMClient/index.html", MediaType.TEXT_HTML);  
 		String initialMsg = null;
 		I_AutentificationManager credMan = new CredentialsManager();
 		
 		initialMsg = credMan.initFirstKeys();
 		
-		response.redirectPermanent("/CBMClient");
-        CookieSetting cS = new CookieSetting(1, "ImgFirst", initialMsg /*, "/", ".127.0.0.1"*/);
-//        cS.setAccessRestricted(false);
-//        cS.setSecure(false);
+        CookieSetting cS = new CookieSetting(1, "ImgFirst", initialMsg );
         response.getCookieSettings().add(cS);
+        
+        response.getCacheDirectives().add(new CacheDirective("no-store"));
 
 		return fr; 
 	}

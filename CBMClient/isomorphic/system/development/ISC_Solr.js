@@ -1,8 +1,7 @@
-
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v11.1d_2017-03-13/LGPL Development Only (2017-03-13)
+  Version v12.0p_2018-06-28/LGPL Development Only (2018-06-28)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -42,7 +41,7 @@ _3[this.queryParam]=_5.join(" AND ")}
 if(_1.startRow!=null)_3[this.startRowParam]=_1.startRow;if(_1.endRow!=null)_3[this.numRowsParam]=_1.endRow-_1.startRow;if(_1.sortBy){var _8="";for(var i=0;i<_1.sortBy.length;i++){var _10=_1.sortBy[i];var _11="asc";if(_10.startsWith("-")){_11="desc";_10=_10.substring(1)}
 _8+=_10+" "+_11;if(i+1<_1.sortBy.length)_8+=","}
 _3[this.sortParam]=_8}
-if(_1.outputs){var _12=this.getPrimaryKeyFieldName(),_13=_1.outputs;if(isc.isA.String(_13)){_13=_13.split(",").map("trim")}
+if(_1.outputs){var _12=this.getPrimaryKeyFieldName(),_13=_1.outputs;if(isc.isA.String(_13)){_13=_13.split(",").callMethod("trim")}
 if(isc.isAn.Array(_13)){if(!_13.contains(_12))_13.add(_12);_1.outputs=_13.join(",")}
 _3[this.outputsParam]=_1.outputs}
 if(_1.facets){_3[this.enableFacetsParam]=true;_3[this.facetFieldParam]=_1.facets}

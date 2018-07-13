@@ -1,5 +1,5 @@
 ﻿/**
- * 
+ *
  */
 package CBMUtils;
 
@@ -19,6 +19,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 
 import javax.crypto.Cipher;
+import javax.sql.DataSource;
 
 import org.restlet.Request;
 import org.restlet.Response;
@@ -26,9 +27,10 @@ import org.restlet.data.Cookie;
 import org.restlet.data.CookieSetting;
 import org.restlet.engine.util.Base64;
 
+import CBMPersistence.ConnectionPool;
 import CBMServer.CBMStart;
 import CBMServer.DSRequest;
-import CBMServer.DSResponce;
+import CBMServer.DSResponse;
 import CBMServer.IDProvider;
 import CBMServer.I_ClientIOFormatter;
 import CBMServer.I_IDProvider;
@@ -40,28 +42,29 @@ import CBMServer.IscIOFormatter;
  *
  */
 public class CredentialsManager implements I_AutentificationManager {
-	private  String dbURL;
-	private  String dbUs;
-	private  String dbCred;
+//	private  String dbURL;
+//	private  String dbUs;
+//	private  String dbCred;
 	private String login = null;
 
 	private Connection dbCon = null;
+	private DataSource dataSource = ConnectionPool.getDataSource();
 
-	public CredentialsManager(){
-		try {
-			Class.forName(CBMStart.getParam("primaryDBDriver"));
-			dbURL = CBMStart.getParam("primaryDBUrl");
-			dbUs = CBMStart.getParam("primaryDBUs");
-			dbCred = CBMStart.getParam("primaryDBCred");
-		}  catch (Exception ex) {
-			ex.printStackTrace();
-		}
-	}
-
-	public CredentialsManager(Connection dbConExt){
-		this();
-		this.dbCon = dbConExt;
-	}
+//	public CredentialsManager(){
+//		try {
+//			Class.forName(CBMStart.getParam("primaryDBDriver"));
+//			dbURL = CBMStart.getParam("primaryDBUrl");
+//			dbUs = CBMStart.getParam("primaryDBUs");
+//			dbCred = CBMStart.getParam("primaryDBCred");
+//		}  catch (Exception ex) {
+//			ex.printStackTrace();
+//		}
+//	}
+//
+//	public CredentialsManager(Connection dbConExt){
+//		this();
+//		this.dbCon = dbConExt;
+//	}
 
 	
 	//--------------------- First request processing in client work session ----------------------------- 
@@ -127,8 +130,10 @@ public class CredentialsManager implements I_AutentificationManager {
 		
 		try
 		{
-			dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
-			statement = dbCon.createStatement();
+//			dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+            dbCon = dataSource.getConnection();
+
+            statement = dbCon.createStatement();
 			dbCon.setAutoCommit(false);
 			dbCon.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
 			statement.executeUpdate("INSERT INTO cbm.startsession (idSession, Moment, FirstKey) VALUES ('" + sessionID + "', CURRENT_TIMESTAMP, '" + strKeys + "')");
@@ -165,7 +170,7 @@ public class CredentialsManager implements I_AutentificationManager {
 	 * 
 	 */
 	public String testRights(DSRequest req) {
-		DSResponce metaResponce = null;
+		DSResponse metaResponse = null;
 //		String login = null;
 		String pass = null;
 //		String clientCode = null;
@@ -180,7 +185,7 @@ public class CredentialsManager implements I_AutentificationManager {
 		// ----- Initial autentification of user by strong password hash
 		if (cook != null && !cook.getValue().equals("")) { // TODO Maybe not only cookie existence is sign for first check! 
 			String sc = cook.getValue();
-			String[] cookData = decodeCredentials(sc, Integer.parseInt(req.itemImg));
+			String[] cookData = decodeCredentials(sc, Integer.parseInt(req.data.clientData.itemImg));
 			login = cookData[0];
 			pass = cookData[1];
 			if (login != null && pass != null) {
@@ -190,7 +195,7 @@ public class CredentialsManager implements I_AutentificationManager {
 	//			sysInstance = cookData[4];
 				// TODO: Distinguish between first and subsequent entries...
 				boolean newUser = false;
-				if(req.extraInfo != null && req.extraInfo.contains("usReg")){
+				if(req.data.clientData.extraInfo != null && req.data.clientData.extraInfo.contains("usReg")){
 					newUser = true;
 				}
 				// Continue with rights resolving 
@@ -206,18 +211,18 @@ public class CredentialsManager implements I_AutentificationManager {
 				Request.getCurrent().getCookies().removeAll("ItemImg");
 			} else {
 				// TODO use localized message from CBMServerMessages class here. Temporary variant below
- 				outMsg = "Вы произвели перезагрузку страницы, (либо сработала загрузка ранее загруженной страницы), тогда как для старта приложения нужно войти через SBMStart. Повторите попытку использовав ссылку заканчивающуюся на CBMStart, (не CBMClient).";
+ 				outMsg = "Перезагрузите страницу"; //Вы произвели перезагрузку страницы, (либо сработала загрузка ранее загруженной страницы), тогда как для старта приложения нужно войти через SBMStart. Повторите попытку использовав ссылку заканчивающуюся на CBMStart";
 // 				outMsg = "You seems to use <Reload> page, instead of real relogin. Use CBMStart URL please to login.";
 			}
 		}
 		// ----- Authenticate user by Session ID
 		else {
 			// ----- Get credentials from Data block -----
-			outMsg = identifyBySessionID(req.currUser, Integer.parseInt(req.itemImg));
+			outMsg = identifyBySessionID(req.data.clientData.currUser, Integer.parseInt(req.data.clientData.itemImg));
 		}
 
 		if (outMsg.equals("OK")){
-			req.currUser = getLogin();
+			req.data.clientData.currUser = getLogin();
 			
 			// TODO: !!! HERE !!! Resolve fine-grained rights for distinguished user and Request
 			
@@ -226,11 +231,11 @@ public class CredentialsManager implements I_AutentificationManager {
 			return outMsg;
 		}
 		else{
-			metaResponce = new DSResponce();
-			metaResponce.retCode = -1;
-			metaResponce.retMsg = outMsg;
+			metaResponse = new DSResponse();
+			metaResponse.retCode = -1;
+			metaResponse.retMsg = outMsg;
 			try {
-				badOut = clientIOFormatter.formatResponce(metaResponce,	req);
+				badOut = clientIOFormatter.formatResponse(metaResponse,	req);
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -250,7 +255,8 @@ public class CredentialsManager implements I_AutentificationManager {
 		Statement statement = null;
 		ResultSet rs = null;
 		try {
-			dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+//			dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+            dbCon = dataSource.getConnection();
 		} catch (SQLException ex){
 			System.out.println("SQLException: " + ex.getMessage());
 			System.out.println("SQLState: " + ex.getSQLState());
@@ -400,8 +406,9 @@ public class CredentialsManager implements I_AutentificationManager {
 		// ---- Get stored password hash ---
 		try {
 			if (dbCon == null) { 
-				dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
-			}
+//				dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+                dbCon = dataSource.getConnection();
+		}
 			statement = dbCon.createStatement();
 			rs = statement.executeQuery("SELECT o.Img FROM cbm.outformat o INNER JOIN cbm.imgname i ON i.ImgCode=o.Code WHERE o.Ds='" + login + "'");
 			if (rs.next()){
@@ -468,7 +475,9 @@ public class CredentialsManager implements I_AutentificationManager {
 		
 		// ---- Get stored SessionID ---
 		try {
-			dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+//			dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+            dbCon = dataSource.getConnection();
+
 			statement = dbCon.createStatement();
 			dbCon.setAutoCommit(false);
 			dbCon.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
@@ -484,8 +493,8 @@ public class CredentialsManager implements I_AutentificationManager {
 				// TODO Analyze emergency here!!! Not found == Bad sign!!!
 //				outMsg = "Not found User (while sequential, not first, request)";
  				// TODO use localized message from CBMServerMessages class here. Temporary variant below
-				outMsg = "Вы не обращались к серверу более  " + CBMStart.getParam("inactivityInterval") + ". Вам придется перевойти в программу. Не пользуйтесь <обновлением> страницы, используйте оканчивающийся на CBMStart адрес.";
-//				outMsg = "You seems to be inactive for more than " + CBMStart.getParam("inactivityInterval") + ". Relogin please. Not <Reload> page, but use CBMStart URL.";
+				outMsg = "Вы не обращались к серверу более  " + CBMStart.getParam("inactivityInterval") + " часов. Вам придется перевойти в программу.";
+//				outMsg = "You seems to be inactive for more than " + CBMStart.getParam("inactivityInterval") + " hours. Relogin please.";
 			}
 		} catch (SQLException ex) {
 			System.out.println("SQLException: " + ex.getMessage());
@@ -532,7 +541,9 @@ public boolean registerNewUserProfile(String login, String pass){
 	I_IDProvider idProvider = new IDProvider();
 
 	try {
-		dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+//		dbCon = DriverManager.getConnection(dbURL, dbUs, dbCred);
+        dbCon = dataSource.getConnection();
+
 		statement = dbCon.createStatement();
 		dbCon.setAutoCommit(false);
 		dbCon.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);

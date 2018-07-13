@@ -1,8 +1,7 @@
-
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v11.1d_2017-03-13/LGPL Deployment (2017-03-13)
+  Version v12.0p_2018-06-28/LGPL Deployment (2018-06-28)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -39,9 +38,9 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
 
-if (window.isc && isc.version != "SNAPSHOT_v11.1d_2017-03-13/LGPL Deployment" && !isc.DevUtil) {
+if (window.isc && isc.version != "v12.0p_2018-06-28/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v11.1d_2017-03-13/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'v12.0p_2018-06-28/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -164,7 +163,7 @@ isc.Animation.addClassMethods({
     //> @classMethod Animation.registerAnimation()
     // Register an action to fire repeatedly for some duration of time.
     //
-    // @param callback (callback) Action to fire repeatedly until the duration expires.
+    // @param callback (Callback) Action to fire repeatedly until the duration expires.
     //                            Passed 3 parameters for each step:<br>
     //                              - "ratio" (number between 0 and 1) indicating what fraction
     //                                of the specified duration has elapsed<br>
@@ -180,9 +179,9 @@ isc.Animation.addClassMethods({
     //                          interval time.  The animation will be cut short if it exceeds
     //                          3 times the target duration
     // @param [acceleration] (AnimationAcceleration) Acceleration bias effect for the animation.
-    // @param [target] (object) If specified the callback will be fired in the scope of the
+    // @param [target] (Object) If specified the callback will be fired in the scope of the
     //                          target passed in.
-    // @return (string) Unique ID for the registered animation action.
+    // @return (String) Unique ID for the registered animation action.
     // @visibility animation_advanced
     //<
     registerAnimation : function (callback, duration, acceleration, target) {
@@ -234,7 +233,7 @@ isc.Animation.addClassMethods({
     // Clear a registered animation action. Only meaningful if the registered animation has
     // not completed (i.e. the specified duration for the action has not elapsed since the
     // action was registered). Will un-register the action and prevent it from firing again.
-    // @param ID (string) ID for the action to be unregistered. This is the ID returned from
+    // @param ID (String) ID for the action to be unregistered. This is the ID returned from
     //                      Animation.registerAnimation().
     // @visibility animation_advanced
     //<
@@ -250,7 +249,7 @@ isc.Animation.addClassMethods({
     //> @classMethod Animation.finishAnimation()
     // "Finish" a registered animation, by clearing it, and firing it with a
     // ratio of 1 and an additional 'earlyFinish' which will be passed to the callback.
-    // @param ID (string) ID for the action to be finished. This is the ID returned from
+    // @param ID (String) ID for the action to be finished. This is the ID returned from
     //                      Animation.registerAnimation().
     // @visibility animation_advanced
     //<
@@ -431,7 +430,7 @@ isc.Canvas.addProperties({
 
     _animations:["rect","fade","scroll","show","hide", "resize", "move"],
 
-    //> @attr canvas.animateShowEffect (animateShowEffectId | animateShowEffect : "wipe" : IRWA)
+    //> @attr canvas.animateShowEffect (AnimateShowEffectId | AnimateShowEffect : "wipe" : IRWA)
     // Default animation effect to use if +link{Canvas.animateShow()} is called without an
     // explicit <code>effect</code> parameter
     // @visibility animation
@@ -439,7 +438,7 @@ isc.Canvas.addProperties({
     //<
     animateShowEffect:"wipe",
 
-    //> @attr canvas.animateHideEffect (animateShowEffectId | animateShowEffect : "wipe" : IRWA)
+    //> @attr canvas.animateHideEffect (AnimateShowEffectId | AnimateShowEffect : "wipe" : IRWA)
     // Default animation effect to use if +link{Canvas.animateHide()} is called without an
     // explicit <code>effect</code> parameter
     // @visibility animation
@@ -546,10 +545,10 @@ isc.Canvas.addMethods({
 
     //> @method canvas.registerAnimation  (A)
     // Register some action to fire repeatedly for a specified duration
-    // @param callback (callback) Action to fire repeatedly until the duration expires
+    // @param callback (Callback) Action to fire repeatedly until the duration expires
     // @param [duration] (Integer) time in ms for which the action should be fired
     // @param [acceleration] (AnimationAcceleration) Acceleration effect to apply to the animation
-    // @return (string) Unique identifier for the registered animation action
+    // @return (String) Unique identifier for the registered animation action
     // @visibility animation_advanced
     // @group animation
     //<
@@ -561,7 +560,7 @@ isc.Canvas.addMethods({
 
     //> @method canvas.cancelAnimation  (A)
     // Clear some registered animation action
-    // @param ID (string) ID of the animation as returned by canvas.registerAnimation()
+    // @param ID (String) ID of the animation as returned by canvas.registerAnimation()
     // @visibility animation_advanced
     // @group animation
     //<
@@ -716,9 +715,9 @@ isc.Canvas.addMethods({
     // Forces a running animation (animated move / resize, etc.) to instantly complete - jumping
     // to its finished state, and firing its callback, and passing the 'earlyFinish' parameter
     // to the callback.
-    // @param [type] (string) animation type name ("move", "resize", etc). If not passed just
+    // @param [type] (String) animation type name ("move", "resize", etc). If not passed just
     //                        finish all animations
-    // @visibility internal
+    // @visibility animation_advanced
     // @group animation
     //<
 
@@ -754,9 +753,11 @@ isc.Canvas.addMethods({
     //> @method Callbacks.AnimationCallback
     // A +link{type:Callback} called when the move completes.
     //
-    // @param earlyFinish (boolean)  parameter will be passed if the animation was
-    //                               cut short by a call to finishAnimation
-    //
+    // @param earlyFinish (boolean)  true if the animation was cut short.  To quit an animation
+    //                               early, simply call the non-animated version of the same
+    //                               API, so for example call +link{canvas.hide()} to cut short
+    //                               an animation from +link{canvas.animateHide()} already in
+    //                               progress.
     // @visibility external
     //<
 
@@ -764,9 +765,10 @@ isc.Canvas.addMethods({
     // Animate a reposition of this canvas from its current position to the specified position
     // @param left (Integer) new left position (or null for unchanged)
     // @param top (Integer) new top position (or null for unchanged)
-    // @param [callback] (AnimationCallback) When the move completes this callback will be fired. Single
-    //                            'earlyFinish' parameter will be passed if the animation was
-    //                            cut short by a call to finishAnimation
+    // @param [callback] (AnimationCallback) When the move completes this callback will be
+    //                       fired. Single 'earlyFinish' parameter will be passed if the
+    //                       animation was cut short, for example by a call to the non-animated
+    //                       APIs +link{moveTo()} or +link{moveBy()}.
     // @param [duration] (Integer) Duration in ms of the animated move
     // @param [acceleration] (AnimationAcceleration) Optional acceleration effect to bias the ratios
     // @visibility animation
@@ -788,9 +790,10 @@ isc.Canvas.addMethods({
     // Animate a resize of this canvas from its current size to the specified size
     // @param width (Integer) new width (or null for unchanged)
     // @param height (Integer) new height (or null for unchanged)
-    // @param [callback] (AnimationCallback) When the resize completes this callback will be fired. Single
-    //                              'earlyFinish' parameter will be passed if the animation was
-    //                              cut short by a call to finishAnimation
+    // @param [callback] (AnimationCallback) When the resize completes this callback will be
+    //                       fired. Single 'earlyFinish' parameter will be passed if the
+    //                       animation was cut short, for example by a call to the non-animated
+    //                       APIs +link{resizeTo()} or +link{resizeBy()}.
     // @param [duration] (Integer) Duration in ms of the animated resize
     // @param [acceleration] (AnimationAcceleration) Optional acceleration effect to apply to the resize
     // @visibility animation
@@ -813,9 +816,10 @@ isc.Canvas.addMethods({
     // @param top (Integer) new top position (or null for unchanged)
     // @param width (Integer) new width (or null for unchanged)
     // @param height (Integer) new height (or null for unchanged)
-    // @param [callback] (AnimationCallback) When the setRect completes this callback will be fired. Single
-    //                              'earlyFinish' parameter will be passed if the animation was
-    //                              cut short by a call to finishAnimation
+    // @param [callback] (AnimationCallback) When the setRect completes this callback will be
+    //                       fired. Single 'earlyFinish' parameter will be passed if the
+    //                       animation was cut short, for example by a call to the non-animated
+    //                       API +link{setRect()}.
     // @param [duration] (Integer) Duration in ms of the animated setRect
     // @param [acceleration] (AnimationAcceleration) Optional acceleration effect to apply to the animation
     // @visibility animation
@@ -927,9 +931,10 @@ isc.Canvas.addMethods({
     //> @method canvas.animateFade()
     // Animate a change in opacity from the widget's current opacity to the specified opacity.
     // @param opacity (Integer) desired final opacity
-    // @param [callback] (AnimationCallback) When the fade completes this callback will be fired. Single
-    //                              'earlyFinish' parameter will be passed if the animation was
-    //                              cut short by a call to finishAnimation
+    // @param [callback] (AnimationCallback) When the fade completes this callback will be
+    //                       fired.  Single 'earlyFinish' parameter will be passed if the
+    //                       animation was cut short, for example by a call to the non-animated
+    //                       API +link{setOpacity()}.
     // @param [duration] (Integer) Duration in ms of the animated fade
     // @param [acceleration] (AnimationAcceleration) Optional animation acceleration to bias the ratios
     // @visibility animation
@@ -1000,9 +1005,10 @@ isc.Canvas.addMethods({
     // Animate a scroll from the current scroll position to the specified position.
     // @param scrollLeft (Integer) desired final left scroll position
     // @param scrollTop (Integer) desired final top scroll position
-    // @param [callback] (AnimationCallback) When the scroll completes this callback will be fired. Single
-    //                              'earlyFinish' parameter will be passed if the animation was
-    //                              cut short by a call to finishAnimation
+    // @param [callback] (AnimationCallback) When the scroll completes this callback will be
+    //                       fired. Single 'earlyFinish' parameter will be passed if the
+    //                       animation was cut short, for example by a call to the non-animated
+    //                       APIs +link{scrollTo()} or +link{scrollBy()}.
     // @param [duration] (Integer) Duration in ms of the animated scroll
     // @param [acceleration] (AnimationAcceleration) Optional acceleration to bias the animation ratios
     // @visibility animation
@@ -1037,7 +1043,7 @@ isc.Canvas.addMethods({
     // animate show effect / effectID split into separate objects for clarity / integration with
     // tools etc
     // (We could also separate animate hide effects from animate show effects).
-    //> @type animateShowEffectId
+    //> @type AnimateShowEffectId
     // String specifying effect to apply during an animated show or hide.
     // @value "slide" content slides into or out of view as the widget grows or shrinks
     // @value "wipe" content is revealed or wiped as the widget grows or shrinks
@@ -1051,12 +1057,12 @@ isc.Canvas.addMethods({
     // @treeLocation Client Reference/System
     // @visibility animation
     //<
-    //> @attr AnimateShowEffect.effect (animateShowEffectId : null : IR)
+    //> @attr AnimateShowEffect.effect (AnimateShowEffectId : null : IR)
     // Effect to apply
     // @visibility animation
     //<
 
-    //> @attr AnimateShowEffect.startFrom (string : null : IR)
+    //> @attr AnimateShowEffect.startFrom (String : null : IR)
     //   For show animations of type <code>"wipe"</code> and
     //   <code>"slide"</code> this attribute specifies where the wipe / slide should originate.
     //   Valid values are <code>"T"</code> (vertical animation from the top down, the
@@ -1064,7 +1070,7 @@ isc.Canvas.addMethods({
     // @visibility animation
     //<
 
-    //> @attr AnimateShowEffect.endsAt (string : null : IR)
+    //> @attr AnimateShowEffect.endsAt (String : null : IR)
     //   For hide animations of type <code>"wipe</code> and
     //   <code>"slide"</code> this attribute specifies where the wipe / slide should finish.
     //   Valid options are <code>"T"</code> (vertical animation upwards to the top of the canvas,
@@ -1077,12 +1083,13 @@ isc.Canvas.addMethods({
     // Show a canvas by growing it vertically to its fully drawn height over a period of time.
     // This method will not fire if the widget is already drawn and visible, or has overflow
     // other than <code>"visible"</code> or <code>"hidden"</code>.
-    // @param [effect] (animateShowEffectId | AnimateShowEffect) Animation effect to use
+    // @param [effect] (AnimateShowEffectId | AnimateShowEffect) Animation effect to use
     //      when revealing the widget. If ommitted, default behavior can be configured via
     //      +link{Canvas.animateShowEffect}
-    // @param [callback] (AnimationCallback) When the show completes this callback will be fired. Single
-    //                              'earlyFinish' parameter will be passed if the animation was
-    //                              cut short by a call to finishAnimation.
+    // @param [callback] (AnimationCallback) When the show completes this callback will be
+    //                       fired. Single 'earlyFinish' parameter will be passed if the
+    //                       animation was cut short, for example by a call to the non-animated
+    //                       API +link{show()}.
     // @param [duration] (Integer) Duration in ms of the animated show. If unset, duration will be
     //   picked up from +link{canvas.animateShowTime}
     // @param [acceleration] (AnimationAcceleration) Optional acceleration effect function to
@@ -1724,12 +1731,13 @@ isc.Canvas.addMethods({
     // Hide a canvas by shrinking it vertically to zero height over a period of time.
     // This method will not fire if the widget is already drawn and visible, or has overflow
     // other than <code>"visible"</code> or <code>"hidden"</code>.
-    // @param [effect] (animateShowEffectId | animateShowEffect) How should the content of the
+    // @param [effect] (AnimateShowEffectId | AnimateShowEffect) How should the content of the
     //  window be hidden during the hide? If ommitted, default behavior can be configured via
     //  +link{Canvas.animateHideEffect}
-    // @param [callback] (AnimationCallback) When the hide completes this callback will be fired. Single
-    //                              'earlyFinish' parameter will be passed if the animation was
-    //                              cut short by a call to finishAnimation.
+    // @param [callback] (AnimationCallback) When the hide completes this callback will be
+    //                       fired.  Single 'earlyFinish' parameter will be passed if the
+    //                       animation was cut short, for example by a call to the non-animated
+    //                       API +link{hide()}.
     // @param [duration] (Integer) Duration in ms of the animated hide.  If unset, duration will be
     //   picked up from +link{canvas.animateHideTime}
     // @param [acceleration] (AnimationAcceleration) Optional acceleration effect function to bias
@@ -1935,7 +1943,7 @@ isc.Canvas.addMethods({
                                                : (vertical ? this._edgedCanvas._bottomMargin
                                                            : this._edgedCanvas._rightMargin));
                 endEdgeSize = (info._slideOut ? (vertical ? this._edgedCanvas._bottomMargin
-                                                          : this._edigedCanvas._rightMargin)
+                                                          : this._edgedCanvas._rightMargin)
                                                : (vertical ? this._edgedCanvas._topMargin
                                                            : this._edgedCanvas._leftMargin));
 
@@ -2280,7 +2288,7 @@ isc.Canvas.addMethods({
 
     //> @method canvas.isAnimating()
     // Is this widget currently performing an animation?
-    // @param [types] (array) Animation types to check for - if unspecified all animation types
+    // @param [types] (Array) Animation types to check for - if unspecified all animation types
     //   will be checked.
     // @visibility internal
     //<
@@ -2330,37 +2338,114 @@ isc.ClassFactory.defineClass("StatefulCanvas", "Canvas");
     //<
 isc.StatefulCanvas.addClassProperties({
 
-    //>    @type    State
+    //> @type   State
     // Constants for the standard states for a StatefulCanvas.
-    //            @group    state
-    STATE_UP:"",                //    @value    StatefulCanvas.STATE_UP         state when mouse is not acting on this StatefulCanvas
-    STATE_DOWN:"Down",            //    @value    StatefulCanvas.STATE_DOWN       state when mouse is down
-    STATE_OVER:"Over",            //    @value    StatefulCanvas.STATE_OVER        state when mouse is over
-    STATE_DISABLED:"Disabled",    //    @value    StatefulCanvas.STATE_DISABLED    disabled
+    // @value  isc.StatefulCanvas.STATE_UP         state when mouse is not acting on this StatefulCanvas
+    // @value  isc.StatefulCanvas.STATE_DOWN       state when mouse is down
+    // @value  isc.StatefulCanvas.STATE_OVER       state when mouse is over
+    // @value  isc.StatefulCanvas.STATE_DISABLED   disabled
+    // @group  state
     // @visibility external
     //<
 
-    //>    @type    SelectionType
+    //> @classAttr StatefulCanvas.STATE_UP (Constant : "" : [R])
+    // A declared value of the enum type
+    // +link{type:State,State}.
+    // @visibility external
+    // @constant
+    //<
+    STATE_UP:"",
+
+    //> @classAttr StatefulCanvas.STATE_DOWN (Constant : "Down" : [R])
+    // A declared value of the enum type
+    // +link{type:State,State}.
+    // @visibility external
+    // @constant
+    //<
+    STATE_DOWN:"Down",
+
+    //> @classAttr StatefulCanvas.STATE_OVER (Constant : "Over" : [R])
+    // A declared value of the enum type
+    // +link{type:State,State}.
+    // @visibility external
+    // @constant
+    //<
+    STATE_OVER:"Over",
+
+    //> @classAttr StatefulCanvas.STATE_DISABLED (Constant : "Disabled" : [R])
+    // A declared value of the enum type
+    // +link{type:State,State}.
+    // @visibility external
+    // @constant
+    //<
+    STATE_DISABLED:"Disabled",
+
+    //> @type  SelectionType
     // Controls how an object changes state when clicked
-    // @group    state
-    // @group    event handling
-    //    @value    StatefulCanvas.BUTTON    object moves to "down" state temporarily (normal button)
-    //    @value    StatefulCanvas.CHECKBOX object remains in "down" state until clicked again (checkbox)
-    //    @value    StatefulCanvas.RADIO    object moves to "down" state, causing another object to go up (radio)
-    BUTTON:"button",
-    CHECKBOX:"checkbox",
-    RADIO:"radio",
+    // @group  state
+    // @group  event handling
+    // @value  isc.StatefulCanvas.BUTTON   object moves to "down" state temporarily (normal button)
+    // @value  isc.StatefulCanvas.CHECKBOX object remains in "down" state until clicked again (checkbox)
+    // @value  isc.StatefulCanvas.RADIO    object moves to "down" state, causing another object to go up (radio)
     // @visibility external
     //<
 
-    //>    @type    Selected
-    //            @group    state
-    FOCUSED:"Focused",          //  @value  StatefulCanvas.FOCUSED  StatefulCanvas should show
-                                // focused state
-    SELECTED:"Selected",        //    @value    StatefulCanvas.SELECTED        StatefulCanvas is selected
-    UNSELECTED:"",                //    @value    StatefulCanvas.UNSELECTED   StatefulCanvas is not selected
+    //> @classAttr StatefulCanvas.BUTTON (Constant : "button" : [R])
+    // A declared value of the enum type
+    // +link{type:SelectionType,SelectionType}.
     // @visibility external
+    // @constant
     //<
+    BUTTON:"button",
+
+    //> @classAttr StatefulCanvas.CHECKBOX (Constant : "checkbox" : [R])
+    // A declared value of the enum type
+    // +link{type:SelectionType,SelectionType}.
+    // @visibility external
+    // @constant
+    //<
+    CHECKBOX:"checkbox",
+
+    //> @classAttr StatefulCanvas.RADIO (Constant : "radio" : [R])
+    // A declared value of the enum type
+    // +link{type:SelectionType,SelectionType}.
+    // @visibility external
+    // @constant
+    //<
+    RADIO:"radio",
+
+    //> @type   Selected
+    // @value  isc.StatefulCanvas.FOCUSED  StatefulCanvas should show
+    //                                     focused state
+    // @value  isc.StatefulCanvas.SELECTED     StatefulCanvas is selected
+    // @value  isc.StatefulCanvas.UNSELECTED   StatefulCanvas is not selected
+    // @visibility external
+    // @group  state
+    //<
+
+    //> @classAttr StatefulCanvas.FOCUSED (Constant : "Focused" : [R])
+    // A declared value of the enum type
+    // +link{type:Selected,Selected}.
+    // @visibility external
+    // @constant
+    //<
+    FOCUSED:"Focused",
+
+    //> @classAttr StatefulCanvas.SELECTED (Constant : "Selected" : [R])
+    // A declared value of the enum type
+    // +link{type:Selected,Selected}.
+    // @visibility external
+    // @constant
+    //<
+    SELECTED:"Selected",
+
+    //> @classAttr StatefulCanvas.UNSELECTED (Constant : "" : [R])
+    // A declared value of the enum type
+    // +link{type:Selected,Selected}.
+    // @visibility external
+    // @constant
+    //<
+    UNSELECTED:"",
 
     // Internal map of radioGroup ID's to arrays of widgets
     _radioGroups:{},
@@ -2403,12 +2488,13 @@ isc.StatefulCanvas.addClassProperties({
     // Causes border properties to be written onto containing DIV rather than
     // be applied to the internal Table TDs for Button widgets
     //<
+
     pushTableBorderStyleToDiv: false,
 
     _shadowStyleCache: {},
     _shadowStyleCSSHTMLCache: {},
 
-    pushTableShadowStyleToDiv: true
+    pushTableShadowStyleToDiv: null
 
 });
 
@@ -2537,7 +2623,7 @@ isc.StatefulCanvas.addProperties({
     //<
     actionType:"button",
 
-    //>    @attr    statefulCanvas.radioGroup   (string : null : IRWA)
+    //>    @attr    statefulCanvas.radioGroup   (String : null : IRWA)
     // String identifier for this canvas's mutually exclusive selection group.
     //        @group    state
     //        @group    event handling
@@ -2647,6 +2733,7 @@ isc.StatefulCanvas.addProperties({
     // Optional icon to be shown with the button title text.
     // <P>
     // Specify as the partial URL to an image, relative to the imgDir of this component.
+    // A sprited image can be specified using the +link{type:SCSpriteConfig} format.
     // <P>
     // Note that the string "blank" is a valid setting for this attribute and will always
     // result in the system blank image, with no state suffixes applied.  Typically, this
@@ -2674,7 +2761,7 @@ isc.StatefulCanvas.addProperties({
     //<
     iconSize:16,
 
-    //> @attr statefulCanvas.iconWidth (integer : null : IR)
+    //> @attr statefulCanvas.iconWidth (Integer : null : IR)
     // Width in pixels of the icon image.
     // <P>
     // If unset, defaults to +link{StatefulCanvas.iconSize,iconSize}.
@@ -2683,7 +2770,7 @@ isc.StatefulCanvas.addProperties({
     // @visibility external
     //<
 
-    //> @attr statefulCanvas.iconHeight (integer : null : IR)
+    //> @attr statefulCanvas.iconHeight (Integer : null : IR)
     // Height in pixels of the icon image.
     // <P>
     // If unset, defaults to +link{StatefulCanvas.iconSize,iconSize}.
@@ -2745,7 +2832,7 @@ isc.StatefulCanvas.addProperties({
     // @visibility external
     //<
 
-    //> @attr statefulCanvas.iconOrientation     (string : "left" : [IR])
+    //> @attr statefulCanvas.iconOrientation     (String : "left" : [IR])
     // If this button is showing an icon should it appear to the left or right of the title?
     // valid options are <code>"left"</code> and <code>"right"</code>.
     //
@@ -2754,7 +2841,7 @@ isc.StatefulCanvas.addProperties({
     //<
     iconOrientation:"left",
 
-    //> @attr statefulCanvas.iconAlign     (string : null : [IR])
+    //> @attr statefulCanvas.iconAlign     (String : null : [IR])
     // If this button is showing an icon should it be right or left aligned?
     //
     // @group buttonIcon
@@ -2877,7 +2964,7 @@ isc.StatefulCanvas.addMethods({
 //>    @method    statefulCanvas.init()    (A)
 // Initialize this StatefulCanvas. Pass in objects with properties to add or override defaults.
 //
-//        @param    [all arguments]    (object)    objects with properties to override from default
+//        @param    [all arguments]    (Object)    objects with properties to override from default
 //<
 initWidget : function () {
 
@@ -2988,8 +3075,8 @@ getAriaLabel : function () {
 //
 //            url =         foo_down_start.gif
 //
-// @param    [pieceName]    (string : "")                 name for part of the image
-// @param    [state]        (string : this.state)        state of the image ("up", "off", etc.)
+// @param    [pieceName]    (String : "")                 name for part of the image
+// @param    [state]        (String : this.state)        state of the image ("up", "off", etc.)
 // @param    [selected]    (boolean : this.selected)    whether or not image is also in the
 //                                                      "selected" state
 // @param  [focused]   (boolean)
@@ -3240,7 +3327,7 @@ setActionType : function (actionType) {
 // any other radiogroup of which this button is already a member.
 //      @group  state
 //      @group event handling
-//      @param  groupID (string)    - ID of the radiogroup to which this widget should be added
+//      @param  groupID (String)    - ID of the radiogroup to which this widget should be added
 //      @visibility external
 //<
 addToRadioGroup : function (groupID) {
@@ -3270,7 +3357,7 @@ addToRadioGroup : function (groupID) {
 //      @group  state
 //      @group event handling
 //      @visibility external
-//      @param  [groupID]   (string)    - optional radio group ID (to ensure the widget is removed
+//      @param  [groupID]   (String)    - optional radio group ID (to ensure the widget is removed
 //                                        from the appropriate group.
 //<
 removeFromRadioGroup : function (groupID) {
@@ -3326,9 +3413,15 @@ setHandleDisabled : function (disabled,b,c,d) {
     }
 
     if (this.showDisabled && this.iconCursor != null) {
-        var imageHandle = this.getImage("icon");
-        if (imageHandle != null) imageHandle.style.cursor = this._getIconCursor();
+        if (this.icon != null) {
+            var imageHandle = this.getImage("icon", this._iconIsSprite());
+            if (imageHandle != null) imageHandle.style.cursor = this._getIconCursor();
+        }
     }
+},
+
+_iconIsSprite : function () {
+    return this.icon && this.icon.startsWith("sprite:");
 },
 
 
@@ -3587,7 +3680,7 @@ setSkinImgDir : function (dir) {
 //> @method statefulCanvas.setIconOrientation
 // Changes the orientation of the icon relative to the text of the button.
 //
-// @param orientation ("left" or "right") The new orientation of the icon relative to the text
+// @param orientation (String) The new orientation of the icon relative to the text
 // of the button.
 //
 // @group buttonIcon
@@ -3690,9 +3783,13 @@ setAutoFit : function (autoFit, initializing) {
 // override 'resizeBy()' / 'setOverflow()' - if these methods are called
 // we're essentially clearing out this.autoFit
 // Note we override resizeBy() as setWidth / setHeight / resizeTo all fall through to this method.
-resizeBy : function (dX, dY, a,b,c,d) {
+resizeBy : function (dX, dY, a, b, c, d) {
 
-    if (this.autoFit && this._autoFitInitialized && !this._settingAutoFit) {
+    var parentElement = this.parentElement;
+
+    if (this.autoFit && this._autoFitInitialized && !this._settingAutoFit &&
+        !(isc.isA.Layout(parentElement) && parentElement._layoutInProgress))
+    {
         var changeAutoFit = false;
 
         if (dX != null &&
@@ -3718,8 +3815,14 @@ resizeBy : function (dX, dY, a,b,c,d) {
         if (changeAutoFit) this.setAutoFit(false);
         // now continue with normal resizeBy logic for other dimension, if it's non-null
     }
-    return this.invokeSuper(isc.StatefulCanvas, "resizeBy", dX,dY, a,b,c,d);
+    return this.invokeSuper(isc.StatefulCanvas, "resizeBy", dX, dY, a, b, c, d);
 },
+
+//> @attr statefulCanvas.labelHPad (number : null : IRW)
+// If non-null, specifies the horizontal padding applied to the label, if any.
+// @see stretchImgButton.labelHPad
+// @visibility sgwt
+//<
 
 getLabelHPad : function () {
     if (this.labelHPad != null) return this.labelHPad;
@@ -3730,6 +3833,11 @@ getLabelHPad : function () {
     }
 },
 
+//> @attr statefulCanvas.labelVPad (number : null : IRW)
+// If non-null, specifies the vertical padding applied to the label, if any.
+// @see stretchImgButton.labelVPad
+// @visibility sgwt
+//<
 getLabelVPad : function () {
     if (this.labelVPad != null) return this.labelVPad;
     if (!this.vertical) {
@@ -4010,12 +4118,28 @@ shouldHiliteAccessKey : function () {
 // in the title (preferring Uppercase to Lowercase)
 getTitleHTML : function () {
 
-    var title = this.getTitle();
+    var title = this.getTitle(true);
 
-    if (!this.shouldHiliteAccessKey() || !isc.isA.String(title) || this.accessKey == null)
+    // Title formatter
+    // Implemented as a separate method for ease of SGWT wrapping
+    title = this.formatTitle(this, title);
+
+    if (!this.shouldHiliteAccessKey() || !isc.isA.String(title) || this.accessKey == null) {
         return title;
+    }
 
     return isc.Canvas.hiliteCharacter(title, this.accessKey);
+},
+
+//> @method statefulCanvas.formatTitle()
+// Formatter method to dynamically modify the title displayed by this component.
+// @param component (StatefulCanvas) the StatefulCanvas for which the title will be displayed
+// @param title (String) title returned by +link{statefulCanvas.getTitle()}
+// @return (String) formatted title to display
+// @visibility sgwt
+//<
+formatTitle : function (component, title) {
+    return title;
 },
 
 //>    @method    statefulCanvas.getTitle()    (A)
@@ -4093,7 +4217,7 @@ _updateCanFocus : function () {
 
 //> @method statefulCanvas.setIcon()
 // Change the icon being shown next to the title text.
-// @param icon (URL) URL of new icon
+// @param icon (SCImgURL) URL of new icon
 // @group buttonIcon
 // @visibility external
 //<
@@ -4258,7 +4382,9 @@ handleMouseDown : function (event, eventInfo) {
         rv = this.mouseDown(event, eventInfo);
         if (rv == false) return false;
     }
-    if (this.showDown) this.setState(isc.StatefulCanvas.STATE_DOWN);
+    if (this.showDown && !this.isDisabled()) {
+            this.setState(isc.StatefulCanvas.STATE_DOWN);
+        }
     return rv;
 },
 
@@ -4361,6 +4487,18 @@ handleKeyPress : function (event, eventInfo) {
 
 },
 
+// -----------------------
+// Helpers used by the Button class. Should we apply css border and shadow styling
+// to the widget handle rather than applying it to the table cell?
+shouldPushTableBorderStyleToDiv : function () {
+    return isc.StatefulCanvas.shouldPushTableBorderStyleToDiv(this);
+},
+
+shouldPushTableShadowStyleToDiv : function () {
+    return isc.StatefulCanvas.shouldPushTableShadowStyleToDiv(this);
+},
+
+
 // ---------------------------------------------------------------------------------------
 
 // override destroy to removeFromRadioGroup - cleans up a class level pointer to this widget.
@@ -4388,7 +4526,7 @@ isc.StatefulCanvas.registerStringMethods({
 isc.StatefulCanvas.addClassMethods({
 
 // build a properties object representing the border for supplied CSS class name
-_buildBorderStyle : function (borderRadiusOnly, className, referenceElement) {
+_buildBorderStyle : function (borderRadiusOnly, className) {
 
     // for performance, use cached border style results if present
     var classNameKey = borderRadiusOnly ? "$" + className : className;
@@ -4407,18 +4545,16 @@ _buildBorderStyle : function (borderRadiusOnly, className, referenceElement) {
     maxProperties = borderRadiusOnly ? isc.StatefulCanvas._nRadiusBorderProperties :
                                        isc.StatefulCanvas._borderProperties.length;
 
-    var styleInfo = isc.Element.getStyleDeclaration(className, true, referenceElement);
-    if (styleInfo) {
-        for (var i = 0; i < styleInfo.length; i++) {
-            for(var j = 0; j < maxProperties; j++) {
-                var prop = isc.StatefulCanvas._borderProperties[j];
 
-                if (borderStyle[prop] == null && styleInfo[i][prop] != isc.emptyString) {
-                    borderStyle[prop] = styleInfo[i][prop];
-                    setProperties++;
-                }
+    var styleInfo = isc.Element.getStyleEdges(className);
+
+    if (styleInfo) {
+        for(var j = 0; j < maxProperties; j++) {
+            var prop = isc.StatefulCanvas._borderProperties[j];
+
+            if (borderStyle[prop] == null && styleInfo[prop] != isc.emptyString) {
+                borderStyle[prop] = styleInfo[prop];
             }
-            if (setProperties == maxProperties) break;
         }
     }
     this._borderStyleCache[classNameKey] = borderStyle;
@@ -4432,17 +4568,15 @@ _getBorderCSSHTML : function (borderRadiusOnly, className) {
     var classNameKey = borderRadiusOnly ? "$" + className : className;
 
     if (this._borderCSSHTMLCache[classNameKey]) {
-        return this._borderCSSHTMLCache[classNameKey];
+       return this._borderCSSHTMLCache[classNameKey];
     }
 
     // if no cached results are present, we must recompute
     var borderStyle = this._buildBorderStyle(borderRadiusOnly, className);
-
     var cssText = isc.emptyString,
         separator = isc.StatefulCanvas._$separator;
 
     // build border style for each possibly different edge
-
     var bottom = isc.SB.concat(
         borderStyle.borderBottomWidth, separator,
         borderStyle.borderBottomStyle, separator,
@@ -4494,10 +4628,8 @@ _getBorderCSSHTML : function (borderRadiusOnly, className) {
 
 // clear the cache of per-class name CSS border objects and HTML strings
 clearBorderCSSCache : function () {
-    if (isc.StatefulCanvas.pushTableBorderStyleToDiv) {
-        this._borderStyleCache   = {};
-        this._borderCSSHTMLCache = {};
-    }
+    this._borderStyleCache   = {};
+    this._borderCSSHTMLCache = {};
 },
 
 // Similar logic for drop-shadows.
@@ -4505,9 +4637,12 @@ clearBorderCSSCache : function () {
 // are applying styling to a table rendered within our handle, and our handle's overflow
 // is hidden, we need to explicitly apply the shadow to the outer element.
 _$boxShadowRegExp: new RegExp("(?:\\([^)]*\\)|[^,])+", "g"),
-_buildShadowStyle : function (className, referenceElement) {
+_buildShadowStyle : function (className, referenceElement, insetOnly) {
 
     var classNameKey = className;
+
+    // store separate cache entries for inset only values
+    if (insetOnly) classNameKey += "_inset";
 
     if (this._shadowStyleCache[classNameKey]) {
         return this._shadowStyleCache[classNameKey];
@@ -4520,31 +4655,31 @@ _buildShadowStyle : function (className, referenceElement) {
     var shadowStyle = {},
         property = "boxShadow";
 
-    var styleInfo = isc.Element.getStyleDeclaration(className, true, referenceElement);
-    if (styleInfo) {
-        for (var i = 0; i < styleInfo.length; i++) {
-            if (shadowStyle[property] == null && styleInfo[i][property] != isc.emptyString) {
-                shadowStyle[property] = styleInfo[i][property];
-            }
-        }
-    }
+    var styleInfo = isc.Element.getStyleEdges(className);
+    // if there's no style object, just bail
+    if (!styleInfo) return "";
+
+    shadowStyle.boxShadow = styleInfo.boxShadow;
+
     // Filter out inner box shadows (those specified with the 'inset' keyword).
     if (shadowStyle.boxShadow != null && shadowStyle.boxShadow.indexOf("inset") >= 0) {
 
-        var shadowDefs = shadowStyle.boxShadow.match(this._$boxShadowRegExp).map("trim"),
-            numShadowDefs = shadowDefs.length;
-        var k = 0;
+        var shadowDefs = shadowStyle.boxShadow.match(this._$boxShadowRegExp).callMethod("trim"),
+            numShadowDefs = shadowDefs.length,
+            insetShadowDefs = [],
+            outsetShadowDefs = [],
+            k = 0
+        ;
         for (var i = 0; i < numShadowDefs; ++i) {
             var shadowDef = shadowDefs[i];
 
             if (shadowDef.startsWith("inset") || shadowDef.endsWith("inset")) {
-                ++k;
-            } else if (k > 0) {
-                shadowDefs[i - k] = shadowDef;
+                insetShadowDefs.add(shadowDef);
+            } else {
+                outsetShadowDefs.add(shadowDef);
             }
         }
-
-        shadowDefs.setLength(numShadowDefs - k);
+        shadowDefs = insetOnly ? insetShadowDefs : outsetShadowDefs;
         shadowStyle.boxShadow = shadowDefs.join(", ");
 
     }
@@ -4577,10 +4712,56 @@ _getShadowCSSHTML : function (className) {
 
 // clear the cache of per-class name CSS shadow objects and HTML strings
 clearShadowCSSCache : function () {
-    if (isc.StatefulCanvas.pushTableShadowStyleToDiv) {
-        this._shadowStyleCache   = {};
-        this._shadowStyleCSSHTMLCache = {};
+    this._shadowStyleCache   = {};
+    this._shadowStyleCSSHTMLCache = {};
+},
+
+// shouldPushTableBorderStyleToDiv()
+
+
+shouldPushTableShadowStyleToDiv : function (widget) {
+    if (isc.StatefulCanvas.pushTableShadowStyleToDiv != null) {
+        return isc.StatefulCanvas.pushTableShadowStyleToDiv;
     }
+
+    if (widget && widget._getHandleOverflow() != isc.Canvas.VISIBLE) {
+        return true;
+    }
+
+    if (this._boxShadowImpactsButtonScrollSize == null) {
+        var _boxShadowScrollSizeTester = isc.Canvas.create({
+            _generated:true,
+            autoDraw:false,
+
+            _fontLoaderIgnore:true,
+            // Position it offscreen
+            left:-500,
+            top:-500,
+            contents:'<table style="width:100px;height:100px;"><tr><td style="box-shadow:0 0 0 5px red;">x</td></tr></table>'
+        });
+
+        _boxShadowScrollSizeTester.draw();
+
+        var reportedHeight = _boxShadowScrollSizeTester.getScrollHeight(),
+            reportedWidth = _boxShadowScrollSizeTester.getScrollHeight();
+
+        if (reportedHeight > 100 || reportedWidth > 100) {
+
+            this._boxShadowImpactsButtonScrollSize = true;
+        } else {
+            this._boxShadowImpactsButtonScrollSize = false;
+        }
+        _boxShadowScrollSizeTester.markForDestroy();
+    }
+    return this._boxShadowImpactsButtonScrollSize;
+},
+
+// shouldPushTableBorderStyleToDiv()
+
+
+shouldPushTableBorderStyleToDiv : function (widget) {
+    return isc.StatefulCanvas.pushTableBorderStyleToDiv
+            || isc.StatefulCanvas.shouldPushTableShadowStyleToDiv(widget);
 }
 
 });
@@ -4633,13 +4814,27 @@ isc.ClassFactory.defineClass("Layout","Canvas");
 
 
 isc.Layout.addClassProperties({
-    //>    @type    Orientation
-    //            @group    orientation
+    //> @type   Orientation
+    //          @group  orientation
     // @visibility external
-    //    @value    isc.Layout.VERTICAL members laid out vertically
-    //    @value    isc.Layout.HORIZONTAL members laid out horizontally
+    // @value  isc.Layout.VERTICAL members laid out vertically
+    // @value  isc.Layout.HORIZONTAL members laid out horizontally
+    //<
+
+    //> @classAttr Layout.VERTICAL (Constant : "vertical" : [R])
+    // A declared value of the enum type
+    // +link{type:Orientation,Orientation}.
+    // @visibility external
+    // @constant
     //<
     //VERTICAL:"vertical", // NOTE: constant declared by Canvas
+
+    //> @classAttr Layout.HORIZONTAL (Constant : "horizontal" : [R])
+    // A declared value of the enum type
+    // +link{type:Orientation,Orientation}.
+    // @visibility external
+    // @constant
+    //<
     //HORIZONTAL:"horizontal", // NOTE: constant declared by Canvas
 
 
@@ -4703,11 +4898,11 @@ isc.Layout.addClassProperties({
     // <P>
     // See also +link{layout.overflow}.
     //
-    //  @value  Layout.NONE
+    //  @value  isc.Layout.NONE
     //  Layout does not try to size members on the axis at all, merely stacking them (length
     //  axis) and leaving them at default breadth.
     //
-    //  @value  Layout.FILL
+    //  @value  isc.Layout.FILL
     //  Layout sizes members so that they fill the specified size of the layout.  The rules
     //  are:
     //  <ul>
@@ -4728,9 +4923,23 @@ isc.Layout.addClassProperties({
     //
     // @see Layout.minBreadthMember
     // @visibility external
-    FILL:"fill",
+    //<
+
+    //> @classAttr Layout.NONE (Constant : "none" : [R])
+    // A declared value of the enum type
+    // +link{type:LayoutPolicy,LayoutPolicy}.
+    // @visibility external
+    // @constant
     //<
     //NONE:"none", // NOTE: constant declared by Canvas
+
+    //> @classAttr Layout.FILL (Constant : "fill" : [R])
+    // A declared value of the enum type
+    // +link{type:LayoutPolicy,LayoutPolicy}.
+    // @visibility external
+    // @constant
+    //<
+    FILL:"fill",
 
 
     reflowOnTEA : function (layout, reason) {
@@ -4809,6 +5018,13 @@ isc.Layout.addProperties({
     // </ul>
     // Height and width settings found on members are interpreted by the Layout according to
     // the +link{layout.vPolicy,layout policy}.
+    // <p>
+    // Note that it is valid to have null slots in the provided <code>members</code> Array,
+    // and the Layout will ignore those slots. This can be useful to keep code compact, for
+    // example, when constructing the <code>members</code> Array, you might use an expression
+    // that either returns a component or null depending on whether the component should be
+    // present. If the expression returns null, the null slot will be ignored by the Layout.
+    //
     // @visibility external
     //<
 
@@ -4816,11 +5032,15 @@ isc.Layout.addProperties({
     // ---------------------------------------------------------------------------------------
 
     //> @attr layout.overflow   (Overflow : "visible" : IRW)
-    // Normal +link{type:Overflow} settings can be used on layouts, for example, an
-    // overflow:auto Layout will scroll if members exceed its specified size, whereas an
-    // overflow:visible Layout will grow to accommodate members.
+    // A Layout may overflow if it has one or more members with a fixed width or height, or that
+    // themselves overflow.  For details on member sizing see +link{layoutPolicy}.
+    // <P>
+    // Note that for overflow: "auto", "scroll", or "visible", members exceeding the Layout's
+    // specified breadth but falling short of its overflow breadth will keep the alignment set
+    // via +link{defaultLayoutAlign} or +link{canvas.layoutAlign}.
     //
     // @see canvas.overflow
+    // @see minBreadthMember
     // @group layoutPolicy
     // @visibility external
     //<
@@ -4890,6 +5110,8 @@ isc.Layout.addProperties({
     // Does not apply to members given a fixed size in pixels - such members will never be
     // shrunk below their specified size in general.
     //
+    // @see Layout.overflow
+    // @see defaultLayoutAlign
     // @group layoutPolicy
     //<
     minMemberBreadth: null, // null allows simpler handling than leaving it undefined
@@ -4921,7 +5143,7 @@ isc.Layout.addProperties({
     //<
     enforcePolicy:true,
 
-    //> @attr layout.defaultLayoutAlign (Alignment or VerticalAlignment : null : IRW)
+    //> @attr layout.defaultLayoutAlign (Alignment | VerticalAlignment : null : IRW)
     // Specifies the default alignment for layout members on the breadth axis (horizontal axis
     // for a VLayout, vertical axis for an HLayout).  Can be overridden on a per-member basis
     // by setting +link{canvas.layoutAlign}.
@@ -4939,14 +5161,19 @@ isc.Layout.addProperties({
     //
     // @group layoutMember
     // @group layoutPolicy
+    // @see Layout.overflow
     // @visibility external
     // @example layoutCenterAlign
     //<
 
-    //> @attr layout.align (Alignment or VerticalAlignment : null : IRW)
+    //> @attr layout.align (Alignment | VerticalAlignment : null : IRW)
     // Alignment of all members in this Layout on the length axis (vertical for a VLayout,
     // horizontal for an HLayout).  Defaults to "top" for vertical Layouts, and "left" for
     // horizontal Layouts.
+    // <p>
+    // Horizontal layouts should only be set to +link{Alignment}, and vertical layouts to
+    // +link{VerticalAlignment}, otherwise they will be considered invalid values, and assigning an
+    // invalid value here will log a warning to the Developer Console.
     // <P>
     // For alignment on the breadth axis, see +link{defaultLayoutAlign} and
     // +link{canvas.layoutAlign}.
@@ -4998,24 +5225,29 @@ isc.Layout.addProperties({
 
 
 
-    //> @attr layout.layoutMargin (integer : null : [IRW])
+    //> @attr layout.layoutMargin (Integer : null : [IRW])
     // Space outside of all members. This attribute, along with +link{layout.layoutLeftMargin}
-    // and related properties does not have a true setter method.<br>
-    // It may be assigned directly at runtime. After setting the property,
+    // and related properties do not have a true setter method.
+    // <smartclient>
+    // It may be assigned directly at runtime.  After setting the property,
     // +link{layout.setLayoutMargin()} may be called with no arguments to reflow the layout.
+    // </smartclient><smartgwt>
+    // If this method is called after the layout instance has been created, it will force a
+    // reflow of the layout and pick up changes to all of the layout*Margin properties.
+    // </smartgwt>
     // @see layoutLeftMargin
     // @see layoutRightMargin
     // @see layoutBottomMargin
     // @see layoutTopMargin
     // @see paddingAsLayoutMargin
-    // @setter none (see +link{layout.setLayoutMargin()})
+    // @setter noauto
     // @group layoutMargin
     // @visibility external
     // @example userSizing
     //<
 //    layoutMargin:null,
 
-    //> @attr layout.layoutLeftMargin (integer : null : [IRW])
+    //> @attr layout.layoutLeftMargin (Integer : null : [IRW])
     // Space outside of all members, on the left-hand side.  Defaults to +link{layoutMargin}.
     // <P>
     // Requires a manual call to <code>setLayoutMargin()</code> if changed on the fly.
@@ -5023,7 +5255,7 @@ isc.Layout.addProperties({
     // @visibility external
     //<
 
-    //> @attr layout.layoutRightMargin (integer : null : [IRW])
+    //> @attr layout.layoutRightMargin (Integer : null : [IRW])
     // Space outside of all members, on the right-hand side.  Defaults to +link{layoutMargin}.
     // <P>
     // Requires a manual call to <code>setLayoutMargin()</code> if changed on the fly.
@@ -5031,7 +5263,7 @@ isc.Layout.addProperties({
     // @visibility external
     //<
 
-    //> @attr layout.layoutTopMargin (integer : null : [IRW])
+    //> @attr layout.layoutTopMargin (Integer : null : [IRW])
     // Space outside of all members, on the top side.  Defaults to +link{layoutMargin}.
     // <P>
     // Requires a manual call to <code>setLayoutMargin()</code> if changed on the fly.
@@ -5039,7 +5271,7 @@ isc.Layout.addProperties({
     // @visibility external
     //<
 
-    //> @attr layout.layoutBottomMargin (integer : null : [IRW])
+    //> @attr layout.layoutBottomMargin (Integer : null : [IRW])
     // Space outside of all members, on the bottom side.  Defaults to +link{layoutMargin}.
     // <P>
     // Requires a manual call to <code>setLayoutMargin()</code> if changed on the fly.
@@ -5067,7 +5299,7 @@ isc.Layout.addProperties({
     // @visibility external
     //<
 
-    //> @attr layout.memberOverlap (positiveInteger : 0 : IR)
+    //> @attr layout.memberOverlap (PositiveInteger : 0 : IR)
     // Number of pixels by which each member should overlap the preceding member, used for
     // creating an "stack of cards" appearance for the members of a Layout.
     // <P>
@@ -5192,7 +5424,7 @@ isc.Layout.addProperties({
     // @example animateLayout
     //<
 
-    //> @attr layout.animateMemberEffect (string : "slide" : IRW)
+    //> @attr layout.animateMemberEffect (String : "slide" : IRW)
     // Animation effect for hiding and showing members when animateMembers is true.
     // @group animation
     // @visibility internal
@@ -5237,6 +5469,7 @@ isc.Layout.addProperties({
     // <P>
     // If you want to dynamically create a component to be added to the Layout in response to a
     // drop event you can do so as follows:
+    // <smartclient>
     // <pre>
     // isc.VLayout.create({
     //   ...various layout properties...
@@ -5253,6 +5486,27 @@ isc.Layout.addProperties({
     //   }
     // });
     // </pre>
+    // </smartclient>
+    // <smartgwt>
+    // <pre>
+    //  final VLayout vLayout = new VLayout();
+    //  //...various layout properties...
+    //  vLayout.setCanDropComponents(true);
+    //  vLayout.addDropHandler(new DropHandler() {
+    //      &#64;Override
+    //      public void onDrop(DropEvent event) {
+    //          // create the new component
+    //          Canvas newMember = new Canvas();
+    //          // add to the layout at the current drop position
+    //          // (the dropLine will be showing here)
+    //          vLayout.addMember(newMember, vLayout.getDropPosition());
+    //          // hide the dropLine that was automatically shown
+    //          // by builtin SmartGWT methods
+    //          vLayout.hideDropLine();
+    //      }
+    //  });
+    // </pre>
+    // </smartgwt>
     // If you want to completely suppress the builtin drag and drop logic, but still receive drag
     // and drop events for your own custom implementation, set +link{Canvas.canAcceptDrop} to
     // <code>true</code> and <code>canDropComponents</code> to <code>false</code> on your Layout.
@@ -5293,7 +5547,7 @@ isc.Layout.addProperties({
     // @example dragMove
     //<
 
-    //> @attr layout.placeHolderProperties (canvas properties: null : IR)
+    //> @attr layout.placeHolderProperties (Canvas Properties: null : IR)
     // If +link{layout.showDragPlaceHolder, this.showDragPlaceHolder} is true, this
     // properties object can be used to customize the appearance of the placeholder displayed
     // when the user drags a widget out of this layout.
@@ -5304,7 +5558,7 @@ isc.Layout.addProperties({
 
     membersAreChildren:true
 
-    //> @attr layout.stackZIndex (string: null : IR)
+    //> @attr layout.stackZIndex (String: null : IR)
     // For use in conjunction with +link{memberOverlap}, controls the z-stacking order of
     // members.
     // <P>
@@ -5369,7 +5623,7 @@ isc.Layout.addProperties({
 // @visibility external
 //<
 
-//> @attr canvas.extraSpace (positiveInteger : 0 : IR)
+//> @attr canvas.extraSpace (PositiveInteger : 0 : IR)
 // When this Canvas is included as a member in a Layout, extra blank space that should be left
 // after this member in a Layout.
 // @see class:LayoutSpacer for more control
@@ -5498,6 +5752,10 @@ memberHasInherentLength : function (member) {
     if (!(this.vertical ? member.hasInherentHeight() : member.hasInherentWidth())) {
         return false;
     }
+    // adaptive-length members are not considered to have an "inherent length"
+    if (this.vertical ? member.canAdaptHeight : member.canAdaptWidth) {
+        return false;
+    }
     // if a percent size or "*" is set on a member that supposedly has inherent length, take
     // this as a sign that the member should actually be sized normally.  Note that if we allow
     // a percent-size member to size itself, a stack of such members would not perfectly fill
@@ -5520,10 +5778,8 @@ _overflowsLength : function (member) {
             (!this.vertical && member.canOverflowWidth()));
 },
 
-_canAdaptSize : function (member) {
-
-    return (this.vertical ? member.canAdaptHeight : member.canAdaptWidth) &&
-           !this.memberHasInherentLength(member);
+_canAdaptLength : function (member) {
+    return this.vertical ? member.canAdaptHeight : member.canAdaptWidth
 },
 
 // NOTE: specified width/height will be defined if width/height were set on construction.
@@ -5633,6 +5889,41 @@ initWidget : function () {
     if (this.members && this.members.length > 0) {
         this._membersChanged();
     }
+
+    // Warn if align is useless for current orientation
+    this.checkAlign(this.align);
+},
+
+//> @method layout.setAlign()
+// Changes the +link{layout.align} for this Layout.
+// <p>
+// Horizontal layouts should only be changed to +link{Alignment}, and vertical layouts to
+// +link{VerticalAlignment}, otherwise they will be considered invalid values, and assigning an
+// invalid value here will log a warning to the Developer Console.
+// <p>
+// For alignment on the breadth axis, see +link{defaultLayoutAlign} and
+// +link{canvas.layoutAlign}.
+//
+// @param align (Alignment | VerticalAlignment)
+// @visibility external
+//<
+setAlign : function (align) {
+    this.checkAlign(align);
+    this.align = align;
+},
+
+// checks if the requested align makes sense for the current orientation, and warns if it is invalid
+checkAlign : function (align) {
+    if (this.vertical) {
+        if (align == isc.Canvas.LEFT || align == isc.Canvas.RIGHT) {
+            isc.logWarn("Layout.align set to " + align + ", which is invalid for vertical layouts");
+        }
+    } else {
+        if (align == isc.Canvas.TOP || align == isc.Canvas.BOTTOM) {
+            isc.logWarn("Layout.align set to " + align + ", which is invalid for horizontal layouts");
+        }
+    }
+
 },
 
 // createMemberCanvii - resolves specified members / children to actual canvas instances, and
@@ -5666,7 +5957,7 @@ _allGeneratedChildren : function () {
 // Method to force a reflow of the layout after directly assigning a value to any of the
 // layout*Margin properties. Takes no arguments.
 //
-// @param [newMargin] (int) optional new setting for layout.layoutMargin.  Regardless of whether a new
+// @param [newMargin] (Integer) optional new setting for layout.layoutMargin.  Regardless of whether a new
 //                          layout margin is passed, the layout reflows according to the current settings
 //                          for layoutStartMargin et al
 //
@@ -5853,7 +6144,7 @@ _drawNonMemberChildren : function () {
 //> @method layout.revealChild()
 // Reveals the child or member Canvas passed in by showing it if it is currently hidden
 //
-// @param child (ID | Canvas)   the child Canvas to reveal, or its global ID
+// @param child (GlobalId | Canvas) the child Canvas to reveal, or its global ID
 // @visibility external
 //<
 revealChild : function (child) {
@@ -6146,18 +6437,17 @@ gatherSizes : function (overflowAsFixed, layoutInfo, sizes) {
         }
 
 
-        if (this._canAdaptSize(member)) {
-            var canOverflow = this._overflowsLength(member);
+        if (this._canAdaptLength(member)) {
+            var canOverflow = this._overflowsLength(member),
+                specifiedLength = this.vertical ? member.getHeight() : member.getWidth(),
+                overflowLength = canOverflow ? this.getMemberLength(member) : specifiedLength
+            ;
             memberInfo._policyLength = overflowAsFixed && !canOverflow ? sizes[i] :
-                (this.vertical ? member.getHeight() : member.getWidth());
-            if (overflowAsFixed && canOverflow) {
+                                                                    overflowLength;
+            memberInfo._overflowed = overflowLength > specifiedLength;
 
-                var overflowPixels = this.getMemberLength(member) - memberInfo._policyLength;
-                if (overflowPixels > 0) memberInfo._adaptiveOverflow = overflowPixels;
-                else             delete memberInfo._adaptiveOverflow;
-            }
             if (report) {
-                memberInfo._lengthReason = "adaptive size";
+                memberInfo._lengthReason = "adaptive length";
             }
             continue;
         }
@@ -6173,6 +6463,7 @@ gatherSizes : function (overflowAsFixed, layoutInfo, sizes) {
                 if (report) {
                     this.logInfo("member: " + member + " overflowed.  set length: " + sizes[i] +
                                  " got length: " + drawnLength, "layout");
+                    memberInfo._lengthReason = "length overflowed";
                 }
                 var policyLength = memberInfo._policyLength;
                 // mark overflowed stretch-size-policy members with policy to limit reversion
@@ -6262,8 +6553,8 @@ resizeMember : function (member, size, memberInfo, overflowers, overflowAsFixed,
     if (overflowers != null && overflowers != this._overflowsLength(member)) return;
 
 
-    var canAdaptSize = this._canAdaptSize(member);
-    if (overflowIndex != null && !canAdaptSize) return;
+    var canAdaptLength = this._canAdaptLength(member);
+    if (overflowIndex != null && !canAdaptLength) return;
 
     // get the breadth this member should be set to, or null if it shouldn't be changed
     var breadth = null;
@@ -6282,16 +6573,27 @@ resizeMember : function (member, size, memberInfo, overflowers, overflowAsFixed,
     // get the length we should set the member to
 
     var length = null;
-    if (this.getLengthPolicy() != isc.Layout.NONE &&
-        !this.memberHasInherentLength(member) && (!memberInfo._overflowed || canAdaptSize))
-    {
-        length = memberInfo._resizeLength = size;
+    if (this.getLengthPolicy() != isc.Layout.NONE && !this.memberHasInherentLength(member)) {
+        if (canAdaptLength && this._overflowsLength(member)) {
+            var specifiedLength = this.vertical ? member.getHeight() : member.getWidth();
+            if (size < specifiedLength) {
+                length = memberInfo._resizeLength = size;
+                if (report) {
+                    this.logInfo("size-adaptive member: " + member + " had to be resized " +
+                        "narrower to ensure that adaptWidthBy()/adaptHeightBy() can assume " +
+                        "its size is overflow-driven", this._$adaptMembers);
+                }
+            }
+        } else if (!memberInfo._overflowed) {
+            length = memberInfo._resizeLength = size;
+        }
     }
 
     // avoid trying to resize an overflowed member to less than its overflowed size
     // (if the width is not also changing, and the member isn't dirty for another reason)
 
-    if (length != null && !canAdaptSize && this._overflowsLength(member) && !member.isDirty() &&
+    if (length != null && !canAdaptLength && this._overflowsLength(member) &&
+        !member.isDirty() &&
         (!member._hasCosmeticOverflowOnly || !member._hasCosmeticOverflowOnly()))
     {
         var specifiedLength = (this.vertical ? member.getHeight() : member.getWidth()),
@@ -6334,11 +6636,11 @@ resizeMember : function (member, size, memberInfo, overflowers, overflowAsFixed,
     } else {
         // cause undrawn members to draw (drawOffscreen because we haven't positioned them
         // yet and don't want them to momentarily appear stacked on top of each other)
-        if (!member.isDrawn()) member._needsDraw = true;
+        member._needsDraw = true;
     }
 
 
-    if (overflowAsFixed && this._overflowsLength(member) && !canAdaptSize) {
+    if (overflowAsFixed && this._overflowsLength(member) && !canAdaptLength) {
         var drawnLength = this.getMemberLength(member);
 
         // if the member's drawn size doesn't match the size we assigned it in the first
@@ -6435,7 +6737,7 @@ stackMembers : function (members, layoutInfo, updateSizes) {
     // to the parent.  Otherwise, if members are peers, the top/left corner is the
     // offsetLeft/Top with respect to the Layout's parent
     var layoutLeft = (this.membersAreChildren ? 0 : this.getOffsetLeft()),
-        layoutTop = (this.membersAreChildren ? 0 : this.getOffsetTop()),
+        layoutTop  = (this.membersAreChildren ? 0 : this.getOffsetTop()),
         // support reversing the order members appear in
         reverse = this.reverseOrder,
         direction = (reverse ? -1 : 1);
@@ -6445,11 +6747,15 @@ stackMembers : function (members, layoutInfo, updateSizes) {
     // breadth to use for centering based on specified size, which we'll use as is
     // for the clipping/scrolling case, and acts as a minimum for the overflow case.
     // Note getInner* takes into account native margin/border
-    var centerBreadth = (this.vertical ? this.getInnerWidth() : this.getInnerHeight())
-            - this._getBreadthMargin();
+    var vertical = this.vertical,
+        specifiedBreadth = (vertical ? this.getInnerWidth() : this.getInnerHeight()) -
+                            this._getBreadthMargin()
+    ;
 
-    if ((this.vertical && this.canOverflowWidth(this._$suppressedOverflowDuringAnimation)) ||
-        (!this.vertical && this.canOverflowHeight(this._$suppressedOverflowDuringAnimation)))
+    var Canvas = isc.Canvas, centerBreadth = specifiedBreadth,
+        overflow = this._$suppressedOverflowDuringAnimation || this.overflow;
+    if (overflow != Canvas.HIDDEN && (vertical ? (overflow != Canvas.CLIP_H) :
+                                                 (overflow != Canvas.CLIP_V)))
     {
         // overflow case.  Note we can't just call getScrollWidth() and subtract off synthetic
         // margins because members have not been placed yet.
@@ -6482,10 +6788,9 @@ stackMembers : function (members, layoutInfo, updateSizes) {
     // start position of the next member on length axis.
     // if reversing, start stacking at end coordinate and work backwards.  Note that this
     // effectively creates right/bottom alignment by default.
-    var nextMemberPosition = (this.vertical ?
-                                (!reverse ? layoutTop : layoutTop + totalLength) :
-                                (!reverse ? layoutLeft : layoutLeft + totalLength)
-                             );
+    var nextMemberPosition = vertical ? (!reverse ? layoutTop  : layoutTop  + totalLength) :
+                                        (!reverse ? layoutLeft : layoutLeft + totalLength)
+    ;
     // if align has been set to non-default,
     if (this.align != null) {
         var totalMemberLength = this._getTotalMemberLength(),
@@ -6493,8 +6798,8 @@ stackMembers : function (members, layoutInfo, updateSizes) {
             remainingSpace = visibleLength - totalMemberLength;
 
 
-        if (((!reverse && (this.align == isc.Canvas.BOTTOM || this.align == isc.Canvas.RIGHT)) ||
-            (reverse && (this.align == isc.Canvas.LEFT || this.align == isc.Canvas.TOP))))
+        if (((!reverse && (this.align == Canvas.BOTTOM || this.align == Canvas.RIGHT)) ||
+              (reverse && (this.align == Canvas.LEFT   || this.align == Canvas.TOP))))
         {
             // leave the space that would have been at the end at the beginning instead.
             // if reversed, hence normally right/bottom aligned, and align has been set to
@@ -6508,8 +6813,8 @@ stackMembers : function (members, layoutInfo, updateSizes) {
     }
 
     // start position of all members on breadth axis
-    var defaultOffset = (this.vertical ? layoutLeft + this._leftMargin :
-                                         layoutTop + this._topMargin),
+    var defaultOffset = vertical ? layoutLeft + this._leftMargin :
+                                   layoutTop  + this._topMargin,
         lastMemberHadResizeBar = false,
         lastMemberWasHidden = false,
         numHiddenMembers = 0;
@@ -6525,8 +6830,8 @@ stackMembers : function (members, layoutInfo, updateSizes) {
             // NOTE: the last element is implicitly followed by the outer margin because space
             // for it is subtracted before we determine sizes.
             var startMargin;
-            if (this.vertical) startMargin = (reverse ? this._bottomMargin : this._topMargin);
-            else startMargin = (reverse ? this._rightMargin : this._leftMargin);
+            if (vertical) startMargin = (reverse ? this._bottomMargin : this._topMargin);
+            else          startMargin = (reverse ? this._rightMargin  : this._leftMargin);
             nextMemberPosition += (direction * startMargin);
         } else {
             if (lastMemberHadResizeBar) {
@@ -6571,24 +6876,30 @@ stackMembers : function (members, layoutInfo, updateSizes) {
 
         // handle alignment (default is left/top)
         var offset = defaultOffset,
-            Canvas = isc.Canvas,
-            layoutAlign = this.getLayoutAlign(member);
+            layoutAlign = this.getLayoutAlign(member)
+        ;
+        // if RTL mode is active with scrolling overflow, shift the breadth alignment baseline
+        if (this.isRTL() && vertical && (overflow == Canvas.AUTO || overflow == Canvas.SCROLL))
+        {
+            var breadthOverflow = centerBreadth - specifiedBreadth;
+            if (breadthOverflow > 0) offset -= breadthOverflow;
+        }
+
         // NOTE: the centerBreadth properly subtracts out layoutMargins
         if (layoutAlign == Canvas.RIGHT || layoutAlign == Canvas.BOTTOM) {
-            offset = centerBreadth - this.getMemberBreadth(member)
-                + (this.vertical ? this._leftMargin : this._topMargin);
+            offset += centerBreadth - this.getMemberBreadth(member);
         } else if (layoutAlign == Canvas.CENTER) {
-            offset = Math.floor((centerBreadth - this.getMemberBreadth(member))/2)
-                    + (this.vertical ? this._leftMargin : this._topMargin);
+            offset += Math.floor((centerBreadth - this.getMemberBreadth(member)) / 2);
         }
-        if (this.getMemberOffset != null)
+        if (this.getMemberOffset != null) {
             offset = this.getMemberOffset(member, offset, layoutAlign);
+        }
 
         var memberLength = this.getMemberLength(member);
         //>Animation
         if (!animating) {//<Animation
         // move the member into position
-        if (this.vertical) {
+        if (vertical) {
             if (!reverse) member.moveTo(offset, nextMemberPosition);
             else member.moveTo(offset, nextMemberPosition-memberLength);
         } else {
@@ -6626,7 +6937,7 @@ stackMembers : function (members, layoutInfo, updateSizes) {
     if (updateSizes) this.memberSizes.length = (i - numHiddenMembers);
 
     // Ensure that the reported scroll-size matches the scrollable area of this layout.
-    if (this.overflow != isc.Canvas.VISIBLE) this._enforceScrollSize();
+    if (overflow != isc.Canvas.VISIBLE) this._enforceScrollSize();
 
     this._enforceStackZIndex();
 },
@@ -6899,7 +7210,8 @@ layoutChildren : function (reason, deltaX, deltaY) {
 
     for (var i = 0; i < this.members.length; i++) {
         var member = this.members[i];
-        if (this._canAdaptSize(member) && !member.allowAdaptSizeBeforeDraw && !member.isDrawn())
+        if (this._canAdaptLength(member) && !member.allowAdaptSizeBeforeDraw &&
+            !member.isDrawn())
         {
             this._moveOffscreen(member);
             member.draw();
@@ -7002,39 +7314,38 @@ _completeChildrenOverflowOnHTMLInit : function () {
 },
 
 _resolvePercentageSizeForChild : function (child) {
-    var percentHeight = child._percent_height,
-        percentWidth = child._percent_width;
+    var childManaged = this.members.contains(child) && !this._shouldIgnoreMember(child);
 
-    if (child.snapTo) {
-        child._resolvePercentageSize();
-        return
+
+    if (childManaged && this.snapTo == null) {
+        var percentWidth, percentHeight,
+            fillLength  = this.getLengthPolicy()  == isc.Layout.FILL,
+            fillBreadth = this.getBreadthPolicy() == isc.Layout.FILL
+        ;
+        if (this.vertical) {
+            percentWidth  = fillBreadth ? null : child._percent_width;
+            percentHeight = fillLength  ? null : child._percent_height;
+        } else {
+            percentWidth  = fillLength  ? null : child._percent_width;
+            percentHeight = fillBreadth ? null : child._percent_height;
+        }
+        // call setRect() if if we've still got percentages to apply the member
+        if (child._percent_left || child._percent_top || percentHeight || percentWidth) {
+            child.setRect(child._percent_left, child._percent_top, percentWidth, percentHeight);
+        }
     }
+    // run snapTo/percent resolution on unmanaged layout children
 
-    var fillLength = (this.getLengthPolicy() == isc.Layout.FILL);
-
-    // skip children with no percent sizes
-    if (!(child._percent_left || child._percent_top ||
-          percentHeight || percentWidth)) return;
-
-    // if child has percent height/width on an axis where we have a sizing policy,
-    // don't have the child apply the percent size itself if its a member
-    if (fillLength && this.vertical) {
-        if (percentHeight != null && this.members.contains(child)) percentHeight = null;
-    } else if (fillLength && !this.vertical) {
-        if (percentWidth != null && this.members.contains(child)) percentWidth = null;
-    }
-
-    child.setRect(child._percent_left, child._percent_top,
-                  percentWidth, percentHeight);
+    if (isc.isA.Canvas(child)) child.parentResized(childManaged);
 },
 
 // get list of "canAdapt" members, ordered by priority
-_getCanAdaptSizeMembers : function (surplus) {
+_getCanAdaptLengthMembers : function (surplus) {
     var list = [];
 
     for (var i = 0; i < this.members.length; i++) {
         var member = this.members[i];
-        if (this._canAdaptSize(member)) {
+        if (this._canAdaptLength(member)) {
             list.add(member);
             member._memberIndex = i;
         }
@@ -7112,24 +7423,24 @@ applyStretchResizePolicy : function (sizes, totalSize, minSize, modifyInPlace) {
         return policy.call(thisClass, sizes, totalSize, minSize, modifyInPlace, this);
 },
 
-_$adaptMembers: "adaptMembers",
-adaptMembersToSpace : function (sizes, totalSpace) {
+adaptMembersToSpace : function (sizes, totalSpace, overflowAsFixed, layoutInfo) {
 
     var adapted = false,
         vertical = this.vertical,
-        commonMinSize = Math.max(this.minMemberSize, this.minMemberLength),
-        remainingSpace = this._getRemainingSpace(sizes, totalSpace, commonMinSize);
+        commonMinLength = Math.max(this.minMemberSize, this.minMemberLength),
+        remainingSpace = this._getRemainingSpace(sizes, totalSpace, commonMinLength)
+    ;
 
-    var adaptiveMembers = this._getCanAdaptSizeMembers(remainingSpace > 0);
+    var adaptiveMembers = this._getCanAdaptLengthMembers(remainingSpace > 0);
     for (var i = 0; i < adaptiveMembers.length; i++) {
         // bail out if nothing to offer
         if (remainingSpace == 0) break;
 
         var member = adaptiveMembers[i],
-            adaptSizeBy = vertical ? member.adaptHeightBy : member.adaptWidthBy;
-
+            adaptLengthBy = vertical ? member.adaptHeightBy : member.adaptWidthBy
+        ;
         // just skip the member if no function is present
-        if (!isc.isA.Function(adaptSizeBy)) {
+        if (!isc.isA.Function(adaptLengthBy)) {
             this.logWarn("adaptMembersToSpace(): member " + member.getID() +
                 " specified as canAdaptWidth/canAdaptHeight: true, but no " +
                 "corresponding adaptWidthBy/adaptHeightBy() function is present",
@@ -7137,24 +7448,41 @@ adaptMembersToSpace : function (sizes, totalSpace) {
             continue;
         }
 
-        var index = member._memberIndex,
-            size = sizes[member._memberIndex];
-
 
         delete member._acceptedAdaptOffer;
 
         // query and react to current canAdaptWidth/Height member
-        var originalRemainingSpace = remainingSpace,
-            deltaSize = adaptSizeBy.call(member, remainingSpace, size);
-        if (!isc.isA.Number(deltaSize)) {
-            this.logWarn("adaptMembersToSpace(): ignoring nonsense value " + deltaSize +
+
+
+        var index = member._memberIndex,
+            deltaLength, length = sizes[index],
+            canOverflow = this._overflowsLength(member),
+            lastAdaptedLength = member._lastAdaptedLength,
+            passAdaptedLength = !canOverflow &&
+                isc.Canvas._isStretchSize(this._explicitLength(member))
+        ;
+        if (passAdaptedLength && lastAdaptedLength) {
+            deltaLength = adaptLengthBy.call(member, remainingSpace +
+                              length - lastAdaptedLength, lastAdaptedLength, !overflowAsFixed);
+        } else {
+            deltaLength = adaptLengthBy.call(member, remainingSpace, length, !overflowAsFixed,
+                                             layoutInfo[index]._overflowed);
+        }
+
+        // only numerical results are valid
+        if (!isc.isA.Number(deltaLength)) {
+            this.logWarn("adaptMembersToSpace(): ignoring nonsense value " + deltaLength +
                          " returned from adaptWidthBy/adaptHeightBy() by member " +
                          member.getID(), this._$adaptMembers);
             continue;
         }
 
+        // translate user's requested deltaLength back to an offset from the current length
+        if (passAdaptedLength && lastAdaptedLength) deltaLength += lastAdaptedLength - length;
+
         // member rejects proposal; nothing to do
-        if (deltaSize == 0) {
+        if (deltaLength == 0) {
+            if (passAdaptedLength) member._lastAdaptedLength = length;
             if (this.logIsInfoEnabled(this._$adaptMembers)) {
                 this.logInfo("adaptMembersToSpace(): member " + member.getID() +
                     " has rejected offer of " + remainingSpace, this._$adaptMembers);
@@ -7162,50 +7490,60 @@ adaptMembersToSpace : function (sizes, totalSpace) {
             continue;
         }
 
-        // if there's an overflow, don't allow increase in size
-        if (remainingSpace < 0 && deltaSize > 0) {
-            this.logWarn("adaptMembersToSpace(): ignoring claim of " + deltaSize + " pixels " +
+        // don't allow an increase in length if there's no remaining space
+        if (remainingSpace < 0 && deltaLength > 0) {
+            this.logWarn("adaptMembersToSpace(): ignoring request for " + deltaLength + " px " +
                 "returned from adaptWidthBy/adaptHeightBy() by member " + member.getID() +
-                " since an overflow is present; no size increase is allowed",
+                " since no remaining space is available; no length increase is allowed",
                 this._$adaptMembers);
             continue;
         }
 
-        // for increases, don't let response exceed offer
-        if (remainingSpace > 0 && deltaSize > remainingSpace) {
-            this.logWarn("adaptMembersToSpace(): ignoring claim of " + deltaSize + " pixels " +
+        // for increases, don't let the response exceed the offer
+        if (remainingSpace > 0 && deltaLength > remainingSpace) {
+            this.logWarn("adaptMembersToSpace(): ignoring request for " + deltaLength + " px " +
                 "returned from adaptWidthBy/adaptHeightBy() by member " + member.getID() +
                 " since it exceeds offer of " + remainingSpace,
                 this._$adaptMembers);
             continue;
         }
 
-        var minSize = Math.max(commonMinSize, vertical ? member.minHeight : member.minWidth);
-        if (size + deltaSize < minSize) {
-            this.logWarn("adaptMembersToSpace(): ignoring claim of " + deltaSize + " pixels " +
+        // enforce minimum member length
+        var minLength = Math.max(commonMinLength, vertical ? member.minHeight :
+                                                             member.minWidth);
+        if (length + deltaLength < minLength) {
+            this.logWarn("adaptMembersToSpace(): ignoring request for " + deltaLength + " px " +
                          "returned from adaptWidthBy/adaptHeightBy() by member " +
-                         member.getID() + " since it would reduce member size below " +
-                         "minimum of " + minSize, this._$adaptMembers);
-            continue;
-        }
-        var maxSize = vertical ?  member.maxHeight : member.maxWidth;
-        if (size + deltaSize > maxSize) {
-            this.logWarn("adaptMembersToSpace(): ignoring claim of " + deltaSize + " pixels " +
-                         "returned from adaptWidthBy/adaptHeightBy() by member " +
-                         member.getID() + " since it would increase member size above " +
-                         "maximum of " + maxSize, this._$adaptMembers);
+                         member.getID() + " since it would reduce member length below " +
+                         "minimum of " + minLength, this._$adaptMembers);
             continue;
         }
 
+        // enforce maximum member length
+        var maxLength = vertical ?  member.maxHeight : member.maxWidth;
+        if (length + deltaLength > maxLength) {
+            this.logWarn("adaptMembersToSpace(): ignoring request for " + deltaLength + " px " +
+                         "returned from adaptWidthBy/adaptHeightBy() by member " +
+                         member.getID() + " since it would increase member length above " +
+                         "maximum of " + maxLength, this._$adaptMembers);
+            continue;
+        }
+
+        var originalRemainingSpace = remainingSpace;
+
         if (this.logIsInfoEnabled(this._$adaptMembers)) {
             this.logInfo("adaptMembersToSpace(): member " + member.getID() + " has accepted " +
-                         "offer of " + deltaSize + "(" + remainingSpace + " offered) pixels",
+                         "offer of " + deltaLength + "(" + remainingSpace + " offered) pixels",
                          this._$adaptMembers);
         }
-        member._acceptedAdaptOffer = deltaSize;
-        sizes[index]              += deltaSize;
-        remainingSpace            -= deltaSize;
+        member._acceptedAdaptOffer = deltaLength;
+        sizes[index]              += deltaLength;
+        remainingSpace            -= deltaLength;
         adapted = true;
+
+        // user's length change granted - update cached adapted length
+        if (passAdaptedLength) member._lastAdaptedLength = sizes[index];
+        else if (canOverflow) delete member._lastAdaptedLength;
 
 
         if (originalRemainingSpace < 0 && remainingSpace > 0) return remainingSpace;
@@ -7237,7 +7575,9 @@ _getMemberSizes : function (totalSpace, overflowAsFixed, sizes, layoutInfo) {
 
     // fit the adaptive-size members to the available space
 
-    if (this.adaptMembersToSpace(sizes, totalSpace) && overflowAsFixed) {
+    if (this.adaptMembersToSpace(sizes, totalSpace, overflowAsFixed, layoutInfo) &&
+        overflowAsFixed)
+    {
         this._revertOverflowedStretchSizedPolicyLengths(layoutInfo, sizes);
     }
 
@@ -7399,7 +7739,7 @@ layoutIsDirty : function () {
 // <code>reflow()</code> after changing settings on the layout, for example,
 // <code>layout.reverseOrder</code>.
 //
-// @param [reason] (string) reason reflow() had to be called (appear in logs if enabled)
+// @param [reason] (String) reason reflow() had to be called (appear in logs if enabled)
 //
 // @visibility external
 //<
@@ -7603,10 +7943,10 @@ sectionHeaderClick : function (sectionHeader) {
         if (section[i].visibility != "hidden") anyVisible = true;
     }
     if (anyVisible) {
-        section.map("hide");
+        section.callMethod("hide");
         sectionHeader.setExpanded(false);
     } else {
-        section.map("show");
+        section.callMethod("show");
         sectionHeader.setExpanded(true);
     }
 },
@@ -7696,6 +8036,7 @@ getMembers : function (memberNum) {
 // @visibility external
 //<
 getMembersLength : function (memberNum) {
+    if (!this.members) return 0;
     return this.members.length;
 },
 
@@ -7948,6 +8289,9 @@ addMembers : function (newMembers, position, dontAnimate) {
 // pick up explicit size specifications, if any
 _getUserSizes : function (newMember) {
 
+    // support sparce members array
+    if (newMember == null) return;
+
 
     if (newMember._percent_width) {
         newMember.updateUserSize(newMember._percent_width, this._$width);
@@ -8195,7 +8539,7 @@ showMember : function (member, callback) {
 //> @method layout.showMembers()
 // Show the specified array of members, and then fire the callback passed in.
 // @param members (Array of Canvas) Members to show
-// @param [callback] (callback) action to fire when the members are showing.
+// @param [callback] (Callback) action to fire when the members are showing.
 //<
 //>Animation  If <code>this.animateMembers</code> is true, the show will be performed as an
 // animation in the case where a single, animate clip-able member was passed.   //<Animation
@@ -8256,7 +8600,7 @@ hideMember : function (member, callback) {
 //> @method layout.hideMembers()
 // Hide the specified array of members, and then fire the callback passed in.
 // @param members (Array of Canvas) Members to hide
-// @param [callback] (callback) action to fire when the members are hidden.
+// @param [callback] (Callback) action to fire when the members are hidden.
 //<
 //>Animation  If <code>this.animateMembers</code> is true, the hide will be performed as an
 // animation in the case where a single, animate clip-able member was passed.   //<Animation
@@ -8414,7 +8758,7 @@ _computeShowResizeBarsForMembers : function () {
 // was called explicitly called for some child, it will be respected over member order.
 //
 // @param child (Canvas) The child for which the tab position should be returned
-// @return (integer) tab position of the child within this layout.
+// @return (Integer) tab position of the child within this layout.
 // @visibility external
 //<
 // Override 'getChildTabPosition' to order children in member order first, then
@@ -9332,6 +9676,7 @@ reportSizes : function (layoutInfo, reason) {
 //  percent and "*" sizes as proportions of the width of the layout. HLayouts will set any members
 //  that do not have explicit heights to match the layout.
 //
+// @inheritsFrom Layout
 // @see Layout.hPolicy
 // @treeLocation Client Reference/Layout
 // @visibility external
@@ -9349,6 +9694,7 @@ isc.defineClass("HLayout","Layout").addProperties({
 //  members that do not have explicit widths to match the layout.
 //
 // @see Layout.vPolicy
+// @inheritsFrom Layout
 // @treeLocation Client Reference/Layout
 // @visibility external
 //<
@@ -9363,6 +9709,7 @@ isc.defineClass("VLayout","Layout").addProperties({
 // manage their width.  On the vertical axis, any members that do not have explicit heights will
 // be sized to match the height of the stack.
 //
+// @inheritsFrom Layout
 // @see Layout.hPolicy
 // @treeLocation Client Reference/Layout
 // @visibility external
@@ -9387,6 +9734,7 @@ isc.defineClass("HStack","Layout").addProperties({
 // will be sized to match the width of the stack.
 //
 // @see Layout.vPolicy
+// @inheritsFrom Layout
 // @treeLocation Client Reference/Layout
 // @visibility external
 //<
@@ -9605,9 +9953,30 @@ isc.Button.addProperties({
     //----------
     //> @attr button.baseStyle (CSSStyleName : "button" : IRW)
     // @include statefulCanvas.baseStyle
+    // @see iconOnlyBaseStyle
     // @visibility external
     //<
     baseStyle:"button",
+
+    //> @attr button.iconOnlyBaseStyle (CSSStyleName : null : [IRW])
+    // if defined, <code>iconOnlyBaseStyle</code> is used as the base CSS style className,
+    // instead of +link{baseStyle}, if +link{canAdaptWidth} is set and the title is not being
+    // shown.
+    // @see canvas.canAdaptWidth
+    // @see tabSet.simpleTabIconOnlyBaseStyle
+    // @visibility external
+    //<
+
+    // If +link{useSimpleTabs} is true, <code>simpleTabBaseStyle</code> will be the base style
+    // used to determine the css style to apply to the tabs.<P>
+    // This property will be suffixed with the side on which the tab-bar will appear, followed
+    // by with the tab's state (selected, over, etc), resolving to a className like
+    // "tabButtonTopOver".
+    // @see Button.baseStyle
+    // @see simpleTabIconOnlyBaseStyle
+    // @visibility external
+    //<
+
     //> @method button.setBaseStyle()
     // @include statefulCanvas.setBaseStyle
     // @visibility external
@@ -9743,13 +10112,15 @@ isc.Button.addProperties({
     height:20,
     width:100,
 
-    //> @attr button.canAdaptWidth (Boolean : null : IR)
+    //> @attr button.canAdaptWidth (Boolean : false : IR)
     // If enabled, the button will collapse to show just its icon when showing the title would
-    // cause overflow of a containing Layout.  See +link{Canvas.canAdaptWidth}.
+    // cause overflow of a containing Layout.  While collapsed, the button will show its title
+    // on hover, unless an explicit hover has been specified such as by overriding
+    // +link{titleHoverHTML()}.
+    // @see canvas.canAdaptWidth
     // @example buttonAdaptiveWidth
     // @visibility external
     //<
-    //canAdaptWidth: null,
 
     //> @attr button.overflow (Overflow : Canvas.HIDDEN : IRWA)
     // Clip the contents of the button if necessary.
@@ -9803,13 +10174,14 @@ isc.Button.addMethods({
 //>    @method    button.initWidget()    (A)
 //            Extended initWidget() to allow initialization of the enabled property
 //
-//        @param    [all arguments]    (object)    objects with properties to override from default
+//        @param    [all arguments]    (Object)    objects with properties to override from default
 //<
 initWidget : function () {
 
 
 
-    if (this.border != null && !isc.StatefulCanvas.pushTableBorderStyleToDiv) {
+    var pushBorderToDiv = this.shouldPushTableBorderStyleToDiv();
+    if (this.border != null && !pushBorderToDiv) {
         this._buttonBorder = this.border;
         this.border = null;
     }
@@ -9817,13 +10189,26 @@ initWidget : function () {
         this._buttonPadding = this.padding;
         this.padding = null;
     }
-    if (this.backgroundColor != null) {
-        this._buttonBGColor = this.backgroundColor;
-        this.backgroundColor = null;
+    // If the style's border will be applied to the handle (div) rather than the table,
+    // we'll also apply the bg-color to the border, and suppress any bg-color on the
+    // handle. This ensures the inner curve of any border-radius isn't clipped by the
+    // bg-color applied to the table cell [which doesn't have the same corner radii]
+    if (pushBorderToDiv) {
+        if (isc.Browser.isChrome && isc.Browser.version == 61) {
+
+            this._buttonBGColor = "transparent";
+        }
+    } else {
+        // Otherwise we apply the background color to the table cell along with other styling,
+        // not to the div
+        if (this.backgroundColor != null) {
+            this._buttonBGColor = this.backgroundColor;
+            this.backgroundColor = null;
+        }
     }
 
 
-    this.forceHandleOverflowHidden = isc.StatefulCanvas.pushTableBorderStyleToDiv;
+    this.forceHandleOverflowHidden = pushBorderToDiv;
 
     // Call super implementation directly rather than using Super() to avoid a string
     // allocation.
@@ -9889,9 +10274,14 @@ _getTitleClipperID : function () {
 // @return (boolean) whether the title is clipped.
 // @visibility external
 //<
-titleClipped : function () {
+titleClipped : function (startAfterNode) {
     var titleClipperHandle = this.getDocument().getElementById(this._getTitleClipperID());
     if (titleClipperHandle == null) return false;
+
+
+    if (this.getScrollHeight() > this.getViewportHeight()) {
+        return true;
+    }
 
 
     if (isc.Browser.isChrome ||
@@ -9899,10 +10289,16 @@ titleClipped : function () {
     {
         var range = this.getDocument().createRange();
         range.selectNodeContents(titleClipperHandle);
+
+
+        if (startAfterNode && titleClipperHandle.contains(startAfterNode)) {
+            range.setStartAfter(startAfterNode);
+        }
+
         var contentsBCR = range.getBoundingClientRect();
         var bcr = titleClipperHandle.getBoundingClientRect();
-        return (bcr.width < contentsBCR.width);
 
+        return (bcr.width < contentsBCR.width);
     } else {
         return (isc.Element.getClientWidth(titleClipperHandle) < titleClipperHandle.scrollWidth);
     }
@@ -9910,6 +10306,12 @@ titleClipped : function () {
 
 defaultTitleHoverHTML : function () {
     return this.getTitleHTML();
+},
+
+// helper used by handleHover() in canAdaptWidth: true case
+hiddenTitleHoverHTML : function () {
+    var title = this.getTitle(true);
+    return this.formatTitle(this, title);
 },
 
 //> @method button.titleHoverHTML()
@@ -9930,14 +10332,19 @@ handleHover : function (a, b, c) {
     // If there is a prompt, prefer the standard hover handling.
     if (this.canHover == null && this.prompt) return this.invokeSuper(isc.Button, "handleHover", a, b, c);
 
-    if (!this.showClippedTitleOnHover || !this.titleClipped()) {
+    if (!this._hideTitle && (!this.showClippedTitleOnHover || !this.titleClipped())) {
         if (this.canHover) return this.invokeSuper(isc.Button, "handleHover", a, b, c);
         else return;
     }
 
     if (this.titleHover && this.titleHover() == false) return;
 
-    var HTML = this.titleHoverHTML(this.defaultTitleHoverHTML());
+    // always return the title HTML here, even if it's hidden due to button width adaptation
+
+    var defaultHTML = this._hideTitle ? this.hiddenTitleHoverHTML() :
+                                       this.defaultTitleHoverHTML();
+
+    var HTML = this.titleHoverHTML(defaultHTML);
     if (HTML != null && !isc.isAn.emptyString(HTML)) {
         var hoverProperties = this._getHoverProperties();
         isc.Hover.show(HTML, hoverProperties, null, this);
@@ -10079,15 +10486,11 @@ getInnerHTML : function () {
         } else {
             buttonHTML[1] = button._widthEquals;
 
-            // If we're going to draw a clip div and pushTableBorderStyleToDiv is true, then
-            // the border styling is going to be pushed onto the inner content DIV, so getInnerWidth()/
-            // getInnerHeight() are off by the horizontal/vertical border size.
-            var willDrawClipDiv = this._shouldWriteClipDiv();
-            buttonHTML[2] = this.getInnerWidth() - (willDrawClipDiv && isc.StatefulCanvas.pushTableBorderStyleToDiv
-                                                    ? this.getHBorderSize() : 0);
+            var willDrawClipDiv = this._shouldWriteClipDiv()
+            buttonHTML[2] = this.getInnerWidth();
             buttonHTML[3] = button._heightEquals;
-            buttonHTML[4] = this.getInnerHeight() - (willDrawClipDiv && isc.StatefulCanvas.pushTableBorderStyleToDiv
-                                                     ? this.getVBorderSize() : 0);
+            buttonHTML[4] = this.getInnerHeight();
+
         }
 
 
@@ -10101,7 +10504,8 @@ getInnerHTML : function () {
 
 
         var afterPadding;
-        if (isc.Browser.isIE && !isc.Browser.isStrict && this._isStatefulCanvasLabel && isc.Browser.version < 10 &&
+        if (isc.Browser.isIE && !isc.Browser.isStrict && isc.Browser.version < 10 &&
+            this._isStatefulCanvasLabel &&
             (afterPadding = this._getAfterPadding == null ? null : this._getAfterPadding()) > 0)
         {
             var cellStartHTML = button._cellStartHTML;
@@ -10120,14 +10524,15 @@ getInnerHTML : function () {
 
         buttonHTML[7] = this.isPrinting ? this.getPrintStyleName() : this.getStateName();
 
-
         var isTitleClipper = !iconAtEdge && clipTitle;
 
 
         var writeStyle = isTitleClipper || this.cssText || this._buttonBorder || this._buttonPadding ||
                          this._buttonBGColor || this.margin || this._writeZeroVPadding() ||
-                         isc.StatefulCanvas.pushTableBorderStyleToDiv ||
-                         this._getAfterPadding != null;
+                         this.shouldPushTableBorderStyleToDiv() ||
+                         this.shouldPushTableShadowStyleToDiv() ||
+                         (this._getAfterPadding != null);
+
         if (writeStyle) buttonHTML[8] = this._getCellStyleHTML(null, isTitleClipper);
         else buttonHTML[8] = null;
 
@@ -10179,7 +10584,6 @@ getInnerHTML : function () {
                         (isRTL && ((this.ignoreRTL && this.iconOrientation == isc.Canvas.LEFT) ||
                                    (!this.ignoreRTL && this.iconOrientation == isc.Canvas.RIGHT)))),
             b = (isRTL || opposite) && !(isRTL && opposite);
-
         var beforePadding = 0,
             afterPadding = 0,
             iconHTML = null;
@@ -10225,14 +10629,8 @@ _sizeTestHTMLTemplate:[
     '" style="',                                                // [4] style start (for padding)
     null,                                                       // [5] possibly padding left/right
     '">',                                                       // [6] close cell tag
-    null,                                                       // [7] icon [if present], or title
-    null,                                                       // [8] if icon, close cell / open [or null]
-    null,                                                       // [9] if icon, 'nowrap="true" ' [or null]
-    null,                                                       // [10] if icon, class start [or null]
-    null,                                                       // [11] if icon, class name [or null]
-    null,                                                       // [12] if icon, close cell tag [or null]
-    null,                                                       // [13] if icon, title [or null]
-    "</td></tr></tbody></table>"                                // [14] end tag
+    null,                                                       // [7] title + icon
+    "</td></tr></tbody></table>"                                // [7] end tag
 ],
 
 _getSizeTestHTML : function (title, wrap) {
@@ -10245,6 +10643,8 @@ _getSizeTestHTML : function (title, wrap) {
     if (beforePadding != null || afterPadding != null) {
         if (beforePadding) {
             template[5] = (isRTL ? "padding-right:" : "padding-left:") + beforePadding + "px;"
+        } else {
+            template[5] = null;
         }
         if (afterPadding != null) {
             var afterPaddingString = (isRTL ? "padding-left:" : "padding-right:")
@@ -10262,19 +10662,16 @@ _getSizeTestHTML : function (title, wrap) {
 
     if (wrap == null) wrap = this.wrap;
 
+    template[1] = wrap ? null : 'nowrap="true" ';
+    template[3] = (this.titleStyle
+                      ? this.getTitleStateName()
+                      : this.getStateName(title)
+                    );
+
     var icon = this.icon;
     if (icon != null) {
-        // Ensure standard slots for second cell are present
-        template[8] = '</td><td ';
-        template[10] =  'class="';
-        template[12] =  '">';
-
-        template[1] = template[9] = wrap ? null : 'nowrap="true" ';
-        template[3] = template[11] = (this.titleStyle ? this.getTitleStateName()
-                                                        : this.getStateName());
-
         // Stolen from getInnerHTML - determine icon orientation / spacing:
-        var iconSpacing = this.getIconSpacing(),
+        var iconSpacing = this.getIconSpacing(title),
             iconWidth = (this.iconWidth || this.iconSize),
             extraWidth = iconSpacing + iconWidth,
             opposite = ((!isRTL && this.iconOrientation == isc.Canvas.RIGHT) ||
@@ -10289,22 +10686,12 @@ _getSizeTestHTML : function (title, wrap) {
                 extraStuff: this._$defaultImgExtraStuff
             });
         if (opposite) {
-            template[7] = title;
-            template[13] = iconHTML;
+            template[7] = title == null ? iconHTML : title + iconHTML;
         } else {
-            template[7] = iconHTML;
-            template[13] = title;
+            template[7] = title == null ? iconHTML : iconHTML + title;
         }
-
     } else {
-        template[1] = wrap ? null : 'nowrap="true" ';
-        template[3] = (this.titleStyle
-                          ? this.getTitleStateName()
-                          : this.getStateName()
-                        );
         template[7] = title;
-        // clear all slots to do with a second cell
-        template[8] = template[9] = template[10] = template[11] = template[12] = template[13] = null;
     }
     return template.join("");
 },
@@ -10322,6 +10709,19 @@ _getCellElement : function () {
     return tableElem.rows[0].childNodes[0];
 },
 
+redraw : function (a,b,c,d) {
+    var borderOnDiv = this.shouldPushTableBorderStyleToDiv();
+    // If we were pushing the table border to div and no longer are
+    // (or vice versa), drop the cached border size so getHBorderSize et al don't
+    // return stale values.
+
+    if (this._currentBorderOnDiv !== borderOnDiv) {
+        this._cachedBorderSize = null;
+        this._currentBorderOnDiv  = borderOnDiv;
+    }
+    return this.invokeSuper(isc.Button, "redraw", a, b, c, d);
+},
+
 // force a redraw on setOverflow()
 // This is required since we write out clipping HTML for our title table if our overflow
 // is hidden (otherwise we don't), so we need to regenerate this.
@@ -10331,7 +10731,7 @@ setOverflow : function () {
     this.Super("setOverflow", arguments);
 
     if (!wasDirty && (oldOverflow != this.overflow ||
-                      (isc.StatefulCanvas.pushTableShadowStyleToDiv && this._getHandleOverflow() === isc.Canvas.HIDDEN)))
+                      (this.shouldPushTableShadowStyleToDiv())))
     {
         this.redraw();
     }
@@ -10341,7 +10741,8 @@ __adjustOverflow : function (reason) {
     this.Super("__adjustOverflow", arguments);
 
 
-    if (isc.Browser.isSafari && !isc.Browser.isChrome && this.icon != null &&
+    if (isc.Browser.isSafari && !isc.Browser.isChrome && !isc.Browser.isEdge &&
+        this.icon != null &&
         !(this.isPrinting || !this._explicitlySizeTable()))
     {
         var isRTL = this.isRTL(),
@@ -10359,7 +10760,6 @@ __adjustOverflow : function (reason) {
 
             var beforePadding = extraWidth,
                 afterPadding = 0;
-
             // Reset the title clipper's left and right padding to "normal" before checking whether
             // the title is clipped.
             titleClipperStyle[isRTL ? "paddingRight" : "paddingLeft"] = beforePadding + "px";
@@ -10375,7 +10775,6 @@ __adjustOverflow : function (reason) {
                     beforePadding -= (beforePadding / 2) << 0;
                     afterPadding = iconWidth;
                 }
-
                 titleClipperStyle[isRTL ? "paddingRight" : "paddingLeft"] = beforePadding + "px";
                 titleClipperStyle[isRTL ? "paddingLeft" : "paddingRight"] = afterPadding + "px";
             }
@@ -10440,7 +10839,8 @@ _getCellStyleHTML : function (template, isTitleClipper) {
 
     template[1] = (this.cssText ? this.cssText : null);
 
-    var border = isc.StatefulCanvas.pushTableBorderStyleToDiv ? "none" : this._buttonBorder;
+    var pushBorderToDiv = this.shouldPushTableBorderStyleToDiv(),
+        border = pushBorderToDiv ? "none;border-radius:inherit" : this._buttonBorder;
     if (border != null) {
         template[2] = this._$borderColon;
         template[3] = border;
@@ -10485,8 +10885,8 @@ _getCellStyleHTML : function (template, isTitleClipper) {
     else template[13] = null;
 
     var afterPadding;
-    if (this.overflow != isc.Canvas.VISIBLE &&
-        (!isc.Browser.isIE || isc.Browser.isStrict || !this._isStatefulCanvasLabel || isc.Browser.version >= 10) &&
+    if ((!isc.Browser.isIE || isc.Browser.isStrict || isc.Browser.version >= 10 ||
+         !this._isStatefulCanvasLabel) &&
         (afterPadding = (this._getAfterPadding == null ? null : this._getAfterPadding())) > 0)
     {
         template[14] = (this.isRTL() ? this._$paddingLeftColon : this._$paddingRightColon);
@@ -10494,6 +10894,15 @@ _getCellStyleHTML : function (template, isTitleClipper) {
         template[16] = this._$pxSemi;
     } else {
         template[16] = template[15] = template[14] = null;
+    }
+
+
+    if (isc.Browser.isChrome && isc.Browser.version == 61) {
+        if (this.shouldPushTableShadowStyleToDiv()) {
+            // if pushing the shadow styles to the outer div, clear the table styles here
+            // - in _applyShadowStyle(), assign inset shadows to the table and others to the div
+            template[17] = "box-shadow:none;";
+        }
     }
 
     return template.join(isc.emptyString);
@@ -10509,7 +10918,7 @@ _writeZeroVPadding : function () {
 
 
 setBorder : function (border) {
-    var pushStyle = isc.StatefulCanvas.pushTableBorderStyleToDiv;
+    var pushStyle = this.shouldPushTableBorderStyleToDiv();
     if (pushStyle) this.border = border;
     else    this._buttonBorder = border;
     this.markForRedraw();
@@ -10520,9 +10929,26 @@ setPadding : function (padding) {
 },
 
 setBackgroundColor : function (color) {
+    // If we're pushing the table border style to the div, we also want the
+    // background color to be pushed to the div.
+    if (this.shouldPushTableBorderStyleToDiv()) {
+        return this.Super("setBackgroundColor", arguments);
+    }
+
     this._buttonBGColor = color;
     var cellElem = this._getCellElement();
     if (cellElem != null) cellElem.style.backgroundColor = (color == null ? "" : color);
+},
+
+// If we're pushing the border style to the div, also push the background color.
+// This is required for the case where we have a border-radius to ensure the color
+// correctly fills the curved inner edges of the border
+_getHandleBackgroundColor : function () {
+    if (this.backgroundColor == null && this.shouldPushTableBorderStyleToDiv()) {
+        return isc.Button._getStateBackgroundColor(this.isPrinting ? this.getPrintStyleName()
+                                                : this.getStateName());
+    }
+    return this.Super("_getHandleBackgroundColor", arguments);
 },
 
 _$endTable :"</td></tr></tbody></table>",
@@ -10548,8 +10974,6 @@ _$newInnerCell : "</td><td ",
 
 _$classEquals : "class='",
 
-//_$tableNoStyleDoubling : defined in Canvas.js
-
 _$closeInnerTag : "'>",
 _$closeInnerTagNoWrap : "' nowrap='true'>",
 
@@ -10573,7 +10997,6 @@ getIconSpacing : function (otherTitle) {
 },
 
 fillInCell : function (template, slot, cellIsTitleClipper) {
-
     var isRTL = this.isRTL();
 
     var title = this.getTitleHTML();
@@ -10640,14 +11063,13 @@ fillInCell : function (template, slot, cellIsTitleClipper) {
                       ? this.getTitleStateName()
                       : this.getStateName()
                     );
-
+    // this._$tableNoStyleDoubling : defined in Canvas.js
     var tableNoStyleDoubling = this._$tableNoStyleDoubling;
     if (!isc.Browser.useCSSFilters) tableNoStyleDoubling += this._$filterNone;
 
     var align = this._getTextAlign(isRTL);
 
     if (iconLeft) {
-
         // icon cell
         template[++slot] = this._$classEquals;
         template[++slot] = styleName;
@@ -10669,6 +11091,7 @@ fillInCell : function (template, slot, cellIsTitleClipper) {
 
         template[++slot] = styleName;
         template[++slot] = tableNoStyleDoubling;
+
         if (clipTitle) template[++slot] = this._$textOverflowEllipsis;
 
         template[++slot] = "' align='";
@@ -10828,15 +11251,18 @@ _getIconStyleSuffix : function () {
     return suffix;
 },
 
-getTitleHTML : function (a,b,c,d) {
+getTitleHTML : function (ignoreHide, b, c, d) {
     // This will call getTitle() so return contents if appropriate, and will hilite accessKeys
-    var title = this.invokeSuper(isc.Button, "getTitleHTML", a,b,c,d);
+    var title = this.invokeSuper(isc.Button, "getTitleHTML", ignoreHide, b, c, d);
+
+    // support adaptive-width buttons hiding title HTML
+    if (!ignoreHide && this._hideTitle) return null;
 
     // FIXME: title padding should be accomplished with CSS
     if (!this.padTitle || this.align == isc.Canvas.CENTER) return title;
 
-    if (this.align == isc.Canvas.RIGHT) return title + isc.nbsp;
-    else if (this.align == isc.Canvas.LEFT) return isc.nbsp + title;
+    if      (this.align == isc.Canvas.RIGHT) return title + isc.nbsp;
+    else if (this.align == isc.Canvas.LEFT)  return isc.nbsp + title;
 },
 
 
@@ -10914,81 +11340,118 @@ getPreferredWidth : function () {
     return width;
 },
 
-adaptWidthBy : function (pixelDifference, unadaptedWidth) {
-    if (this.icon == null) return 0;
+// measure button width by writing the "width test" HTML into a test canvas
 
-    // If given a surplus and the title is not being hidden, we shouldn't expand further.
-    // If the containing layout is too narrow for its contents (pixelDifference is negative),
-    // and the title is already being hidden, then we can't shrink further.
-    if (pixelDifference == 0 ||
-        (pixelDifference > 0 && !this._hideTitle) ||
-        (pixelDifference < 0 && this._hideTitle))
-    {
-        return 0;
+_measureWidth : function (title) {
+    // create common test canvas shared by isc.Button
+    var buttonWidthTester = isc.Button._buttonWidthTester;
+    if (buttonWidthTester == null || buttonWidthTester.destroyed) {
+        buttonWidthTester = isc.Button._buttonWidthTester = isc.Canvas.create({
+            autoDraw: false,
+            top: -1000,
+            width: 1,
+            overflow: "hidden",
+            ariaState: {
+                hidden: true
+            }
+        });
     }
-
-    this._hideTitle = false;
-
-    var expectedWidth;
-    if (pixelDifference > 0 && this.overflow === isc.Canvas.HIDDEN && isc.isA.Number(this._userWidth)) {
-        expectedWidth = this._userWidth;
-
+    // get "width test" HTML for supplied title, and if it matches cache, use cached width
+    var testHTML = this._getSizeTestHTML(title);
+    if (title != null) {
+        if (this._showTitleHTML && this._showTitleHTML == testHTML) return this._showTitleWidth;
     } else {
-        var buttonWidthTester = isc.Button._buttonWidthTester;
-        if (buttonWidthTester == null || buttonWidthTester.destroyed) {
-            buttonWidthTester = isc.Button._buttonWidthTester = isc.Canvas.create({
-                autoDraw: false,
-                top: -100,
-                width: 1,
-                overflow: "hidden",
-                ariaState: {
-                    hidden: true
-                }
-            });
-        }
-
-        // If we're being asked to shrink, calculate the icon-only width. Otherwise, we're
-        // being asked to expand, so calculate the full width (icon + title).
-        var sizeTestHTML = this._getSizeTestHTML(pixelDifference < 0 ? null : this.getTitle());
-        buttonWidthTester.setContents(sizeTestHTML);
-        if (!buttonWidthTester.isDrawn()) buttonWidthTester.draw();
-        else buttonWidthTester.redrawIfDirty("measuring button width");
-        expectedWidth = buttonWidthTester.getScrollWidth();
+        if (this._hideTitleHTML && this._hideTitleHTML == testHTML) return this._hideTitleWidth;
     }
 
-    if (pixelDifference < 0) {
-        this._hideTitle = false;
+    // changed HTML - install it in test canvas and (re)draw it
+    buttonWidthTester.setContents(testHTML);
+    if (!buttonWidthTester.isDrawn()) buttonWidthTester.draw();
+    else buttonWidthTester.redrawIfDirty("measuring button width");
 
-        // If we are being asked to shrink and hiding the title would reduce the unadaptedWidth
-        // by any amount, then go ahead and hide the title.
-        var desiredDelta = expectedWidth - unadaptedWidth;
-        if (desiredDelta < 0) {
+    // cache and report test canvas width
+    if (title != null) {
+        this._showTitleHTML = testHTML;
+        return this._showTitleWidth = buttonWidthTester.getScrollWidth();
+    } else {
+        this._hideTitleHTML = testHTML;
+        return this._hideTitleWidth = buttonWidthTester.getScrollWidth();
+    }
+},
+
+// implements canAdaptWidth: true behavior for button
+
+adaptWidthBy : function (pixelDifference, unadaptedWidth, firstOffer, overflowed) {
+
+
+    var canStretch = isc.Canvas._isStretchSize(this._userWidth),
+        canOverflow = this.overflow != isc.Canvas.HIDDEN && this.overflow != isc.Canvas.CLIP_H
+    ;
+
+    // consider whether to show or hide the button's title, based on the pixel offer
+
+    var hideTitle = this._hideTitle;
+    if (this.icon != null && (pixelDifference > 0 &&  hideTitle ||
+                              pixelDifference < 0 && !hideTitle))
+    {
+        // desired state is opposite title visibility
+        hideTitle = !hideTitle;
+    } else {
+        // keep current title visibility, but possibly still adapt
+        if (overflowed || !firstOffer) return 0;
+    }
+
+    // calculate the desired width (in the new state)
+
+    var desiredWidth;
+    if (!hideTitle && !canOverflow && isc.isA.Number(this._userWidth)) {
+        desiredWidth = this._userWidth;
+    } else {
+        desiredWidth = this._measureWidth(hideTitle ? null : this.getTitleHTML(true));
+    }
+
+    // we want to hide the title
+    if (hideTitle) {
+
+        if (desiredWidth < unadaptedWidth) {
             this._hideTitle = true;
             this.markForRedraw();
-            return desiredDelta;
+            return desiredWidth - unadaptedWidth;
         }
 
+    // we want to show the title
     } else {
-        this._hideTitle = true;
 
-        var desiredWidth = unadaptedWidth + pixelDifference;
-
-        // If we are being asked to expand and the width of the full button (showing the icon
-        // and title) is less than or equal to the desired width, then show the title.
-        if (expectedWidth <= desiredWidth) {
+        var availableWidth = unadaptedWidth + pixelDifference;
+        if (desiredWidth <= availableWidth) {
             this._hideTitle = false;
             this.markForRedraw();
-            return expectedWidth - unadaptedWidth;
+            return desiredWidth - unadaptedWidth;
         }
     }
 
+    // reject the offer - maintain currently adapted width
     return 0;
 },
 
-getTitle : function () {
-    if (this._hideTitle) return null;
+getTitle : function (ignoreHide) {
+    if (!ignoreHide && this._hideTitle) return null;
     if (this.useContents) return this.getContents();
     return this.title;
+},
+
+//> @attr button.iconOnlybaseStyle (CSSStyleName : null : IRW)
+// Base CSS style className applied to the component if +link{canAdaptWIdth} is true and we're
+// hiding the title.  Allows for more flexibility in how a title-hidden button is drawn.
+//
+// @see baseStyle
+//<
+getStateName : function (title) {
+    var undef,
+        modifier = this.getStateSuffix(),
+        hideTitle = title !== undef ? !title : this._hideTitle,
+        baseStyle = hideTitle && this.iconOnlyBaseStyle || this.baseStyle;
+    return modifier ? baseStyle + modifier : baseStyle;
 },
 
 //>    @method    button.stateChanged()    (A)
@@ -11005,8 +11468,17 @@ stateChanged : function () {
         var stateName = this.isPrinting ? this.getPrintStyleName() : this.getStateName();
 
         // if the border properties are on the DIV, apply them to the element's handle now
-        if (isc.StatefulCanvas.pushTableBorderStyleToDiv) this._applyBorderStyle(stateName);
-        if (isc.StatefulCanvas.pushTableShadowStyleToDiv && this._getHandleOverflow() === isc.Canvas.HIDDEN) {
+        if (this.shouldPushTableBorderStyleToDiv()) {
+            this._applyBorderStyle(stateName);
+            // Also apply the bg-color to the div. This is required to ensure
+            // the background butts up agains the inner edge of any curved borders properly
+            var styleHandle = this.getStyleHandle();
+            if (styleHandle != null) {
+                var newColor = this._getHandleBackgroundColor();
+                styleHandle.backgroundColor = newColor
+            }
+        }
+        if (this.shouldPushTableShadowStyleToDiv()) {
             this._applyShadowStyle(stateName);
         }
 
@@ -11018,9 +11490,12 @@ stateChanged : function () {
             // but either state or selectedness or both may have just changed, and we may be
             // transitioning from a state we do show to a state we don't, so no-oping is
             // tricky; we don't both for now.
-            this.setImage(this._$icon, this._getIconURL());
+            this.setImage(this._$icon, this._getIconURL(), null, this._iconIsSprite());
 
-            if (this.iconStyle != null) this.getImage(this._$icon).className = this.iconStyle + this._getIconStyleSuffix();
+            if (this.iconStyle != null) {
+                this.getImage(this._$icon).className =
+                    this.iconStyle + this._getIconStyleSuffix();
+            }
         }
 
         // If we have a titleStyle and we are using a subtable, then update the styles of the
@@ -11044,7 +11519,9 @@ stateChanged : function () {
 // Set the css className of the table cell
 _$TABLE: "TABLE",
 setTableClassName : function (newClass){
-    if (isc.StatefulCanvas.pushTableBorderStyleToDiv) {
+    // If we're pushing the border style to the div, we can't assume the
+    // border thickness for the widget won't change with the new style name
+    if (this.shouldPushTableBorderStyleToDiv()) {
         this._cachedBorderSize = null;
     }
 
@@ -11141,8 +11618,14 @@ setIcon : function (icon) {
 
     // Make sure that we're drawn before trying to set the image src or redraw().
     if (this.isDrawn()) {
-        if (hadIcon && (icon != null)) this.setImage(this._$icon, this._getIconURL());
-        else this.redraw();
+        var src = this._getIconURL(),
+            isSprite = this._iconIsSprite()
+        ;
+        if (hadIcon && (icon != null) && this._canSetImage(this._$icon, src, isSprite)) {
+            this.setImage(this._$icon, src, null, isSprite);
+        } else {
+            this.redraw();
+        }
     }
 },
 
@@ -11190,7 +11673,7 @@ _getShadowCSSHTML : function (stateName) {
 // return the border HTML used by getTagStart
 _getBorderHTML : function () {
 
-    if (isc.StatefulCanvas.pushTableBorderStyleToDiv) {
+    if (this.shouldPushTableBorderStyleToDiv()) {
         var stateName = this.isPrinting ? this.getPrintStyleName() : this.getStateName();
 
         var borderHTML = this.border != null ? ";BORDER:" + this.border : "";
@@ -11198,14 +11681,14 @@ _getBorderHTML : function () {
         // Also apply box-shadow CSS text. Not technically part of the border but
         // this also needs to be shifted from the Table element to the
         // widget handle
-        if (isc.StatefulCanvas.pushTableShadowStyleToDiv && this._getHandleOverflow() === isc.Canvas.HIDDEN) {
+        if (this.shouldPushTableShadowStyleToDiv()) {
             borderHTML += this._getShadowCSSHTML(stateName);
         }
         return borderHTML;
     }
 
     var borderHTML = this.Super("_getBorderHTML", arguments);
-    if (isc.StatefulCanvas.pushTableShadowStyleToDiv && this._getHandleOverflow() === isc.Canvas.HIDDEN) {
+    if (this.shouldPushTableShadowStyleToDiv()) {
         var stateName = this.isPrinting ? this.getPrintStyleName() : this.getStateName(),
             shadowCSS = this._getShadowCSSHTML(stateName);
         if (shadowCSS != isc.emptyString) {
@@ -11217,36 +11700,54 @@ _getBorderHTML : function () {
 },
 
 _applyBorderStyle : function (className) {
-    var styleHandle = this.getHandle().style,
+    var styleHandle = this.getClipHandle().style,
         properties = isc.StatefulCanvas._buildBorderStyle(this.border != null, className);
 
-    // Reset all border styling.
-    styleHandle.border = styleHandle.borderRadius = isc.emptyString;
-
+    // if this.border is set, we don't want the CSS style to clobber it - the first param in
+    // the call to _buildBorderStyle() above will cause it to return only border-radius styles
+    // - in that case, don't clear the border setting on the styleHandle.
+    if (!this.border) styleHandle.border = isc.emptyString;
+    styleHandle.borderRadius = isc.emptyString;
     isc.addProperties(styleHandle, properties);
 },
 
 _applyShadowStyle : function (className) {
 
-    var styleHandle = this.getHandle().style;
+    var styleHandle = this.getClipHandle().style;
     if (this.showShadow && this.shouldUseCSSShadow()) {
         styleHandle.boxShadow = this._getShadowCSSText();
         return;
     }
 
+    // get the outset shadows
     var properties = isc.StatefulCanvas._buildShadowStyle(className);
 
-    // Reset all shadow styling
+    // reset all shadow styling on the outer div
     styleHandle.boxShadow = isc.emptyString;
-
+    // apply just the outset shadows to the outer div
     isc.addProperties(styleHandle, properties);
+
+    // in Chrome, we want to apply inset shadows to the table element, to avoid missizing
+    // - in other browsers, assign them to the cell, so inset shadows show
+    var elem = (isc.Browser.isChrome) ? this._getTableElement() : this._getCellElement();
+
+    if (elem != null) {
+        var style = elem.style;
+        // get the inset shadows
+        properties = isc.StatefulCanvas._buildShadowStyle(className, null, true);
+
+        // reset all shadow styling on the inner table
+        style.boxShadow = isc.emptyString;
+        // apply just the inset shadows to the inner table
+        isc.addProperties(style, properties);
+    }
 },
 
 // CSS class that actually governs what borders appear on the handle.
 // This is overridden in Button.js where we apply the baseStyle + modifier to the
 // handle directly.
 _getBorderClassName : function () {
-    if (isc.StatefulCanvas.pushTableBorderStyleToDiv) {
+    if (this.shouldPushTableBorderStyleToDiv()) {
         return this.getStateName();
     }
     return this.Super("_getBorderClassName", arguments);
@@ -11290,6 +11791,22 @@ handleFocusIn : function (element, event) {
 
 });    // END    isc.Button.addMethods()
 
+
+
+isc.Button.addClassProperties({
+    _stateBGColorCache:{},
+    _getStateBackgroundColor : function (className) {
+        var nullMarker = "**null**";
+        if (this._stateBGColorCache[className] == null) {
+            var computedStyle = isc.Element._deriveStyleProperties(className, ["backgroundColor"]);
+            this._stateBGColorCache[className] = computedStyle.backgroundColor == null ?
+                                                nullMarker : computedStyle.backgroundColor;
+        }
+        return this._stateBGColorCache[className] == nullMarker ? null :
+                this._stateBGColorCache[className];
+    }
+});
+
 isc.Button.registerStringMethods({
     getTitle:null
 });
@@ -11308,6 +11825,7 @@ isc.Button.registerStringMethods({
 // the Button class instead by setting the property +link{Button.autoFit} to true.
 //
 // @see Button
+// @inheritsFrom Button
 // @treeLocation Client Reference/Control/Button
 // @visibility external
 //<
@@ -11356,6 +11874,7 @@ isc.Button.registerStringMethods({
 // on the +link{StretchImgButton} component, which renders via images, or may be based on the
 // +link{Button} component, which renders via CSS styles.
 //
+// @inheritsFrom Button
 // @treeLocation Client Reference/Control
 // @visibility external
 //<
@@ -11425,7 +11944,7 @@ isc.defineClass("Img", "StatefulCanvas").addClassMethods({
 
 // add default properties
 isc.Img.addProperties( {
-    //> @attr    img.name    (string : "main" : IA)
+    //> @attr    img.name    (String : "main" : IA)
     // The value of this attribute is specified as the value of the 'name' attribute in the
     // resulting HTML.
     // <p>
@@ -11513,7 +12032,7 @@ isc.Img.addProperties( {
     // @include Canvas.prompt
     //<
 
-    //>    @attr    img.activeAreaHTML        (String of HTML AREA tags : null : IRWA)
+    //>    @attr    img.activeAreaHTML        (String of HTML AREA Tag : null : IRWA)
     //
     // Setting this attribute configures an image map for this image.  The value is expected as a
     // sequence of &lg;AREA&gt tags - e.g:
@@ -11557,13 +12076,13 @@ isc.Img.addProperties( {
     //<
     imageType: isc.Img.STRETCH,
 
-    //> @attr img.imageHeight (integer : null : IR)
+    //> @attr img.imageHeight (Integer : null : IR)
     // Explicit size for the image, for +link{imageType} settings that would normally use the
     // image's natural size (applies to +link{img.imageType} "center" and "normal" only).
     // @visibility external
     //<
 
-    //> @attr img.imageWidth (integer : null : IR)
+    //> @attr img.imageWidth (Integer : null : IR)
     // Explicit size for the image, for +link{imageType} settings that would normally use the
     // image's natural size (applies to +link{img.imageType} "center" and "normal" only).
     // @visibility external
@@ -11628,7 +12147,7 @@ getURL : function () {
 //        @group    drawing
 //            write the actual image for the contents
 //
-//        @return    (HTML)    HTML output for this canvas
+//        @return    (HTMLString)    HTML output for this canvas
 //<
 
 _$tableStart : "<TABLE WIDTH=",
@@ -11743,7 +12262,7 @@ _labelAdjustOverflow : function () {
 // Does nothing if the src has not changed - if <code>src</code> has not changed but other
 // state has changed such that the image needs updating, call +link{resetSrc()} instead.
 //
-// @param    URL        (URL)    new URL for the image
+// @param    URL        (SCImgURL)    new URL for the image
 // @group    appearance
 // @visibility external
 // @example loadImages
@@ -11765,10 +12284,12 @@ setSrc : function (URL) {
 resetSrc : function () {
     if (!this.isDrawn()) return;
 
+    var src = this.getURL();
+
     // depending on how the image was originally drawn,
     //    we may be able to simply reset the image
-    if (this.imageType != isc.Img.TILE) {
-        this.setImage(this.name, this.getURL());
+    if (this.imageType != isc.Img.TILE && this._canSetImage(this.name, src)) {
+        this.setImage(this.name, src);
         // The new image might have different intrinsic dimensions. Need to call adjustOverflow()
         // to refresh the scrollWidth/Height.
         this.adjustOverflow("setImage() called");
@@ -11778,12 +12299,10 @@ resetSrc : function () {
     }
 },
 
-
-
 //> @method img.stateChanged()
 //        Update the visible state of this image by changing the URL
 //
-//        @param  newState    (string)    name for the new state
+//        @param  newState    (String)    name for the new state
 //<
 stateChanged : function () {
     this.Super("stateChanged");
@@ -11920,7 +12439,7 @@ isc.StretchImg.addProperties({
     //  @treeLocation Client Reference/Foundation
     // @visibility external
     //<
-    //> @attr stretchItem.width (number or String : null : IR)
+    //> @attr stretchItem.width (number | String : null : IR)
     // The width of the image. This can either be a number (for the number of pixels wide), the string
     // "*" (remaining space, divided amongst all items that specify width:"*"), or the name of a property
     // on the StretchImg component, such as "capSize" for the StretchImg's +link{StretchImg.capSize,capSize}.
@@ -11929,7 +12448,7 @@ isc.StretchImg.addProperties({
     // (+link{StretchImg.vertical} is false).
     // @visibility external
     //<
-    //> @attr stretchItem.height (number or String : null : IR)
+    //> @attr stretchItem.height (number | String : null : IR)
     // The height of the image. This can either be a number (for the number of pixels tall), the string
     // "*" (remaining space, divided amongst all items that specify height:"*"), or the name of a property
     // on the StretchImg component, such as "capSize" for the StretchImg's +link{StretchImg.capSize,capSize}.
@@ -12025,12 +12544,12 @@ isc.StretchImg.addProperties({
 
     ignoreRTL:true,
 
-    //>    @attr    stretchImg.autoCalculateSizes        (attrtype : true : IRWA)
+    //>    @attr    stretchImg.autoCalculateSizes        (Attrtype : true : IRWA)
     // If true, we calculate the image sizes automatically
     //        @group    drawing
     //<
     autoCalculateSizes:true,
-    //>    @attr    stretchImg.cacheImageSizes        (attrtype : true : IRWA)
+    //>    @attr    stretchImg.cacheImageSizes        (Attrtype : true : IRWA)
     //    If true, we cache image sizes automatically, if not we calculatge it every time we draw
     //        @group    appearance
     //<
@@ -12049,7 +12568,7 @@ isc.StretchImg.addProperties({
     //<
     // actually implemented on StatefulCanvas
 
-    //> @attr   stretchImg.gripImgSuffix (string : "grip" : IRA)
+    //> @attr   stretchImg.gripImgSuffix (String : "grip" : IRA)
     // Suffix used the 'grip' image if +link{stretchImg.showGrip} is true.
     // @group grip
     // @visibility external
@@ -12104,7 +12623,7 @@ shouldShowLabel : function () {
 //        @group    appearance
 //            return a logical image "part"
 //
-//        @param    partName        (string)    name of the image part you're looking for
+//        @param    partName        (String)    name of the image part you're looking for
 //
 // @return (StretchItem) member of the +link{StretchImg.items,items} array
 //<
@@ -12121,7 +12640,7 @@ getPart : function (partName) {
 //        @group    appearance
 //            return the number of a logical image "part"
 //
-//        @param    partName        (string)    name of the image part you're looking for
+//        @param    partName        (String)    name of the image part you're looking for
 //
 //        @return    (number)    index of the part in this.items array
 //<
@@ -12349,7 +12868,7 @@ resizeImages : function () {
 //        @group    drawing
 //            return the HTML for this stretch image
 //
-//        @return    (HTML)    HTML output for this image
+//        @return    (HTMLString)    HTML output for this image
 //<
 _$noBRStart : "<NOBR>",
 _$noBREnd : "</NOBR>",
@@ -12519,7 +13038,14 @@ getInnerHTML : function () {
                                 "px;height:",height,"px;'>")
                         imgWidth = size+2;
                     }
-                    output.append(this.imgHTML(src, imgWidth, height, item.name, extraStuff));
+                    output.append(this.imgHTML({
+                        src: src,
+                        width: imgWidth,
+                        height: height,
+                        name: item.name,
+                        extraStuff: extraStuff,
+                        extraCSSText: item.extraCSSText
+                    }));
                     if (oversize) {
                         output.append("</div>");
                     }
@@ -12543,10 +13069,12 @@ getInnerHTML : function () {
 
                     var extraCSSText = isc.Browser.isDOM ? this._$displayBlock : null;
                     if (isc.Browser.isMobileSafari && item.browserTouchCallout == false) {
-                        extraCSSText += ((extraCSSText == null ? "" : extraCSSText + ";") +
+                        extraCSSText = ((extraCSSText == null ? "" : extraCSSText + ";") +
                                          "-webkit-touch-callout:none");
                     }
-
+                    if (item.extraCSSText) {
+                        extraCSSText = ((extraCSSText == null ? "" : extraCSSText + ";") + item.extraCSSText);
+                    }
                     output.append(this.imgHTML({
                         src: src,
                         width: width,
@@ -12626,8 +13154,8 @@ _getItemURL : function (item) {
 //      @visibility external
 //        @group    appearance
 //
-//        @param    newState    (string)        name for the new state ("off", "down", etc)
-//        @param    [whichPart]    (string)        name of the piece to set ("start", "stretch" or "end")
+//        @param    newState    (String)        name for the new state ("off", "down", etc)
+//        @param    [whichPart]    (String)        name of the piece to set ("start", "stretch" or "end")
 //                                            if not specified, sets them all
 //<
 setState : function (newState, whichPart) {
@@ -12682,7 +13210,8 @@ stateChanged : function (whichPart) {
 
                 if (!whichPart || item.name == whichPart) {
                     // set the image to the new state image
-                    if (!this._$blankRE.test(item.name)) {
+
+                    if (!item.src && !this._$blankRE.test(item.name)) {
                         this.setImage(item.name, this._getItemURL(item));
                     }
 
@@ -12709,7 +13238,7 @@ stateChanged : function (whichPart) {
 //>    @method    stretchImg.setSrc()    ([])
 // Changes the base +link{stretchImg.src} for this stretchImg, redrawing if necessary.
 //
-// @param    src        (URL)    new URL for the image
+// @param    src        (SCImgURL)    new URL for the image
 // @group    appearance
 // @visibility external
 // @example loadImages
@@ -12756,6 +13285,11 @@ inWhichPart : function () {
     }
 
     var item = this.items[num];
+    // If the TabSet includes an "emptyButton" between the ScrollerForwardImg and the
+    // ScrollerBackImg we need to take it into account, as the emptyButton is not a valid
+    // target for inWhichPart(). So, if the cursor is in the emptyButton, we will return the
+    // next item in the scroller, that will be the ScrollerBackImg.
+    if (item.name == "emptyButton") item = this.items[num+1];
     return (item ? item.name : null);
 }
 
@@ -12940,6 +13474,7 @@ isc.defineClass("Label", "Button").addMethods({
 // The Progressbar widget class extends the StretchImg class to implement image-based progress
 // bars (graphical bars whose lengths represent percentages, typically of task completion).
 //
+//  @inheritsFrom StretchImg
 //  @treeLocation Client Reference/Control
 //  @visibility external
 //<
@@ -12957,7 +13492,7 @@ isc.Progressbar.addProperties( {
     //<
     percentDone:0,
 
-    //> @attr progressbar.length (Number or String : 100 : IRW)
+    //> @attr progressbar.length (Number | String : 100 : IRW)
     // Length of the progressbar in pixels. This is effectively height for a vertical
     // progressbar, or width for a horizontal progressbar.
     // <P>
@@ -12986,13 +13521,13 @@ isc.Progressbar.addProperties( {
     //<
     vertical:false,
 
-    //>    @attr    progressbar.imgDir        (string : isc.Canvas.USE_WIDGET_IMG_DIR : IRW)
+    //>    @attr    progressbar.imgDir        (String : isc.Canvas.USE_WIDGET_IMG_DIR : IRW)
     //            where progress bar images come from
     //        @group    appearance
     //<
 //    imgDir:isc.Canvas.USE_WIDGET_IMG_DIR,
 
-    //>    @attr    progressbar.skinImgDir        (URL : "images/Progressbar/" : IRWA)
+    //>    @attr    progressbar.skinImgDir        (SCImgURL : "images/Progressbar/" : IRWA)
     //        Where do 'skin' images (those provided with the class) live?
     //        This is local to the Page.skinDir
     //        @group    appearance, images
@@ -13125,7 +13660,7 @@ percentChanged : function () { },
 // Returns the current width of a horizontal progressbar, or height of a vertical progressbar.
 //
 //      @visibility external
-//        @return    (number)    the length of the progressbar
+//        @return    (Number)    the length of the progressbar
 //<
 getLength : function () {
     return this.vertical ? this.getHeight() : this.getWidth();
@@ -13145,7 +13680,7 @@ getBreadth : function () {
 // Sets the length of the progressbar to newLength. This is the width of a horizontal progressbar,
 // or the height of a vertical progressbar.
 //
-// @param newLength (number) the new length of the progressbar
+// @param newLength (Number) the new length of the progressbar
 // @visibility external
 //<
 setLength : function (newLength) {
@@ -13431,7 +13966,7 @@ isc.ClassFactory.defineClass("Toolbar", "Layout");
 
 // add default properties to the class
 isc.Toolbar.addProperties( {
-    //>    @attr    toolbar.buttons        (array : null : [IRW])
+    //>    @attr    toolbar.buttons        (Array of Button Properties : null : [IRW])
     // An array of button object initializers. See the Button Widget Class for standard
     // button properties. The following additional properties can also be specified for
     // button sizing and positioning on the toolbar itself:<br><br>
@@ -13537,7 +14072,7 @@ isc.Toolbar.addProperties( {
     //<
     overrideDefaultButtonSizes: true,
 
-    //>    @attr    toolbar.buttonDefaults        (object : varies : [IRWA])
+    //>    @attr    toolbar.buttonDefaults        (Object : varies : [IRWA])
     // Settings to apply to all buttons of a toolbar. Properties that can be applied to
     // button objects can be applied to all buttons of a toolbar by specifying them in
     // buttonDefaults using the following syntax:<br>
@@ -13986,10 +14521,10 @@ makeButton : function (button) {
 // Creates and returns a widget for the toolbar
 //        @group    drawing
 //
-//        @param    [buttonProperties]    (object)    the button properties
-//        @param    [rect]        (object)    the rectangle for this widget, e.g. {top:50, left:100, ...}
+//        @param    [buttonProperties]    (Object)    the button properties
+//        @param    [rect]        (Object)    the rectangle for this widget, e.g. {top:50, left:100, ...}
 //
-//        @return    (object)    the created widget
+//        @return    (Object)    the created widget
 //<
 _makeItem : function (buttonProperties, rect) {
     var cons = (buttonProperties.buttonConstructor
@@ -14025,7 +14560,7 @@ _makeItem : function (buttonProperties, rect) {
 
 //>    @method    toolbar.addButtons()
 // Add a list of buttons to the toolbar
-// @param [buttons]    (Array of objects) list of button object initializers.
+// @param [buttons]    (Array of Object) list of button object initializers.
 // @param [position] (number) position to add the new buttons at
 // @visibility external
 //<
@@ -14055,10 +14590,8 @@ addButtons : function (buttons, position) {
             mapping[position[i]] = buttons[i];
         }
 
-        // sort the positions - we'll need to add buttons starting with the
-        // leftmost position (Otherwise adding an item, then a second item to the left of
-        // it would shift the first item a slot to the right from the desired position).
-        position.sort();
+
+        position.sort(function (a, b) {return a - b;});
 
         discreteBlocks = [];
         var currentBlock = {buttons:[], position:position[0]},
@@ -14115,7 +14648,7 @@ addButtons : function (buttons, position) {
     // setResizeRules to update dragResizing, etc.
     if (this.canResizeItems) this.setResizeRules();
 
-    buttonWidgets.map("show");  // auto-show the new members
+    buttonWidgets.callMethod("show");  // auto-show the new members
 },
 
 _createButtonInstances : function (buttons) {
@@ -14187,7 +14720,7 @@ removeButtons : function (buttons) {
 //      @see    getButtonNumber()
 //      @visibility external
 //        @group    buttons
-//        @param    index        (number | string | object)    identifier for the button to retrieve
+//        @param    index        (number | String | Object)    identifier for the button to retrieve
 //
 //      @return (Button)    the button, or null if the button wasn't found
 //<
@@ -14207,7 +14740,7 @@ getButton : function (index) {
 //          </ul><p>
 //            returns -1 if not found
 //
-//        @param    button        (number | string  | button object | button widget)
+//        @param    button        (number | String  | Button Object | Button Widget)
 //
 //        @return    (number)    index of the button in question
 // @visibility external
@@ -14221,7 +14754,7 @@ getButtonNumber : function (button) {
 
 //>    @method    toolbar.getButtons()
 //        @group    buttons
-//        @return (array) array of all buttons in the Toolbar
+//        @return (Array) array of all buttons in the Toolbar
 //<
 getButtons : function () {
     return this.members;
@@ -14297,7 +14830,7 @@ setResizeRules : function () {
 
 //>    @method    toolbar.getSelectedButton()    (A)
 // Get the button currently selected.
-//        @return (object) button
+//        @return (Object) button
 //<
 getSelectedButton : function () {
     return this.lastSelectedButton;
@@ -14310,7 +14843,7 @@ getSelectedButton : function () {
 //
 //      @see    getButtonNumber()
 //        @group    selection
-//        @param    buttonID        (number | string | object | canvas)    Button / Button identifier
+//        @param    buttonID        (number | String | Object | Canvas)    Button / Button identifier
 //      @visibility external
 //<
 selectButton : function (buttonID) {
@@ -14329,7 +14862,7 @@ selectButton : function (buttonID) {
 //      @see    getButtonNumber()
 //      @visibility external
 //        @group    selection
-//        @param    buttonID        (number | string | object | canvas)    Button / Button identifier
+//        @param    buttonID        (number | String | Object | Canvas)    Button / Button identifier
 //<
 deselectButton : function (buttonID) {
     var btn = this.getButton(buttonID);
@@ -14341,7 +14874,7 @@ deselectButton : function (buttonID) {
 // One of the toolbar button was just selected -- update other buttons as necessary
 //        @group    selection
 //
-//        @param    button        (button object)        a member of this.buttons
+//        @param    button        (Button Object)        a member of this.buttons
 //<
 buttonSelected : function (button) {
     if (button.getActionType() == isc.Button.RADIO) {
@@ -14354,26 +14887,34 @@ buttonSelected : function (button) {
 // Notification that one of the toolbar buttons was just DEselected
 //        @group    selection
 //
-//        @param    button        (button object)        a member of this.buttons
+//        @param    button        (Button Object)        a member of this.buttons
 //<
 buttonDeselected : function (button) {
 },
 
 
-//>    @method    toolbar.itemClick() ([A])
-//    Called when one of the buttons receives a click event
-//        @group    event handling
-//        @param    item        (button)        pointer to the button in question
-//        @param    itemNum        (number)        number of the button in question
-// @visibility external
+//> @method toolbar.itemClick() ([A])
+//  Called when one of the buttons receives a click event.
+// @param  item     (StatefulCanvas)  button in question
+// @param  itemNum  (number)          number of the button in question
+// @group  event handling
+// @visibility smartclient
 //<
 itemClick : function (item, itemNum) {
 },
 
+//> @method toolbar.sgwtItemClick() ([A])
+// @include itemClick
+// @param  targetCanvas  (StatefulCanvas)  button in question
+// @param  itemNum       (number)          number of the button in question
+// @group  event handling
+// @visibility sgwt
+//<
+
 //>    @method    toolbar.itemDoubleClick() ([A])
 //    Called when one of the buttons receives a double-click event
 //        @group    event handling
-//        @param    item        (button)        pointer to the button in question
+//        @param    item        (Button)        pointer to the button in question
 //        @param    itemNum        (number)        number of the button in question
 // @visibility external
 //<
@@ -14717,6 +15258,7 @@ itemDragReordered : "itemNum,newPosition"
 // <P>
 // Example uses are Window minimize/close buttons.
 //
+// @inheritsFrom Img
 // @treeLocation Client Reference/Control
 // @visibility external
 //<
@@ -15014,10 +15556,13 @@ isc.defineClass("ImgButton", "Img").addProperties({
 
     canFocus:true,
 
-    //>    @attr    isc.ImgButton.overflow      (string : "hidden" : IRW)
+    //>    @attr ImgButton.overflow      (String : "hidden" : IRW)
     // Clip by default, because expanding to the label (if present) is likely to distort image
     //<
-    overflow:isc.Canvas.HIDDEN
+    overflow:isc.Canvas.HIDDEN,
+
+
+    useImageForSVG:isc.Browser.isEdge
 
 });
 
@@ -15103,6 +15648,7 @@ isc.ImgButton.registerStringMethods({
 // <P>
 // Examples of use include fancy buttons, poplist headers, and tabs.
 //
+// @inheritsFrom StretchImg
 // @treeLocation Client Reference/Control
 // @visibility external
 //<
@@ -15613,6 +16159,7 @@ isc.StretchImgButton.registerStringMethods({
 // See the +explorerExample{toolstrip} example.
 // </smartgwt>
 //
+// @inheritsFrom Layout
 // @treeLocation Client Reference/Layout
 // @visibility external
 // @example toolstrip
@@ -15640,7 +16187,7 @@ isc.defineClass("ToolStrip", "Layout").addProperties({
 
     defaultWidth: 250,
 
-    //> @attr toolStrip.styleName (CSSClassName : "toolStrip" : IRW)
+    //> @attr toolStrip.styleName (CSSStyleName : "toolStrip" : IRW)
     // CSS class applied to this toolstrip.
     // <P>
     // Note that if +link{toolStrip.vertical} is true for this toolStrip,
@@ -15648,7 +16195,7 @@ isc.defineClass("ToolStrip", "Layout").addProperties({
     //<
     styleName: "toolStrip",
 
-    //> @attr toolStrip.verticalStyleName (CSSClassName : null : IR)
+    //> @attr toolStrip.verticalStyleName (CSSStyleName : null : IR)
     // Default stylename to use if +link{toolStrip.vertical,this.vertical} is true.
     // If unset, the standard +link{styleName} will be used for both vertical and horizontal
     // toolstrips.
@@ -15850,7 +16397,7 @@ isc.defineClass("ToolStrip", "Layout").addProperties({
     //  formWrapper component. If passed, specified properties will be overlaid onto the
     //  properties derived from +link{toolStrip.formWrapperDefaults} and
     //  +link{toolStrip.formWrapperProperties}.
-    // @param [position] (integer) desired position for the form item in the tools
+    // @param [position] (Integer) desired position for the form item in the tools
     // @return (DynamicForm) generated wrapper containing the form item.
     // @visibility external
     //<
@@ -15909,12 +16456,13 @@ isc.defineClass("ToolStrip", "Layout").addProperties({
 
 //> @class ToolStripSeparator
 // Simple subclass of Img with appearance appropriate for a ToolStrip separator
+// @inheritsFrom Img
 // @treeLocation Client Reference/Layout/ToolStrip
 //
 // @visibility external
 //<
 isc.defineClass("ToolStripSeparator", "Img").addProperties({
-    //> @attr toolStripSeparator.skinImgDir (URL : "images/ToolStrip/" : IR)
+    //> @attr toolStripSeparator.skinImgDir (SCImgURL : "images/ToolStrip/" : IR)
     // Path to separator image.
     // @visibility external
     //<
@@ -15957,6 +16505,7 @@ isc.defineClass("ToolStripSeparator", "Img").addProperties({
 
 //> @class ToolStripSpacer
 // Simple subclass of LayoutSpacer with appearance appropriate for a ToolStrip spacer
+// @inheritsFrom LayoutSpacer
 // @treeLocation Client Reference/Layout/ToolStrip
 //
 // @visibility external
@@ -15979,13 +16528,15 @@ isc.defineClass("ToolStripSpacer", "LayoutSpacer").addProperties({
 });
 
 //> @class ToolStripButton
-// Simple subclass of StretchImgButton with appearance appropriate for a ToolStrip button.
+// Simple subclass of Button with appearance appropriate for a ToolStrip button.
 // Can be used to create an icon-only button, and icon with text, or a text only button by setting the
 // icon and title attributes as required.
+// @inheritsFrom Button
 // @visibility external
 // @treeLocation Client Reference/Layout/ToolStrip
 //<
-isc.defineClass("ToolStripButton", "StretchImgButton").addProperties({
+
+isc.defineClass("ToolStripButton", "Button").addProperties({
 
     showTitle:true,
     showRollOver:true,
@@ -16023,12 +16574,13 @@ isc.defineClass("ToolStripButton", "StretchImgButton").addProperties({
 //
 // A widget that groups other controls for use in +link{class:ToolStrip, tool-strips}.
 //
+// @inheritsFrom VLayout
 // @treeLocation Client Reference/Layout
 // @visibility external
 //<
 isc.defineClass("ToolStripGroup", "VLayout").addProperties({
 
-    //> @attr toolStripGroup.styleName (CSSClassName : "toolStripGroup" : IRW)
+    //> @attr toolStripGroup.styleName (CSSStyleName : "toolStripGroup" : IRW)
     // CSS class applied to this ToolStripGroup.
     // @visibility external
     //<
@@ -16044,7 +16596,7 @@ isc.defineClass("ToolStripGroup", "VLayout").addProperties({
     width: 1,
     overflow: "visible",
 
-    //> @attr toolStripGroup.controls (Array of Widget : null : IRW)
+    //> @attr toolStripGroup.controls (Array of Canvas : null : IRW)
     // The array of controls to show in this group.
     // @visibility external
     //<
@@ -16103,7 +16655,7 @@ isc.defineClass("ToolStripGroup", "VLayout").addProperties({
     //<
     //titleAlign: "center",
 
-    //> @attr toolStripGroup.titleStyle (CSSClassName : "toolStripGroupTitle" : IRW)
+    //> @attr toolStripGroup.titleStyle (CSSStyleName : "toolStripGroupTitle" : IRW)
     // CSS class applied to the +link{toolStripGroup.label, title label} in this group.
     // @setter toolStripGroup.setTitleStyle
     // @visibility external
@@ -16136,7 +16688,7 @@ isc.defineClass("ToolStripGroup", "VLayout").addProperties({
     // @deprecated set these properties directly via the +link{toolStripGroup.label, label autoChild}
     //<
 
-    //> @attr toolStripGroup.titleHeight (Number : 18 : IRW)
+    //> @attr toolStripGroup.titleHeight (int : 18 : IRW)
     // Controls the height of the +link{toolStripGroup.label, title label} in this group.
     // @setter toolStripGroup.setTitleHeight
     // @visibility external
@@ -16320,7 +16872,7 @@ isc.defineClass("ToolStripGroup", "VLayout").addProperties({
     // This method forcibly sets the +link{toolStripGroup.titleStyle, CSS class name}
     // for this group's +link{toolStripGroup.label, title label} after initial draw.
     //
-    // @param styleName (CSSClassName) the CSS class to apply to the
+    // @param styleName (CSSStyleName) the CSS class to apply to the
     //                                 +link{toolStripGroup.label, title label}.
     // @visibility external
     //<
@@ -16357,7 +16909,7 @@ isc.defineClass("ToolStripGroup", "VLayout").addProperties({
     // This method forcibly sets the height of this group's
     // +link{toolStripGroup.label, title label} after initial draw.
     //
-    // @param titleHeight (Integer) the new height for the +link{toolStripGroup.label, title label}
+    // @param titleHeight (int) the new height for the +link{toolStripGroup.label, title label}
     // @visibility external
     //<
     setTitleHeight : function (titleHeight) {
@@ -16575,9 +17127,15 @@ isc.defineClass("ToolStripGroup", "VLayout").addProperties({
     },
 
     _updateLabel : function () {
-        if (this.label) {
-            this.label.setWidth(this.body.getVisibleWidth());
+
+        var innerWidth = this.getInnerWidth(),
+            newWidth = innerWidth
+        ;
+        if (newWidth < 0) {
+            newWidth =  this.body ? this.body.getVisibleWidth() : this.getVisibleWidth();
         }
+
+        if (this.label) this.label.setWidth(newWidth);
     }
 
 });
@@ -16588,6 +17146,7 @@ isc.defineClass("ToolStripGroup", "VLayout").addProperties({
 // +link{iconButton.showButtonTitle, title} and optional +link{iconButton.menuIconSrc, menuIcon}
 // and is capable of horizontal and vertical +link{iconButton.orientation, orientation}.
 //
+// @inheritsFrom Button
 // @treeLocation Client Reference/Layout
 // @visibility external
 //<
@@ -16618,7 +17177,7 @@ orientation: "horizontal",
 //<
 rowSpan: 1,
 
-//> @attr iconButton.baseStyle (CSSClassName : "iconButton" : IRW)
+//> @attr iconButton.baseStyle (CSSStyleName : "iconButton" : IRW)
 // Default CSS class for this button.
 //
 // @visibility external
@@ -16654,10 +17213,6 @@ menuIconWidth: 14,
 // @visibility external
 //<
 menuIconHeight: 13,
-
-menuIconStyleCSS: "vertical-align:middle; border:1px solid transparent; -moz-border-radius: 3px; " +
-    "-webkit-border-radius: 3px; -khtml-border-radius: 3px; border-radius: 3px;"
-,
 
 menuConstructor: isc.Menu,
 
@@ -16818,14 +17373,12 @@ getTitle : function () {
 
     // pick up disabled, over etc state if appropriate
     icon = this._getStatefulIconURL(icon);
-    var iconCSS = "vertical-align:middle;",
-        menuIconCSS = this.menuIconStyleCSS,
-        img = icon ? this.imgHTML({
+    var img = icon ? this.imgHTML({
             src: icon,
             width: iconSize,
             height: iconSize,
-            extraCSSText: iconCSS,
-            extraStuff: " eventpart='icon'"
+            extraStuff: " eventpart='icon'",
+            cssClass: isLarge ? "iconButtonVIcon" : "iconButtonHIcon"
         }) : null
     ;
 
@@ -16833,15 +17386,15 @@ getTitle : function () {
     if (this.showMenuIcon) {
         var menuIconUrl = this._getMenuIconURL();
 
-        menuIcon = this.menuIcon = this.showMenuIcon ?
+        menuIcon = this.menuIcon = (this.showMenuIcon ?
             this.imgHTML({
                 src: menuIconUrl,
                 width: this.menuIconWidth,
                 height: this.menuIconHeight,
                 name: "menuIcon",
-                extraCSSText: menuIconCSS,
-                extraStuff: " eventpart='menuIcon'"
-            }) : null;
+                extraStuff: " eventpart='menuIcon'",
+                cssClass: isLarge ? "iconButtonVMenuIcon" : "iconButtonHMenuIcon"
+            }) : null);
         ;
     }
 
@@ -16854,12 +17407,10 @@ getTitle : function () {
     if (this.orientation == "vertical") {
         if (this.showButtonTitle) {
             if (title != "") title += "<br>";
-            var extraPad = Math.floor(this._toolStripGroup.rowHeight / 5);
-            title += "<div style='padding-top: " + (extraPad *2) + "px; padding-bottom: " + extraPad + "px;'>";
             title += tempTitle;
-            title += "</div>";
         }
         if (this.showMenuIcon && menuIcon) {
+            title += "<br>";
             title += menuIcon;
         }
     } else {
@@ -16979,7 +17530,6 @@ menuIconMouseMove : function () {
     if (element) {
         this.showingMenuButtonOver = true;
         this.setTitle(this._originalTitle);
-        //element.style.border = this.menuIconOverBorderCSS;
     }
 },
 
@@ -16991,7 +17541,6 @@ menuIconMouseOut : function () {
     if (element) {
         this.showingMenuButtonOver = false;
         this.setTitle(this._originalTitle);
-        //element.style.border = "1px solid transparent";
     }
 },
 
@@ -17023,6 +17572,7 @@ _shouldRedrawOnStateChange : function () {
 // This menuIconClick handler cancels default click behavior, so, if a user clicks the menu
 // item, any specified +link{canvas.click,click handler} for the button as a whole will not fire.
 //
+// @inheritsFrom IconButton
 // @treeLocation Client Reference/Layout
 // @visibility external
 //<
@@ -17048,7 +17598,7 @@ menuIconClick : function () {
 //<
 menu:null,
 
-//> @attr iconMenuButton.menuAnimationEffect (string : null : IRWA)
+//> @attr iconMenuButton.menuAnimationEffect (String : null : IRWA)
 // Allows you to specify an animation effect to apply to the menu when it is being shown.
 // Valid options are "none" (no animation), "fade", "slide" and "wipe".
 // If unspecified falls through to <code>menu.showAnimationEffect</code>
@@ -17107,6 +17657,7 @@ _createMenu : function (menu) {
 // A +link{class:ToolStrip, ToolStrip-based} class for showing
 // +link{class:RibbonGroup, groups} of related buttons and other controls.
 //
+// @inheritsFrom ToolStrip
 // @treeLocation Client Reference/Layout
 // @visibility external
 //<
@@ -17134,6 +17685,7 @@ isc.defineClass("RibbonBar", "ToolStrip").addProperties({
 //
 // A widget that groups other controls for use in +link{class:RibbonBar, RibbonBars}.
 //
+// @inheritsFrom ToolStripGroup
 // @treeLocation Client Reference/Layout
 // @visibility external
 //<
@@ -17188,6 +17740,7 @@ isc.defineClass("RibbonGroup", "ToolStripGroup").addProperties({
 // SectionStack can be configured so that only one section is visible at a time (similar to MS Outlook's
 // left-hand Nav), or to allow multiple sections to be visible and share the available space.
 //
+// @inheritsFrom VLayout
 // @treeLocation Client Reference/Layout
 // @visibility external
 // @example sectionsExpandCollapse
@@ -17291,10 +17844,12 @@ isc.SectionStack.addProperties({
     //> @attr SectionStack.sections (Array of SectionStackSection Properties : null : [IR])
     // List of sections of components managed by this SectionStack.
     //
-    // @see sectionStack.getSections()
-    // @visibility external
+    // @getter noauto
+    // @see sectionStack.getSectionNames()
     // @example sectionsExpandCollapse
+    // @visibility external
     //<
+
 
     //> @attr SectionStack.canResizeSections (Boolean : true : [IRA])
     // Whether sections can be drag resized by the user dragging the section header.
@@ -17344,7 +17899,10 @@ isc.SectionStack.addProperties({
     // order for accessibility.
     // May be overridden at the Section level via +link{SectionStackSection.canTabToHeader}
     // <P>
-    // If unset, section headers will be focusable if +link{isc.setScreenReaderMode} has been called.
+    // If unset, section headers will be focusable if <smartclient>+link{isc.setScreenReaderMode}
+    // </smartclient>
+    // <smartgwt>{@link com.smartgwt.client.util.SC#setScreenReaderMode SC.setScreenReaderMode()}
+    // </smartgwt> has been called.
     // See +link{group:accessibility}.
     // @visibility external
     //<
@@ -17373,15 +17931,24 @@ isc.SectionStack.addProperties({
     //> @object SectionStackSection
     // Section descriptor used by a SectionStack to describe a section of items which are shown
     // or hidden together along with their associated header.
-    // <P>
-    // A section header (see +link{sectionStack.sectionHeaderClass}) is created from this descriptor when
-    // the SectionStack is drawn. Any changes after creation  must be made to the section header:
-    // +link{sectionStack.getSectionHeader}.
-    // <P>
-    // Additional SectionHeader properties set on the SectionStackSection not explicitly documented such as
-    // "iconAlign" or "prompt" is supported<smartgwt> - use
+    // <P><smartclient>
+    // A section header (see +link{sectionStack.sectionHeaderClass}) is created from this
+    // descriptor when the SectionStack is created.  Any changes after creation  must be made to
+    // the section header: +link{sectionStack.getSectionHeader}.
+    // </smartclient><smartgwt>
+    // A <code>SectionStackSection</code> can't be modified once it's been added to a
+    // +link{SectionStack}, which creates its section header (by default a +link{SectionHeader},
+    // but see +link{sectionStack.sectionHeaderClass}).  After that, you must call the
+    // appropriate <code>SectionStack</code> method to modify a section property, or the
+    // section header getter method to get the updated property value.  As a convenience, we
+    // route several <code>SectionStackSection</code> setter methods to the +link{SectionStack}
+    // for you after the <code>SectionStackSection</code> has been added to it, but with the
+    // exception of +link{SectionStackSection.items}, you'll always get the original property
+    // values when calling a getter directly on a <code>SectionStackSection</code>.
+    // </smartgwt><P>
+    // Additional SectionHeader properties set on the SectionStackSection not explicitly
+    // documented, such as "iconAlign" or "prompt", are supported<smartgwt> - use
     // <code>setAttribute()</code></smartgwt>.
-    //
     // @treeLocation Client Reference/Layout/SectionStack
     // @visibility external
     //<
@@ -17896,7 +18463,7 @@ isc.SectionStack.addMethods({
 
     //> @method sectionStack.addItem
     // Add a canvas as an item to a section.
-    // @param section (String or Number) ID or index of the section to add item to
+    // @param section (String | Number) ID or index of the section to add item to
     // @param item (Canvas) Item to insert into the section
     // @param index (Number) Index into section to insert item
     // @visibility external
@@ -17932,7 +18499,7 @@ isc.SectionStack.addMethods({
             if (isc.Canvas.ariaEnabled()) {
                 section = this.getSectionHeader(section);
                 if (isc.isA.Canvas(section)) {
-                    var itemIDs = section.items.map("_getAriaHandleID");
+                    var itemIDs = section.items.callMethod("_getAriaHandleID");
                     section._tabPanel.setAriaState("owns", itemIDs.join(" "));
                 }
             }
@@ -17945,7 +18512,7 @@ isc.SectionStack.addMethods({
 
     //> @method sectionStack.removeItem
     // Remove an item from a section.
-    // @param section (String or Number) ID or index of the section to remove item from
+    // @param section (String | Number) ID or index of the section to remove item from
     // @param item (Canvas) Item to remove
     // @visibility external
     //<
@@ -17961,10 +18528,46 @@ isc.SectionStack.addMethods({
         if (isc.Canvas.ariaEnabled()) {
             section = this.getSectionHeader(section);
             if (isc.isA.Canvas(section)) {
-                var itemIDs = section.items.map("_getAriaHandleID");
+                var itemIDs = section.items.callMethod("_getAriaHandleID");
                 section._tabPanel.setAriaState("owns", itemIDs.join(" "));
             }
         }
+    },
+
+    //> @method sectionStack.setItems()
+    // Sets a new list of canvii as items into the specified section by removing the existing
+    // items, then adding the new ones.  Initial items for a section should be specified using
+    // the property +link{sectionStackSection.items}.
+    // @param section (String | Number) ID or index of the section to remove item from
+    // @param items (Array of Canvas) new items to add
+    // @visibility external
+    //<
+    setItems : function (section, items) {
+        if (!section) return;
+
+        // delay reflow until we're done
+        var oldSetting = this.instantRelayout;
+        this.instantRelayout = false;
+
+        // first remove all existing items from the section
+        var sectionHeader = this.getSection(section);
+        while (sectionHeader.items.length > 0) {
+            this.removeItem(section, sectionHeader.items.last());
+        }
+
+
+
+        // now the new items must be added to the section
+        if (!isc.isAn.Array(items)) items = [items];
+        for (var i = 0; i < items.length; i++) {
+            this.addItem(section, items[i], i);
+        }
+
+
+
+        // reflow now if so configured
+        this.instantRelayout = oldSetting;
+        if (oldSetting) this.reflowNow();
     },
 
     //> @method sectionStack.setSectionProperties()
@@ -18296,7 +18899,7 @@ isc.SectionStack.addMethods({
         }
     },
 
-    //> @method sectionStack.getSections()
+    //> @method sectionStack.getSectionNames()
     //
     // Returns a list of all +link{SectionStackSection.name,section names} in the order in which
     // they appear in the SectionStack.
@@ -18304,15 +18907,24 @@ isc.SectionStack.addMethods({
     // @return (List) list of all section names in the order in which they appear in the SectionStack.
     // @visibility external
     //<
-    getSections : function () {
+    getSectionNames : function () {
         return this.sections.getProperty("name");
+    },
+
+    //> @method sectionStack.getSections()
+    // @include getSectionNames()
+    // @deprecated in favor of +link{getSectionNames()}.
+    // @visibility external
+    //<
+    getSections : function () {
+        return this.getSectionNames();
     },
 
     //> @method sectionStack.reorderSection()
     //
     // Reorder the sections by shifting the specified section to a new position
     //
-    // @param section  (Integer or String) Section to move.  You can pass the position
+    // @param section  (Integer | String) Section to move.  You can pass the position
     //                      of the section in the SectionStack or the name of the section.
     // @param position   (number) new position index for the section.
     //
@@ -18513,7 +19125,7 @@ isc.SectionStack.addMethods({
                     itemsToShow.addList(section.items);
 
                     if (ariaEnabled) {
-                        var itemIDs = section.items.map("_getAriaHandleID");
+                        var itemIDs = section.items.callMethod("_getAriaHandleID");
                         section._tabPanel.setAriaState("owns", itemIDs.join(" "));
                     }
                 }
@@ -18598,7 +19210,7 @@ isc.SectionStack.addMethods({
     // this method has no effect
     //
     // @visibility external
-    // @param child (ID | Canvas)   the child Canvas to reveal, or its global ID
+    // @param child (GlobalId | Canvas)   the child Canvas to reveal, or its global ID
     //<
     revealChild : function (child) {
         if (isc.isA.String(child)) child = window[child];
@@ -18841,7 +19453,7 @@ isc.SectionStack.addMethods({
     //> @method sectionStack.setSectionTitle()
     // Changes the title of a SectionHeader.
     //
-    // @param section (String or Number) ID or index of the section whose title you want to change
+    // @param section (String | Number) ID or index of the section whose title you want to change
     // @param newTitle (String) new title for the SectionHeader
     // @visibility external
     //<
@@ -18862,7 +19474,7 @@ isc.SectionStack.addMethods({
     // re-use headers or use other strategies that would make it invalid to store a pointer to
     // a section header, assume the header is a layout member, etc.
     //
-    // @param section (String or Number) ID or index of the section for which you want the header
+    // @param section (String | Number) ID or index of the section for which you want the header
     // @return (SectionHeader) the section header indicated
     // @visibility external
     //<
@@ -18886,7 +19498,7 @@ isc.SectionStack.addMethods({
     // Returns the position of the specified section in the SectionStack.  The numbering is
     // zero-based.
     //
-    // @param sectionName     (string) name of a section for which you want to obtain the position.
+    // @param sectionName     (String) name of a section for which you want to obtain the position.
     //
     // @return (number)     Position of the section in the SectionStack or -1 if the specified
     //                      section is not a member of this SectionStack.
@@ -19381,6 +19993,7 @@ isc._commonHeaderProps = {
 //> @class SectionHeader
 // Simple SectionHeader class based on a Label with an icon, skinnable via CSS.
 //
+// @inheritsFrom Label
 // @treeLocation Client Reference/Layout/SectionStack
 // @visibility external
 //<
@@ -19438,6 +20051,9 @@ isc.defineClass("SectionHeader", "Label").addMethods(isc._commonHeaderProps,
         // want the sectionheader to register the click.
         if (this.contains(isc.EH.lastTarget)) return;
         if (!this.canCollapse || !this._hasLayout()) return;
+        // a child component may have shown a picker or other canvas which is now EH.lastTarget
+        // - check whether the original mouseDown target is a child
+        if (this.contains(isc.EH.mouseDownTarget())) return false;
         return this.getSectionStack().sectionHeaderClick(this);
     },
 
@@ -19517,6 +20133,7 @@ isc.defineClass("SectionHeader", "Label").addMethods(isc._commonHeaderProps,
 
 //> @class ImgSectionHeader
 // SectionHeader class based on an HLayout with +link{StretchImg} background.
+// @inheritsFrom HLayout
 // @treeLocation Client Reference/Layout/SectionStack
 // @visibility external
 //<
@@ -19666,7 +20283,7 @@ isc.defineClass("ImgSectionHeader", "HLayout").addMethods({
 
     //> @method imgSectionHeader.setIcon()
     // Change the icon being shown for the header.
-    // @param icon (URL) URL of new icon
+    // @param icon (SCImgURL) URL of new icon
     // @visibility external
     //<
     setIcon : function (icon) {
@@ -19876,8 +20493,8 @@ isc.SectionStack.registerStringMethods({
 isc.SectionStack.registerDupProperties(
     "sections",
     // second array is sub-properties!
-    ["items"],
-    ["controls"]);
+    ["items", "controls"]
+);
 
 
 
@@ -19901,6 +20518,7 @@ isc.SectionStack.registerDupProperties(
 // the draggable portion of the scrollbar, also a StretchImg, with an optional
 // +link{stretchImg.showGrip,grip}.
 //
+// @inheritsFrom StretchImg
 // @treeLocation Client Reference/Foundation
 // @visibility external
 //<
@@ -19910,6 +20528,7 @@ isc.ClassFactory.defineClass("Scrollbar", "StretchImg");
 // Class used for the draggable "thumb" of a scrollbar.  Do not use directly; this class is
 // documented only for skinning purposes.
 //
+// @inheritsFrom StretchImg
 // @treeLocation Client Reference/Foundation/Scrollbar
 // @visibility external
 //<
@@ -19929,6 +20548,20 @@ isc._thumbProperties = {
     triggerAreaRight: 0,
     triggerAreaBottom: 0,
     triggerAreaLeft: 0,
+
+    _updateTriggerArea : function (scrollTarget) {
+        var vertical = this.scrollbar.vertical,
+            offset = isc.Browser.isTouch ? 8 : 0,
+            scrollTargetIsRTL = scrollTarget == null ? isc.Page.isRTL() : scrollTarget.isRTL()
+        ;
+        this.setTriggerAreaLeft(vertical && !scrollTargetIsRTL ? offset : 0);
+        this.setTriggerAreaRight(vertical && scrollTargetIsRTL ? offset : 0);
+    },
+
+    enableTouchSupport : function () {
+        this.Super("enableTouchSupport", arguments);
+        if (this.triggerArea) this._updateTriggerArea();
+    },
 
 
     showDisabled:false,
@@ -19953,7 +20586,7 @@ isc._thumbProperties = {
 
     // send special notifications for some events
     mouseOver : function () {return this.scrollbar.thumbOver();},
-    mouseOut : function () {return this.scrollbar.thumbOut();},
+    mouseOut : function (event) {return this.scrollbar.thumbOut(event);},
     mouseDown : function () {return this.scrollbar.thumbDown();},
     dragStart : function () {return this.scrollbar.thumbDragStart();},
     dragMove : function () {return this.scrollbar.thumbMove();},
@@ -20153,7 +20786,7 @@ isc.Scrollbar.addProperties( {
 
     overflow:isc.Canvas.HIDDEN,
 
-    //>    @attr scrollbar.skinImgDir (URL : "images/Scrollbar/" : IRA)
+    //>    @attr scrollbar.skinImgDir (SCImgURL : "images/Scrollbar/" : IRA)
     // Where are the skin images for the Scrollbar.  This is local to the +link{Page.getSkinDir(),
     // overall skin directory}.
     // @group images
@@ -20169,7 +20802,7 @@ isc.Scrollbar.addProperties( {
     //<
     cornerSrc : "[SKIN]corner.gif",
 
-    //> @attr scrollbar.cornerSize (integer : null : IR)
+    //> @attr scrollbar.cornerSize (Integer : null : IR)
     // Allows the size of the corner segment to be set independently of the +link{btnSize}.
     // @group corner
     // @visibility external
@@ -20293,7 +20926,7 @@ isc.Scrollbar.addMethods({
 //            creates the thumb and adds it as a peer
 //            calls setScrollTarget() to set us up with the target to be scrolled
 //
-//        @param    [all arguments]    (object)    objects with properties to override from default
+//        @param    [all arguments]    (Object)    objects with properties to override from default
 //<
 initWidget : function () {
     this.invokeSuper(isc.Scrollbar,"initWidget");
@@ -20441,6 +21074,9 @@ setScrollTarget : function (newTarget) {
         delete this.scrollTarget[this.vertical ? "_vscrollbar" : "_hscrollbar"];
     }
 
+    // setScrollTarget() can be called to switch targets, so clear any previous eventParent
+    if (this.scrollTarget && this.scrollTarget.receiveScrollbarEvents) this._redirectEvents();
+
     // If a newTarget was specified, set the scrollTarget to it.
     // If a newTarget was not specified, we'll use the current scrollTarget. If the
     // current scrollTarget isn't set, we use the scrollBar itself to avoid
@@ -20452,17 +21088,18 @@ setScrollTarget : function (newTarget) {
     // We now are sure that we have a scrollTarget. If the scrollTarget has been changed
     // then we re-observe it. Otherwise, we're done.
 
-    if (this._selfManaged && this.scrollTarget != this) {
-         this.observe(this.scrollTarget, "scrollTo",        "observer.setThumb()");
-        this.observe(this.scrollTarget, "_adjustOverflow", "observer.setThumb()");
-        this._setScrollbarOnTarget(this.scrollTarget);
+    var scrollTarget = this.scrollTarget;
+    if (this._selfManaged && scrollTarget != this) {
+         this.observe(scrollTarget, "scrollTo",        "observer.setThumb()");
+        this.observe(scrollTarget, "_adjustOverflow", "observer.setThumb()");
+        this._setScrollbarOnTarget(scrollTarget);
     }
 
-    if (this.thumb != null) {
-        var scrollTargetIsRTL = newTarget == null ? isc.Page.isRTL() : newTarget.isRTL();
-        this.thumb.setTriggerAreaLeft(this.vertical && !scrollTargetIsRTL ? 8 : 0);
-        this.thumb.setTriggerAreaRight(this.vertical && scrollTargetIsRTL ? 8 : 0);
-    }
+
+    if (scrollTarget.receiveScrollbarEvents) this._redirectEvents(scrollTarget);
+
+    // update the thumb's trigger area to deal with new scroll target
+    if (this.thumb != null) this.thumb._updateTriggerArea(newTarget);
 
     // call setThumb to figure out how big and where the scrollbar thumb should be
     // note: this will enable and disable the scrollbar if autoEnable is true
@@ -20532,7 +21169,7 @@ parentVisibilityChanged : function (newState,b,c,d) {
 //>    @method    scrollbar.drawPeers()    (A)
 //            custom drawPeers routine to size the thumb before it's drawn
 //
-//        @param    document        (document)
+//        @param    document        (Document)
 //
 //        @return    ()
 //<
@@ -20560,7 +21197,11 @@ makeThumb : function () {
 
     // Note: Scrollbar sets its textDirection to "ltr", so even if running in RTL mode, `this.isRTL()'
     // will be false.
-    var scrollTargetIsRTL = this.scrollTarget == null ? isc.Page.isRTL() : this.scrollTarget.isRTL();
+
+
+    var scrollTargetIsRTL = this.scrollTarget == null ? isc.Page.isRTL() : this.scrollTarget.isRTL(),
+        triggerAreaOffset = isc.Browser.isTouch ? 8 : 0
+    ;
 
     // figure out derived attributes
     var classObject = this.vertical ? this.vThumbClass : this.hThumbClass;
@@ -20577,10 +21218,10 @@ makeThumb : function () {
         // In LTR mode, the trigger area cannot extend to the right of the thumb without increasing
         // the scrollWidth of the scrollTarget. Similarly, in RTL mode the trigger area cannot
         // extend to the left of the thumb without increasing the scrollWidth.
-        triggerAreaLeft: this.vertical && !scrollTargetIsRTL ? 8 : 0,
-        triggerAreaRight: this.vertical && scrollTargetIsRTL ? 8 : 0,
+        triggerAreaLeft: this.vertical && !scrollTargetIsRTL ? triggerAreaOffset : 0,
+        triggerAreaRight: this.vertical && scrollTargetIsRTL ? triggerAreaOffset : 0,
 
-        triggerAreaTop: !this.vertical ? 8 : 0,
+        triggerAreaTop: !this.vertical ? triggerAreaOffset : 0,
 
         dragScrollDirection : this.vertical ? isc.Canvas.VERTICAL : isc.Canvas.HORIZONTAL
     });
@@ -20639,6 +21280,8 @@ setThumb : function () {
     if (this.thumb == null || this._suppressSetThumb) return;
 
 
+
+    this._adjustThumbOverlap();
 
     var thumb = this.thumb,
         trackSize = this.trackSize();
@@ -20728,7 +21371,34 @@ moveThumb : function () {
 },
 
 
+_adjustThumbOverlap : function () {
+    this._startThumbOverlap = this.startThumbOverlap;
+    this._endThumbOverlap   = this.endThumbOverlap;
+
+    // shortfall - how far are we from the minimum size?
+    var shortfall = this.trackMinSize - this.trackSize();
+    if (shortfall <= 0) return;
+
+    // if overlaps are different, increase more negative overlap first
+    var overlapDiff = this._startThumbOverlap - this._endThumbOverlap;
+    if (overlapDiff > 0) {
+        var offset = Math.min(shortfall, overlapDiff);
+        shortfall -= offset, this._endThumbOverlap += offset;
+    } else if (overlapDiff < 0) {
+        var offset = Math.min(shortfall, -overlapDiff);
+        shortfall -= offset, this._startThumbOverlap += offset;
+    }
+    if (shortfall <= 0) return;
+
+    // otherwise, increase them equally to meet trackMinSize
+    var startOffset = shortfall >> 1,
+        endOffset = shortfall - startOffset;
+    this._startThumbOverlap += startOffset;
+    this._endThumbOverlap   += endOffset;
+},
+
 _$thumb:"thumb",
+trackMinSize: 1,
 //>    @method    scrollbar.trackSize()    (A)
 //        @group    sizing
 //            return the size of the scroll track
@@ -20740,7 +21410,7 @@ trackSize : function () {
            (this.showTrackEnds != false ? (this.getSize(this.getPartNum(this.trackStartImg.name)) +
                                            this.getSize(this.getPartNum(this.trackEndImg.name)))
                                         : 0) +
-           this.startThumbOverlap + this.endThumbOverlap;
+           this._startThumbOverlap + this._endThumbOverlap;
 },
 
 
@@ -20751,10 +21421,8 @@ trackSize : function () {
 //        @return    (number)    relative pixel where the scroll track starts
 //<
 trackStart : function () {
-    if (this.vertical)
-        return this.getTop() + (this.showTrackButtons == true ? this.getSize(this.getPartNum(this.startImg.name)) : 0) - this.startThumbOverlap;
-    else
-        return this.getLeft() + (this.showTrackButtons == true ? this.getSize(this.getPartNum(this.startImg.name)) : 0) - this.startThumbOverlap;
+    return (this.vertical ? this.getTop() : this.getLeft()) + (this.showTrackButtons == true ?
+               this.getSize(this.getPartNum(this.startImg.name)) : 0) - this._startThumbOverlap;
 },
 
 //>    @method    scrollbar.directionRelativeToThumb()    (A)
@@ -20927,12 +21595,14 @@ handleMouseMove : function () {
 //            may redraw the button
 //        @group    events
 //<
-handleMouseOut : function () {
+handleMouseOut : function (event) {
     if (this.ns.EH.mouseIsDown()) return isc.EH.STOP_BUBBLING;
     if (this.showRollOver) {
         this.setState(isc.StatefulCanvas.STATE_UP);
     }
-    return isc.EH.STOP_BUBBLING;
+    if (this._shouldSuppressMouseOut(event)) {
+        return isc.EH.STOP_BUBBLING;
+    }
 },
 
 // avoid triggering drag interactions on the track (possible if any of our master's parents are
@@ -20985,9 +21655,12 @@ thumbOver : function () {
 //
 //        @return    (boolean)    false == cancel event processing
 //<
-thumbOut : function () {
+thumbOut : function (event) {
     if (!isc.EH.mouseIsDown()) {
         this.thumb.setState(isc.StatefulCanvas.STATE_UP);
+    }
+    if (this._shouldSuppressMouseOut(event)) {
+        return isc.EH.STOP_BUBBLING;
     }
 },
 
@@ -21030,13 +21703,10 @@ thumbDragStart : function () {
 //<
 getEventCoord : function () {
     var EH = isc.EH;
-    if (this.vertical) {
-        return EH.getY() - this.getPageTop() - (this.showTrackButtons == true ? this.getSize(this.getPartNum(this.startImg.name)) : 0) +
-               this.startThumbOverlap - EH.dragOffsetY;
-    } else {
-        return EH.getX() - this.getPageLeft() - (this.showTrackButtons == true ? this.getSize(this.getPartNum(this.startImg.name)) : 0) +
-               this.startThumbOverlap - EH.dragOffsetX;
-    }
+    return (this.vertical ?
+            EH.getY() - this.getPageTop()  - EH.dragOffsetY :
+            EH.getX() - this.getPageLeft() - EH.dragOffsetX) + this._startThumbOverlap -
+        (this.showTrackButtons == true ? this.getSize(this.getPartNum(this.startImg.name)) : 0);
 },
 
 
@@ -21129,6 +21799,26 @@ hide : function (a,b,c,d) {
         this.moveTo(this.scrollTarget.getLeft(), this.scrollTarget.getTop());
         this.resizeTo(1,1);
     }
+},
+
+// helper to set eventParent of both this scrollbar and the thumb
+_redirectEvents : function (eventParent) {
+    var thumb = this.thumb;
+    if (!eventParent) eventParent = null;
+    this.eventParent = eventParent;
+    if (thumb != null) thumb.eventParent = eventParent;
+},
+
+
+_shouldSuppressMouseOut : function (event) {
+    var target = event.target;
+    return target && target == this.scrollTarget && target.receiveScrollbarEvents;
+},
+
+// whether canvas is one of ours (the scrollbar or thumb) that bubbles to scrollTarget
+_hasScrollTargetEventParent : function (canvas) {
+    if (this.disabled) return false;
+    return canvas == this || canvas && canvas == this.thumb;
 }
 
 });
@@ -21170,6 +21860,7 @@ isc.defineClass("SpritedScrollbar", "Scrollbar").addProperties({
 // To enable this for a component simply set +link{canvas.showCustomScrollbars} to true and
 // set +link{canvas.scrollbarConstructor} to <code>"NativeScrollbar"</code>
 //
+// @inheritsFrom Canvas
 // @treeLocation Client Reference/Foundation
 // @visibility external
 //<
@@ -21520,6 +22211,7 @@ isc.ScrollStick.addMethods({
 //
 // @see class:Layout
 // @see class:ImgSplitbar
+// @inheritsFrom StretchImg
 // @treeLocation Client Reference/Layout
 // @visibility external
 //<
@@ -21566,12 +22258,12 @@ isc._SplitbarProperties = {
     // @visibility external
     //<
 
-    //> @attr splitbar.capSize (integer : null : IR)
+    //> @attr splitbar.capSize (Integer : null : IR)
     // @include StretchImg.capSize
     // @visibility external
     //<
 
-    //> @attr splitbar.skinImgDir (string : null : IR)
+    //> @attr splitbar.skinImgDir (SCImgURL : null : IR)
     // @include Canvas.skinImgDir
     // @visibility external
     //<
@@ -21581,7 +22273,7 @@ isc._SplitbarProperties = {
     // @visibility external
     //<
 
-    //> @attr splitBar.gripImgSuffix (string : "grip" : IRA)
+    //> @attr splitBar.gripImgSuffix (String : "grip" : IRA)
     // @include StretchImg.gripImgSuffix
     // @visibility external
     //<
@@ -21820,6 +22512,7 @@ isc.Splitbar.addMethods(isc._SplitbarProperties, isc._SplitbarMethods);
 // property.
 // @see class:Layout
 // @see class:Splitbar
+// @inheritsFrom Img
 // @treeLocation Client Reference/Layout
 // @visibility external
 //<
@@ -21928,6 +22621,7 @@ isc.defineClass("VStretchbar", "Stretchbar").addProperties({
 // to show a stateful open / close indicator.
 // @see class:Splitbar
 // @see class:Layout
+// @inheritsFrom Splitbar
 // @treeLocation Client Reference/Layout
 //  @visibility external
 //<
@@ -21983,6 +22677,7 @@ isc.Snapbar.addProperties({
 //> @class ToolStripResizer
 // Simple subclass of ImgSplitbar with appearance appropriate for a ToolStrip resizer.
 //
+// @inheritsFrom ImgSplitbar
 // @treeLocation Client Reference/Layout/ToolStrip
 // @visibility external
 //<
@@ -22051,7 +22746,7 @@ isc.Canvas.addClassMethods({
 
 
 
-_calculateStaticSize : function (sizes, resultSizes, totalSize, propertyTarget) {
+_calculateStaticSize : function (sizes, resultSizes, totalSize, propertyTarget, stretchFields) {
     //!OBFUSCATEOK
 
     // count up all non-static sizes
@@ -22061,9 +22756,6 @@ _calculateStaticSize : function (sizes, resultSizes, totalSize, propertyTarget) 
         percentTotal = 0, // total percentage sizes
         staticSize   = 0; // amount that's taken up by static images
 
-    var layoutInfo = isc.isA.Layout(propertyTarget) && !propertyTarget.isA("ListGrid") ?
-                                    propertyTarget._layoutInfo : null;
-
     for (var i = 0; i < sizes.length; i++) {
         var size = sizes[i];
         if (size == null || isc.is.emptyString(size)) sizes[i] = size = isc.star;
@@ -22071,10 +22763,6 @@ _calculateStaticSize : function (sizes, resultSizes, totalSize, propertyTarget) 
         if (isc.isA.Number(size)) {
             resultSizes[i] = size;
 
-            if (layoutInfo) {
-                var overflowPixels = layoutInfo[i]._adaptiveOverflow;
-                if (overflowPixels > 0) size += overflowPixels;
-            }
         } else {
             if (size == isc.star) {
                 // a stretch item -- increment the number of stretch items
@@ -22248,7 +22936,10 @@ applyNewStretchResizePolicy : function (sizes, totalSize, commonMinSize, modifyI
     if (!commonMinSize || commonMinSize < 0) commonMinSize = 1;
 
     var resultSizes = modifyInPlace ? sizes : [], // the calculated sizes
-        logEnabled = this.logIsDebugEnabled(this._$listPolicy);
+        logEnabled = this.logIsDebugEnabled(this._$listPolicy),
+        stretchFields = callerMinSizes != null
+    ;
+
 
     //>DEBUG  preserve the original sizes array for logging purposes
     var logMessage;
@@ -22258,22 +22949,15 @@ applyNewStretchResizePolicy : function (sizes, totalSize, commonMinSize, modifyI
     }
     //<DEBUG
 
-    // calculate the static size so we know what's available for stretch resizing
-    var results = this._calculateStaticSize(sizes, resultSizes, totalSize, propertyTarget),
-        starCount    = results.starCount,
-        percentCount = results.percentCount,
-        percentTotal = results.percentTotal,
-        staticSize   = results.staticSize;
-
 
     var minSizes = [],
         maxSizes = [];
 
-    if (isc.isA.Layout(propertyTarget) && !propertyTarget.ignoreStretchResizeMemberSizeLimits) {
+    if (isc.isA.Layout(propertyTarget)) {
         var members, vertical;
 
 
-        if (propertyTarget.isA("ListGrid")) {
+        if (stretchFields) {
             members  = propertyTarget.fields || [];
             vertical = false;
         } else {
@@ -22281,28 +22965,73 @@ applyNewStretchResizePolicy : function (sizes, totalSize, commonMinSize, modifyI
             vertical = propertyTarget.vertical;
         }
 
+
+        if (!propertyTarget.ignoreStretchResizeForCanAdaptMembers && !stretchFields) {
+
+            callerMinSizes = [];
+
+            for (var i = 0; i < members.length; i++) {
+                var member = members[i];
+                if (!propertyTarget._canAdaptLength(member)) continue;
+                // if an adaptive-size member has a stretch user size, apply it to size
+                var userLength = propertyTarget._explicitLength(member);
+                if (isc.Canvas._isStretchSize(userLength) && isc.isA.Number(sizes[i])) {
+
+                    if (propertyTarget._overflowsLength(member)) {
+                        if (!propertyTarget._warnOnStretchSizeForAdaptLengthOverflow) {
+                            propertyTarget._warnOnStretchSizeForAdaptLengthOverflow = true;
+                            propertyTarget.logWarn("applyNewStretchResizePolicy(): " +
+                                "Adaptive-length members cannot support stretch sizing " +
+                                "unless overflow is hidden - member " + member.ID);
+                        }
+                        continue;
+                    }
+                    callerMinSizes[i] = sizes[i];
+                    sizes[i] = userLength;
+                }
+            }
+        }
+
         // set up min/max arrays for clamping stretch members
-        for (var i = 0; i < members.length; i++) {
-            var member = members[i];
-            if (vertical) {
-                minSizes[i] = member.minHeight;
-                maxSizes[i] = member.maxHeight;
-            } else {
-                minSizes[i] = member.minWidth;
-                maxSizes[i] = member.maxWidth;
+        if (!propertyTarget.ignoreStretchResizeMemberSizeLimits) {
+            for (var i = 0; i < members.length; i++) {
+                var member = members[i];
+                if (vertical) {
+                    minSizes[i] = member.minHeight;
+                    maxSizes[i] = member.maxHeight;
+                } else {
+                    minSizes[i] = member.minWidth;
+                    maxSizes[i] = member.maxWidth;
+                }
+                // merge caller constraints into the member-specific minSizes
+                if (minSizes[i] == null || minSizes[i] < commonMinSize) {
+                    minSizes[i] = commonMinSize;
+                }
             }
-            // add caller constraints; callerMinSizes array may be null
-            var callerMinSize = commonMinSize;
-            if (callerMinSizes && callerMinSizes[i] > callerMinSize) {
-                callerMinSize = callerMinSizes[i];
-            }
-            // merge caller constraints into the member-specific minSizes
-            if (minSizes[i] == null || minSizes[i] < callerMinSize) {
-                minSizes[i] = callerMinSize;
+
+            if (callerMinSizes) {
+                for (var i = 0; i < members.length; i++) {
+                    var callerMinSize = callerMinSizes[i];
+                    // clamp the minimum from callerMinSize to the maxSize, if appropriate
+                    if (stretchFields && maxSizes[i] != null && callerMinSize > maxSizes[i]) {
+                        callerMinSize = maxSizes[i];
+                    }
+
+                    // apply the minimum from callerMinSize to the minSize
+                    if (callerMinSize > minSizes[i]) minSizes[i] = callerMinSize;
+                }
             }
         }
     }
 
+    // calculate the static size so we know what's available for stretch resizing
+    var results = this._calculateStaticSize(sizes, resultSizes, totalSize, propertyTarget,
+                                            stretchFields),
+        starCount    = results.starCount,
+        percentCount = results.percentCount,
+        percentTotal = results.percentTotal,
+        staticSize   = results.staticSize
+    ;
 
     if (modifyInPlace) sizes = sizes.duplicate();
     else {
@@ -22315,7 +23044,8 @@ applyNewStretchResizePolicy : function (sizes, totalSize, commonMinSize, modifyI
     }
 
 
-    var resultFrozen = [],
+    var epsilon = 1e-9,
+        resultFrozen = [],
         remainingSpace = 0;
 
     while (starCount + percentCount > 0) {
@@ -22375,7 +23105,8 @@ applyNewStretchResizePolicy : function (sizes, totalSize, commonMinSize, modifyI
                         // understand it)
                         continue;
                     }
-                    stretchSize = Math.floor(stretchSize);
+
+                    stretchSize = Math.floor(stretchSize + epsilon);
 
 
                     var minSize = minSizes[i] != null ? minSizes[i] : commonMinSize;
@@ -22500,7 +23231,7 @@ applyNewStretchResizePolicy : function (sizes, totalSize, commonMinSize, modifyI
 isc.ClassFactory.defineClass("GroupingMessages");
 
 isc.GroupingMessages.addClassProperties({
-    //> @classAttr GroupingMessages.upcomingTodayTitle   (string : "Today" : IRW)
+    //> @classAttr GroupingMessages.upcomingTodayTitle   (String : "Today" : IRW)
     // When a +link{ListGrid} is grouped by a date field in 'Upcoming' mode,
     // this is the group title for all records in which the grouped date field occurs today,
     // relative to the current date.
@@ -22510,7 +23241,7 @@ isc.GroupingMessages.addClassProperties({
     //<
     upcomingTodayTitle: "Today",
 
-    //> @classAttr GroupingMessages.upcomingTomorrowTitle   (string : "Tomorrow" : IRW)
+    //> @classAttr GroupingMessages.upcomingTomorrowTitle   (String : "Tomorrow" : IRW)
     // When a +link{ListGrid} is grouped by a date field in 'Upcoming' mode,
     // this is the group title for all records in which the grouped date field occurs tomorrow,
     // relative to the current date.
@@ -22520,7 +23251,7 @@ isc.GroupingMessages.addClassProperties({
     //<
     upcomingTomorrowTitle: "Tomorrow",
 
-    //> @classAttr GroupingMessages.upcomingThisWeekTitle   (string : "This Week" : IRW)
+    //> @classAttr GroupingMessages.upcomingThisWeekTitle   (String : "This Week" : IRW)
     // When a +link{ListGrid} is grouped by a date field in 'Upcoming' mode,
     // this is the group title for all records in which the grouped date field occurs this week,
     // relative to the current date.
@@ -22530,7 +23261,7 @@ isc.GroupingMessages.addClassProperties({
     //<
     upcomingThisWeekTitle: "This Week",
 
-    //> @classAttr GroupingMessages.upcomingNextWeekTitle   (string : "Next Week" : IRW)
+    //> @classAttr GroupingMessages.upcomingNextWeekTitle   (String : "Next Week" : IRW)
     // When a +link{ListGrid} is grouped by a date field in 'Upcoming' mode,
     // this is the group title for all records in which the grouped date field occurs next week,
     // relative to the current date.
@@ -22540,7 +23271,7 @@ isc.GroupingMessages.addClassProperties({
     //<
     upcomingNextWeekTitle: "Next Week",
 
-    //> @classAttr GroupingMessages.upcomingNextMonthTitle   (string : "Next Month" : IRW)
+    //> @classAttr GroupingMessages.upcomingNextMonthTitle   (String : "Next Month" : IRW)
     // When a +link{ListGrid} is grouped by a date field in 'Upcoming' mode,
     // this is the group title for all records in which the grouped date field occurs next month,
     // relative to the current date.
@@ -22550,7 +23281,7 @@ isc.GroupingMessages.addClassProperties({
     //<
     upcomingNextMonthTitle: "Next Month",
 
-    //> @classAttr GroupingMessages.upcomingBeforeTitle   (string : "Before" : IRW)
+    //> @classAttr GroupingMessages.upcomingBeforeTitle   (String : "Before" : IRW)
     // When a +link{ListGrid} is grouped by a date field in 'Upcoming' mode,
     // this is the group title for all records in which the grouped date field occurs before
     // the current date.
@@ -22560,7 +23291,7 @@ isc.GroupingMessages.addClassProperties({
     //<
     upcomingBeforeTitle: "Before",
 
-    //> @classAttr GroupingMessages.upcomingLaterTitle   (string : "Later" : IRW)
+    //> @classAttr GroupingMessages.upcomingLaterTitle   (String : "Later" : IRW)
     // When a +link{ListGrid} is grouped by a date field in 'Upcoming' mode,
     // this is the group title for all records in which the grouped date field occurs later than
     // one month after today's date.
@@ -22572,7 +23303,7 @@ isc.GroupingMessages.addClassProperties({
 
     // ----------------date constants----------------------------------------------------------
 
-    //> @classAttr GroupingMessages.byDayTitle   (string : "by Day" : IRW)
+    //> @classAttr GroupingMessages.byDayTitle   (String : "by Day" : IRW)
     // Title to use for the menu option which groups a date field by day of week, across all
     // weeks and years.  For example, all values that are on any Tuesday are grouped together.
     //
@@ -22581,7 +23312,7 @@ isc.GroupingMessages.addClassProperties({
     //<
     byDayTitle: "by Day",
 
-    //> @classAttr GroupingMessages.byWeekTitle   (string : "by Week" : IRW)
+    //> @classAttr GroupingMessages.byWeekTitle   (String : "by Week" : IRW)
     // Title to use for the menu option which groups a date field by week number, across all
     // years.  For example, all values that are in Week 30 of any year are grouped together.
     //
@@ -22590,7 +23321,7 @@ isc.GroupingMessages.addClassProperties({
     //<
     byWeekTitle: "by Week",
 
-    //> @classAttr GroupingMessages.byMonthTitle   (string : "by Month" : IRW)
+    //> @classAttr GroupingMessages.byMonthTitle   (String : "by Month" : IRW)
     // Title to use for the menu option which groups a date field by month number, across all
     // years.  For example, all values that are in December of any year are grouped together.
     //
@@ -22599,7 +23330,7 @@ isc.GroupingMessages.addClassProperties({
     //<
     byMonthTitle: "by Month",
 
-    //> @classAttr GroupingMessages.byQuarterTitle   (string : "by Quarter" : IRW)
+    //> @classAttr GroupingMessages.byQuarterTitle   (String : "by Quarter" : IRW)
     // Title to use for the menu option which groups a date field by quarter, across all
     // years.  For example, all values that are in Q4 of any year are grouped together.
     //
@@ -22608,7 +23339,7 @@ isc.GroupingMessages.addClassProperties({
     //<
     byQuarterTitle: "by Quarter",
 
-    //> @classAttr GroupingMessages.byYearTitle   (string : "by Year" : IRW)
+    //> @classAttr GroupingMessages.byYearTitle   (String : "by Year" : IRW)
     // Title to use for the menu option which groups a date field by year.
     //
     // @visibility external
@@ -22616,7 +23347,7 @@ isc.GroupingMessages.addClassProperties({
     //<
     byYearTitle: "by Year",
 
-    //> @classAttr GroupingMessages.byDayOfMonthTitle   (string : "by Day of Month" : IRW)
+    //> @classAttr GroupingMessages.byDayOfMonthTitle   (String : "by Day of Month" : IRW)
     // Title to use for the menu option which groups a date field by day of month, across all
     // months and years.  For example, all values that are on day 25 of any month in any year
     // are grouped together.
@@ -22626,7 +23357,7 @@ isc.GroupingMessages.addClassProperties({
     //<
     byDayOfMonthTitle: "by Day of Month",
 
-    //> @classAttr GroupingMessages.byUpcomingTitle   (string : "by Upcoming" : IRW)
+    //> @classAttr GroupingMessages.byUpcomingTitle   (String : "by Upcoming" : IRW)
     // Title to use for the menu option which groups a date field by upcoming dates.
     //
     // @visibility external
@@ -22634,7 +23365,7 @@ isc.GroupingMessages.addClassProperties({
     //<
     byUpcomingTitle: "by Upcoming",
 
-    //> @classAttr GroupingMessages.byDateTitle   (string : "by Date" : IRW)
+    //> @classAttr GroupingMessages.byDateTitle   (String : "by Date" : IRW)
     // Title to use for the menu option which groups a date field by specific dates.  All
     // values that are within the 24 hours of a specific date in a given year are
     // grouped together.
@@ -22644,7 +23375,7 @@ isc.GroupingMessages.addClassProperties({
     //<
     byDateTitle: "by Date",
 
-    //> @classAttr GroupingMessages.byWeekAndYearTitle   (string : "by Week and Year" : IRW)
+    //> @classAttr GroupingMessages.byWeekAndYearTitle   (String : "by Week and Year" : IRW)
     // Title to use for the menu option which groups a date field by week number and year.  All
     // values that are in the same week in a given year are grouped together.
     //
@@ -22653,7 +23384,7 @@ isc.GroupingMessages.addClassProperties({
     //<
     byWeekAndYearTitle: "by Week and Year",
 
-    //> @classAttr GroupingMessages.byMonthAndYearTitle   (string : "by Month and Year" : IRW)
+    //> @classAttr GroupingMessages.byMonthAndYearTitle   (String : "by Month and Year" : IRW)
     // Title to use for the menu option which groups a date field by month number and year.
     // All values that are in the same month in a given year are grouped together.
     //
@@ -22662,7 +23393,7 @@ isc.GroupingMessages.addClassProperties({
     //<
     byMonthAndYearTitle: "by Month and Year",
 
-    //> @classAttr GroupingMessages.byQuarterAndYearTitle   (string : "by Quarter and Year" : IRW)
+    //> @classAttr GroupingMessages.byQuarterAndYearTitle   (String : "by Quarter and Year" : IRW)
     // Title to use for the menu option which groups a date field by quarter and year.  All
     // values that are in the same quarter of a given year are grouped together.
     //
@@ -22671,7 +23402,7 @@ isc.GroupingMessages.addClassProperties({
     //<
     byQuarterAndYearTitle: "by Quarter and Year",
 
-    //> @classAttr GroupingMessages.byDayOfWeekAndYearTitle   (string : "by Day of specific Week" : IRW)
+    //> @classAttr GroupingMessages.byDayOfWeekAndYearTitle   (String : "by Day of specific Week" : IRW)
     // Title to use for the menu option which groups a date field by specific day of week.  All
     // values that are in the same week and day of a given year are grouped together.
     //
@@ -22680,7 +23411,7 @@ isc.GroupingMessages.addClassProperties({
     //<
     byDayOfWeekAndYearTitle: "by Day of specific Week",
 
-    //> @classAttr GroupingMessages.byDayOfMonthAndYearTitle   (string : "by Day of specific Month" : IRW)
+    //> @classAttr GroupingMessages.byDayOfMonthAndYearTitle   (String : "by Day of specific Month" : IRW)
     // Title to use for the menu option which groups a date field by specific day of month.  All
     // values that are in the same day and month of a given year are grouped together.
     //
@@ -22691,7 +23422,7 @@ isc.GroupingMessages.addClassProperties({
 
     // -------------time contants--------------------------------------------------------------
 
-    //> @classAttr GroupingMessages.byHoursTitle   (string : "by Hours" : IRW)
+    //> @classAttr GroupingMessages.byHoursTitle   (String : "by Hours" : IRW)
     // Title to use for the menu option which groups a time field by hours.
     //
     // @visibility external
@@ -22699,7 +23430,7 @@ isc.GroupingMessages.addClassProperties({
     //<
     byHoursTitle: "by Hours",
 
-    //> @classAttr GroupingMessages.byMinutesTitle   (string : "by Minutes" : IRW)
+    //> @classAttr GroupingMessages.byMinutesTitle   (String : "by Minutes" : IRW)
     // Title to use for the menu option which groups a time field by minutes.
     //
     // @visibility external
@@ -22707,7 +23438,7 @@ isc.GroupingMessages.addClassProperties({
     //<
     byMinutesTitle: "by Minutes",
 
-    //> @classAttr GroupingMessages.bySecondsTitle   (string : "by Seconds" : IRW)
+    //> @classAttr GroupingMessages.bySecondsTitle   (String : "by Seconds" : IRW)
     // Title to use for the menu option which groups a time field by seconds.
     //
     // @visibility external
@@ -22715,7 +23446,7 @@ isc.GroupingMessages.addClassProperties({
     //<
     bySecondsTitle: "by Seconds",
 
-    //> @classAttr GroupingMessages.byMillisecondsTitle   (string : "by Milliseconds" : IRW)
+    //> @classAttr GroupingMessages.byMillisecondsTitle   (String : "by Milliseconds" : IRW)
     // Title to use for the menu option which groups a time field by milliseconds.
     //
     // @visibility external
@@ -22723,7 +23454,7 @@ isc.GroupingMessages.addClassProperties({
     //<
     byMillisecondsTitle: "by Milliseconds",
 
-    //> @classAttr GroupingMessages.weekNumberTitle   (string : "Week #" : IRW)
+    //> @classAttr GroupingMessages.weekNumberTitle   (String : "Week #" : IRW)
     // Title to use for the week number grouping mode
     //
     // @visibility external
@@ -22731,7 +23462,7 @@ isc.GroupingMessages.addClassProperties({
     //<
     weekNumberTitle: "Week #",
 
-    //> @classAttr GroupingMessages.timezoneMinutesSuffix   (string : "minutes" : IRW)
+    //> @classAttr GroupingMessages.timezoneMinutesSuffix   (String : "minutes" : IRW)
     // Suffix to append to the timezoneMinutes grouping mode
     //
     // @visibility external
@@ -22739,7 +23470,7 @@ isc.GroupingMessages.addClassProperties({
     //<
     timezoneMinutesSuffix: "minutes",
 
-    //> @classAttr GroupingMessages.timezoneSecondsSuffix   (string : "seconds" : IRW)
+    //> @classAttr GroupingMessages.timezoneSecondsSuffix   (String : "seconds" : IRW)
     // Suffix to append to the timezoneSeconds grouping mode
     //
     // @visibility external
@@ -23411,13 +24142,13 @@ isc.defineClass("SimpleType");
 
 isc.SimpleType.addClassMethods({
 
-    //> @attr simpleType.name (identifier : null : IR)
+    //> @attr simpleType.name (Identifier : null : IR)
     // Name of the type, used to refer to the type from +link{DataSourceField.type,field.type}.
     // @serverDS allowed
     // @visibility external
     //<
 
-    //> @attr simpleType.inheritsFrom (identifier : null : IR)
+    //> @attr simpleType.inheritsFrom (Identifier : null : IR)
     // Name of another SimpleType from which this type should inherit.
     // <P>
     // Validators, if any, will be combined.  All other SimpleType properties default to the
@@ -23444,7 +24175,7 @@ isc.SimpleType.addClassMethods({
     // @visibility external
     //<
 
-    //> @attr simpleType.editorType (FormItem ClassName : null : IR)
+    //> @attr simpleType.editorType (FormItemClassName : null : IR)
     // Classname of the FormItem that should be the default for editing values of this type (eg
     // "SelectItem").
     // <P>
@@ -23458,7 +24189,7 @@ isc.SimpleType.addClassMethods({
     // @visibility external
     //<
 
-    //> @attr simpleType.readOnlyEditorType (FormItem ClassName : null : IR)
+    //> @attr simpleType.readOnlyEditorType (FormItemClassName : null : IR)
     // Classname of the FormItem that should be used to display values of this type when a field
     // is marked as +link{DataSourceField.canEdit,canEdit false} and the field is displayed
     // in an editor type component like a DynamicForm.
@@ -23469,7 +24200,7 @@ isc.SimpleType.addClassMethods({
     // @visibility external
     //<
 
-    //> @attr simpleType.filterEditorType (FormItem ClassName : null : IR)
+    //> @attr simpleType.filterEditorType (FormItemClassName : null : IR)
     // Classname of the FormItem that should be used to edit values of this type if it appears
     // in a filter row.
     // <P>
@@ -23518,11 +24249,11 @@ isc.SimpleType.addClassMethods({
     // <li>"saveLocally" Setting the value from +link{ListGrid.saveLocally()}</li>
     // </ul>
     //
-    // @param value (any) Raw data value to convert. Typically this would be a field
+    // @param value (Any) Raw data value to convert. Typically this would be a field
     //   value for some record.
     // @param reason (String) The reason your getAtomicValue() method is being
     //   called
-    // @return (any) Atomic value. This should match the underlying atomic type
+    // @return (Any) Atomic value. This should match the underlying atomic type
     //   specified by the +link{SimpleType.inheritsFrom} attribute.
     // @visibility external
     //<
@@ -23536,12 +24267,12 @@ isc.SimpleType.addClassMethods({
     // Note that if the user is editing a field which did not previously have a value, the
     // 'currentValue' will be null. This method should handle this (creating a new data value).
     //
-    // @param atomicValue (any) New atomic value. This should match the underlying
+    // @param atomicValue (Any) New atomic value. This should match the underlying
     //  atomic type specified by the +link{SimpleType.inheritsFrom} attribute.
-    // @param currentValue (any) Existing data value to be updated.
+    // @param currentValue (Any) Existing data value to be updated.
     // @param reason (String) The reason your updateAtomicValue() method is being
     //   called. See +link{getAtomicValue()} for the reason strings used by the framework
-    // @return (any) Updated data value.
+    // @return (Any) Updated data value.
     // @visibility external
     //<
 
@@ -23560,8 +24291,8 @@ isc.SimpleType.addClassMethods({
     // <li>1 if the second value is greater than the first</li>
     // </ul>
     //
-    // @param value1 (any) First value for comparison
-    // @param value2 (any) Second value for comparison
+    // @param value1 (Any) First value for comparison
+    // @param value2 (Any) Second value for comparison
     // @param field (DataSourceField | ListGridField | DetailViewerField | FormItem)
     //  Field definition from a dataSource or dataBoundComponent.
     // @return (Integer) Result of comparison, -1, 0 or 1, as described above
@@ -23593,7 +24324,7 @@ isc.SimpleType.addClassMethods({
     // may want to omit a prefix in views where it is redundant, and could check a flag
     // listGridField.omitAccountIdPrefix for this purpose.
     //
-    // @param value (any) value to be formatted
+    // @param value (Any) value to be formatted
     // @param [field] (Field) field descriptor from the component calling the formatter, if
     //                      applicable.  Depending on the calling component, this could be a
     //                      +link{ListGridField}, +link{TreeGridField}, etc
@@ -23615,7 +24346,7 @@ isc.SimpleType.addClassMethods({
     // may want to omit a prefix in views where it is redundant, and could check a flag
     // detailViewer.omitAccountIdPrefix for this purpose.
     //
-    // @param value (any) value to be formatted
+    // @param value (Any) value to be formatted
     // @param [field] (Field) field descriptor from the component calling the formatter, if
     //                      applicable.  Depending on the calling component, this could be a
     //                      +link{FormItem}, +link{DetailViewerField}, etc
@@ -23632,13 +24363,13 @@ isc.SimpleType.addClassMethods({
     // <P>
     // See also +link{simpleType.parseInput()} for parsing an edited text value back to
     // a data value.
-    // @param value (any) value to be formatted
+    // @param value (Any) value to be formatted
     // @param [field] (FormItem) Editor for this field
     // @param [form] (DynamicForm) DynamicForm containing this editor
     // @param [record] (Record) Current edit values for this record, as displayed in
     //      the edit component.
     //
-    // @return (string) formatted value
+    // @return (String) formatted value
     //
     // @visibility external
     //<
@@ -23655,14 +24386,14 @@ isc.SimpleType.addClassMethods({
     // @param [record] (Record) Current edit values for this record, as displayed in
     //      the edit component.
     //
-    // @return (any) data value derived from display string passed in.
+    // @return (Any) data value derived from display string passed in.
     //
     // @visibility external
     //<
 
     //> @classMethod SimpleType.getType()
     // Retrieve a simpleType definition by type name
-    // @param typeName (string) the <code>name</code> of the simpleType to return
+    // @param typeName (String) the <code>name</code> of the simpleType to return
     // @return (SimpleType) simple type object
     // @visibility external
     //<
@@ -23830,6 +24561,10 @@ isc.SimpleType.addClassMethods({
         if (type.getGroupValue == null) {
             var getGroupValue = this.getInheritedProperty(type, "getGroupValue", ds);
             if (getGroupValue != null) type.getGroupValue = getGroupValue;
+        }
+        if (type.getGroupingModes == null) {
+            var getGroupingModes = this.getInheritedProperty(type, "getGroupingModes", ds);
+            if (getGroupingModes != null) type.getGroupingModes = getGroupingModes;
         }
     },
 
@@ -24020,7 +24755,7 @@ isc.SimpleType.addClassMethods({
     // @visibility external
     //<
 
-    //> @attr summaryConfiguration.invalidSummaryValue (string : "&nbsp;" : IRWA)
+    //> @attr summaryConfiguration.invalidSummaryValue (String : "&nbsp;" : IRWA)
     // The field value to treat as an invalid value from a summary row (see
     // +link{listGrid.showGridSummary} or +link{listGrid.showGroupSummary}) or as an invalid value
     // in a summary-type field (see +link{listGridFieldType,listGridFieldType:"summary"}).
@@ -24218,8 +24953,8 @@ isc.SimpleType.addClassMethods({
     // Registers a new +link{type:SummaryFunction} by name. After calling this method,
     // developers may specify the name passed in as a standard summaryFunction
     // (for example in +link{listGridField.summaryFunction}).
-    // @param functionName (string) name for the newly registered summaryFunction
-    // @param method (function) New summary function. This function should take 2 parameters
+    // @param functionName (String) name for the newly registered summaryFunction
+    // @param method (Function) New summary function. This function should take 2 parameters
     // <ul>
     //  <li><code>records</code>: an array of records for which a summary must be generated
     //  <li><code>field</code>: a field definition
@@ -24249,7 +24984,7 @@ isc.SimpleType.addClassMethods({
     // <br>- <code>"integer"</code> defaults to <code>"sum"</code>
     // <br>- <code>"float"</code> defaults to <code>"sum"</code>.
     //
-    // @param typeName (string) type name
+    // @param typeName (String) type name
     // @param summaryFunction (SummaryFunction) summary function to set as the default for
     //   this data type.
     // @visibility external
@@ -24261,7 +24996,7 @@ isc.SimpleType.addClassMethods({
 
     //> @classMethod SimpleType.getDefaultSummaryFunction()
     // Retrieves the default summary function for some field type.
-    // @param typeName (string) type name
+    // @param typeName (String) type name
     // @return (SummaryFunction) default summary function for this data type.
     // @visibility external
     //<
@@ -24285,7 +25020,7 @@ isc.SimpleType.addClassMethods({
     //  in order to retrieve the summary value. May be specified as an explicit function
     //  or string of script to execute, or a SummaryFunction identifier
     // @param summaryConfig (SummaryConfiguration) config that affects summary calculation
-    // @return (any) summary value generated from the applied SummaryFunction
+    // @return (Any) summary value generated from the applied SummaryFunction
     // @visibility external
     //<
 
@@ -24498,7 +25233,7 @@ isc.defineClass("MiniNavControl", "StretchImgButton");
 
 isc.MiniNavControl.addProperties({
 
-    //> @attr miniNavControl.skinImgDir (URL : "images/NavigationBar" : IR)
+    //> @attr miniNavControl.skinImgDir (SCImgURL : "images/NavigationBar" : IR)
     // @visibility external
     //<
     skinImgDir:"images/NavigationBar/",
@@ -24655,7 +25390,7 @@ isc.MiniNavControl.registerStringMethods({
 // The new +link{NavigationBar.title} setting. If unset, the <code>title</code> is not changed.
 // @visibility external
 //<
-//> @attr NavigationBarViewState.controls (Array of string or canvas : null : IRW)
+//> @attr NavigationBarViewState.controls (Array of String | Array of Canvas : null : IRW)
 // The new +link{NavigationBar.controls} setting. If unset, the <code>controls</code> array
 // is not changed.
 // @visibility external
@@ -24794,7 +25529,6 @@ isc.NavigationBar.addProperties({
         direction: "back",
         clipTitle: true,
         iconSize: 16,
-
         click : function () {
             var creator = this.creator;
             if (!creator._animating && creator.navigationClick != null) {
@@ -24906,7 +25640,7 @@ isc.NavigationBar.addProperties({
     },
     showRightButton:false,
 
-    //> @attr navigationBar.controls (Array of string or canvas : null : IRW)
+    //> @attr navigationBar.controls (Array of String | Array of Canvas : null : IRW)
     // Controls to show in the navigation bar. The auto children names
     // "leftButton", "titleLabel", "rightButton" may be used to show the standard
     // navigation bar controls, as well as any Canvases (which will be embedded directly
@@ -25135,6 +25869,7 @@ isc.NavigationBar.addProperties({
                 title: isc.emptyString,
                 visibility: isc.Canvas.HIDDEN
             });
+
             this.addChild(leftIconButton);
 
             var oldLeftTitleButton = this._oldLeftTitleButton = this.createAutoChild("leftButton", {
@@ -25273,7 +26008,7 @@ isc.NavigationBar.addProperties({
 
     //> @method navigationBar.setCustomNavControl()
     // Setter to update the +link{navigationBar.customNavControl} at runtime.
-    // @param controls (Array of string or canvas)
+    // @param controls (Array of String | Array of Canvas)
     // @visibility external
     //<
     setCustomNavControl : function (canvas) {
@@ -25391,7 +26126,6 @@ isc.NavigationBar.addProperties({
 
         } else {
             var useCSSTransitions = isc.Browser._supportsCSSTransitions && this.skinUsesCSSTransitions;
-
 
 
             // Create an event mask peer covering the NavigationBar to intercept all UI events.
@@ -25593,17 +26327,15 @@ isc.NavigationBar.addProperties({
             animationInfo.newMembers = newMembers;
 
 
-
             if (oldShowLeftButton || newShowLeftButton) {
                 if (oldShowLeftButton) {
                     var oldLeftTitleButton = this._oldLeftTitleButton;
-                    oldLeftTitleButton.setLeft(oldAutoFitInfo._leftButtonLeft);
+                    oldLeftTitleButton.moveTo(oldAutoFitInfo._leftButtonLeft, this.leftButton.getTop());
                     oldLeftTitleButton.setOpacity(null);
                     oldLeftTitleButton.setTitle(oldAutoFitInfo.leftButtonTitle);
                     oldLeftTitleButton.setVisibility(isc.Canvas.INHERIT);
                     oldLeftTitleButton.redrawIfDirty();
                 }
-
 
                 this.leftButton.setVisibility(isc.Canvas.INHERIT);
                 if ((oldShowLeftButton && !newShowLeftButton) ||
@@ -25638,6 +26370,7 @@ isc.NavigationBar.addProperties({
                     this.leftButton.setIcon(isc.Canvas._blankImgURL);
                     this._leftIconButton.setIcon(this.leftButtonIcon);
 
+
                     // Position the _leftIconButton over the leftButton so that the position of the
                     // icon would be the same if the leftButton's icon had not been changed to the
                     // blank image.
@@ -25647,19 +26380,21 @@ isc.NavigationBar.addProperties({
                         (oldShowLeftButton && newShowLeftButton))
                     {
                         var oldAutoFitInfo = animationInfo.oldAutoFitInfo;
-                        this._leftIconButton.setLeft(oldAutoFitInfo._leftButtonLeft +
+                        this._leftIconButton.moveTo(oldAutoFitInfo._leftButtonLeft +
                                                      (leftIconOrientation
                                                       ? 0
-                                                      : (oldAutoFitInfo._leftButtonWidth - leftIconButtonWidth)));
+                                                      : (oldAutoFitInfo._leftButtonWidth - leftIconButtonWidth)),
+                                                    this.leftButton.getTop());
                         // We will either be fading the _leftIconButton out or not animating it.
                         this._leftIconButton.setOpacity(null);
                     } else {
 
                         var newAutoFitInfo = animationInfo.newAutoFitInfo;
-                        this._leftIconButton.setLeft(newAutoFitInfo._leftButtonLeft +
+                        this._leftIconButton.moveTo(newAutoFitInfo._leftButtonLeft +
                                                      (leftIconOrientation
                                                       ? 0
-                                                      : (newAutoFitInfo._leftButtonWidth - leftIconButtonWidth)));
+                                                      : (newAutoFitInfo._leftButtonWidth - leftIconButtonWidth)),
+                                                    this.leftButton.getTop());
                         // We will be fading the _leftIconButton in.
                         this._leftIconButton.setOpacity(0);
                     }
@@ -25829,6 +26564,16 @@ isc.NavigationBar.addProperties({
                 }
 
 
+                if (transitioningElements.isEmpty()) {
+
+                    this._leftIconButton._origStyleName     = null;
+                    this._oldLeftTitleButton._origStyleName = null;
+                    this.leftButton._origStyleName          = null;
+                    this._oldTitleLabel._origStyleName      = null;
+                    this.titleLabel._origStyleName          = null;
+                    return;
+                }
+
                 if (this._animateStateChangeTimer != null) {
                     isc.Timer.clear(this._animateStateChangeTimer);
                     this._animateStateChangeTimer = null;
@@ -25960,6 +26705,7 @@ isc.NavigationBar.addProperties({
             isc.Timer.clear(this._animateStateChangeTimer);
             this._animateStateChangeTimer = null;
         }
+        this._pendingAnimateStateChangeCall = false;
 
         var animationInfo = this._animationInfo,
             Canvas_setStyleName = isc.Canvas._instancePrototype.setStyleName,
@@ -26687,6 +27433,12 @@ isc.NavigationBar.addProperties({
             innerRightExtra = 0,
             rightButtonWidth = 0,
             outerRightExtra = 0;
+
+        // Account for any space on the left due to the layout margin
+        if (this.layoutMargin) {
+            outerLeftExtra += this.layoutMargin;
+            outerRightExtra += this.layoutMargin;
+        }
 
         var members = viewState.members;
 
@@ -27421,7 +28173,7 @@ _addPagesToPagesContainer : function (pages) {
 
 setPages : function (pages) {
     if (pages == null) {
-        this.pages.map("deparent");
+        this.pages.callMethod("deparent");
         this.pages.setLength(0);
     } else {
         var pagesToRemove,
@@ -27441,7 +28193,7 @@ setPages : function (pages) {
                 if (!pages.contains(currentPage)) pagesToRemove.add(currentPage);
             }
         }
-        pagesToRemove.map("deparent");
+        pagesToRemove.callMethod("deparent");
         currentPages.setArray(pages);
         this._addPagesToPagesContainer(pages);
     }
@@ -28745,12 +29497,12 @@ isc.SplitPane.addProperties({
             this.setProperty("vertical", true);
 
             this.leftLayout.removeMembers(this.leftLayout.members);
-
             this.portraitSidePanel.setPagedPanel(this._pagedPanel);
-
             this.updateDetailToolStrip();
-            this.setMembers([this.detailToolStrip]);
-            if (this.detailPane != null) this.addMember(this.detailPane);
+
+            var newMembers = [this.detailToolStrip];
+            if (this.detailPane != null) newMembers.add(this.detailPane);
+            this.setMembers(newMembers);
 
             var pages;
             if (prevConfig !== "portrait") {
@@ -29241,6 +29993,8 @@ isc.SplitPane.addProperties({
     // @visibility external
     //<
     showNavigationPane : function (direction, fromHistoryCallback, forceUIRefresh) {
+        if (!this.navigationPane || !this.navigationPane.isVisible()) forceUIRefresh = true;
+
         var changed = this.currentPane != null && this.currentPane !== "navigation";
         this.currentPane = "navigation";
         // If coming from the history callback, then we need to refresh the UI because the
@@ -29318,11 +30072,15 @@ isc.SplitPane.addProperties({
     // is <code>true</code>, this is the direction passed to +link{NavigationBar.setViewState()}.
     // @visibility external
     //<
-    showListPane : function (listPaneTitle, backButtonTitle, direction, fromHistoryCallback, forceUIRefresh) {
+    showListPane : function (listPaneTitle, backButtonTitle, direction, fromHistoryCallback,
+                             forceUIRefresh)
+    {
         if (!this._hasListPane()) {
             this.logWarn("Attempted to show the list pane, but this SplitPane does not have a list pane. Ignoring.");
             return;
         }
+
+        if (!this.listPane || !this.listPane.isVisible()) forceUIRefresh = true;
 
         var changed = (this.currentPane !== "list");
         if (listPaneTitle != null) this.listTitle = listPaneTitle;
@@ -29330,7 +30088,8 @@ isc.SplitPane.addProperties({
         this.currentPane = "list";
         // If coming from the history callback, then we need to refresh the UI because the
         // list title might be different or there might be an overridden back button title.
-        this.updateUI(listPaneTitle != null || backButtonTitle != null || fromHistoryCallback || forceUIRefresh, direction);
+        this.updateUI(listPaneTitle != null || backButtonTitle != null ||
+                      fromHistoryCallback || forceUIRefresh, direction);
 
         if (changed) {
             if (!fromHistoryCallback) {
@@ -29402,14 +30161,19 @@ isc.SplitPane.addProperties({
     // is <code>true</code>, this is the direction passed to +link{NavigationBar.setViewState()}.
     // @visibility external
     //<
-    showDetailPane : function (detailPaneTitle, backButtonTitle, direction, fromHistoryCallback, forceUIRefresh) {
+    showDetailPane : function (detailPaneTitle, backButtonTitle, direction, fromHistoryCallback,
+                               forceUIRefresh)
+    {
+        if (!this.detailPane || !this.detailPane.isVisible()) forceUIRefresh = true;
+
         var changed = (this.currentPane !== "detail");
         if (detailPaneTitle != null) this.detailTitle = detailPaneTitle;
         if (backButtonTitle != null) this._overriddenBackButtonTitle = backButtonTitle;
         this.currentPane = "detail";
         // If coming from the history callback, then we need to refresh the UI because the
         // detail title might be different or there might be an overridden back button title.
-        this.updateUI(detailPaneTitle != null || backButtonTitle != null || fromHistoryCallback || forceUIRefresh, direction);
+        this.updateUI(detailPaneTitle != null || backButtonTitle != null ||
+                      fromHistoryCallback || forceUIRefresh, direction);
 
         if (changed) {
             if (!fromHistoryCallback) {
@@ -29885,6 +30649,7 @@ isc.NavStack.addProperties({
 // and +link{layout.vPolicy} do apply to deck.  However, trying to manipulate
 // <code>deck.members</code> with APIs such as +link{layout.addMember()} is not supported and
 // will have undefined results.
+// @inheritsFrom Layout
 // @treeLocation Client Reference/Layout
 // @visibility external
 //<
@@ -29914,7 +30679,7 @@ isc.Deck.addProperties({
     // <p>
     // If the passed pane is not contained in this <code>Deck</code>, logs a warning and does
     // nothing.
-    // @param pane (identifier | Canvas) the pane to show, as either a <code>Canvas</code> or
+    // @param pane (Canvas | GlobalId) the pane to show, as either a <code>Canvas</code> or
     // the +link{Canvas.ID}
     // @visibility external
     //<
@@ -29953,14 +30718,39 @@ isc.Deck.addProperties({
 
     setPanes : function (panes) {
         if (panes == null) panes = [];
-        else {
-            var currentPane = this.currentPane;
-            for (var i = 0, numPanes = panes.length; i < numPanes; ++i) {
-                var pane = panes[i];
-                pane.setVisibility(pane === currentPane ? isc.Canvas.INHERIT : isc.Canvas.HIDDEN);
+
+        // Create autoChild panes or grab references to panes by ID
+        for (var i = 0, numPanes = panes.length; i < numPanes; ++i) {
+            if (panes[i] != null && !isc.isA.Canvas(panes[i])) {
+                var pane = panes[i],
+                    paneID = pane.replace("autoChild:","")
+                ;
+
+                panes[i] = pane = this.createCanvas(pane);
+                if (pane) pane._paneID = paneID;
+            }
+        }
+
+        // Update pane visibility leaving at most one pane visible (currentPane)
+        var currentPane = this.currentPane;
+        for (var i = 0, numPanes = panes.length; i < numPanes; ++i) {
+            if (panes[i] != null) {
+                var pane = panes[i],
+                    paneID = pane._paneID || pane.ID,
+                    isCurrentPane = (currentPane != null &&
+                            (isc.isA.String(currentPane) ? (paneID == currentPane) : (pane === currentPane)))
+                ;
+
+                pane.setVisibility(isCurrentPane ? isc.Canvas.INHERIT : isc.Canvas.HIDDEN);
+                if (isCurrentPane) this.currentPane = pane;
             }
         }
         this.panes = panes;
+
+        // Clear currentPane if it does not reference an existing pane
+        if (this.currentPane != null && this.panes != null && !this.panes.contains(this.currentPane)) {
+            this.currentPane = null;
+        }
 
         this.setMembers(panes);
 
@@ -29998,9 +30788,6 @@ isc.Deck.addProperties({
 
     initWidget : function () {
         this.Super("initWidget", arguments);
-        if (this.currentPane != null && this.panes != null && !this.panes.contains(this.currentPane)) {
-            this.currentPane = null;
-        }
         this.setPanes(this.panes);
     },
 
@@ -30081,6 +30868,7 @@ isc.Deck.registerStringMethods({
 // handler to call +link{deck.setCurrentPane()} with a component ID stored as an attribute of
 // each Record.
 //
+// @inheritsFrom SplitPane
 // @treeLocation Client Reference/Layout
 // @visibility external
 //<
@@ -30263,7 +31051,7 @@ isc.NavPanel.addProperties({
     // @visibility external
     //<
 
-    //> @attr navPanel.currentItemId (identifier : null : IRW)
+    //> @attr navPanel.currentItemId (Identifier : null : IRW)
     // The ID of the current +link{NavItem} whose +link{NavItem.pane,pane} is showing in the
     // +link{NavPanel.navDeck,navDeck}.  The <code>NavItem</code> must be an item of this
     // <code>NavPanel</code> if set.
@@ -30281,7 +31069,7 @@ isc.NavPanel.addProperties({
     // @visibility external
     //<
 
-    //> @attr navItem.id (identifier : null : IR)
+    //> @attr navItem.id (Identifier : null : IR)
     // An optional ID for this <code>NavItem</code>.  If specified, this must be unique within
     // the <code>NavPanel</code>.
     // @visibility external
@@ -30323,7 +31111,7 @@ isc.NavPanel.addProperties({
     // @visibility external
     //<
 
-    //> @attr navItem.pane (Canvas | identifier : null : IR)
+    //> @attr navItem.pane (Canvas | Identifier : null : IR)
     // Component to display in the +link{navPanel.navDeck} when this <code>NavItem</code> is
     // selected.
     // <p>
@@ -30485,7 +31273,7 @@ isc.NavPanel.addProperties({
     // Setter for +link{NavPanel.currentItemId}.  Note that +link{NavPanel.currentItem} is also
     // updated by this setter and <code>this.currentItemId</code> may be normalized to a different
     // identifier.
-    // @param [newCurrentItemId] (identifier) the ID of the new current item, which may be either
+    // @param [newCurrentItemId] (Identifier) the ID of the new current item, which may be either
     // the item's +link{NavItem.id} or the ID of the item's +link{NavItem.pane}.  May be
     // <code>null</code> or an empty string to hide the current item.  If the item with ID
     // <code>newCurrentItemId</code> is a separator or header item, then setCurrentItemId() has no effect.
@@ -30644,11 +31432,10 @@ isc.NavPanel.addProperties({
     //<EditMode
 });
 isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._debugModules.push('Foundation');isc.checkForDebugAndNonDebugModules();isc._moduleEnd=isc._Foundation_end=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc.Log&&isc.Log.logIsInfoEnabled('loadTime'))isc.Log.logInfo('Foundation module init time: ' + (isc._moduleEnd-isc._moduleStart) + 'ms','loadTime');delete isc.definingFramework;if (isc.Page) isc.Page.handleEvent(null, "moduleLoaded", { moduleName: 'Foundation', loadTime: (isc._moduleEnd-isc._moduleStart)});}else{if(window.isc && isc.Log && isc.Log.logWarn)isc.Log.logWarn("Duplicate load of module 'Foundation'.");}
-
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v11.1d_2017-03-13/LGPL Deployment (2017-03-13)
+  Version v12.0p_2018-06-28/LGPL Deployment (2018-06-28)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
