@@ -1008,12 +1008,13 @@ function getRelationsForViewConcept(forView, callback) {
 
   var viewRec = viewRS.find("SysCode", forView);
   
+  if (viewRec) {
   var conceptDS = isc.DataSource.get("Concept");
   var filter = {ID: viewRec.ForConcept};
   var conceptRec = conceptDS.getCacheData().find(filter);
   var conceptName = conceptRec.SysCode;
   
-  if (viewRec) {
+//  if (viewRec) {
     getRelationsForConcept(viewRec.ForConcept, 
         function (rel) {
           var ds = isc.DataSource.get(conceptName);

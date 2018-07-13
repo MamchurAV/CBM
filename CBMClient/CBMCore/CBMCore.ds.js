@@ -1665,6 +1665,15 @@ isc.CBMDataSource.create({
    displayField: "Description",
    hidden: true
    },*/ {
+    name: "MenuItemActionType", // TODO: substitute with Method link
+    type: "MenuItemActionType",
+    title: "Item Action Type",
+    editorType: "ComboBoxItem",
+    foreignKey: "MenuItemActionType.SysCode",
+    optionDataSource: "MenuItemActionType",
+    valueField: "SysCode",
+    displayField: "Description"
+  }, {
     name: "CalledMethod", // TODO: substitute with Method link
     type: "PrgFunction",
     title: "Called method",
@@ -1680,6 +1689,62 @@ isc.CBMDataSource.create({
     colSpan: 2,
     length: 2000
   }]
+});
+
+
+isc.CBMDataSource.create({
+  ID: "MenuItemActionType",
+  clientOnly: true,
+  titleField: "SysCodeDescription",
+  infoField: "Description",
+  fields: [{
+    name: "Odr",
+    type: "integer",
+    title: "Order",
+    length: 4,
+    //hidden: true,
+    required: true,
+    inList: true
+  }, {
+    name: "SysCode",
+    type: "text",
+    primaryKey: true,
+    title: "Code of Concept called by this Item",
+    length: 400,
+    required: true,
+    inList: true
+  }, {
+    name: "Description",
+    type: "multiLangText",
+    title: "Description of Item",
+    //      titleOrientation: "top",
+    colSpan: 5,
+    length: 400,
+    inList: true
+  }],
+  
+   testData: [{
+    Odr: 0,
+    SysCode: 'Empty',
+    Description: 'Empty information'
+  }, {
+    Odr: 1,
+    SysCode: 'List',
+    Description: 'List'
+  }, {
+    Odr: 2,
+    SysCode: 'SingleInstance',
+    Description: 'Existing instance of some concept selected by some filter'
+  }, {
+    Odr: 3,
+    SysCode: 'Form',
+    Description: 'Some singleton form - wide variants of use'
+  }, {
+    Odr: 4,
+    SysCode: 'Command',
+    Description: 'Command'
+  }]
+
 });
 
 //========================================================================
