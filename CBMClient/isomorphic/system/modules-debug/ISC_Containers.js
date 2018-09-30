@@ -1,7 +1,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version v12.0p_2018-06-28/LGPL Deployment (2018-06-28)
+  Version v12.0p_2018-09-15/LGPL Deployment (2018-09-15)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,9 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
 
-if (window.isc && isc.version != "v12.0p_2018-06-28/LGPL Deployment" && !isc.DevUtil) {
+if (window.isc && isc.version != "v12.0p_2018-09-15/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'v12.0p_2018-06-28/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'v12.0p_2018-09-15/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -846,17 +846,17 @@ fixLayout : function () {
     var barPos = this.tabBarPosition;
     if (barPos === isc.Canvas.TOP) {
         //bl.setRect(0, null, this.getScrollWidth(true), null);
-        bl.setWidth(this.getScrollWidth(true));
+        bl.setWidth(Math.max(this.getScrollWidth(true), 1));
     } else if (barPos === isc.Canvas.RIGHT) {
         //bl.setRect(null, 0, null, this.getScrollHeight(true));
-        bl.setHeight(this.getScrollHeight(true));
+        bl.setHeight(Math.max(this.getScrollHeight(true), 1));
     } else if (barPos === isc.Canvas.BOTTOM) {
         //bl.setRect(0, null, this.getScrollWidth(true), null);
-        bl.setWidth(this.getScrollWidth(true));
+        bl.setWidth(Math.max(this.getScrollWidth(true), 1));
     } else {
 
         //bl.setRect(null, 0, null, this.getScrollHeight(true));
-        bl.setHeight(this.getScrollHeight(true));
+        bl.setHeight(Math.max(this.getScrollHeight(true), 1));
     }
 
 
@@ -13947,17 +13947,23 @@ fixLayout : function (deltaX, deltaY) {
                                        tb.baseLineThickness);
 
     // lay out the tabBar and paneContainer, depending on where the tabBar is.
+    var tbWidth, tbHeight;
+    if (this.showTabBar || !this.shrinkElementOnHide) {
+
+        tbWidth =  tb.getWidth();
+        tbHeight = tb.getHeight();
+    } else {
+        tbHeight = tbWidth = tbOverlap = 0;
+    }
+
     var vertical;
-    var tbHeight = (!this.showTabBar && this.shrinkElementOnHide) ? 0 : tb.getHeight();
-    var tbWidth = (!this.showTabBar && this.shrinkElementOnHide ) ? 0 : tb.getWidth();
-    tbOverlap = (!this.showTabBar && this.shrinkElementOnHide ) ? 0: tbOverlap;
     switch (this.tabBarPosition) {
         case isc.Canvas.TOP :
             vertical = false;
             pc.setRect(0,
                        tbHeight - tbOverlap,
                        this.getWidth(),
-                       this.getHeight() - tbHeight + tbOverlap
+                       Math.max(1, this.getHeight() - tbHeight + tbOverlap)
                       );
             break;
         case isc.Canvas.BOTTOM :
@@ -13966,14 +13972,14 @@ fixLayout : function (deltaX, deltaY) {
             pc.setRect(0,
                        0,
                        this.getWidth(),
-                       this.getHeight() - tbHeight + tbOverlap
+                       Math.max(1, this.getHeight() - tbHeight + tbOverlap)
                       );
             break;
         case isc.Canvas.LEFT :
             vertical = true;
             pc.setRect(tbWidth - tbOverlap,
                        0,
-                       this.getWidth() - tbWidth + tbOverlap,
+                       Math.max(1, this.getWidth() - tbWidth + tbOverlap),
                        this.getHeight()
                       );
             break;
@@ -13982,7 +13988,7 @@ fixLayout : function (deltaX, deltaY) {
             tb.setLeft(this.getWidth() - tbWidth);
             pc.setRect(0,
                        0,
-                       this.getWidth() - tbWidth + tbOverlap,
+                       Math.max(1, this.getWidth() - tbWidth + tbOverlap),
                        this.getHeight()
                       );
             break;
@@ -14369,7 +14375,7 @@ _adjustControlClipping : function (vertical) {
 
     if (vertical) {
         // size the tabBar so as to show all the controls
-        tb.setHeight(Math.max(0, this.getViewportHeight() -
+        tb.setHeight(Math.max(1, this.getViewportHeight() -
                               this.tabBarControlLayout.getHeight()));
         // except, ensure the first tab is always visible
         if (firstTab && firstTab.isDrawn()) {
@@ -14382,7 +14388,7 @@ _adjustControlClipping : function (vertical) {
         }
     } else {
         // size the tabBar so as to show all the controls
-        tb.setWidth(Math.max(0, this.getViewportWidth() -
+        tb.setWidth(Math.max(1, this.getViewportWidth() -
                              this.tabBarControlLayout.getWidth()));
         // except, ensure the first tab is always visible
         if (firstTab && firstTab.isDrawn()) {
@@ -15205,7 +15211,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version v12.0p_2018-06-28/LGPL Deployment (2018-06-28)
+  Version v12.0p_2018-09-15/LGPL Deployment (2018-09-15)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

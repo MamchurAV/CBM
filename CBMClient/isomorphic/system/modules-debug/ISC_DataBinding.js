@@ -1,7 +1,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version v12.0p_2018-06-28/LGPL Deployment (2018-06-28)
+  Version v12.0p_2018-09-15/LGPL Deployment (2018-09-15)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,9 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
 
-if (window.isc && isc.version != "v12.0p_2018-06-28/LGPL Deployment" && !isc.DevUtil) {
+if (window.isc && isc.version != "v12.0p_2018-09-15/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'v12.0p_2018-06-28/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'v12.0p_2018-09-15/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -5323,7 +5323,7 @@ isc.defineClass("DataSource");
 //     </div>
 //     <ul>
 //       <li><i>jna</i> - if testing with IE on Windows environments
-//       <li><i>servlet-api</i> - needed only if you intend to run Selenium RC from a standalone process (ie, from a normal Java program, not a webapp).
+//       <li><i>servlet-api</i> - needed only if you intend to run TestRunner from a standalone process (ie, from a normal Java program, not a webapp).
 //         <p/>
 //         However, it should <u>not</u> be deployed to a servlet container such as Tomcat or Jetty.
 //         The best case is that the file will be unused and a source of confusion for anybody looking at the webapp's library usage;
@@ -31466,6 +31466,72 @@ isc.DataSource.addClassMethods({
         return isc.DataSource._operators;
     },
 
+
+    getTypeOperators : function (typeName, ds) {
+        typeName = typeName || "text";
+
+        var typeOps = [],
+            type = isc.SimpleType.getType(typeName),
+            dsTypes = ds && ds._typeOperators
+        ;
+        if (dsTypes) {
+
+            while (type && !dsTypes[type.name]) {
+                if (!type || !type.inheritsFrom) break;
+                type = isc.SimpleType.getType(type.inheritsFrom, ds);
+            }
+            if (type) {
+                var globals = dsTypes._includeGlobals,
+                    includeGlobals = globals && globals[type.name] != false
+                ;
+                if (dsTypes[type.name]) {
+                    // add any type-specific operators
+                    typeOps.addList(dsTypes[type.name]);
+                }
+                // add any operators specified for type "_all_"
+                typeOps.addList(dsTypes["_all_"]);
+
+
+                if (!includeGlobals && typeOps.length > 0) {
+                    var validOps = isc.SimpleType.getValidOperators(type.name);
+                    if (validOps) {
+                        // if the simpleType has validOperators, restrict the list
+                        typeOps = typeOps.intersect(validOps);
+                    }
+                    return typeOps;
+                }
+            }
+        }
+
+        dsTypes = isc.DataSource._typeOperators;
+        // look up the global list of operators for this type
+        type = isc.SimpleType.getType(typeName);
+        while (type && !dsTypes[type.name]) {
+            if (!type || !type.inheritsFrom) break;
+            type = isc.SimpleType.getType(type.inheritsFrom, ds);
+        }
+
+        if (type && dsTypes[type.name]) {
+            // add type-specific operators
+            typeOps.addList(dsTypes[type.name]);
+        }
+        // add any operators specified for type "_all_"
+        typeOps.addList(dsTypes["_all_"]);
+
+        if (type) {
+            var typeValidOps = isc.SimpleType.getValidOperators(type.name);
+            if (typeValidOps) {
+                // if the simpleType has validOperators, restrict the list
+                typeOps = typeOps.intersect(typeValidOps);
+            }
+        }
+
+        typeOps = typeOps.getUniqueItems();
+
+        return typeOps;
+    },
+
+
     //> @classMethod DataSource.setTypeOperators()
     // Set the list of valid +link{OperatorId}s for a given FieldType.
     //
@@ -32905,63 +32971,7 @@ isc.DataSource.addMethods({
     // @visibility external
     //<
     getTypeOperators : function (typeName) {
-        typeName = typeName || "text";
-
-        var typeOps = [],
-            type = isc.SimpleType.getType(typeName),
-            dsTypes = this._typeOperators
-        ;
-        if (dsTypes) {
-
-            while (type && !dsTypes[type.name]) {
-                if (!type || !type.inheritsFrom) break;
-                type = isc.SimpleType.getType(type.inheritsFrom, this);
-            }
-            if (type) {
-                var globals = dsTypes._includeGlobals,
-                    includeGlobals = globals && globals[type.name] != false
-                ;
-                if (dsTypes[type.name]) {
-                    // add any type-specific operators
-                    typeOps.addList(dsTypes[type.name]);
-                }
-                // add any operators specified for type "_all_"
-                typeOps.addList(dsTypes["_all_"]);
-
-
-                if (!includeGlobals && typeOps.length > 0) {
-                    if (type.validOperators) {
-                        // if the simpleType has validOperators, restrict the list
-                        typeOps = typeOps.intersect(type.validOperators);
-                    }
-                    return typeOps;
-                }
-            }
-        }
-
-        dsTypes = isc.DataSource._typeOperators;
-        // look up the global list of operators for this type
-        type = isc.SimpleType.getType(typeName);
-        while (type && !dsTypes[type.name]) {
-            if (!type || !type.inheritsFrom) break;
-            type = isc.SimpleType.getType(type.inheritsFrom, this);
-        }
-
-        if (type && dsTypes[type.name]) {
-            // add type-specific operators
-            typeOps.addList(dsTypes[type.name]);
-        }
-        // add any operators specified for type "_all_"
-        typeOps.addList(dsTypes["_all_"]);
-
-        if (type && type.validOperators) {
-            // if the simpleType has validOperators, restrict the list
-            typeOps = typeOps.intersect(type.validOperators);
-        }
-
-        typeOps = typeOps.getUniqueItems();
-
-        return typeOps;
+        return isc.DataSource.getTypeOperators(typeName, this)
     },
 
     //> @method dataSource.setTypeOperators()
@@ -33000,6 +33010,31 @@ isc.DataSource.addMethods({
         var type = field.type || "text";
         if (!baseFieldType) type = "text";
         return this.getTypeOperators(type);
+    },
+
+    //> @method dataSource.getFieldDefaultOperator()
+    // Get the default +link{OperatorId} for this field.
+    // <P>
+    // By default, if +link{dataSourceField.defaultOperator,field.defaultOperator} is set,
+    // returns that value, otherwise returns the data-type default from
+    // +link{SimpleType.defaultOperator}.
+    // @param field (String | DataSourceField) Field (or field name) to obtain the default
+    //                                         operator for
+    // @return (Array of OperatorId) available Operators
+    // @group advancedFilter
+    // @visibility external
+    //<
+    getFieldDefaultOperator : function (field) {
+        if (isc.isA.String(field)) field = this.getField(field);
+        if (!field) return null;
+
+        // return dataSourceField.defaultOperator if it's set
+        if (field && field.defaultOperator) return field.defaultOperator;
+        // otherwise, return the default from the associated SimpleType
+        var baseFieldType = isc.SimpleType.getType(field.type);
+        var type = field.type || "text";
+        if (!baseFieldType) type = "text";
+        return isc.SimpleType.getDefaultOperator(type);
     },
 
     //> @method dataSource.getFieldOperatorMap()
@@ -33257,7 +33292,7 @@ isc.DataSource.addMethods({
 });
 
 //> @attr dataSourceField.validOperators (Array of OperatorId : null : IR)
-// List of operators valid on this field.
+// Set of search-operators valid for this field.
 // <P>
 // If not specified, all operators that are valid for the field type are allowed.
 // @group advancedFilter
@@ -33265,14 +33300,18 @@ isc.DataSource.addMethods({
 // @visibility external
 //<
 
-//> @attr simpleType.validOperators (Array of OperatorId : null : IR)
-// Set of search operators valid for this type.
+//> @attr dataSourceField.defaultOperator (OperatorId : null : IR)
+// The default search-operator for this field.
 // <P>
-// If not specified, the +link{inheritsFrom,inherited} type's operators will be used, finally
-// defaulting to the default operators for the basic types (eg, integer).
+// If not specified, falls back to the default specified for the field's
+// +link{SimpleType.defaultOperator, data-type}.
 // @group advancedFilter
+// @serverDS allowed
 // @visibility external
 //<
+
+
+
 
 
 
@@ -33788,7 +33827,7 @@ isc._initBuiltInOperators = function () {
             if (isDate) {
                 fieldValue = new Date(-8640000000000000);
             } else if (isNumber) {
-                fieldValue = Number.MIN_VALUE;
+                fieldValue = -Number.MAX_VALUE;
             } else {
                 fieldValue = "";
             }
@@ -35620,22 +35659,25 @@ isc._initBuiltInOperators = function () {
                                                "iNotContainsField", "iNotStartsWithField", "iNotEndsWithField",
                                                "matchesPattern", "iMatchesPattern", "containsPattern", "iContainsPattern",
                                                "inSet", "notInSet", "iStartsWithPattern"]);
-
-    isc.DataSource.setTypeOperators("integer", ["iBetween","iBetweenInclusive","iEqualsField", "iNotEqualField",
+    isc.DataSource.setTypeOperators("integer", ["inSet", "notInSet"]);
+    /*
+                                               "iBetween","iBetweenInclusive","iEqualsField", "iNotEqualField",
                                                "containsField", "startsWithField", "endsWithField",
                                                "iContainsField", "iStartsWithField", "iEndsWithField",
                                                "notContainsField", "notStartsWithField", "notEndsWithField",
                                                "iNotContainsField", "iNotStartsWithField", "iNotEndsWithField",
                                                "inSet", "notInSet"]);
-
+*/
+    isc.DataSource.setTypeOperators("float", ["inSet", "notInSet"]);
+/*
     isc.DataSource.setTypeOperators("float", ["iBetween","iBetweenInclusive","iEqualsField", "iNotEqualField",
                                                "containsField", "startsWithField", "endsWithField",
                                                "iContainsField", "iStartsWithField", "iEndsWithField",
                                                "notContainsField", "notStartsWithField", "notEndsWithField",
                                                "iNotContainsField", "iNotStartsWithField", "iNotEndsWithField",
                                                "inSet", "notInSet"]);
-
-    isc.DataSource.setTypeOperators("date", ["iBetween","iBetweenInclusive"]);
+*/
+//    isc.DataSource.setTypeOperators("date", ["iBetween","iBetweenInclusive"]);
 };
 
 isc._initBuiltInOperators();
@@ -50105,6 +50147,7 @@ sortByProperty : function (property, sortDirection, normalizer, context) {
         // If this is from a cache update, and we're sorting, avoid passing the updated
         // record info to dataChanged()
         delete this._lastUpdateOperation;
+        delete this._lastUpdateDataArray;
         delete this._lastUpdateData;
         delete this._lastOrigRecord;
         delete this._lastUpdateRow;
@@ -50529,6 +50572,7 @@ _doneChangingData : function (operation, filterChanged, dataFromCache) {
         this.dataChanged(operation, record, row, this._lastUpdateData, filterChanged, dataFromCache);
         // clear all 'single row update' type flags unconditionally once we fire dataChanged
         delete this._lastUpdateOperation;
+        delete this._lastUpdateDataArray;
         delete this._lastOrigRecord;
         delete this._lastUpdateRow;
         delete this._lastUpdateRecord;
@@ -52131,6 +52175,7 @@ invalidateCache : function () {
     // If we're updating the cache from a server operation, avoid passing the updated
     // record info to dataChanged()
     delete this._lastUpdateOperation;
+    delete this._lastUpdateDataArray;
     delete this._lastUpdateRecord;
     delete this._lastUpdateData;
     delete this._lastOrigRecord;
@@ -54389,6 +54434,7 @@ addCacheData : function (updateData) {
         criteria = (this._localCriteria || this.criteria),
         haveCriteria = this.haveCriteria(criteria),
         pk = this.getDataSource().getPrimaryKeyFieldNames()[0],
+        idField = this.idField || pk,
         checkParent = (this.idField != undef && this.parentIdField != undef)
     ;
 
@@ -54408,7 +54454,7 @@ addCacheData : function (updateData) {
                 addRow[this.idField].toString()) + ").  Skipping this node.");
             continue;
         }
-        this._addNodeToCache(this.completeTree, addRow, pk);
+        this._addNodeToCache(this.completeTree, addRow, idField);
     }
 
     // now turn to visible tree - remove any rows of new data that don't pass filtering
@@ -54436,16 +54482,16 @@ addCacheData : function (updateData) {
                 addRow[this.idField].toString()) + ").  Skipping this node.");
             continue;
         }
-        this._addNodeToCache(this, addRow, pk);
+        this._addNodeToCache(this, addRow, idField);
     }
 },
 
-_addNodeToCache : function (tree, node, pk) {
+_addNodeToCache : function (tree, node, idField) {
 
 
     var parentId = node[this.parentIdField], parentNode;
 
-    if (parentId != null) parentNode = tree.find(pk, parentId);
+    if (parentId != null) parentNode = tree.find(idField, parentId);
     else {
         if (this.defaultNewNodesToRoot || tree.rootValue == null) parentNode = tree.getRoot();
         else parentNode = null;
@@ -54569,21 +54615,22 @@ _updateNodeInCache : function (tree, updateRow, matchesFilter, criteria, mismatc
 
     var ds = this.getDataSource(),
         pk = ds.getPrimaryKeyFieldNames()[0],
-        node = tree.find(pk, updateRow[pk])
+        idField = this.idField || pk,
+        node = tree.find(idField, updateRow[idField])
     ;
     // Very likely we'll see null nodes - we probably haven't opened their parent folder yet
     // However - check for the case where we have and if so, add to our data-set
     if (node == null) {
         if (matchesFilter || mismatchingParents) {
-            if (this._addNodeToCache(tree, updateRow, pk)) {
+            if (this._addNodeToCache(tree, updateRow, idField)) {
                 // non-matching; queue new node to check for children preventing its removal
-                if (!matchesFilter) mismatchingParents.add(tree.find(pk, updateRow[pk]));
+                if (!matchesFilter) mismatchingParents.add(tree.find(idField, updateRow[idField]));
 
                 // This situation is valid - a developer updated a child of a parent we haven't
                 // loaded (possibly in another tree on the page) and shifted it into a
                 // parent we have loaded
                 this.logInfo("updated row returned by server doesn't match any cached row, " +
-                             " adding as new row.  Primary key value: " + this.echo(updateRow[pk]) +
+                             " adding as new row.  idField value: " + this.echo(updateRow[idField]) +
                              ", complete row: " + this.echo(updateRow));
                 if (debugTotals) debugTotals.addedRows++;
             }
@@ -54658,27 +54705,28 @@ removeCacheData : function (updateData) {
     if (!isc.isAn.Array(updateData)) updateData = [updateData];
 
     var pk = this.getDataSource().getPrimaryKeyFieldNames()[0],
+        idField = this.idField || pk,
         criteria = (this._localCriteria || this.criteria),
         haveCriteria = this.haveCriteria(criteria)
     ;
     // Update cache of the entire tree (all nodes)
 
     if (this.completeTree) {
-        this._removeNodesFromCache(this.completeTree, updateData, pk);
+        this._removeNodesFromCache(this.completeTree, updateData, idField);
     }
     // Update the visible tree
-    this._removeNodesFromCache(this, updateData, pk,
+    this._removeNodesFromCache(this, updateData, idField,
         this.keepParentsOnFilter && haveCriteria ? criteria : null);
 },
 
-_removeNodesFromCache : function (tree, updateData, pk, criteria) {
+_removeNodesFromCache : function (tree, updateData, idField, criteria) {
 
 
     // Build list of nodes to be removed
     var paged = this.isPaged(),
         nodes = [];
     for (var i = 0; i < updateData.length; i++) {
-        var node = tree.find(pk, updateData[i][pk]);
+        var node = tree.find(idField, updateData[i][idField]);
         if (node == null) {
             this.logWarn("Cache synch: couldn't find deleted node:" + this.echo(updateData[i]));
         } else if (!(paged && isc.isA.ResultSet(this.getChildren(this.getParent(node))))) {
@@ -62376,9 +62424,20 @@ isc.RulesEngine.addProperties({
                   }
 
                   if (targetContext == null || targetContext.object == null) {
-                      this.logWarn("RulesEngine unable to resolve locator specified on rule. " +
-                              (this.baseComponent ? "\nBase Component: " + this.baseComponent : "") +
-                              "\nLocator in question:\n" + currentLocator);
+                      // While destroying a hierarchy of components rules might be fired as
+                      // components are removed from the ruleScope. If the rules target another
+                      // component in the hierarchy a locator will not be valid anymore because
+                      // of the locatorMatching=restrictSuffix. Logging the bad locator is not
+                      // desired in this case so another attempt is made to use the locator without
+                      // the locatorMatching restriction. If a component is found and is being
+                      // destroyed, don't log the locator failure.
+                      currentLocator = currentLocator.replace(/,locatorMatching=restrictSuffix/, "");
+                      targetContext = isc.AutoTest.getObjectContext(currentLocator, rule.internalRule);
+                      if (!targetContext || !targetContext.object || !targetContext.object.destroying) {
+                          this.logWarn("RulesEngine unable to resolve locator specified on rule. " +
+                                  (this.baseComponent ? "\nBase Component: " + this.baseComponent : "") +
+                                  "\nLocator in question:\n" + currentLocator + " - " + isc.AutoTest.getLogFailureText() + this.getStackTrace());
+                      }
                       continue;
                   }
 
@@ -73230,7 +73289,7 @@ isc.EditProxy.addMethods({
 
         // Adjust width and height for minimum
         width = Math.max(width, minWidth);
-        if (this.inlineEditMultiline) height = Math.min(Math.max(height, 50), 200);
+        if (this.inlineEditMultiline) height = Math.max(height, 50);
         else height = minHeight;
 
         layout.setWidth(width);
@@ -77945,9 +78004,18 @@ isc.GridEditProxy.addMethods({
             children = editTree.getChildren(this.creator.editNode)
         ;
         if (children && children.length > 0) {
-            // Remove previous dataSource and field nodes
+            // Remove previous dataSource node
+            for (var i = 0; i < children.length; i++) {
+                if (isc.isA.DataSource(children[i].liveObject)) {
+                    editContext.removeNode(children[i]);
+                    break;
+                }
+            }
+
+            // Remove remaining field nodes (although they should already be gone)
+            children = editTree.getChildren(this.creator.editNode);
             for (var i = children.length -1; i >= 0; i--) {
-                editContext.removeNode(children[i]);
+                if (children[i]) editContext.removeNode(children[i]);
             }
         }
         var dataSourceEditNode = editContext.makeEditNode(dataSourcePaletteNode);
@@ -85217,7 +85285,7 @@ getFieldNames : function () {
 getFieldOperatorMap : function (field, includeHidden, valueType, omitValueType) {
     // call the local getFieldOperators() method, which may be overridden, and pass the resulting
     // list into ds.getFieldOperatorMap() as new undoc'd final param "operators"
-    var operators = this.getFieldOperators(field),
+    var operators = this._getFieldOperators(field),
         ds = this.getPrimaryDS(field),
         map = ds.getFieldOperatorMap(field, includeHidden, valueType, omitValueType, operators)
     ;
@@ -85464,8 +85532,14 @@ setupClause : function () {
                     if (criterion && criterion.operator) {
                         operatorItem.defaultValue = criterion.operator;
                     } else {
-                        // use the default operator for the data-type of the field
-                        operatorItem.defaultValue = isc.DynamicForm.getDefaultOperatorForType(field.type, null, null, field);
+                        var ds = this.getPrimaryDS();
+                        if (ds) {
+                            // use defaultOperator from the data-type of the field or simpleType
+                            operatorItem.defaultValue = ds.getFieldDefaultOperator(field.name);
+                        } else {
+                            // use defaultOperator from the simpleType
+                            operatorItem.defaultValue = isc.SimpleType.getDefaultOperator(field.type);
+                        }
                     }
                 }
 
@@ -86313,14 +86387,16 @@ updateValueItems : function (field,operator,fieldName) {
 updateOperatorDefault : function (field) {
     var item = this.clause.getItem("operator");
     if (item) {
-        item.defaultValue = isc.DynamicForm.getDefaultOperatorForType(field.type, item, null, field);
         var ds = this.getPrimaryDS(field);
         if (ds) {
-            var ops = this.getFieldOperators(field);
-            if (!ops.contains(item.defaultValue)) item.defaultValue = ops[0];
-            if (!ops.contains(item.getValue())) item.clearValue();
-
-
+            item.defaultValue = ds.getFieldDefaultOperator(field.name);
+            var ops = this._getFieldOperators(field);
+            if (ops && ops.length > 0) {
+                if (!ops.contains(item.defaultValue)) item.defaultValue = ops[0];
+                if (!ops.contains(item.getValue())) item.clearValue();
+            }
+        } else {
+            item.defaultValue = isc.SimpleType.getDefaultOperator(field.type);
         }
     }
 },
@@ -86430,6 +86506,14 @@ updateFields : function () {
     this._lastFieldName = fieldName;
 },
 
+// Wrapper for getfieldOperators. Internal calls pass field but
+// filterClause.getFieldOperators, which is public and overridable,
+// takes a fieldName. Extract the fieldName and pass both.
+_getFieldOperators : function (field) {
+    var fieldName = field && field.name;
+    return this.getFieldOperators(fieldName, field);
+},
+
 //> @method filterClause.getFieldOperators()
 // Get the list of +link{OperatorId, operatorIds} that are valid for this field.  By default,
 // calls through to the same method on +link{filterBuilder.getFieldOperators, filterBuilder},
@@ -86442,14 +86526,12 @@ updateFields : function () {
 // @return (Array of OperatorId) valid operators for this field
 // @visibility external
 //<
-getFieldOperators : function (fieldName) {
+getFieldOperators : function (fieldName, field) {
     var filterBuilder = this.getFilterBuilder();
-    if (!filterBuilder) return;
+    if (!filterBuilder) return null;
 
-    var field = this.getField(fieldName),
-        fName = field && field.name
-    ;
-    return filterBuilder.getFieldOperators(fName, field);
+    field = field || this.getField(fieldName);
+    return filterBuilder.getFieldOperators(fieldName, field);
 },
 
 // called when the user changes the topOperator via a form - inline only.  We only implement
@@ -87990,8 +88072,10 @@ validate : function () {
 //<
 getFieldOperators : function (fieldName, field) {
 
-    var ds = this.getPrimaryDS(fieldName);
-    return ds ? ds.getFieldOperators(field || fieldName) : null;
+    field = field || fieldName;
+
+    var ds = this.getPrimaryDS(field);
+    return ds ? ds.getFieldOperators(field) : null;
 },
 
 //> @method filterBuilder.getValueFieldProperties()
@@ -88173,7 +88257,7 @@ addSubClause : function (criterion) {
             while (filterBuilder.filterBuilder != null) {
                 filterBuilder = filterBuilder.filterBuilder;
             }
-            // Fire return the result of getFieldOperators on the top-most filterBuilder
+            // return the result of getFieldOperators on the top-most filterBuilder
             if (isc.isA.Function(filterBuilder.getFieldOperators)) {
                 return filterBuilder.getFieldOperators(fieldName, field);
             }
@@ -93682,8 +93766,6 @@ mainEditorDefaults: {
     dataSource:"DataSource",
     fields : [
         {name:"ID", title: "ID", required:true},
-        {name:"dropExtraFields"},
-        {name:"autoDeriveSchema"},
         //{name:"dataFormat", defaultValue:"iscServer", redrawOnChange:true},
 
         {type:"section", defaultValue:"XPath Binding",
@@ -93706,21 +93788,36 @@ mainEditorDefaults: {
 
         {type:"section", defaultValue:"SQL Binding",
          showIf:"values.serverType == 'sql' || values.serverType == 'hibernate'",
-         itemIds:["dbName", "schema", "tableName", "quoteTableName", "beanClassName"]},
+         itemIds:["dbName", "schema", "tableName"]},
         {name:"dbName", showIf:"values.serverType == 'sql'"},
         {name:"schema", showIf:"values.serverType == 'sql'"},
         {name:"tableName",
          showIf:"values.serverType == 'sql' || values.serverType == 'hibernate'"},
+
+        {type:"section", defaultValue:"Record Titles", sectionExpanded:false,
+         itemIds:["title", "pluralTitle"]},
+        {name:"title"},
+        {name:"pluralTitle"},
+        {type:"section", defaultValue:"Advanced", sectionExpanded:false,
+            itemIds:["dropExtraFields", "autoDeriveSchema", "quoteTableName", "beanClassName", "titleField"]},
+        {name:"dropExtraFields"},
+        {name:"autoDeriveSchema"},
         {name:"quoteTableName", showIf:"values.serverType == 'sql'"},
         {name:"beanClassName",
          showIf:"values.serverType == 'sql' || values.serverType == 'hibernate'"},
-
-        {type:"section", defaultValue:"Record Titles", sectionExpanded:false,
-         itemIds:["title", "pluralTitle", "titleField"]},
-        {name:"title"},
-        {name:"pluralTitle"},
         {name:"titleField"}
-    ]
+    ],
+    itemHoverStyle: "docHover",
+    titleHoverHTML : function (item) {
+        if (isc.jsdoc.hasData()) {
+            // the dataSource is the class
+            var html = isc.jsdoc.hoverHTML("DataSource", item.name);
+            if (html) return html;
+        }
+        // no doc exists for this attribute - show a hover with just the attribute name in bold so
+        // the user doesn't wait forever for the tooltip
+        return "<nobr><code><b>"+item.name+"</b></code> (no doc available)</nobr>";
+    }
 },
 
 fieldEditorDefaults: {
@@ -94698,7 +94795,7 @@ save : function () {
             var inheritsPK = false;
             if (isc.isA.DataSource(this._editingDataSource)) {
                 var allFields = this._editingDataSource.getFields(),
-                localFields = this._editingDataSource.getLocalFields();
+                    localFields = this._editingDataSource.getLocalFields();
                 for (var key in allFields) {
                     var fld = allFields[key];
                     // Catch the case that the user has overridden its inherited PK
@@ -94971,7 +95068,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version v12.0p_2018-06-28/LGPL Deployment (2018-06-28)
+  Version v12.0p_2018-09-15/LGPL Deployment (2018-09-15)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

@@ -1,7 +1,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version v12.0p_2018-06-28/LGPL Deployment (2018-06-28)
+  Version v12.0p_2018-09-15/LGPL Deployment (2018-09-15)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,9 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
 
-if (window.isc && isc.version != "v12.0p_2018-06-28/LGPL Deployment" && !isc.DevUtil) {
+if (window.isc && isc.version != "v12.0p_2018-09-15/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'v12.0p_2018-06-28/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'v12.0p_2018-09-15/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -6547,8 +6547,14 @@ getTableHTML : function (colNum, startRow, endRow, discreteCols, asyncCallback, 
     var cellHeight = this.cellHeight,
         // Do we need to write a DIV into the cell (See comments in _writeDiv())
         writeDiv = this._writeDiv(cellHeight),
-        nowrap = !this.wrapCells && !isc.Browser.isIE8Strict,
-        skipNOBR = !nowrap || writeDiv,
+
+        nowrap = !this.wrapCells && (!isc.Browser.isIE || isc.Browser.isStrict),
+        skipNOBR = this.wrapCells || writeDiv || nowrap,
+        // If preserveWhitespace is true, use the special 'pre' / 'pre-wrap' settings
+        // to retain multiple spaces, etc
+        whitespaceCSS = this.preserveWhitespace ?
+                    (this.wrapCells ? ";white-space:pre-wrap;" : ";white-space:pre;") :
+                    (!nowrap ? null : ";white-space:nowrap;"),
         cellWrapHTML = (skipNOBR ? "" : "<NOBR>"),
         cellWrapHTMLClose = (!this.closeNOBRs || skipNOBR ? "" : "</NOBR>")
     ;
@@ -6588,7 +6594,7 @@ getTableHTML : function (colNum, startRow, endRow, discreteCols, asyncCallback, 
         // [11] cssText range start (per cell)
         // [12] used if this.fastCellUpdates is true!
         // [gap]
-        cellHTML[16] = skipNOBR && !this.wrapCells ? ";white-space: nowrap;" : null;
+        cellHTML[16] = whitespaceCSS;
         // [17] fastCellUpdates: close STYLE attribute; no CLASS attribute will be written
         // [17] normal: close STYLE attribute, start CLASS attribute
         cellHTML[17] = this.fastCellUpdates ? "' " : "' class=";
@@ -6820,7 +6826,7 @@ getTableHTML : function (colNum, startRow, endRow, discreteCols, asyncCallback, 
 
                 cellHTML[divStartSlot] = ">" + this._$cellClipDivStart +
                        this._getCellDivCSSHeight(rowHeight, record, rowNum, isAnimationRow);
-                if (nowrap) cellHTML[divStartSlot] += "white-space:nowrap;";
+                if (whitespaceCSS != null) cellHTML[divStartSlot] += whitespaceCSS;
             }
 
             // If we're drawing the record as a single cell, figure out which cells it's spanning
@@ -9613,10 +9619,14 @@ _getCompleteCellCSSText : function (record, rowNum, colNum, className) {
             else cssText = customCSSText
         }
     }
-
     // If we skipped NOBR tags, write out the css equivalent.
-    if (isc.Browser.isIE8Strict && !this.wrapCells) {
-        cssText += ";white-space: nowrap;"
+    var nowrap = !this.wrapCells && (!isc.Browser.isIE || isc.Browser.isStrict),
+        whitespaceCSS = this.preserveWhitespace ?
+                    (this.wrapCells ? ";white-space:pre-wrap;" : ";white-space:pre;") :
+                    (!nowrap ? null : ";white-space:nowrap;");
+
+    if (whitespaceCSS != null) {
+        cssText += whitespaceCSS
     }
     return cssText;
 },
@@ -9700,7 +9710,11 @@ refreshCellValue : function (rowNum, colNum) {
 
     // determine whether we need to write a DIV for this cell
     var writeDiv = this._writeDiv(rowHeight),
-        nowrap = !this.wrapCells && !isc.Browser.isIE8Strict;
+        nowrap = !this.wrapCells && (!isc.Browser.isIE || isc.Browser.isStrict),
+        writeNOBR = !this.wrapCells && !nowrap,
+        whitespaceCSS = this.preserveWhitespace ?
+                    (this.wrapCells ? "white-space:pre-wrap;" : "white-space:pre;") :
+                    (!nowrap ? null : "white-space:nowrap;");
     if (writeDiv) {
 
         // cellclipdivstart includes an open style=' attr
@@ -9720,7 +9734,7 @@ refreshCellValue : function (rowNum, colNum) {
             sb.append(this._getFieldDivWidthCSSText(colNum));
         }
 
-        if (nowrap) sb.append("white-space:nowrap;");
+        if (whitespaceCSS != null) sb.append(whitespaceCSS);
 
         sb.append("'>");
     }
@@ -14136,6 +14150,29 @@ isc.defineClass("GridBody", isc.GridRenderer).addProperties({
         this._delayedRedraw = delayedRedraw;
     },
 
+
+    _fixIEFocusScrollArtifacts : function () {
+        var mustRedraw = this._redrawToFixIEFocusScrollArtifacts;
+        if (mustRedraw && this.grid && this.grid.frozenBody != null
+            && this.virtualScrolling)
+        {
+            this.logWarn("Disabling redraw");
+            mustRedraw = false;
+        }
+
+        if (mustRedraw) {
+            // use fireOnPause to minimize redraws (Even though this means the lines sit there for
+            // a few ms)
+            this.fireOnPause("redrawToFixIEFocusScrollArtifacts",
+                {target:this, methodName:"markForRedraw", args:["fixIEScrollArtifacts"]},
+                100);
+        } else {
+            var style = this.getStyleHandle();
+            // trivial touch is sufficient to clear the odd focus-outline scroll artifacts
+            if (style) style.backgroundColor = style.backgroundColor;
+        }
+    },
+
     // Embedded Components
     // ---------------------------------------------------------------------------------------
 
@@ -14792,10 +14829,13 @@ isc.defineClass("GridBody", isc.GridRenderer).addProperties({
                 // Note: partially out of viewport actually could be ok for text items
                 // where focus will only cause a scroll if the actual text is offscreen.
 
-                outOfViewport = rect[0] < scrollLeft ||
+                // if the field is frozen, it won't be scrolled out of view
+                frozen = this.grid.fieldIsFrozen(editColNum),
+                outOfViewport = !frozen &&
+                                (rect[0] < scrollLeft ||
                                 rect[1] < scrollTop ||
                                 rect[0] + rect[2] > (scrollLeft + viewportWidth) ||
-                                rect[1] + rect[3] > (scrollTop + viewportHeight);
+                                rect[1] + rect[3] > (scrollTop + viewportHeight));
 
             if (!outOfViewport) {
                 // Avoid selecting the focused value - we don't want rapid keypresses
@@ -14946,6 +14986,11 @@ isc.defineClass("GridBody", isc.GridRenderer).addProperties({
             // no support for frozen body / rollOverCanvas yet
 
         }
+
+        // if the record is a group-node, just bail - we don't want to set the rollover
+        // rowStyle on group-headers, which have a custom class - doing so changes the height
+        // of the row
+        if (lg.isGroupNode(lg.getRecord(rowNum))) return;
 
         this.setRowStyle(rowNum, null, this.canSelectCells || this.useCellRollOvers ?
                          colNum : null);
@@ -16021,6 +16066,7 @@ isc.ListGrid.addClassProperties({
         // table geometry
         "autoFit",
         "wrapCells",
+        "preserveWhitespace",
         "cellSpacing",
         "cellPadding",
         "cellHeight",
@@ -18431,6 +18477,21 @@ isc.ListGrid.addProperties( {
     // @visibility external
     //<
 
+    //> @attr listGridField.rotateTitle (Boolean : null : [IR])
+    // Whether to rotate the field's title so it's rendered vertically from bottom to top.
+    // If unset, default behavior is derived from +link{listGrid.rotateHeaderTitles}.
+    // @see listGrid.rotateHeaderTitles
+    // @visibility external
+    //<
+
+    //> @attr listGridField.valign (VerticalAlignment : null : [IR])
+    // Specifies vertical alignment in the column header for a
+    // +link{rotateTitle, rotated title}: "top", "center", or "bottom".  If unset, default
+    // behavior is derived from +link{listGrid.headerTitleVAlign}.
+    // @see listGrid.rotateHeaderTitles
+    // @visibility external
+    //<
+
     //> @attr listGridField.hoverWrap (Boolean : null : IRW)
     // This property may be set to customize the <code>wrap</code> attribute for the
     // canvas shown when the mouse hovers over cells in this field. Note that this causes a
@@ -19133,9 +19194,14 @@ isc.ListGrid.addProperties( {
     //> @attr   listGridField.align (Alignment : null : [IRW])
     // Horizontal alignment for field's column header: "left", "right"
     // or "center". Applied to the column header title and cells by default. A separate
-    // alignment for cells can be specified via +link{listGridField.cellAlign}.<br>
-    // If null, values are left-aligned. If this field is editable, the
-    // alignment of cells in the body will also be reflected in any editors for the field.
+    // alignment for cells can be specified via +link{listGridField.cellAlign}.
+    // <P>
+    // If null, the default alignment depends on the field's declared +link{type} - generally
+    // "left" except for numbers which are "right" - and if +link{rotateTitle} has been
+    // specified, the default is always "center".
+    // <P>
+    // Note that if this field is editable, the alignment of cells in the body will also be
+    // reflected in any editors for the field.
     //  @group  appearance
     //  @visibility external
     //<
@@ -21581,6 +21647,20 @@ isc.ListGrid.addProperties( {
     //<
     //wrapCells:false,
 
+    //> @attr listGrid.preserveWhitespace (Boolean : false : IRWA)
+    // Should cells be written out with css that will preserve whitespace?
+    // <P>
+    // If true, depending on the value of +link{listGrid.wrapCells}, the css generated
+    // for cells will use the
+    // +externalLink{https://www.w3.org/wiki/CSS/Properties/white-space#Values,white-space}
+    // property values of <code>pre</code> or <code>pre-wrap</code>.
+    // This avoids collapsing sequences of whitespace without requiring
+    // special <i>&amp;nbsp;</i> characters.
+    //
+    // @visibility external
+    //<
+
+
     //> @attr listGrid.showClippedValuesOnHover (Boolean : null : IRA)
     // @include gridRenderer.showClippedValuesOnHover
     //<
@@ -23728,15 +23808,7 @@ isc.ListGrid.addProperties( {
     // @visibility external
     //<
     filterEditorDefaults : {
-        shouldPrint:false,
-
-
-        sourceWidgetResized : function (source) {
-            var horizontal = source.autoFitData != null && source.autoFitData != "vertical";
-
-            this.setWidth(horizontal ? source.body.getVisibleWidth() :
-                                       source.getInnerContentWidth(true));
-        }
+        shouldPrint:false
     },
 
     //> @attr listGrid.filterButtonProperties (Button Properties : null : IR)
@@ -23828,7 +23900,8 @@ shouldAllowFilterOperators : function (field) {
             // there's no field matching the fieldName we were passed
         } else {
             var editorClass = isc.FormItemFactory.getItemClass(this.getFilterEditorType(field));
-            if (!isc.isA.TextItem(editorClass)) return false;
+            // no support for operators in non-TextItem fields (including ComboBoxItem, which is a subclass)
+            if (!isc.isA.TextItem(editorClass)  || isc.isA.ComboBoxItem(editorClass)) return false;
             // support an undocumented flag, SimpleType.allowFilterOperators - if this is false,
             // return false - for now, deal with date and boolean here as well
             var type = field._simpleType,
@@ -25299,43 +25372,12 @@ defaultFilterOperatorSuffix: "(default)",
     // this ListGrid.
     // Note that, depending on the +link{listGrid.headerButtonConstructor, Class} of the header
     // buttons, you may also need to set +link{listGrid.headerTitleStyle}.
-    // <P>
-    // <h4>Rotated Titles</h4>
-    // <p>
-    // The Framework doesn't have built-in support for rotating header button titles in a
-    // fashion similar to +link{Facetchart.rotateLabels}.  However, you can manually configure
-    // a grid to render with rotated labels by applying a fixed +link{listGridField.width} to
-    // each button, a large +link{headerHeight} to the grid, and custom CSS via this property.
-    // <P>
-    // For example, given a grid with a header height of 120 and field widths of 48, if you
-    // copied the existing headerButtonXXX style declarations from skin_styles.css as new,
-    // customHeaderButtonXXX declarations, and then added the lines:
-    // <pre>
-    //     -ms-transform:     translate(-32px,0px) rotate(270deg);
-    //     -webkit-transform: translate(-32px,0px) rotate(270deg);
-    //     transform:         translate(-32px,0px) rotate(270deg);
-    //     width:110px;</pre>
-    // in the declaration section beginning:
-    // <pre>
-    // .customHeaderButton,
-    // .customHeaderButtonSelected,
-    // .customHeaderButtonSelectedOver,
-    // .customHeaderButtonSelectedDown,
-    // .customHeaderButtonSelectedDisabled,
-    // .customHeaderButtonOver,
-    // .customHeaderButtonDown,
-    // .customHeaderButtonDisabled {</pre>
-    // you'd get vertically rendered titles with overflow via ellipsis as expected, and also
-    // wrap with +link{wrapHeaderTitles}.  The explicit width applied via CSS is needed because
-    // rotated elements don't inherit dimensions in their new orientation from the DOM - the
-    // transform/rotation occurs independently of layout.
     // @group gridHeader, appearance
     // @see group:skins
     // @see clipHeaderTitles
     // @see wrapHeaderTitles
     // @visibility external
     //<
-
 
     //> @attr listGrid.headerTitleStyle (CSSStyleName : null : IR)
     // +link{StretchImgButton.titleStyle} to apply to the buttons in the header, and the sorter,
@@ -25401,6 +25443,35 @@ defaultFilterOperatorSuffix: "(default)",
             return this.Super("getCurrentCursor", arguments);
         },
 
+
+        _getVPadding : function () {
+            if (this._cachedVPadding != null) return this._cachedVPadding;
+
+            // Determine the padding size from the DOM.
+            var top, bottom,
+            pxString = isc.px;
+
+            // if it's drawn, examine the style of the drawn HTML element first
+            if (this.isDrawn()) {
+                var element = this._getCellElement();
+                if (element) {
+                    top    = isc.Element.getTopPaddingSize(element);
+                    bottom = isc.Element.getBottomPaddingSize(element);
+                }
+            }
+
+            var className = this.getStateName();
+            if (className) {
+                if (!isc.isA.Number(top))    top    = isc.Element._getTopPadding(className);
+                if (!isc.isA.Number(bottom)) bottom = isc.Element._getBottomPadding(className);
+            }
+
+            if (!isc.isA.Number(top))    top    = 0;
+            if (!isc.isA.Number(bottom)) bottom = 0;
+
+            return this._cachedVPadding = top + bottom;
+        },
+
         dragScrollType:"parentsOnly",
         minWidth:20,
         hoverDelay:500
@@ -25451,6 +25522,41 @@ defaultFilterOperatorSuffix: "(default)",
     // @visibility external
     //<
 
+
+    //> @attr listGrid.rotateHeaderTitles (Boolean : null : IR)
+    // Whether to rotate the field titles so they're rendered vertically from bottom to top.
+    // Can be overridden for individual fields by setting +link{listGridFIeld.rotateTitle}.
+    // <P>
+    // Note that you can manually set the header height and field widths as you please when
+    // using this feature, but it's not compatible with +link{autoFitHeaderHeights} or
+    // autofitting of field widths in any +link{AutoFitWidthApproach} other than "value".
+    // <P>
+    // You can use +link{headerTitleVAlign} or +link{listGridField.valign} to control vertical
+    // positioning of the titles, and +link{listGridField.align} to control the horizontal.
+    // You may also choose between +link{clipHeaderTitles,clipping} or
+    // +link{wrapHeaderTitles,wrapping}, and set +link{showHeaderMenuButton} as you please
+    // (which reserves space in each header button for the header menu button).
+    // <P>
+    // Note that this feature is incompatible with clipping via +link{clipHeaderTitles}:false,
+    // and may not work with older browsers, particular IE versions before IE10.  The
+    // "TreeFrog" and "Basic" +link{group:skins,skins} are not supported for this feature.
+    //
+    // @see headerTitleVAlign
+    // @see listGridFIeld.valign
+    // @see listGridField.rotateTitle
+    // @visibility external
+    //<
+
+    //> @attr listGrid.headerTitleVAlign (Boolean : isc.Canvas.BOTTOM : IR)
+    // When using +link{rotateHeaderTitles,rotated titles}, specifies vertical alignment in the
+    // column headers: "top", "center", or "bottom".  Can be overridden for individual fields by
+    // setting +link{listGridField.valign}.
+    // @see listGridFIeld.valign
+    // @see rotateHeaderTitles
+    // @see listGridField.rotateTitle
+    // @visibility external
+    //<
+    headerTitleVAlign: isc.Canvas.BOTTOM,
 
     //> @attr listGrid.wrapHeaderSpanTitles (Boolean : null : IR)
     // If +link{headerSpan.wrap} is not explicitly set, should fields wrap?  If autofitting,
@@ -25545,6 +25651,8 @@ defaultFilterOperatorSuffix: "(default)",
     // information.
     //
     // @group sorting, grouping
+    // @see groupSortDirection
+    // @see groupSortNormalizer
     // @visibility external
     //<
 
@@ -25555,6 +25663,27 @@ defaultFilterOperatorSuffix: "(default)",
     // user has not sorted the data.
     //
     // @group sorting, grouping
+    // @see sortByGroupFirst
+    // @see groupSortNormalizer
+    // @see SortSpecifier.direction
+    // @visibility external
+    //<
+
+    //> @method listGrid.groupSortNormalizer()
+    // When +link{sortByGroupFirst} is active, the sorting
+    // +link{SortSpecifier.normalizer,normalizer} applied for implicit sorting by the field(s)
+    // used for grouping.
+    // <P>
+    // No default implementation.
+    //
+    // @param record  (ListGridRecord)  record to normalize
+    // @param fieldName    (FieldName)  name of the field on which sorting occurred
+    // @param context       (ListGrid)  the grid is passed to allow property and method access
+    // @return (Any)  normalized value for sorting
+    // @group sorting, grouping
+    // @see sortByGroupFirst
+    // @see groupSortDirection
+    // @see SortSpecifier.normalizer
     // @visibility external
     //<
 
@@ -28848,6 +28977,11 @@ invalidateCache : function () {
 
 dataSetChanged : function () {
 
+    if (this.summaryRow && this.getSummaryRowDataSource() != null) {
+        this.summaryRow.invalidateCache();
+    }
+
+
     delete this._virtualScrollingLocked;
 },
 
@@ -28961,6 +29095,7 @@ setSelectionType : function (selectionType, ignoreCheckbox) {
     // on it's grid
     this.selectionType = selectionType;
     if (this.body) this.body.selectionType = selectionType;
+    if (this.frozenBody) this.frozenBody.selectionType = selectionType;
 },
 
 //> @method listGrid.setSelectionAppearance()
@@ -30272,6 +30407,11 @@ dataChanged : function (type, originalRecord, rowNum, updateData, filterChanged,
     // groupTree if we're currently grouped by any field(s)
     this._handlingDataChanged = true;
 
+    // operations other than fetch may mean a new summary row is required, so re-fetch
+    if (this.summaryRow && this.getSummaryRowDataSource() != null) {
+        if (type != "fetch") this.summaryRow.invalidateCache();
+    }
+
     // DataChanged fires in some cases where we don't want to reset autoFieldWidths
     // For example, scrolling through a paged resultset where the columns resizing on scroll
     // would be ugly.
@@ -30354,9 +30494,11 @@ dataChanged : function (type, originalRecord, rowNum, updateData, filterChanged,
 
             var pks = this.getDataSource().getPrimaryKeyFieldNames(),
                 keyCriteria = {};
-            this.logInfo("dataChanged(): Attempting incremental regroup for operation type:"
+            if (this.logIsInfoEnabled("grouping")) {
+                this.logInfo("dataChanged(): Attempting incremental regroup for operation type:"
                          + type + " will be treated as a[n] " +
                             (isAdd ? "add" : isRemove ? "remove" : "update"), "grouping");
+            }
 
             if (isAdd) {
                 // Add - no existing node, so just add a node to the groupTree
@@ -30515,8 +30657,10 @@ dataChanged : function (type, originalRecord, rowNum, updateData, filterChanged,
             fields = this.groupByFields || this._groupByFields;
         }
 
-        this.logInfo("dataChanged() occurred while asynchronous regrouping in progress. " +
+        if (this.logIsInfoEnabled("grouping")) {
+            this.logInfo("dataChanged() occurred while asynchronous regrouping in progress. " +
                      "Restarting grouping with fields:" + fields, "grouping");
+        }
         // no need to clear the timer for the asynch-regroup that's currently in progress - that's
         // already handled by 'groupBy'
         this.groupBy(fields);
@@ -30589,10 +30733,14 @@ dataChanged : function (type, originalRecord, rowNum, updateData, filterChanged,
         }
     }
 
+    // if the originalRecord has components, we want to refresh the record's components later
+    var originalRecordHasComponents = this._hasRecordComponents(originalRecord);
+
     // re-associate embeddedComponents with records which were not previously present in the
     // cache but are now - set grid._shouldRetainEmbeddedComponents to false to have components
     // removed when their associated records are no longer in the cache.
     if (!isc.isA.ResultSet(this.data) || this.data.lengthIsKnown()) {
+        // remap embedded components
         this._remapEmbeddedComponents();
     }
 
@@ -30638,11 +30786,14 @@ dataChanged : function (type, originalRecord, rowNum, updateData, filterChanged,
             type == "update" && originalRecord != null) {
             var currentRowNum = this.data.indexOf(originalRecord);
             if (currentRowNum != null && currentRowNum != -1) {
-                this.refreshRow(currentRowNum);
+                this.refreshRow(currentRowNum, originalRecordHasComponents);
+
                 mustRedraw = false;
             }
         }
         if (mustRedraw) this.redrawForDataChanged();
+    } else {
+        if (originalRecordHasComponents) this.updateRecordComponents();
     }
 
     // Note - a regroup may require a re-selection of the prior-to-regroup selection
@@ -30898,6 +31049,10 @@ applyFieldDefaults : function (fields) {
 
         if (field == null) continue;
 
+        // the default title rotation from the grid can be overridden on a per-field basis
+        var rotateTitle = field.rotateTitle = field.rotateTitle ||
+                this.rotateHeaderTitles && field.rotateTitle != false;
+
 
         if (field.componentID == null) field.componentID = thisID;
 
@@ -30996,7 +31151,7 @@ applyFieldDefaults : function (fields) {
                 if (this.autoFitIconFields != "none") {
                     field.autoFitWidth = true;
                     field.autoFitWidthApproach =
-                        (this.autoFitIconFields == "title") ? "both" : "value";
+                        (this.autoFitIconFields == "title" && !rotateTitle) ? "both" : "value";
                 }
             }
             field.align = field.align || "center";
@@ -31036,12 +31191,24 @@ applyFieldDefaults : function (fields) {
                 if (this.autoFitIconFields != "none") {
                     field.autoFitWidth = true;
                     field.autoFitWidthApproach =
-                        (this.autoFitIconFields == "title") ? "both" : "value";
+                        (this.autoFitIconFields == "title" && !rotateTitle) ? "both" : "value";
                 }
             }
         } else if (field.icon != null && field.showTitle == false) {
 
             field.iconSpacing = 0;
+        }
+
+        // configure alignment for rotated header button titles
+        if (rotateTitle) {
+
+            if (!field.align) {
+                field.align = isc.Canvas.CENTER;
+                // pass through the default field alignment to the cells
+                if (!field.cellAlign) field.cellAlign = defaultAlign;
+            }
+            // default the vertical alignment of fields to headerTitleVAlign
+            if (!field.valign) field.valign = this.headerTitleVAlign;
         }
 
         // TODO: numeric quantities with range validators could be given specific sizes
@@ -38225,7 +38392,6 @@ updateRecordComponents : function () {
             cellComponents = this.showRecordComponentsByCell,
             bodyID = this.body.getID(),
             frozenBodyID = this.frozenBody ? this.frozenBody.getID() : null;
-
         if (this.recordComponentPoolingMode == "recycle") {
             if (debugLog) {
                 this.logDebug("START updateRecordComponents - pre-loop recordComponent " +
@@ -38266,11 +38432,9 @@ updateRecordComponents : function () {
             if (record == null || Array.isLoading(record)) continue;
 
             if (this.showRecordComponents) {
-
                 // If we don't have cell components we will add components to the (unfrozen) body,
                 // one per row.
                 if (!cellComponents) {
-
                     var shouldShowRecordComponent = null;
                     // Skip spanned cells.
 
@@ -38381,7 +38545,6 @@ updateRecordComponents : function () {
 
                         if (liveComp != null) {
                             var ID = liveComp.getID();
-
                             this._liveRecordComponentsObj[ID] = true;
                             this._liveRecordComponents[this._liveRecordComponents.length] = liveComp;
                         }
@@ -38433,7 +38596,6 @@ updateRecordComponents : function () {
     }
 
     var drawArea = this.body.getDrawArea();
-
     for (var rowNum = drawArea[0]; rowNum <= drawArea[1]; rowNum++) {
         var record = this.getRecord(rowNum);
 
@@ -38514,7 +38676,9 @@ updateRecordComponents : function () {
 // get the recordComponent for some record or cell.
 _applyNewRecordComponent : function (record, fieldName, body, rowNum, bodyCol) {
 
-    if (this.logIsDebugEnabled("recordComponents")) {
+    var debugLog = this.logIsDebugEnabled("recordComponents");
+
+    if (debugLog) {
         this.logDebug("getting record component for row/field:" + [rowNum,fieldName],
             "recordComponents");
     }
@@ -38535,8 +38699,12 @@ _applyNewRecordComponent : function (record, fieldName, body, rowNum, bodyCol) {
     if (!component) {
         if (this.createRecordComponent && isc.isA.Function(this.createRecordComponent)) {
             component = this.createRecordComponent(record, this.getColNum(fieldName));
-            if (component != null) component.isRecordComponent = true;
-            this.logDebug("created new record component:" + component, "recordComponents");
+            if (component != null) {
+                component.isRecordComponent = true;
+                if (debugLog) {
+                    this.logDebug("created new record component:" + component, "recordComponents");
+                }
+            }
         }
     } else {
         if (this.updateRecordComponent && isc.isA.Function(this.updateRecordComponent)) {
@@ -38554,7 +38722,9 @@ _applyNewRecordComponent : function (record, fieldName, body, rowNum, bodyCol) {
                 // stick it back into the pool for future use
                 this.addToRecordComponentPool(origComponent);
             }
-            this.logDebug("updated record component from pool:" + component, "recordComponents");
+            if (debugLog) {
+                this.logDebug("updated record component from pool:" + component, "recordComponents");
+            }
         }
     }
     return this._finishApplyNewRecordComponent(record, fieldName, body, rowNum, bodyCol, component);
@@ -38815,7 +38985,6 @@ refreshRecordComponent : function (rowNum, colNum) {
             liveComp = this.updateRecordComponent(record, colNum, prevComp, false);
             if (liveComp != prevComp) {
                 this._cleanUpRecordComponent(prevComp, (this.recordComponentPoolingMode != "recycle"));
-                this.addToRecordComponentPool(prevComp);
 
                 liveComp = this._finishApplyNewRecordComponent(record, fieldName, body, rowNum, bodyColNum, liveComp);
                 if (liveComp && liveComp.isNullMarker) liveComp = null;
@@ -38902,7 +39071,11 @@ getFromRecordComponentPool : function (record, fieldName) {
 addToRecordComponentPool : function (component) {
     var components = this.getRecordComponentPool();
 
-    components.add(component);
+    if (!components.contains(component)) {
+        components.add(component);
+        return true;
+    }
+    return false;
 },
 
 // Should we show a recordComponent for this record/col?
@@ -43233,6 +43406,11 @@ getSummaryRowCriteria : function () {
     }
     return this.getInitialCriteria();
 },
+setSummaryRowCriteria : function (criteria) {
+    this.summaryRowCriteria = criteria;
+
+    if (this.dataSource) this.invalidateCache();
+},
 
 //> @attr listGrid.summaryRowFetchRequestProperties (DSRequest Properties : null : IRWA)
 // If +link{listGrid.showGridSummary} is true, and a +link{listGrid.summaryRowDataSource} is specified
@@ -43933,15 +44111,8 @@ getSummaryRow : function () {
 
                 // if we are getting data from a dataSource, simply re-fetch
                 if (this.dataSource != null) {
-                    var criteria = grid.getSummaryRowCriteria(),
-                        forceRefresh = isc.ResultSet && isc.isA.ResultSet(this.data) &&
-                                       !this.data.willFetchData(criteria);
-
-                    // Note - if we're dropping cache, do this before the fetchData call so our
-                    // callback fires!
-                    if (forceRefresh) this.invalidateCache();
                     this.fetchData(
-                        criteria,
+                        grid.getSummaryRowCriteria(),
                         {target:grid, methodName:"summaryRowFetchComplete"},
                         grid.getSummaryRowFetchRequestConfig()
                     );
@@ -44265,6 +44436,19 @@ makeFilterEditor : function () {
 
 },
 
+// Drawn width for fields and scrollbar (if applicable)
+// Used to size the filterEditor
+
+getGridInnerContentWidth : function () {
+    var horizontal = this.autoFitData != null && this.autoFitData != "vertical";
+
+    if (horizontal && this.body) {
+        var body = this.bodyLayout || this.body;
+        return body.getWidth();
+    }
+    return this.getInnerContentWidth();
+},
+
 
 
 //> @method listGrid.getFilterEditorValueMap()  ([A])
@@ -44370,16 +44554,20 @@ getFieldUIOperatorList : function (field, ds, includeHidden) {
     // if there's a displayField, use the operators that apply to that field
     if (field && field.displayField) field = this.getUnderlyingField(field.displayField);
     if (ds) {
-        ops = ds.getFieldOperatorMap(field, null, "fieldType");
+        var form = this.getFilterEditor().getEditForm(),
+            formItem = form.getItem(field.name),
+            validOps = formItem ? formItem.getValidOperators() : ds.getFieldOperators(field)
+        ;
+        ops = ds.getFieldOperatorMap(field, null, "fieldType", null, validOps);
         if (this.allowFilterExpressions && field.allowFilterExpressions != false) {
             // only add "between" and variants if grid.allowFilterExpressions is true and the
             // field doesn't override that setting
-            isc.addProperties(ops, ds.getFieldOperatorMap(field, null, "valueRange"));
+            isc.addProperties(ops, ds.getFieldOperatorMap(field, null, "valueRange", null, validOps));
         }
         // blank/null variants
-        isc.addProperties(ops, ds.getFieldOperatorMap(field, null, "none"));
+        isc.addProperties(ops, ds.getFieldOperatorMap(field, null, "none", null, validOps));
         // regex and pattern variants
-        isc.addProperties(ops, ds.getFieldOperatorMap(field, includeHidden, "custom"));
+        isc.addProperties(ops, ds.getFieldOperatorMap(field, includeHidden, "custom", null, validOps));
     }
     return ops;
 },
@@ -46946,12 +47134,21 @@ getEditFormItemFieldWidths : function (record) {
 // @visibility external
 //<
 
-getEditorValueMap : function (field, values) {
+// Undocumented "item" parameter - this is used to catch the case where a custom
+// 'getEditorProperties()' implementation supplied an explicit valueMap
+getEditorValueMap : function (field, values, item) {
+
+
+    if (item && item._dynamicPropsValueMap != null) {
+        return item._dynamicPropsValueMap;
+    }
+
     if (field.getEditorValueMap != null) {
 
         isc.Func.replaceWithMethod(field, "getEditorValueMap", "values,field,grid");
         return field.getEditorValueMap(values,field,this)
     }
+
     if (field.editorValueMap != null) {
         return field.editorValueMap;
     }
@@ -47027,6 +47224,10 @@ setEditorValueMap : function (fieldID, map) {
     if (this._editorShowing) {
         var rowNum = this.getEditRow(),
             editRecord = this.getEditedRecord(rowNum, fieldNum);
+
+        var editItem = this._editRowForm.getItem(fieldName);
+        if (editItem) delete editItem._dynamicPropsValueMap;
+
         // Apply the valueMap to the edit form field - note that we retrieve it via the
         // getter method in case it has been overridden.
         this._editRowForm.setValueMap(fieldName, this.getEditorValueMap(field, editRecord));
@@ -47405,6 +47606,7 @@ getEditItem : function (editField, record, editedRecord, rowNum, colNum, width, 
     // Note that we pass in the edit values, rather than the record's saved values - we want
     // the valueMap to update as edits are performed
 
+
     item.valueMap = this.getEditorValueMap(editField, editedRecord);
     // if "multiple" is set on the field, apply it directly to the item.
     // Of course if multiple were set on the DataSource field it'd get picked up by the item
@@ -47539,6 +47741,10 @@ getEditItem : function (editField, record, editedRecord, rowNum, colNum, width, 
 
     // Propagate the date format
     item.format = editField.format;
+
+    // Propagate decimalPad/Precision for float fields
+    if (editField.decimalPrecision != null) item.decimalPrecision = editField.decimalPrecision;
+    if (editField.decimalPad != null) item.decimalPad = editField.decimalPad;
 
     // if we're updating an existing item in place we don't need to reapply standard handlers,
     // or any properties which can't be updated on the fly (like editorType)
@@ -47723,6 +47929,13 @@ getEditItem : function (editField, record, editedRecord, rowNum, colNum, width, 
     // Allow for developer specified defaults / properties for this field
 
     var propertyDefaults = this.getEditorProperties(editField, record, rowNum);
+    // If the dynamic method returned a custom valueMap, remember that so it doesn't get
+    // wiped out by editField.valueMap, etc in downstream code
+    if (propertyDefaults.valueMap != null &&
+        propertyDefaults.valueMap != item.valueMap)
+    {
+        item._dynamicPropsValueMap = propertyDefaults.valueMap;
+    }
     isc.addProperties(item, propertyDefaults);
     // if this grid is databound, any other properties specified in the DS will be picked
     // up by the form during databinding
@@ -47800,7 +48013,7 @@ _editItemStringMethodCache:{},
 //  @example calculatedCellValue
 //<
 // override refreshCell just to pass the additional params through to refreshCellValue()
-refreshCell : function (rowNum, colNum, refreshingRow, allowEditCellRefresh) {
+refreshCell : function (rowNum, colNum, refreshingRow, allowEditCellRefresh, updateRecordComponents) {
     if (rowNum == null) {
 
         this.logInfo("ListGrid.refreshCell(): first parameter rowNum not present, returning");
@@ -47832,6 +48045,10 @@ refreshCell : function (rowNum, colNum, refreshingRow, allowEditCellRefresh) {
     // refresh the value too unless it's already been refreshed as part of styling
     if (!body.shouldRefreshCellHTML()) {
         this.refreshCellValue(rowNum, colNum, refreshingRow, allowEditCellRefresh);
+    }
+
+    if (this.showRecordComponents && refreshingRow && updateRecordComponents) {
+        this.refreshRecordComponent(rowNum, colNum);
     }
 },
 
@@ -47976,6 +48193,8 @@ refreshCellValue : function (rowNum, colNum, refreshingRow, allowEditCellRefresh
 
                     editItem._storeFocusForRedraw();
                     form._blurFocusItemWithoutHandler();
+
+                    editItem._skipStoreFocusForRedraw = true;
                 }
                 else editItem.blurItem();
             }
@@ -47995,6 +48214,7 @@ refreshCellValue : function (rowNum, colNum, refreshingRow, allowEditCellRefresh
 
     // Call the body's method to update the HTML of the cell:
     body.refreshCellValue(rowNum, bodyColNum);
+    if (editItem && editItem._skipStoreFocusForRedraw) delete editItem._skipStoreFocusForRedraw;
     if (editItem && (cellShowingEditor || cellWillShowEditor)) {
         // Call our method to fire the appropriate 'drawn()' / 'redrawn()' / 'cleared()'
         // notification on the edit item.
@@ -48064,7 +48284,7 @@ refreshCellValue : function (rowNum, colNum, refreshingRow, allowEditCellRefresh
 //> @method listGrid.refreshRow()
 // @include gridRenderer.refreshRow()
 //<
-refreshRow : function (rowNum) {
+refreshRow : function (rowNum, updateRecordComponents) {
     if (!this.body || !this.isDrawn()) return;
 
     // If the body is already dirty, allow the redraw to handle updating the row.
@@ -48094,7 +48314,7 @@ refreshRow : function (rowNum) {
     // just call 'refreshCell' on all drawn cells
     if (frozenFields) {
         for (var i = 0; i < this.frozenFields.length; i++) {
-            this.refreshCell(rowNum, this.getFieldNum(this.frozenFields[i]), true);
+            this.refreshCell(rowNum, this.getFieldNum(this.frozenFields[i]), true, null, updateRecordComponents);
         }
     }
 
@@ -48103,7 +48323,7 @@ refreshRow : function (rowNum) {
 
     for (var i = firstVisible; i <= lastVisible; i++) {
         var colNum = this.getFieldNumFromLocal(i, this.body);
-        this.refreshCell(rowNum, colNum, true);
+        this.refreshCell(rowNum, colNum, true, null, updateRecordComponents);
     }
 
     // If we have variable row heights and frozen fields, also refresh the
@@ -49236,7 +49456,8 @@ _storeEditValue : function (rowNum, colNum, fieldName, newValue, suppressDisplay
             if (!atomicValue) newAtomicValue = simpleType.getAtomicValue(newValue, "compare");
         }
     }
-    if (this.fieldValuesAreEqual(field, oldAtomicValue, newAtomicValue)) changed = false; // indicate no change
+    if (this.fieldValuesAreEqual(field, oldAtomicValue, newAtomicValue)) changed = false;
+        // indicate no change
 
     // store the changed value
     // Note: If newValue was not passed in, clear the field value instead
@@ -50067,17 +50288,31 @@ _remapVisibleEmbeddedComponents : function () {
         for (var i = 0; i < removeThese.length; i++) {
             var item = removeThese[i];
 
+            // for recordComponents, ensure we remove the component from the "liveRecordComponents" list
+            // so updateRecordComponents() doesn't get confused about whether this
+            // item is currently actively visible in the grid.
+            var lrc = this._liveRecordComponents,
+                lrcObj = this._liveRecordComponentsObj;
+            if (lrcObj && lrcObj[item.ID] != null) {
+                delete lrcObj[item.ID];
+                lrc.remove(item);
+            }
+
             // only affect expandedRecord values if we're using expansionComponents - this loop
             // now also runs for recordComponents
             if (this.canExpandRecords) {
                 if (this._currentExpandedRecord && this._currentExpandedRecord == item.embeddedRecord)
                     delete this._currentExpandedRecord;
             }
-            this.body._embeddedComponents.remove(item);
-            if (this.shouldDestroyOnUnembed(item, this._$dataChanged)) {
-                item.markForDestroy();
+            if (item.isRecordComponent && this.recordComponentPoolingMode == "recycle") {
+                this._cleanUpRecordComponent(item);
             } else {
-                item.deparent();
+                this.body._embeddedComponents.remove(item);
+                if (this.shouldDestroyOnUnembed(item, this._$dataChanged)) {
+                    item.markForDestroy();
+                } else {
+                    item.deparent();
+                }
             }
         }
     }
@@ -50133,7 +50368,10 @@ _remapEmbeddedComponentColumns : function (body) {
     if (componentsToClear.length > 0) {
         for (var i = 0; i < componentsToClear.length; i++) {
             var comp = componentsToClear[i];
-            if (comp.removeOnHideField) {
+            if (comp.isRecordComponent && this.recordComponentPoolingMode == "recycle") {
+                this._cleanUpRecordComponent(comp);
+                changes = true;
+            } else if (comp.removeOnHideField) {
                 body.removeEmbeddedComponent(comp.embeddedRecord, comp);
                 if (this.shouldDestroyOnUnembed(comp, this._$columnRemap)) {
                     comp.markForDestroy();
@@ -50457,7 +50695,8 @@ _editorChange : function (rowNum, colNum, newValue, oldValue) {
             // We don't create form items for un-rendered fields if we're incrementally rendering
             if (formItem == null) continue;
 
-            var valueMap = this.getEditorValueMap(field, this.getEditedRecord(rowNum, colNum, true));
+            var valueMap = this.getEditorValueMap(
+                            field, this.getEditedRecord(rowNum, colNum, true), formItem);
 
 
             if (formItem.valueMap != valueMap) {
@@ -51543,13 +51782,16 @@ findNextEditCell : function (rowNum, colNum, direction, stepThroughFields, check
     // cell and for some reason don't care about focus. Example use case: Finding the first
     // edit cell with a RecordEditor.
 
+    // canEditCell calls can be lengthy so limit the number of calls where possible
+    var canEditStartingCell = this.canEditCell(newRow, newCol);
+
     // check whether we can edit at the starting coordinates, unless that is being
     // explicitly suppressed
     // Note: The cell passed in may be off the end of the list or past the end of the fields,
     //       since we blindly add 1 to a newRow / colNum in some cases.
     if (  (checkStartingCell != false || direction == 0) &&
           newRow <= lastRow && newRow >=0 && newCol < totalCols && newCol >=0 &&
-          this.canEditCell(newRow, newCol) &&
+          canEditStartingCell &&
           (ignoreFocus || this._canFocusInEditor(newRow, newCol))
         )
     {
@@ -51561,9 +51803,8 @@ findNextEditCell : function (rowNum, colNum, direction, stepThroughFields, check
     // check for zero anyway, since that would cause real problems!
     if (direction == 0) return null;
 
-    var canEditStartingCell = this.canEditCell(newRow, newCol) &&
-                              this._canFocusInEditor(newRow, newCol),
-        firstRow = dontCheckPastRowEnd ? newRow : 0;
+    canEditStartingCell = canEditStartingCell && this._canFocusInEditor(newRow, newCol);
+    var firstRow = dontCheckPastRowEnd ? newRow : 0;
 
     if (stepThroughFields) {
         var style = this.rowEndEditAction || "next";
@@ -55739,6 +55980,10 @@ setValueMap : function (fieldID, map) {
         if (fieldNum != -1 && fieldNum < this.fields.length) {
             var field = this.getField(fieldID),
                 fieldName = field[this.fieldIdProperty];
+
+            var item = this._editRowForm.getItem(fieldName);
+            if (item != null) delete item._dynamicPropsValueMap;
+
             this._editRowForm.setValueMap(
                 fieldName,
                 this.getEditorValueMap(field, this.getEditedRecord(this.getEditRow(), fieldNum))
@@ -58117,8 +58362,31 @@ createHeader : function (properties) {
                     }
                 }
 
-                // pick up the default wrap and apply it to the button
-                if (button.wrap == null) button.wrap = grid.wrapHeaderTitles;
+                // pick up the default wrap and apply it to the button (but not for CG fields)
+
+                if (button.wrap == null && button.headerLevel == null) {
+                    button.wrap = grid.wrapHeaderTitles;
+                }
+
+                // header button initialization for rotated titles
+                if (button.rotateTitle) {
+                    button.customState = "Rotated";
+
+
+                    var clipperID = this.grid._getHeaderTitleClipperID(button);
+                    if (isc.Browser.isMoz || isc.Browser.isSafariStrict) {
+                        button.modifyContent = function () {
+                            var clipper = isc.Element.get(clipperID);
+                            if (clipper) {
+                                var target = clipper.parentElement,
+                                    targetWidth = isc.Element.getClientWidth(target),
+                                    clipperWidth = isc.Element.getClientWidth(clipper)
+                                ;
+                                target.style.width = (targetWidth + clipperWidth) + "px";
+                            }
+                        }
+                    }
+                }
 
                 // Also if we already calculated a field width based on auto-fit to values,
                 // apply it to the header button:
@@ -58165,6 +58433,12 @@ createHeader : function (properties) {
                     }
                 }
                 var button = this.Super("makeButton", [button,a,b,c,d]);
+
+                // button autofitting other than "value" is incompatible with title rotation
+                if (button.rotateTitle && grid.getAutoFitWidthApproach(button) != "value") {
+                    button.logWarn("Autofitting by title width isn't supported for " +
+                                   "rotated titles - width or layout may be incorrect");
+                }
 
                 // pick up field level headerBaseStyle if specified.
 
@@ -58477,6 +58751,11 @@ createHeader : function (properties) {
                 this.Super("draw", arguments);
                 this._adjustSpans();
 
+                // autofitting the header height is incompatible with title rotation
+                if (this.grid.autoFitHeaderHeights) {
+                    this.grid.logWarn("Autofitting header heights isn't supported for " +
+                                      "rotated titles - height or layout may be incorrect");
+                }
             }
 
             // AutoTest subsytem APIs
@@ -59402,17 +59681,31 @@ headerTitleClipped : function (fieldNum) {
     }
 
 
+    var rotateTitle = field.rotateTitle;
+    if (rotateTitle && field.wrap) {
+        // select the titleClipper node as a range inside its parent
+        var range = this.getDocument().createRange();
+        range.selectNode(titleClipperHandle);
+        // now compare bounding clientRects of the range and the parent DIV
+        var contentsBCR = range.getBoundingClientRect(),
+            bcr = titleClipperHandle.parentElement.getBoundingClientRect();
+        return bcr.height < contentsBCR.height || bcr.width < contentsBCR.width;
+    }
+
+
     if (isc.Browser.isChrome ||
         (isc.Browser.isMoz && isc.Browser.version >= 7))
     {
         var range = this.getDocument().createRange();
         range.selectNodeContents(titleClipperHandle);
-        var contentsBCR = range.getBoundingClientRect();
-        var bcr = titleClipperHandle.getBoundingClientRect();
-        return bcr.width < contentsBCR.width;
+        var contentsBCR = range.getBoundingClientRect(),
+            bcr = titleClipperHandle.getBoundingClientRect();
+        return rotateTitle ? bcr.height < contentsBCR.height :
+                             bcr.width  < contentsBCR.width;
 
     } else {
-        return isc.Element.getClientWidth(titleClipperHandle) < titleClipperHandle.scrollWidth;
+        return rotateTitle ? titleClipperHandle.clientHeight < titleClipperHandle.scrollHeight :
+            isc.Element.getClientWidth(titleClipperHandle) < titleClipperHandle.scrollWidth;
     }
 },
 
@@ -59522,16 +59815,20 @@ getHeaderButtonTitle : function (button, clipTitle) {
         sortIndex = specifier.sortIndex;
     }
 
-    var title = field.showTitle == false ? "" :
-            (field.headerTitle != null ? field.headerTitle : this.getFieldTitle(fieldNum)),
-        fullTitle = isc.StringBuffer.create(),
-        isRTL = this.isRTL(),
-        align = this.getFieldHeaderAlign(fieldNum, isRTL);
+    var isRTL = this.isRTL(),
+        rotateTitle = field.rotateTitle,
+        wrapTitle = this._getHeaderButtonWrap(field),
+        align = this.getFieldHeaderAlign(fieldNum, isRTL)
+    ;
+    var fullTitle = isc.StringBuffer.create(),
+        title = field.showTitle == false ? "" :
+            (field.headerTitle != null ? field.headerTitle : this.getFieldTitle(fieldNum))
+    ;
 
     if (clipTitle == null) clipTitle = this._shouldClipHeaderTitle(fieldNum);
 
 
-    if (this._getHeaderButtonWrap(field)) {
+    if (wrapTitle && !rotateTitle) {
 
 
         if (addPadding) {
@@ -59558,7 +59855,7 @@ getHeaderButtonTitle : function (button, clipTitle) {
 
         fullTitle.append(title);
 
-    } else if (!addPadding && (!clipTitle || !this.clipHeaderTitles)) {
+    } else if (!addPadding && (!clipTitle || !this.clipHeaderTitles) && !rotateTitle) {
 
         fullTitle.append("<div style='display:inline-block;max-width:100%;text-align:",
                 align, ";vertical-align:middle'>");
@@ -59579,10 +59876,20 @@ getHeaderButtonTitle : function (button, clipTitle) {
         fullTitle.append("</div>");
 
     } else {
-        fullTitle.append("<div style='display:inline-block;max-width:100%;text-align:",
-            align, ";vertical-align:middle'>");
+
+
+        fullTitle.append("<div style='display:inline-block;max-width:100%;text-align:", align,
+                         ";vertical-align:");
+
+        // vertical alignment of a rotated title is controlled by LGF.valign
+        if (rotateTitle) {
+            if      (button.valign == isc.Canvas.TOP)    fullTitle.append("top'>");
+            else if (button.valign == isc.Canvas.BOTTOM) fullTitle.append("bottom'>");
+            else                                         fullTitle.append("middle'>");
+        } else fullTitle.append("middle'>");
 
         var writeExtraMargin,
+            sortHtmlHeight = 0,
             extraRightWidth = 0
         ;
         if (addPadding) {
@@ -59596,7 +59903,7 @@ getHeaderButtonTitle : function (button, clipTitle) {
                     isRTL ? "left:" : "right:", offset, "px;'>", arrow, numeral, "</a>");
             }
         } else {
-            writeExtraMargin = isc.Browser.isMoz;
+            writeExtraMargin = isc.Browser.isMoz && !rotateTitle;
 
 
 
@@ -59604,17 +59911,32 @@ getHeaderButtonTitle : function (button, clipTitle) {
 
                 var sortNumeralHTMLWidth = (sortIndex >= 9 ? 12 : 6);
                 extraRightWidth += 4 + sortNumeralHTMLWidth;
-                fullTitle.append("<a style='",
-                    (isRTL ? "float:left;margin-right:" : "float:right;margin-left:"),
-                    "4px;width:", sortNumeralHTMLWidth, "px;overflow:hidden'>",
-                    this.getSortNumeralHTML(fieldName, sortIndex), "</a>")
-                ;
+                fullTitle.append("<a style='", isRTL ? "float:left;" : "float:right;");
+
+                // due to the line-height, we don't need the margin for rotated titles unless
+                // it's separating the sort arrow and numeral
+                if (!rotateTitle || showSortArrow) {
+                    fullTitle.append(isRTL ? "margin-right:" : "margin-left:", "4px;");
+                }
+
+
+                if (rotateTitle && (wrapTitle || isc.Browser.isSafariStrict)) {
+                    fullTitle.append("height:12px;");
+                    sortHtmlHeight = 12;
+                }
+                fullTitle.append("width:", sortNumeralHTMLWidth, "px;overflow:hidden'>",
+                                 this.getSortNumeralHTML(fieldName, sortIndex), "</a>");
             }
             if (showSortArrow) {
                 var img = this.getSortArrowImage(fieldNum, true, true);
                 if (img != null) {
                     extraRightWidth += 4 + img.width;
-                    fullTitle.append(this.getSortArrowImage(fieldNum, false, true));
+                    fullTitle.append(this.getSortArrowImage(fieldNum, false, clipTitle,
+                                                            wrapTitle, rotateTitle));
+                    // adjust the gap discussed above for the sort arrow, if appropriate
+                    if (rotateTitle && (wrapTitle || isc.Browser.isSafariStrict)) {
+                        sortHtmlHeight = Math.max(sortHtmlHeight, img.height);
+                    }
                 }
             }
         }
@@ -59624,9 +59946,42 @@ getHeaderButtonTitle : function (button, clipTitle) {
             fullTitle.append(" id='", titleClipperID, "'");
         }
         fullTitle.append(" style='overflow:hidden;", isc.Browser._textOverflowPropertyName,
-                         ":ellipsis;white-space:nowrap");
+                         ":ellipsis;white-space:", wrapTitle ? "normal;" : "nowrap;");
+
+        // style the inner titleClipper to create the rotated title
+        if (rotateTitle) {
+
+            // vertical alignment of a rotated title is controlled by LGF.valign
+            var textVAlign = "center;";
+            if      (button.valign == isc.Canvas.TOP)    textVAlign = "right;";
+            else if (button.valign == isc.Canvas.BOTTOM) textVAlign = "left;";
+
+            // both "writing-mode" CSS and a CSS rotation transform are required
+            var writingMode = this._getTextWritingMode(true, isRTL);
+            fullTitle.append("text-align:", textVAlign, this._getTextTransform(true, isRTL),
+                             "writing-mode:", writingMode);
+
+
+            if (isc.Browser.isSafariStrict) {
+                fullTitle.append("-webkit-writing-mode:", writingMode);
+            }
+
+
+            if (isc.isAn.Instance(button)) {
+                var maxHeight = button.getHeight() - button._getVPadding() - sortHtmlHeight;
+                if (sortHtmlHeight > 0) {
+                    fullTitle.append("margin-top:", sortHtmlHeight, "px;display:block;height:");
+                } else {
+                    fullTitle.append("display:inline-block;height:");
+                }
+                fullTitle.append(maxHeight, "px;");
+
+            } else {
+
+            }
+        }
         if (writeExtraMargin) {
-            fullTitle.append(isRTL ? ";margin-left:" : ";margin-right:", extraRightWidth, "px");
+           fullTitle.append(isRTL ? "margin-left:" : "margin-right:", extraRightWidth, "px;");
         }
         fullTitle.append("'>", title, "</div>", "</div>");
     }
@@ -60528,7 +60883,7 @@ _resizeFields : function (fieldNums, newWidths, storeWidths) {
     }
 
     if (this.showFilterEditor && this.filterEditor) {
-        this.filterEditor._resizeFields(fieldNums, newWidths, storeWidths);
+        this.filterEditor.sourceWidgetFieldsResized();
     }
     if (this.summaryRow && this.showGridSummary) {
         this.summaryRow._resizeFields(fieldNums, newWidths, storeWidths);
@@ -61039,10 +61394,11 @@ _canGroupByField : function (field) {
 // @visibility external
 //<
 getHeaderSpanContextMenuItems : function (span) {
-    if (!this.showTreeColumnPicker && !this.showHeaderSpanContextMenu) return false;
+    // if (!this.showTreeColumnPicker && !this.showHeaderSpanContextMenu) return false;
+    if (!this.showHeaderSpanContextMenu) return span.getParentElement().showContextMenu();
 
     var menuItems = [];
-    if (this.canPickFields) {
+    if (this.canPickFields && this.showTreeColumnPicker) {
         menuItems[0] = {
             title: this.fieldVisibilitySubmenuTitle,
             submenu: this.getColumnPickerItems(),
@@ -61303,7 +61659,7 @@ getFilterOperatorMenuItems : function (field, includeTitleItem) {
 
     if (!formItem) return;
 
-    var addFilterMenuItem = function (operator, field) {
+    var addFilterMenuItem = function (operator, field, currentOperator) {
         var title = isc.DS._getFieldOperatorTitle(field, operator);
         menuItems.add({
             title: title,
@@ -61311,7 +61667,7 @@ getFilterOperatorMenuItems : function (field, includeTitleItem) {
             targetField: field,
             fieldName: field.name,
             operator: operator,
-            checked: (formItem.getOperator() || field.filterOperator) == operator.ID,
+            checked: currentOperator == operator.ID,
             click: function(target, item, menu) {
                 this.grid.setFieldSearchOperator(this.targetField, this.operator)
             }
@@ -61338,7 +61694,10 @@ getFilterOperatorMenuItems : function (field, includeTitleItem) {
     // add a flag that can automatically hide the operatorIcon when the default is selected
     defaultOp.isFieldDefault = true;
 
-    addFilterMenuItem(defaultOp, field);
+
+    var currentOp = (formItem.getOperator() || field.filterOperator);
+
+    addFilterMenuItem(defaultOp, field, currentOp);
     menuItems.add({ isSeparator: true });
 
 
@@ -61348,7 +61707,7 @@ getFilterOperatorMenuItems : function (field, includeTitleItem) {
     for (var opID in ops) {
         op = ds.getSearchOperator(opID) || ops[opID];
         if (op.ID != defaultOpId) { // || formItem.getOperator() != defaultOpId) {
-            addFilterMenuItem(op, field);
+            addFilterMenuItem(op, field, currentOp);
         }
     }
     return menuItems;
@@ -61992,12 +62351,12 @@ getHeaderContextMenu : function () {
 // @group drawing
 // @return (ImgProperties | HTMLString) HTML for sorter button
 //<
-getSortArrowImage : function (fieldNum, returnImg, clipTitle, wrap) {
+getSortArrowImage : function (fieldNum, returnImg, clipTitle, wrap, rotateTitle) {
     if (fieldNum == null) fieldNum = this._getSortFieldNum();
     var img = null;
     if (this.showSortArrow != false && fieldNum != null) {
-        var field = this.getField(fieldNum);
-        var fieldDirection = field && field.sortDirection;
+        var field = this.getField(fieldNum),
+            fieldDirection = field && field.sortDirection;
         if (fieldDirection == null) fieldDirection = this.sortDirection;
         img = Array.shouldSortAscending(fieldDirection)
               ? this.sortAscendingImage
@@ -62008,9 +62367,10 @@ getSortArrowImage : function (fieldNum, returnImg, clipTitle, wrap) {
     if (img != null) {
         return this.imgHTML(isc.addProperties({
             imgDir: this.widgetImgDir,
-            extraCSSText: (clipTitle && this.clipHeaderTitles) || wrap
-                          ? (this.isRTL() ? "float:left;margin-right:4px" : "float:right;margin-left:4px")
-                          : null
+            extraCSSText: (clipTitle && this.clipHeaderTitles) || wrap || rotateTitle ?
+                (rotateTitle ? (this.isRTL() ? "float:left;" : "float:right;") :
+                 (this.isRTL() ? "float:left;margin-right:4px" :
+                                 "float:right;margin-left:4px")) : null
         }, img));
     } else {
         return isc.Canvas.spacerHTML(1, 1);
@@ -62630,6 +62990,26 @@ getSortNumeralHTML : function (fieldName, sortIndex, extraCSSText) {
     return template.join(isc.emptyString);
 },
 
+
+//
+// APIs to get text CSS "writing mode" and CSS rotation transform
+
+_$rotateText180:"transform:rotate(180deg);",
+
+_getTextTransform : function (isVertical, isRTL) {
+    if (!isVertical) return null;
+    if (isRTL == null) isRTL = this.isRTL();
+    var modeCSS = isc.Browser._writingModeCSS;
+    return (isRTL ? modeCSS.rotate_rtl : modeCSS.rotate_ltr) ? this._$rotateText180 : null;
+},
+_getTextWritingMode : function (isVertical, isRTL) {
+    var modeCSS = isc.Browser._writingModeCSS;
+    if (!isVertical) return modeCSS.horizontal;
+    if (isRTL == null) isRTL = this.isRTL();
+    return isRTL ? modeCSS.vertical_rtl : modeCSS.vertical_ltr;
+},
+
+
 //> @method listGrid.clearSort()    (A)
 //  This method clears any existing sort on this grid by calling +link{listGrid.setSort} with
 // a null parameter.  The internal list of +link{SortSpecifier}s is removed and the grid is
@@ -62688,7 +63068,8 @@ _addImplicitSort : function(sortSpecifiers, groupByFields) {
                 sortedImplicitly: true,
                 context: this,
                 // if the field isn't databound and no type was specified, default to "text"
-                normalizer: this._getSortNormalizerForField(field) || "text",
+                normalizer: this.groupSortNormalizer ||
+                    this._getSortNormalizerForField(field) || "text",
                 property: name,
                 direction: this._groupSortDirection
             }
@@ -62724,6 +63105,7 @@ _addImplicitSort : function(sortSpecifiers, groupByFields) {
 },
 
 //> @method listGrid.getSortByGroupFirst() (A)
+// @see sortByGroupFirst
 // @visibility external
 //<
 getSortByGroupFirst : function() {
@@ -62756,6 +63138,12 @@ _getSortNormalizerForField : function (field) {
         if (record._isGroup) return record.groupValue;
         return grid.getSummaryFieldValue(field, record);
     };
+
+    // return normalizer that computes summary if the value isn't being written into the field
+
+    if (field.type == this._$summary && !this.shouldApplyRecordSummaryToRecord(field)) {
+        return function (record, field) {return grid.getRecordSummary(record, field);};
+    }
 
     if (field.valueMap && !isc.isAn.Array(field.valueMap) &&
         (field.sortByMappedValue == null || field.sortByMappedValue == true)) {
@@ -76059,9 +76447,9 @@ isc.RecordEditor.addMethods({
             // This allows the fields to align with the sourceWidget's body columns
             var source = this.sourceWidget;
 
-            this.setWidth(source.getInnerContentWidth(true));
+            this.setWidth(source.getGridInnerContentWidth());
 
-            this.observe(source, "resized", "observer.sourceWidgetResized(observed)");
+            this.observe(source, "resized", "observer.sourceWidgetResized(observed);");
 
             // If the sourceWidget is not leaving a scrollbar gap, we shouldn't either - the
             // button will still float over the scrollbar area, but this ensures that any
@@ -76114,7 +76502,8 @@ isc.RecordEditor.addMethods({
     // Note that we have to use the *visible* width -- the source grid could be autoFitData:"horizontal"
     // in which case it overflows specified size horizontally.
     sourceWidgetResized : function (source) {
-        this.setWidth(source.getInnerContentWidth(true));
+
+        this.setWidth(source.getGridInnerContentWidth());
     },
 
     _$filter:"filter",
@@ -76144,7 +76533,8 @@ isc.RecordEditor.addMethods({
         // Ensure we're correctly sized
 
         var source = this.sourceWidget;
-        this.setWidth(source.getInnerContentWidth(true));
+
+        this.setWidth(source.getGridInnerContentWidth());
 
         // findNextEditCell signature:
         // rowNum, colNum, direction, stepThroughFields, checkStartingCell,
@@ -76929,8 +77319,12 @@ isc.RecordEditor.addMethods({
         this.Super("layoutChildren", arguments);
         // Stick the action button to the left
         var sorterWidth = this.sourceWidget._getSorterWidth();
-        if (this.actionButton)
-            this.actionButton.setLeft(this.isRTL() ? 0 : this.getInnerWidth() - sorterWidth);
+
+        if (this.actionButton) {
+            this.actionButton.setLeft(
+                this.isRTL() ? 0 : this.sourceWidget.getGridInnerContentWidth() - sorterWidth
+            );
+        }
 
         // Ensure the body does not extend behind the action button - this avoids issues
         // where we can't scroll the source widget horizontally to get at stuff under the
@@ -76938,13 +77332,13 @@ isc.RecordEditor.addMethods({
         if (this.body) {
             var body = this.body;
             if (this.bodyLayout) body = this.bodyLayout;
+
             body.setWidth(Math.max(1, this.getInnerWidth() - sorterWidth));
             if (this.actionButton && this.isRTL()) {
                 body.setLeft(sorterWidth);
             }
         }
     },
-
 
     // Override adjustOverflow to render the actionButton as tall as this widget
     adjustOverflow : function () {
@@ -77015,23 +77409,29 @@ isc.RecordEditor.addMethods({
         }
     },
 
-    // override 'getFieldWidths' to get the source's field widths.
+    // Notification method fired from _resizeFields on the sourceGrid to ensure our
+    // field widths stay synched with those of the source grid.
 
+    sourceWidgetFieldsResized : function () {
+        var allFieldNums = [];
+        for (var i = 0; i < this.fields.length; i++) allFieldNums.add(i);
+        this._resizeFields(allFieldNums, this.getFieldWidths(), []);
+    },
+
+    // override 'getFieldWidths' to get the source's field widths
     getFieldWidths : function () {
         var widths = this.sourceWidget.getFieldWidths();
         // duplicate the widths so modifications on the LG widths array won't directly affect
-        // our widths
+        // our widths, then adjust for any mismatch in size if we're showing
+        // the actionButton and the sourceGrid has no scrollbar/sorter gap
         if (isc.isA.Array(widths)) {
             widths = widths.duplicate();
             this._correctForActionButtonClipping(widths);
         }
         return widths;
     },
-    // getEditFormItemFieldWidths():
-    // Overridden to reduce the size of the last edit item to ensure it fits in the available
-    // space (isn't clipped by the filter button), even if the sourceWidget's field is sized larger
-    // than the available space
-    // Happens when the source widget shows an HScrollbar but no VScrollbar
+
+
     _correctForActionButtonClipping : function (widths) {
         var sourceWidget = this.sourceWidget;
         if (sourceWidget != null && !sourceWidget._showSortButton() && sourceWidget.body != null &&
@@ -77053,12 +77453,6 @@ isc.RecordEditor.addMethods({
         }
     },
 
-
-    getEditFormItemFieldWidths : function (record) {
-        var widths = this.Super("getEditFormItemFieldWidths", arguments);
-        this._correctForActionButtonClipping(widths);
-        return widths;
-    },
 
     // override getCellValue to avoid showing checkbox icons for the checkboxField
 
@@ -83587,6 +83981,22 @@ recycleTiles: true,
 // @visibility external
 //<
 
+//> @attr tileGrid.loadingDataMessage (HTMLString : "${loadingImage}&nbsp;Loading data..." : IRW)
+// The string to display in the body of a tileGrid while data is being loaded.
+// Use <code>"&#36;{loadingImage}"</code> to include +link{Canvas.loadingImageSrc,a loading image}.
+// @see loadingDataMessageStyle
+// @group emptyMessage, i18nMessages
+// @visibility external
+//<
+loadingDataMessage : "${loadingImage}&nbsp;Loading data...",
+
+//> @attr tileGrid.loadingDataMessageStyle (CSSStyleName : "loadingDataMessage" : [IRW])
+// The CSS style name applied to the loadingDataMessage string if displayed.
+// @group emptyMessage
+// @visibility external
+//<
+loadingDataMessageStyle: "loadingDataMessage",
+
 //> @attr tileGrid.drawAllMaxTiles (Integer : 25 : IRWA)
 // If drawing all tiles would cause no more than <code>drawAllMaxTiles</code> tiles to be
 // rendered, the full dataset will instead be drawn even if +link{tileGrid.showAllRecords}
@@ -84085,14 +84495,19 @@ dataChanged : function (operationType, originalRecord, rowNum, updateData) {
     } else if (operationType == "update") {
         this.logDebug("update", "TileGrid");
 
+        // update record in the tile(s)
 
-        var originalTileID = this.getTileID(originalRecord),
-            originalTile = originalTileID && window[originalTileID];
-        if (originalTile) {
-            originalTile.record = updateData;
-            delete originalTile._recordNeedsRefresh;
-            // Calling markForRedraw() causes a visual flicker, so use redraw() instead.
-            originalTile.redraw("tile record data changed");
+        if (originalRecord) {
+            this._updateTileForDataChanged(updateData, originalRecord);
+
+        } else if (isc.ResultSet && isc.isA.ResultSet(this.data) && this.data._isArrayUpdate) {
+            // iterate across each updated record from RS
+            var dataArray = this.data._lastUpdateDataArray;
+            if (isc.isAn.Array(dataArray)) {
+                for (var i = 0; i < dataArray.length; i++) {
+                    this._updateTileForDataChanged(dataArray[i]);
+                }
+            }
         }
 
         this.layoutTiles();
@@ -84164,6 +84579,20 @@ dataChanged : function (operationType, originalRecord, rowNum, updateData) {
         this.cleanupExtraTiles(true);
     }
 
+},
+
+// helper to update the record associated with a tile during a dataChanged() update operation
+
+_updateTileForDataChanged : function (updateData, originalRecord) {
+
+    var originalTileID = this.getTileID(originalRecord || updateData),
+    originalTile = originalTileID && window[originalTileID];
+    if (originalTile) {
+        originalTile.record = updateData;
+        delete originalTile._recordNeedsRefresh;
+        // Calling markForRedraw() causes a visual flicker, so use redraw() instead.
+        originalTile.redraw("tile record data changed");
+    }
 },
 
 // stop the current animation
@@ -84349,6 +84778,22 @@ _tileRecordsEqual : function (tile, record1, record2) {
 //<
 getTileHTML : function (tileRecord) {
     return this.detailViewer.getBlockHTML([tileRecord]);
+},
+
+getEmptyMessage : function () {
+    if (isc.ResultSet && isc.isA.ResultSet(this.data) && !this.data.lengthIsKnown()) {
+        return this.loadingDataMessage == null ? "&nbsp;" :
+            this.loadingDataMessage.evalDynamicString(this, {
+                loadingImage: this.imgHTML(isc.Canvas.loadingImageSrc,
+                                           isc.Canvas.loadingImageSize,
+                                           isc.Canvas.loadingImageSize)
+            });
+    }
+    return this.emptyMessage == null ? "&nbsp;" : this.emptyMessage.evalDynamicString(this, {
+        loadingImage: this.imgHTML(isc.Canvas.loadingImageSrc,
+                                   isc.Canvas.loadingImageSize,
+                                   isc.Canvas.loadingImageSize)
+    });
 },
 
 //> @method tileGrid.getTile()
@@ -85519,18 +85964,22 @@ setEmptyMessageStyle : function (style) {
 
 // update the emptyMessage label AutoChild to be shown or hidden as appropriate
 updateEmptyMessageLabel : function () {
+    var messageToShow = this.getEmptyMessage();
     var showEmptyMessage = this.showEmptyMessage,
         hasVisibleTiles = this._visibleTiles && this._visibleTiles.length > 0;
 
     if (this.emptyMessageLabel == null) {
         if (showEmptyMessage) this.addAutoChild("emptyMessageLabel", {
-            contents: this.emptyMessage,
+            contents: messageToShow,
             visibility: hasVisibleTiles,
             styleName: this.emptyMessageStyle
         });
     } else {
+        this.emptyMessageLabel.setContents(messageToShow);
         if (hasVisibleTiles || !showEmptyMessage) this.emptyMessageLabel.hide();
-        else                                      this.emptyMessageLabel.show();
+        else {
+            this.emptyMessageLabel.show();
+        }
     }
 }
 
@@ -95788,7 +96237,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version v12.0p_2018-06-28/LGPL Deployment (2018-06-28)
+  Version v12.0p_2018-09-15/LGPL Deployment (2018-09-15)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

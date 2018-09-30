@@ -1,7 +1,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version v12.0p_2018-06-28/LGPL Development Only (2018-06-28)
+  Version v12.0p_2018-09-15/LGPL Development Only (2018-09-15)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -65,7 +65,7 @@ if(!_7){if(_1.startsWith("method:")||_1.startsWith("classMethod:")||_1.startsWit
 {_2+="()"}
 return _2}
 if(_11=="type"&&_5){return isc.TypeViewer.linkForType(_2,null,null,_5)}
-return isc.StringBuffer.concat("<a href='?id="+isc.DocViewer.instance.encodeHistoryID(_1)+"' "," onmouseout='isc.Hover.clear()' onmouseover='isc.DocUtils.$46s(\"",_1,"\")'"," onclick='isc.Hover.clear();isc.DocViewer.instance.$46t(\"",_1,"\"",(_3?",\""+_3+"\"":""),");return false;'>",_2,"</a>")},isc.A.evalDynamicStringWithDocClass=function isc_c_DocUtils_evalDynamicStringWithDocClass(_1,_2){var _3=_2,_4=!isc.isA.Function(_3.getAttribute)?_3.definingClass:_3.getAttribute("definingClass");if(_4){this.$169f=_4.replace(/(?:[^:.]*:)?([^:.]+)/,"$1")}
+var _14=(isc.DocViewer.instance?"?id="+isc.DocViewer.instance.encodeHistoryID(_1):"");return isc.StringBuffer.concat("<a href='"+_14+"' "," onmouseout='isc.Hover.clear()' onmouseover='isc.DocUtils.$46s(\"",_1,"\")'"," onclick='isc.Hover.clear();isc.DocViewer.instance.$46t(\"",_1,"\"",(_3?",\""+_3+"\"":""),");return false;'>",_2,"</a>")},isc.A.evalDynamicStringWithDocClass=function isc_c_DocUtils_evalDynamicStringWithDocClass(_1,_2){var _3=_2,_4=!isc.isA.Function(_3.getAttribute)?_3.definingClass:_3.getAttribute("definingClass");if(_4){this.$169f=_4.replace(/(?:[^:.]*:)?([^:.]+)/,"$1")}
 var _5=_1.evalDynamicString();delete this.$169f;return _5},isc.A.$46s=function isc_c_DocUtils__showDocHover(_1){var _2=isc.JSDoc.hoverHTML(_1);if(_2)isc.Hover.setAction(isc.Hover,isc.Hover.show,[_2,{width:500,baseStyle:"docHover"}],300)},isc.A.linkForDocNode=function isc_c_DocUtils_linkForDocNode(_1,_2){if(!isc.DocViewer)return _2?_2:_1;if(!_2){var _3=isc.DocViewer.instance.$46u;_2=_3.getTitle(_3.find(_3.idField,_1))}
 return isc.StringBuffer.concat("<a href='' "," onclick='isc.DocUtils.$46v(\"",_1,"\");return false;'>",_2,"</a>")},isc.A.$46v=function isc_c_DocUtils__doSelectDocNode(_1){var _2=isc.DocViewer.instance.$46u,_3=isc.DocViewer.instance.$46w;var _4=_2.find(_2.idField,_1);_3.deselectAllRecords();_3.selectRecord(_4)},isc.A.linkForExampleId=function isc_c_DocUtils_linkForExampleId(_1,_2){if(!_2){var _3=window.exampleTree;if(_3){var _4=_3.getExampleNode(_1);_2=_4.title+" Example"}else{_2=_1+" Example"}}
 if(isc.DocViewer&&isc.DocViewer.instance){return"<a target='_blank' href='"+isc.DocViewer.instance.featureExplorerURL+"#"+_1+"'>"+_2+"</a>"}else{return _2}},isc.A.textForFlags=function isc_c_DocUtils_textForFlags(_1){var _2=_1;_1=this.getCanonicalFlags(_1);if((!_1||!_2)&&!(_2&&_2.contains("A")))return isc.emptyString;var _3=isc.StringBuffer.create();if(_1!=isc.emptyString){_3.append("&nbsp;",this.linkForRef("group:flags",_1))}

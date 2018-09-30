@@ -1,7 +1,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version v12.0p_2018-06-28/LGPL Deployment (2018-06-28)
+  Version v12.0p_2018-09-15/LGPL Deployment (2018-09-15)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,9 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
 
-if (window.isc && isc.version != "v12.0p_2018-06-28/LGPL Deployment" && !isc.DevUtil) {
+if (window.isc && isc.version != "v12.0p_2018-09-15/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'v12.0p_2018-06-28/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'v12.0p_2018-09-15/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -872,9 +872,21 @@ isc.CalendarView.addProperties({
         return HTML.join(isc.emptyString);
     },
 
-    eventDragTargetDefaults: {
+    //> @attr calendarView.eventDragCanvasStyleName (CSSStyleName : "eventDragCanvas" : IR)
+    // CSS class applied to the +link{calendarView.eventDragCanvas, eventDragCanvas}.
+    //
+    // @visibility calendar
+    //<
+    eventDragCanvasStyleName: "eventDragCanvas",
+
+    //> @attr calendarView.eventDragCanvas (AutoChild Canvas : null : IR)
+    // +link{Canvas} displayed while draggging or resizing an event in this view and styled
+    // according to +link{calendarView.eventDragCanvasStyleName, eventDragCanvasStyleName}.
+    //
+    // @visibility calendar
+    //<
+    eventDragCanvasDefaults: {
         _constructor: "Canvas",
-        border: "1px dashed red",
         width:1, height: 1,
         snapToGrid: false,
         autoDraw: false,
@@ -2583,6 +2595,12 @@ isc.CalendarView.addProperties({
                 }
                 top = top + Math.floor((slotSize * (props.slotNum - 1)));
                 if (props.slotNum > 1) top += (padding * (props.slotNum-1));
+                if (cal.eventOverlap && props._drawOverlap != false) {
+                    if (props.slotNum > 1) {
+                        top -= Math.floor(slotSize * (cal.eventOverlapPercent / 100));
+                        height += Math.floor(slotSize * (cal.eventOverlapPercent / 100));
+                    }
+                }
             } else {
                 slotSize = Math.floor((width-totalPadding) / props.totalSlots);
                 width = slotSize;
@@ -3334,7 +3352,7 @@ isc.CalendarView.addProperties({
 
         // this is suspect - setEvent() already does this...
         var canEdit = cal.canEditEvent(event);
-        canvas.setDragProperties(canEdit, canEdit, this.eventDragTarget);
+        canvas.setDragProperties(canEdit, canEdit, this.eventDragCanvas);
 
         if (!hideWindow && this.body && this.body.isDrawn()) {
             // if the "retag" param was passed, this is an event that hasn't been rendered
@@ -3754,6 +3772,50 @@ isc.CalendarView.addProperties({
         if (this.clearZones) this.clearZones();
         if (this.clearIndicators) this.clearIndicators();
         this.Super("destroy", arguments);
+    },
+
+    draw : function () {
+        var result = this.Super("draw", arguments);
+        if (this._pendingScrollTo) {
+            //isc.logWarn("_pendingScrollTo: " + this._pendingScrollTo);
+            // scroll to the extents of the range
+            this["scrollTo" + this._pendingScrollTo]();
+            delete this._pendingScrollTo;
+        }
+    },
+
+    //> @method CalendarView.scrollToStart()
+    // Move the viewport of this CalendarView to the start of its scrollable range.
+    // @visibility calendar
+    //<
+    scrollToStart : function () {
+        if (!this.isDrawn()) {
+            // store the requested scroll-type - scroll to it at the end of draw()
+            this._pendingScrollTo = "Start";
+            return;
+        }
+        if (this.verticalEvents) {
+            this.body.scrollToTop();
+        } else {
+            this.body.scrollToLeft();
+        }
+    },
+
+    //> @method CalendarView.scrollToEnd()
+    // Move the viewport of this CalendarView to the end of its scrollable range.
+    // @visibility calendar
+    //<
+    scrollToEnd : function () {
+        if (!this.isDrawn()) {
+            // store the requested scroll-type - scroll to it at the end of draw()
+            this._pendingScrollTo = "End";
+            return;
+        }
+        if (this.verticalEvents) {
+            this.body.scrollToBottom();
+        } else {
+            this.body.scrollToRight();
+        }
     }
 
 });
@@ -3841,9 +3903,9 @@ isc.DaySchedule.addProperties({
 
         this.rebuildFields();
 
-        this.addAutoChild("eventDragTarget");
-        this.body.addChild(this.eventDragTarget);
-        this.dragTarget = this.eventDragTarget;
+        this.addAutoChild("eventDragCanvas", { styleName: this.eventDragCanvasStyleName });
+        this.body.addChild(this.eventDragCanvas);
+        this.dragTarget = this.eventDragCanvas;
     },
 
     getFirstDateColumn : function () {
@@ -4196,8 +4258,8 @@ isc.DaySchedule.addProperties({
         // call refreshEvents() whenever we're drawn
         // see comment above dataChanged for the logic behind this
 
-        this.body.addChild(this.eventDragTarget);
-        this.eventDragTarget.setView(this);
+        this.body.addChild(this.eventDragCanvas);
+        this.eventDragCanvas.setView(this);
 
         /*
         if (this.isDayView() && this.calendar.scrollToWorkday) {
@@ -5153,6 +5215,10 @@ isc.MonthSchedule.addProperties({
             doDefault = false
         ;
 
+        // if showOtherDays is false and the clicked date is in another month, bail without
+        // calling setChosenDate()
+        if (!cal.showOtherDays && isOtherDay) return;
+
         // update the Calendar's chosenDate - this will update selection in this (month) view
         // and mark day/week views for a refresh, as required
         cal.setChosenDate(isc.DateUtil.createDatetime(currDate.getFullYear(),
@@ -5167,8 +5233,7 @@ isc.MonthSchedule.addProperties({
                 cal.selectTab(0);
             }
         } else { // day body clicked
-            if (isOtherDay) return;
-            if (!this.cellDisabled(rowNum, colNum) && !(!cal.showOtherDays && isOtherDay)) {
+            if (!this.cellDisabled(rowNum, colNum)) {
                 doDefault = cal.dayBodyClick(currDate, evtArr, cal, rowNum, colNum);
                 if (doDefault && cal.canCreateEvents) {
                     var startDate = cal.getCellDate(rowNum, colNum, this),
@@ -5480,8 +5545,8 @@ isc.TimelineView.addProperties({
         // only refreshData at this time if the calendar is not autoFetchData: true
         this._rebuild(!c.autoFetchData);
 
-        this.addAutoChild("eventDragTarget");
-        //this.body.addChild(this.eventDragTarget);
+        this.addAutoChild("eventDragCanvas", { styleName: this.eventDragCanvasStyleName });
+        //this.body.addChild(this.eventDragCanvas);
 
         this.initCacheValues();
     },
@@ -6187,9 +6252,9 @@ isc.TimelineView.addProperties({
 
         var fields = this.calcFields();
         if (this.isDrawn()) {
-            this.body.removeChild(this.eventDragTarget);
+            this.body.removeChild(this.eventDragCanvas);
             this.setFields(fields);
-            this.body.addChild(this.eventDragTarget);
+            this.body.addChild(this.eventDragCanvas);
         } else this.fields = fields;
     },
     _rebuild : function (refreshData) {
@@ -6251,6 +6316,7 @@ isc.TimelineView.addProperties({
         }
 
         this.setData(lanes);
+
         if (this.isDrawn()) this.redraw();
 
         // refetch or just redraw applicable events (setLanes() may have been called after setData)
@@ -6971,8 +7037,8 @@ isc.TimelineView.addProperties({
         // call refreshEvents() whenever we're drawn
         // see comment above dataChanged for the logic behind this
 
-        this.body.addChild(this.eventDragTarget);
-        this.eventDragTarget.setView(this);
+        this.body.addChild(this.eventDragCanvas);
+        this.eventDragCanvas.setView(this);
 
         //this.refreshEvents();
         if (this._fireViewChangedOnDraw) {
@@ -8037,7 +8103,13 @@ getMinutePixels : function (minutes, rowSize, view) {
 },
 
 //> @method calendar.scrollToTime()
-// Scroll the calendar Day or Week views to the specified time.
+// Scrolls Calendar +link{calendar.dayView, day} or +link{calendar.weekView, week} views to the
+// time represented by the time parameter.  This string parameter is expected to be an
+// arbitrary logical time value in any parsable time format - no date portion is expected, but
+// time formats like "13:31" or "1:20am" are supported.
+// <P>
+// Has no effect in +link{calendar.timelineView, timelines}, where an arbitrary time-value is
+// inapplicable to any range or resolution greater than a day.
 // @param time (String) any parsable time-string
 // @visibility calendar
 //<
@@ -8054,7 +8126,27 @@ scrollToTime : function (time, view) {
         var sRowTop = view.getRowHeight(view.getRecord(0), 0) * sRow;
         view.body.scrollTo(0, sRowTop);
         view.redraw();
-   }
+    }
+},
+
+//> @method calendar.scrollToStart()
+// Move the viewport of a CalendarView to the start of it's scrollable range.
+// @param [view] (CalendarView) the view to affect, the current view if not specified
+// @visibility calendar
+//<
+scrollToStart : function (view) {
+    view = view || this.getSelectedView();
+    if (view) view.scrollToStart();
+},
+
+//> @method calendar.scrollToEnd()
+// Move the viewport of a CalendarView to the end of its scrollable range.
+// @param [view] (CalendarView) the view to affect, the current view if not specified
+// @visibility calendar
+//<
+scrollToEnd : function (view) {
+    view = view || this.getSelectedView();
+    if (view) view.scrollToEnd();
 },
 
 //> @method calendar.moveToEvent()
@@ -10369,9 +10461,6 @@ dateLabelDefaults : {
 
 // initial setup of the calendar
 initWidget : function () {
-    // create the selection model
-    if (this.canSelectEvents) this.createSelectionModel();
-
     if (this.startDate && this.endDate && this.endDate.getTime() < this.startDate.getTime()) {
         // inverted range-dates - flip them and log a warning
         this.logWarn("endDate (" + this.endDate + ") is before startDate (" +
@@ -10489,6 +10578,10 @@ initWidget : function () {
     }
 
     if (!this.data) this.data = this.getDefaultData();
+
+    // create the selection model
+    if (this.canSelectEvents) this.createSelectionModel();
+
     // set hover text strings for toolbar buttons
     // can't set dynamically in defaults block, so have to do it here.
     this.previousButtonDefaults.prompt = this.previousButtonHoverText;
@@ -12939,7 +13032,7 @@ getIndicatorCanvas : function (indicator, view) {
     view = view || this.getSelectedView();
     var props = { calendar: this, calendarView: view, event: indicator, isIndicatorCanvas: true,
             styleName: this.getIndicatorCanvasStyle(indicator, view),
-            dragTarget: view.eventDragTarget
+            dragTarget: view.eventDragCanvas
         },
         canvas = this.createAutoChild("indicatorCanvas", props, this.indicatorCanvasConstructor)
     ;
@@ -13041,9 +13134,9 @@ _getEventCanvas : function (event, view) {
             _redrawWithParent:false,
             showCloseButton: canRemove,
             descriptionText: event[this.descriptionField],
-            dragTarget: view.eventDragTarget,
-            headerProps: isc.addProperties({}, {dragTarget: view.eventDragTarget}),
-            footerProperties: {dragTarget: view.eventDragTarget}
+            dragTarget: view.eventDragCanvas,
+            headerProps: isc.addProperties({}, {dragTarget: view.eventDragCanvas}),
+            footerProperties: {dragTarget: view.eventDragCanvas}
         }, this.eventWindowDefaults, this.eventWindowProperties
     );
 
@@ -15206,7 +15299,9 @@ _getCellCSSText : function (grid, record, rowNum, colNum) {
     if (this.todayBackgroundColor) {
         // if todayBackgroundColor is set and the passed logical date is today,
         // return CSS for that...
-        var dateComp = isc.DateUtil.compareLogicalDates(currDate, new Date());
+        var today = isc.DateUtil._getDisplayOffsetDate(new Date());
+        //this.logWarn(new Date() + "\n" + today);
+        var dateComp = isc.DateUtil.compareLogicalDates(currDate, today);
         if ((dateComp !== false && dateComp == 0)) {
             return "background-color:" + this.todayBackgroundColor + ";";
         }
@@ -16418,7 +16513,7 @@ isc.EventWindow.addProperties({
     _footerProperties: {overflow:"hidden", defaultLayoutAlign:"center", height: 7},
 
     initWidget : function () {
-        //headerProps: isc.addProperties({}, {dragTarget: view.eventDragTarget}),
+        //headerProps: isc.addProperties({}, {dragTarget: view.eventDragCanvas}),
 
         this.addProperties(this.creator.viewProps);
         this.addProperties(this.creator.gridProps);
@@ -16430,7 +16525,7 @@ isc.EventWindow.addProperties({
         this.showHeader = this.calendar.showEventHeaders;
         this.showBody = this.calendar.showEventDescriptions;
 
-        this.footerProperties = isc.addProperties({dragTarget: this.eventDragTarget},
+        this.footerProperties = isc.addProperties({dragTarget: this.eventDragCanvas},
                 this.footerProperties, this._footerProperties);
 
         if (this.bodyConstructor == null) this.bodyConstructor = isc.HTMLFlow;
@@ -18363,7 +18458,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version v12.0p_2018-06-28/LGPL Deployment (2018-06-28)
+  Version v12.0p_2018-09-15/LGPL Deployment (2018-09-15)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

@@ -1,7 +1,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version v12.0p_2018-06-28/LGPL Deployment (2018-06-28)
+  Version v12.0p_2018-09-15/LGPL Deployment (2018-09-15)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,9 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
 
-if (window.isc && isc.version != "v12.0p_2018-06-28/LGPL Deployment" && !isc.DevUtil) {
+if (window.isc && isc.version != "v12.0p_2018-09-15/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'v12.0p_2018-06-28/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'v12.0p_2018-09-15/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -2652,7 +2652,7 @@ isc.DateChooser.addMethods({
     resized : function () {
         // if the chooser was just resized, call placeNear() to make sure it remains on-screen
         // - placeNear() will no-op if there's nothing to do
-        this.placeNear(this.getLeft(), this.getTop());
+        this.placeNear(this.getPageLeft(), this.getPageTop());
     },
 
     handleKeyPress : function () {
@@ -3065,7 +3065,8 @@ isc.DateChooser.addMethods({
         var arr = this._getMonthChooserTitles(),
             style = (this.baseNavButtonStyle || this.baseButtonStyle) + "Over",
             extraWidth = isc.Element._getHBorderPad(style) * 2,
-            maxWidth = isc.Canvas.measureContent(arr.join("<br>"), style) + extraWidth
+            maxWidth = isc.Canvas.measureContent("<span style='white-space:nowrap'>"
+                         + arr.join("<br>") + "</span>", style) + extraWidth
         ;
         this._monthChooserButtonWidth =  maxWidth;
         return this._monthChooserButtonWidth;
@@ -6599,9 +6600,16 @@ isc.DynamicForm.addClassProperties({
             }
         }
         return returnVal;
-    },
+    }
 
+    /*
+    ,
     getDefaultOperatorForType : function (type, item, textMatchStyle, field) {
+        if (item) {
+            var defaultOp = item.getDefaultOperator(textMatchStyle);
+            if (defaultOp) return defaultOp;
+        }
+
         var form = item && item.form,
             typeName = type == null ? "text" : isc.isA.String(type) ? type : type.name,
             operator
@@ -6641,6 +6649,7 @@ isc.DynamicForm.addClassProperties({
         }
         return operator;
     }
+    */
 });
 
 
@@ -6781,6 +6790,9 @@ isc.DynamicForm.addProperties({
     //
     // @treeLocation Client Reference/Forms
     // @title Form Layout
+    // @see formItem.width
+    // @see formItem.height
+    // @see dynamicForm.itemLayout
     // @visibility external
     //<
 
@@ -6804,6 +6816,9 @@ isc.DynamicForm.addProperties({
     // </ul>
     //
     // @group formLayout
+    // @see group:formLayout
+    // @see formItem.width
+    // @see formItem.height
     // @visibility absForm
     //<
     //itemLayout:"table",
@@ -8657,6 +8672,15 @@ createItem : function (item, type) {
     if (item.destroyed && isc.isA.FormItem(item)) {
         this.logWarn("destroyed FormItem passed to setItems()/addItem(): FormItems cannot be " +
                      "re-used with different DynamicForms");
+    }
+
+    // warn for a percent width other than "100%", unless using absolute item layout
+    if (!this._absPos() && isc.isA.String(item.width) && item.width != "100%" &&
+                                                         item.width != "*")
+    {
+        this.logWarn("Found width:'" + item.width + "' for item " + item.name +
+                     ".  Percent sizes other than '100%' (as a synonym for '*') " +
+                     "aren't allowed unless using absolute item layout");
     }
 
     // Handle item.hidden as a synonym for showIf:"false"
@@ -15593,7 +15617,7 @@ handleFocusIn : function (element, event) {
     if (isc.EH.synchronousFocusNotifications && element != null) {
         var itemInfo = isc.DynamicForm._getItemInfoFromElement(element, this);
         var item = itemInfo ? itemInfo.item : null;
-        if (item) {
+        if (item && !item.disabled) {
             // focusIn occurred on the focus handler - fire standard item focus handling
 
             if (element == item.getFocusElement()) {
@@ -18739,7 +18763,15 @@ isc.FormItem.addProperties({
     // @visibility external
     //<
 
+    //> @attr formItem.showInputElement (boolean : true : IRWA)
+    // When set to false, prevents this item's input element from being written into the DOM.
+    // If there are +link{formItem.valueIcons, valueIcons} or a
+    // +link{formItem.showPickerIcon, picker icon}, these are displayed as normal, and the item
+    // will auto-sizing to that content if its +link{formItem.width, width} is set to null.
+    // @visibility internal
+    //<
 
+    showInputElement: true,
 
 
     // ValueIcons
@@ -18900,7 +18932,7 @@ isc.FormItem.addProperties({
     //<
     isInGrid : function () {
 
-        return isc.isA.GridRenderer(this.containerWidget);
+        return this._inGrid || isc.isA.GridRenderer(this.containerWidget);
     },
 
     //> @method formItem.getListGrid()
@@ -19597,15 +19629,23 @@ isc.FormItem.addProperties({
     //> @attr formItem.width (int | String : "*" : IRW)
     // Width of the FormItem.  Can be either a number indicating a fixed width in pixels, or
     // "*" indicating the FormItem fills the space allocated to it's column (or columns, for a
-    // +link{colSpan,column spanning} item).
+    // +link{colSpan,column spanning} item).  You may also use "100%" as a synonym for "*", but
+    // other percentages are not supported.
+    // <P>
+    // Note that for "absolute" item layout rather than the default "table" layout, the rules
+    // for specifying the width are slightly different.  All percent sizes are allowed, but not
+    // "*".  See +link{dynamicForm.itemLayout} for further details.
     // <P>
     // <smartgwt>If width is specified as a String, getWidth() will return -1.  Use
     // +sgwtLink{getWidthAsString()} in this case.<p></smartgwt>
     // See the +link{group:formLayout} overview for details.
     //
     // @group formLayout
-    // @visibility external
+    // @see group:formLayout
+    // @see formItem.height
+    // @see dynamicForm.itemLayout
     // @example columnSpanning
+    // @visibility external
     //<
     width:"*",
 
@@ -19638,8 +19678,11 @@ isc.FormItem.addProperties({
     // the property +link{formItem.staticHeight} is used instead.
     //
     // @group formLayout
-    // @visibility external
+    // @see group:formLayout
+    // @see formItem.width
+    // @see dynamicForm.itemLayout
     // @example formLayoutFilling
+    // @visibility external
     //<
 
     height:20,
@@ -20318,6 +20361,26 @@ isc.FormItem.addProperties({
         // @visibility external
         //<
 
+        //> @attr formItemIcon.cursor (Cursor : Canvas.POINTER : IRWA)
+        // Specifies the cursor image to display when the mouse pointer is
+        // over this icon. It corresponds to the CSS cursor attribute. See Cursor type for
+        // different cursors.
+        // <p>
+        // See also +link{formItemIcon.disabledCursor}.
+        // @visibility external
+        // @group cues
+        //<
+        cursor:isc.Canvas.POINTER_OR_HAND,
+
+        //> @attr formItemIcon.disabledCursor (Cursor : Canvas.DEFAULT : IRWA)
+        // Specifies the cursor image to display when the mouse pointer is
+        // over this icon if this icon is disabled. It corresponds to the CSS cursor
+        // attribute. See Cursor type for different cursors.
+        // @visibility external
+        // @group cues
+        //<
+        disabledCursor:isc.Canvas.DEFAULT,
+
         //> @attr formItemIcon.showOver (boolean : null : IRWA)
         // Should this icon's image and/or +link{FormItemIcon.baseStyle,baseStyle} switch to the
         // appropriate "Over" value when the user rolls over or focuses on the icon?
@@ -20385,6 +20448,13 @@ isc.FormItem.addProperties({
         // receives focus.
         // @see formItem.showFocusedIcons
         // @see formItemIcon.showFocused
+        // @group  formIcons
+        // @visibility external
+        //<
+
+        //> @attr formItemIcon.canFocus (Boolean : null : IRWA)
+        // Set to false to suppress all focus features for this icon. Clicking the
+        // icon will not apply focus to the icon or to the form item.
         // @group  formIcons
         // @visibility external
         //<
@@ -22011,7 +22081,7 @@ isc.FormItem.addMethods({
             var titleLeft = this.getTitlePageLeft(),
                 titleTop = this.getTitlePageTop(),
                 titleWidth = this.getVisibleTitleWidth(),
-                titleHeight = this.form.getTitleHeight(this);;
+                titleHeight = this.form.getTitleHeight(this);
             if (this.titleOrientation == "left" || this.titleOrientation == "left" ||
                 this.titleOrientation == null)
             {
@@ -22294,8 +22364,10 @@ isc.FormItem.addMethods({
 
     getPickerIconHSpace : function () {
         var width = 0;
-        if (this._pickerIconVisible()) {
-            width += this.getPickerIconWidth();
+        if (this.showPickerIcon) {
+            if (this._pickerIconVisible()) {
+                width += this.getPickerIconWidth();
+            }
             // Additional horizontal space required due to hspace / border/padding on style
             var iconProps = this.getPickerIcon();
             if (iconProps.hspace != null) width += iconProps.hspace;
@@ -22358,6 +22430,14 @@ isc.FormItem.addMethods({
 
         // reduce by error width for left or right-oriented errors
         return basicWidth - this._getErrorWidthAdjustment();
+    },
+
+    // Return the width of the text box as it appears to the user - used to determine
+    // geometry for absolutely floated inline icons
+    getLogicalTextBoxWidth : function () {
+        var width = this.getElementWidth();
+        if (this.showPickerIcon) width -= this.getPickerIconHSpace();
+        return width;
     },
 
     // anticipated width of the error message, if we are showing errors on the left or right
@@ -23961,10 +24041,10 @@ isc.FormItem.addMethods({
                 var leftBorderPad = isc.Element._getLeftBorderSize(textBoxStyle) + leftPad,
                     rightBorderPad = isc.Element._getRightBorderSize(textBoxStyle) + rightPad;
 
-                var logicalTextBoxWidth = this.getElementWidth() - this.getPickerIconHSpace();
+                var logicalTextBoxWidth = this.getLogicalTextBoxWidth();
 
                 elementHTML = "<div id='" + this._getInlineIconsWrapperID() +
-                    "' style='position:relative;display:block;width:"
+                    "' style='position:relative;vertical-align:center;display:block;width:"
                     + logicalTextBoxWidth + "px;'>"
                      + elementHTML;
 
@@ -24239,9 +24319,15 @@ isc.FormItem.addMethods({
         }
         // if we have an error always just return the error state
         if (hasErrors && this.shouldShowErrorStyle() && this.form.showInlineErrors) {
-            style = this.showFocusedErrorState && this.hasFocus && !this.isInactiveHTML() ?
+            if (this.hasFocus) {
+                style = this.showFocusedErrorState && !this.isInactiveHTML() ?
                         (showOver ? cacheObject.ErrorFocusedOver : cacheObject.ErrorFocused) :
-                        cacheObject.Error;
+                        cacheObject.ErrorFocused;
+            } else {
+                style = !this.isInactiveHTML() ?
+                        (showOver ? cacheObject.ErrorOver : cacheObject.Error) :
+                        cacheObject.ErrorOver;
+            }
         } else {
             // suppress focused styling when inactive
             if (showFocused) {
@@ -24352,7 +24438,7 @@ isc.FormItem.addMethods({
                 className = this.cellClassName;
             }
         } else {
-            // If the deprecated 'errorCellClassName' proeprty is set, use that
+            // If the deprecated 'errorCellClassName' property is set, use that
             if (this.errorCellClassName != null) {
                 this._warnDeprecated("errorCellClassname", "cellStyle");
                 className = this.errorCellClassName;
@@ -25016,18 +25102,26 @@ isc.FormItem.addMethods({
             );
         } else {
 
-            output = isc.SB.concat("<TABLE ",
+            output = isc.SB.create();
+            output.append("<TABLE ",
                     this._getInlineErrorHandleAttributes(),
                     "' role='presentation' WIDTH=100% CELLSPACING=0 CELLPADDING=0><TR>",
-                    "<TD WIDTH=",this.errorIconWidth,">"
+                "<TD WIDTH=",this.errorIconWidth + this.iconHSpace,">"
                     // If we're writing a table we know we're always writing out the icon
                     , this.getErrorIconHTML(error)
-                    , "</TD><TD STYLE='", isc.Canvas._$noStyleDoublingCSS, "' CLASS='" ,
-                        this.getCellStyle() , "'>&nbsp;"
+                , "</TD>"
+            );
+
+            if (showErrorText) {
+                output.append("<TD STYLE='", isc.Canvas._$noStyleDoublingCSS, "' CLASS='" ,
+                        this.getCellStyle(), "'>&nbsp;"
                     , titleText
                     , messageString
-                    , "</TD></TR></TABLE>"
+                    , "</TD>"
             );
+        }
+            output.append("</TR></TABLE>");
+            output = output.release(false);
         }
         return output;
     },
@@ -25307,6 +25401,7 @@ isc.FormItem.addMethods({
 
     _storeFocusForRedraw : function () {
 
+        if (this._skipStoreFocusForRedraw) return;
         this._hadFocusBeforeRedraw = true;
 
         this.rememberSelection();
@@ -25718,6 +25813,10 @@ isc.FormItem.addMethods({
         if (icon.height == null) icon.height = this.iconHeight;
         if (icon.hspace == null) icon.hspace = this.iconHSpace;
         icon.hspace = Math.max(0, icon.hspace);
+
+        // An icon that should not receive focus nor focus its
+        // FormItem is implemented by setting imgOnly
+        if (icon.canFocus == false) icon.imgOnly = true;
     },
 
     //> @method formItem.getIconTabPosition()
@@ -26133,6 +26232,8 @@ isc.FormItem.addMethods({
         var iconSrc = this.getIconURL(icon, over,disabled,focused),
             classText = (iconStyle == null ? isc.emptyString : " class='" + iconStyle + this._$singleQuote);
 
+        var cursor = (disabled ? icon.disabledCursor : icon.cursor);
+
         // If the icon is marked as 'imgOnly', just return the img tag - event handling should
         // be handled by the Form Item itself
 
@@ -26156,7 +26257,8 @@ isc.FormItem.addMethods({
                                 // do write out display:block for this case
                                 !inline,
 
-                                extraStuff
+                                extraStuff,
+                                cursor
                     );
 
         // We embed the icon in a link to make it focusable
@@ -26227,9 +26329,11 @@ isc.FormItem.addMethods({
             //In Moz we need to set -moz-user-focus to disable focus if tabIndex < 0
             if (isc.Browser.isMoz) template[6] = (tabIndex < 0 ? "ignore;" : "normal;");
 
-            template[7] = disabled ? "cursor:default;" : "cursor:" + isc.Canvas.POINTER_OR_HAND;
-            if (!inline) {
-                template[7] += ";display:block;height:" + height + "px;"
+            // it seems to be necessary to set display:block irrespective of the value
+            // of the "inline" param, in all browsers except IE - just don't set the display
+            // for IE
+            if (!isc.Browser.isIE) {
+                template[7] = ";display:block;height:" + icon.height || this.iconHeight || height + "px;"
             }
 
             template[9] = tabIndex;
@@ -26250,7 +26354,7 @@ isc.FormItem.addMethods({
             template[19] = this._getIconImgHTML(
                                 this._getIconImgId(iconID),
                                 width,
-                                height,
+                                icon.height || this.iconHeight || height,
                                 this._getIconVAlign(icon),
                                 this._getIconVMargin(icon),
                                 (!hspaceToLink ? hspace : null),
@@ -26258,7 +26362,8 @@ isc.FormItem.addMethods({
                                 iconSrc,
 
                                 !isc.Browser.isDOM || !isc.Browser.isIE,
-                                classText
+                                classText,
+                                cursor
                            );
             return template.join(isc.emptyString);
 
@@ -26300,13 +26405,14 @@ isc.FormItem.addMethods({
         // Optional background-color for the icon
         ,                           // 8: background-color='xxx'
         ,                           // 9: optional display:block for strict mode
-        "-webkit-touch-callout:none" // 10 - disables Mobile Safari's "Save Image" dialog
+        ,                           // 10: optional cursor
+        "-webkit-touch-callout:none" // 11 - disables Mobile Safari's "Save Image" dialog
                                      // The "Save Image" dialog is prevented in Chrome for Android
                                      // by canceling the native 'contextmenu' event.
                                      // See DynamicForm.handleShowContextMenu()
     ],
     _getIconImgHTML : function (imgID, width, height, vAlign, vMargin, hspace, backgroundColor,
-                                src, displayBlock, extraStuff) {
+                                src, displayBlock, extraStuff, cursor) {
         // Get the icon Img HTML from the Canvas 'imgHTML()' method.  This handles displaying
         // PNG type files as well as other img files.
 
@@ -26343,6 +26449,8 @@ isc.FormItem.addMethods({
 
         if (displayBlock) template[9] = "display:block;";
         else template[9] = ""
+
+        template[10] = (cursor != null ? "cursor:" + cursor + ";" : null);
 
         var extraCSSText = template.join(isc._emptyString);
 
@@ -26545,8 +26653,16 @@ isc.FormItem.addMethods({
             if (hasFocus == null) hasFocus = this._hasRedrawFocus(true);
 
             // If we don't have focus don't show
-            // * Exception: Treat 'showingPickList' as having focus
-            if (hasFocus == false && !this._showingPickList) return false;
+            // * Exception: Treat 'showingPickList' as having focus, but only if the picker is
+            // visible - a pending fetch can mean the item blurs after _showingPickList is set
+            // to true, but before the picklist if ready to show
+            if (hasFocus == false) {
+                if (!this._showingPickList) return false;
+                if (this._isPickListVisible && !this._isPickListVisible()) {
+                    //this.logWarn("picker not visible - hiding icon");
+                    return false;
+                }
+            }
 
             // If showOnFocus is true, and the icon is disabled, potentially avoid
             // showing it even if we do have focus
@@ -27539,6 +27655,7 @@ isc.FormItem.addMethods({
         else this._adjustOverflowReason[2] = reason;
 
         if (isc.isA.DynamicForm(this.containerWidget)) {
+            this.containerWidget._resetHandleOnAdjustOverflow = true;
             // shift canvasItems around if necessary
             this.containerWidget._placeCanvasItems();
             this.containerWidget.adjustOverflow(this._adjustOverflowReason.join(isc.emptyString));
@@ -27674,6 +27791,7 @@ isc.FormItem.addMethods({
         // subclasses such as the ContainerItem class may do more complicated things which
         // make this method's return value vary.
         if (this.showValueIconOnly) return false;
+        if (this.showInputElement == false) return false;
         return this._hasDataElement;
     },
 
@@ -29251,7 +29369,12 @@ isc.FormItem.addMethods({
         }
         // If the form item is `multiple` then the value of the form must be an array.
         if (this.multiple && newValue != null && !isc.isAn.Array(newValue)) {
-            newValue = [newValue];
+            var op = isc.DS._operators[this.getOperator()];
+            if (op && op.valueType == "valueSet" && op.processValue) {
+                newValue = op.processValue(newValue);
+            } else {
+                newValue = [newValue];
+            }
         }
         // truncate newValue to the length of the field, if specified
         if (this.enforceLength && this.length != null && newValue != null) {
@@ -31492,37 +31615,123 @@ isc.FormItem.addMethods({
         }
     },
 
-    getDefaultOperator : function (textMatchStyle, isMultiValued) {
-        var operator;
-        if (isMultiValued) {
-            operator = "inSet"
-        } else {
-            var type = this.getType();
-            if (this.valueMap || this.optionDataSource ||
-                isc.SimpleType.inheritsFrom(type, "enum") ||
-                isc.SimpleType.inheritsFrom(type, "boolean") ||
-                isc.SimpleType.inheritsFrom(type, "float") ||
-                isc.SimpleType.inheritsFrom(type, "integer") ||
-                isc.SimpleType.inheritsFrom(type, "date") ||
-                isc.SimpleType.inheritsFrom(type, "time"))
-            {
-                operator = "equals";
-            } else {
-                // Don't pass in a value - this is appropriate for text-based items
-                // we'll override for other items if necessary.
+    supportsOperator : function (operatorId, validOps) {
+        validOps = validOps || this.getValidOperators();
+        return validOps.contains(operatorId);
+    },
 
-                var defaultOperator = "iContains";
-                if (this.form) {
-                    defaultOperator = this.form.defaultSearchOperator ||
-                        (this.form.allowExpressions ? "iContainsPattern" : "iContains");
-                    var ds = this.form.getDataSource(),
-                        types = ds && ds.getFieldOperators(this.name),
-                        validOp = types && types.contains(defaultOperator)
-                    ;
-                    if (!validOp && types) defaultOperator = types[0];
-                }
-                operator = isc.DataSource.getCriteriaOperator(null, textMatchStyle, defaultOperator);
+    getValidOperators : function () {
+        // if the item has validOperators, return them
+        if (this.validOperators) return this.validOperators;
+
+        var ds = this.dataSource || (this.form && this.form.dataSource),
+            type = this.getType() || "text"
+        ;
+        if (ds) {
+            // if there's a DS, return field.validOperators if it's set - if not, the simpleType's
+            // validOperators, or finally the global valid ops for the Type
+            var field = ds.getField(this.getCriteriaFieldName());
+            return ds.getFieldOperators(field);
+        } else {
+            // return the validOperators from the SimpleType if there's no DS
+            var validOps = isc.SimpleType.getValidOperators(type);
+            if (validOps) return validOps;
+        }
+
+        if (isc.DataSource) {
+            // no DS, get the global typeOperators from isc.DataSource
+            var validOps = isc.DataSource.getTypeOperators(type);
+            if (validOps) return validOps;
+        }
+
+        return null;
+    },
+
+    getDefaultOperator : function (textMatchStyle, isMultiValued) {
+        var defaultOp = null;
+
+        // if the item has a defaultOperator, use it
+        if (this.defaultOperator) defaultOp = this.defaultOperator;
+
+        // if it's multiValued and there's no defaultOp, use defaultMultipleOperator, or "inSet"
+        if (!defaultOp && isMultiValued) {
+            if (this.defaultMultipleOperator != null) {
+                // return defaultOperator if it's set and valid for the item
+                defaultOp = this.defaultMultipleOperator;
             }
+            if (!defaultOp) defaultOp = "inSet";
+        }
+
+        if (!defaultOp) {
+            // no defaultOperator and not multi-valued
+            var ds = this.dataSource || (this.form && this.form.dataSource);
+            if (ds) {
+                // if there's a DS, use field.defaultOperator if it's set, or
+                // simpleType.getDefaultOperator() otherwise
+                defaultOp = ds.getFieldDefaultOperator(this.getCriteriaFieldName());
+            } else {
+                // if there's no DS, use SimpleType.getDefaultOperator()
+                defaultOp = isc.SimpleType.getDefaultOperator(this.getType());
+            }
+        }
+
+        if (!defaultOp) {
+            // no defaultOp - should never happen, but fall back to the legacy method if it does
+            defaultOp = this._getDefaultOperator(textMatchStyle, isMultiValued);
+        }
+
+        // get the specified or inherited validOperators from the item, field or type
+        var validOps = this.getValidOperators();
+        if (!validOps || validOps.length == 0) {
+            // no valid ops for this item - some items, like buttons and sections, don't have
+            // types and don't support operators - log a warning and return the detected
+            // default anyway - this is what would always have happened in the past (before
+            // the recent addition of defaultOperator)
+            this.logInfo("This item does not support filter operators.");
+            return defaultOp;
+        }
+
+        if (defaultOp) {
+            // if the detected defaultOperator is valid, return it
+            if (this.supportsOperator(defaultOp, validOps)) return defaultOp;
+        }
+
+        this.logInfo("Detected defaultOperator, '" + defaultOp + "', is unsupported in " +
+            "this item.  Valid operators are: " + isc.echoAll(validOps) + "\n " +
+            "Using " + validOps[0] + " instead.");
+        return validOps[0];
+    },
+
+    _getDefaultOperator : function (textMatchStyle, isMultiValued) {
+        var validOps = this.getValidOperators();
+
+        // get the defaultOperator from the data-type
+        var type = this.getType();
+        var operator;
+        if (this.valueMap || this.optionDataSource ||
+            isc.SimpleType.inheritsFrom(type, "enum") ||
+            isc.SimpleType.inheritsFrom(type, "boolean") ||
+            isc.SimpleType.inheritsFrom(type, "float") ||
+            isc.SimpleType.inheritsFrom(type, "integer") ||
+            isc.SimpleType.inheritsFrom(type, "date") ||
+            isc.SimpleType.inheritsFrom(type, "time"))
+        {
+            operator = "equals";
+        } else {
+            // Don't pass in a value - this is appropriate for text-based items
+            // we'll override for other items if necessary.
+
+            var defaultOperator = "iContains";
+            if (this.form) {
+                defaultOperator = this.form.defaultSearchOperator ||
+                    (this.form.allowExpressions ? "iContainsPattern" : "iContains");
+                var ds = this.form.getDataSource(),
+                    types = ds && ds.getFieldOperators(this.name),
+                    validOp = types && types.contains(defaultOperator)
+                ;
+                if (!validOp && types) defaultOperator = types[0];
+            }
+            operator = isc.DataSource.getCriteriaOperator(null, textMatchStyle, defaultOperator);
         }
         return operator;
     },
@@ -31671,9 +31880,14 @@ isc.FormItem.addMethods({
         // some ops (isNull and notNull) have valueType "none" - no value is required
         if (op.valueType != "none") result.value = value;
 
-        if (this._shouldAllowExpressions()) {
+        if (isc.isA.String(value) && this._shouldAllowExpressions()) {
             var crit = this.parseValueExpressions(value, fieldName, operator);
             if (crit != null) {
+                var tOp = isc.DS._operators[crit.operator];
+                if (tOp.valueType == "valueSet" && crit.value != null && isc.isA.String(crit.value)) {
+                    crit.value = tOp.processValue(crit.value);
+                }
+
 
                 if (!this.canEditCriterion(crit)) result = null;
                 else result = crit;
@@ -31709,6 +31923,12 @@ isc.FormItem.addMethods({
                 // if operatorIcons are showing, we don't want to add the expression to the
                 // value, because it's already been applied to the operatorIcon
                 value = this.buildValueExpressions(criterion);
+            } else {
+                if (op.valueType == "valueSet") {
+                    if (isc.isAn.Array(value)) {
+                        value = value.join(op.valueSeparator);
+                    }
+                }
             }
         } else {
             if (this.multiple) {
@@ -35997,7 +36217,6 @@ isc.FormItem.addMethods({
     },
     _stylingProperties:{
         baseStyle:true,
-        showErrorStyle:true,
         //showDisabled:true // handled by explicit setShowDisabled method
         showFocused:true,
         showErrorStyle:true,
@@ -36114,6 +36333,13 @@ isc.FormItem.addMethods({
     // <P>
     // Applies only to form/formItem when +link{formItem.allowExpressions} is true, allowing the
     // user to input expressions.
+    // @group advancedFilter
+    // @visibility external
+    //<
+
+    //> @attr formItem.defaultOperator (OperatorId : null : IR)
+    // The default search-operator for this item when it or its form allow
+    // +link{formItem.allowExpressions, filter-expressions}.
     // @group advancedFilter
     // @visibility external
     //<
@@ -36487,13 +36713,8 @@ isc.FormItem.addMethods({
 
         var opIndex = isc.DynamicForm.getOperatorIndex(),
             opList = isc.getKeys(opIndex),
-            validOps = this.validOperators
+            validOps = this.getValidOperators()
         ;
-
-        if (!validOps) {
-            // if no item.validOperators, all ops for the type are considered valid
-            validOps = ds.getTypeOperators(this.type, true);
-        }
 
         var defOpName = this.getOperator();
         if (defOpName) validOps.add(defOpName);
@@ -36653,7 +36874,7 @@ isc.FormItem.addMethods({
         }
 
         var ds = isc.DS.get(this.form.expressionDataSource || this.form.dataSource),
-            validOps = this.validOperators || (ds ? ds.getTypeOperators(this.type, true) : []),
+            validOps = this.getValidOperators() || [],
             needsAValue = !["$", "!$", "#", "!#"].contains(value),
             hasExpression = true
         ;
@@ -43072,6 +43293,10 @@ isc.CanvasItem.addMethods({
                 }
                 this.canvas.deparent();
 
+                // the canvas's tab-position is registered as being under ours -
+                // reset this so it doesn't get removed from the TIM tree when we are
+                isc.TabIndexManager.moveTarget(this.canvas.getID());
+
                 // ignore the focus methods we observed at init
                 this.ignore(this.canvas, "_focusChanged");
                 if (isc.isA.DynamicForm(this.canvas)) {
@@ -44589,6 +44814,14 @@ isc.TextItem.addProperties({
         return this.canEscapeHTML;
     }
 
+    //> @attr textItem.showInputElement (boolean : true : IRWA)
+    // When set to false, prevents this item's input element from being written into the DOM.
+    // If there are +link{formItem.valueIcons, valueIcons} or a
+    // +link{formItem.showPickerIcon, picker icon}, these are displayed as normal, and the item
+    // will auto-sizing to that content if its +link{formItem.width, width} is set to null.
+    // @visibility external
+    //<
+
 });
 
 isc.TextItem.addMethods({
@@ -45013,6 +45246,9 @@ isc.TextItem.addMethods({
     getElementHTML : function (value, dataValue) {
         var valueIconHTML = this._getValueIconHTML(dataValue);
         if (this.showValueIconOnly) return valueIconHTML;
+
+        // if showInputElement is false, don't add it to the DOM
+        if (this.showInputElement == false) return "";
 
         var result;
 
@@ -45842,7 +46078,7 @@ isc.TextItem.addMethods({
                     this.browserInputType + "'. Ignoring.");
                 this.mask = null;
             } else {
-                this._parseMask ();
+                this._parseMask();
                 if (this.keyPressFilter) {
                     this.logWarn("init: keyPressFilter ignored because mask is enabled");
                 }
@@ -45976,10 +46212,12 @@ isc.TextItem.addMethods({
 
             // Handle ESC key
             if (keyName == "Escape") {
-                this._clearMaskBuffer(0, this._length)
-                this._saveMaskBuffer(true);
-                this._setSelection(this._firstNonMaskPos == null ? 0 : this._firstNonMaskPos);
-                return false;
+                if (this.resetMaskOnEscape) {
+
+                    this._clearMaskBuffer(0, this._length);
+                    this._saveMaskBuffer(true);
+                    this._setSelection(this._firstNonMaskPos == null ? 0 : this._firstNonMaskPos);
+                }
             }
         }
         if (this._insertCharacterValue(characterValue) == false) {
@@ -46299,7 +46537,7 @@ isc.TextItem.addMethods({
         }
         // Setup mask
         this.mask = mask;
-        this._parseMask ();
+        this._parseMask();
         if (this.keyPressFilter) {
             this._keyPressRegExp = null;
             this.logWarn("setMask: keyPressFilter ignored because mask is enabled");
@@ -47718,7 +47956,6 @@ isc._ScrollingPickerProperties = {
             var fieldName = formItem.getValueFieldName();
             var valueFieldName = (specialRecord && existSeparateValuesList ? formItem._$separateValuesListValueField : formItem.getValueFieldName());
             var value = record[valueFieldName];
-
             if (isc.PickList.selectAllStoredValue && value == isc.PickList.selectAllStoredValue) {
                 var listGrid = this,
                     data = this.getData(),
@@ -47754,7 +47991,6 @@ isc._ScrollingPickerProperties = {
                 }
                 var sel = formItem.pickList.getSelection(),
                     value = sel.getProperty(fieldName);
-
                 formItem.pickValue(value);
             } else {
                 if (isc.PickList.emptyStoredValue && value == isc.PickList.emptyStoredValue) {
@@ -47932,7 +48168,6 @@ isc._ScrollingPickerProperties = {
     // the first letter of the option.
     bodyKeyPress : function (event, eventInfo) {
         var keyName = isc.EH.lastEvent.keyName;
-
         // Catch shift+tab in safari in keyPress rather than keydown
         if (isc.Browser.isSafari) {
             if (keyName == "Tab") {
@@ -47942,7 +48177,7 @@ isc._ScrollingPickerProperties = {
         }
 
         var charVal = isc.EH.getKeyEventCharacterValue();
-        if (charVal != null) {
+        if (charVal != null && keyName != "Enter") {
             var data = this.formItem.getAllLocalOptions();
             if (!data || data.length < 1) {
                 // getAllLocalOptions returns null if we have a partial cache - just search
@@ -47986,10 +48221,8 @@ isc._ScrollingPickerProperties = {
                         buffer = formItem._moveToBuffer;
                     }
                 }
-
                 while (newIndex != currentIndex) {
                     if (currentIndex < 0) currentIndex = 0;
-
                     // if record not loaded, there's a partial cache - allow restart from zero
                     if (!data[newIndex]) {
                         if (canRestart) {
@@ -51671,37 +51904,42 @@ isc.NativeSelectItem.addMethods({
 
         if (valueIconHTML != null) output.append(valueIconHTML);
 
-        if (this._isPrinting() || this.renderAsStatic()) {
-            if (this.printFullText) {
-                result = isc.StringBuffer.concat(
-                    "<SPAN ",this.getElementStyleHTML(), ">",
-                    dataValue == null ? "&nbsp;" : dataValue.asHTML(), "</SPAN>"
-                );
-            } else {
-                result = isc.StaticTextItem._instancePrototype.getElementHTML.apply(this, arguments);
-            }
-        } else {
-            output.append(
-                    "<SELECT",
-                    " NAME=" , this.getElementName(),
-                    " ID=", this.getDataElementId(),
-
-                    // hang a flag on the element marking it as the data element for the
-                    // appropriate form item.
-                    this._getItemElementAttributeHTML(),
-
-                    (!this.showTitle && this.accessKey != null ?
-                        " ACCESSKEY=" + this.accessKey : emptyString),
-                    ((this.isReadOnly() || this.isDisabled()) ? " DISABLED "
-                                                                              : emptyString),
-                    this.getElementStyleHTML(),
-                    (this.multiple ? " MULTIPLE" : emptyString),
-                    " TABINDEX=", this._getElementTabIndex()," handleNativeEvents=false>");
-
-            output.append(this.getOptionsHTML(this.getValueMap()));
-
-            output.append("</SELECT>");
+        if (this.showInputElement == false) {
+            // if showInputElement is false, just return the valueIconHTML, if any
             result = output.release(false);
+        } else {
+            if (this._isPrinting() || this.renderAsStatic()) {
+                if (this.printFullText) {
+                    result = isc.StringBuffer.concat(
+                        "<SPAN ",this.getElementStyleHTML(), ">",
+                        dataValue == null ? "&nbsp;" : dataValue.asHTML(), "</SPAN>"
+                    );
+                } else {
+                    result = isc.StaticTextItem._instancePrototype.getElementHTML.apply(this, arguments);
+                }
+            } else {
+                output.append(
+                        "<SELECT",
+                        " NAME=" , this.getElementName(),
+                        " ID=", this.getDataElementId(),
+
+                        // hang a flag on the element marking it as the data element for the
+                        // appropriate form item.
+                        this._getItemElementAttributeHTML(),
+
+                        (!this.showTitle && this.accessKey != null ?
+                            " ACCESSKEY=" + this.accessKey : emptyString),
+                        ((this.isReadOnly() || this.isDisabled()) ? " DISABLED "
+                                                                                  : emptyString),
+                        this.getElementStyleHTML(),
+                        (this.multiple ? " MULTIPLE" : emptyString),
+                        " TABINDEX=", this._getElementTabIndex()," handleNativeEvents=false>");
+
+                output.append(this.getOptionsHTML(this.getValueMap()));
+
+                output.append("</SELECT>");
+                result = output.release(false);
+            }
         }
 
         return result;
@@ -51804,13 +52042,13 @@ isc.NativeSelectItem.addMethods({
         if (isc.Browser.isDOM) {
 
 
-            var width = this.getElementWidth();
+            var width = this.getTextBoxWidth();
             if (isc.isA.Number(width)) {
                 // Don't attempt to write out a negatively sized element!
                 width = Math.max(width, 1);
 
-                // output the width as a CSS WIDTH property
-                style.append("WIDTH:", width, "px;");
+                // output the width as a CSS width property
+                style.append("width:", width, "px;");
             }
 
             // In Mozilla we must use the 'moz-user-focus' css property to govern
@@ -51830,6 +52068,11 @@ isc.NativeSelectItem.addMethods({
         }
 
         return output.release(false);
+    },
+
+    _sizeTextBoxAsContentBox : function () {
+        // override to return false - hBorderPad reduces width by 2px otherwise
+        return false;
     },
 
     // We allow SelectItems with no explicitly specified size, to size based on the content
@@ -52235,7 +52478,7 @@ isc._SelectItemProperties = {
     // If set to <code>false</code> the setValue() call will have no effect if the value
     // is not a valid option.
     // <P>
-    // If set to <code>true</code> the item's value will be update to the new value, and
+    // If set to <code>true</code> the item's value will be updated to the new value, and
     // the value will be added to the set of options displayed in the pick-list until the
     // next call to +link{setValueMap()} or +link{setValue()}.
     // <P>
@@ -52352,6 +52595,16 @@ isc._SelectItemProperties = {
     //
     // FormItem that shows a list of options, plus an "Other..." option that allows them to enter
     // another value.
+    // <p>
+    // Note - SelectOtherItem does not support using an +link{SelectItem.optionDataSource,optionDataSource},
+    // instead, use a normal +link{SelectItem} and use the +link{SelectItem.specialValues,specialValues}
+    // to implement a way to add new DataSource records to the +link{SelectItem.optionDataSource,optionDataSource}.
+    // This creates a UI more appropriate to +link{SelectItem.optionDataSource,optionDataSource}:
+    // the +link{SelectOtherItem.otherValue,otherValue} option or options
+    // can be placed at the top of the list, so that scrolling to the bottom of a long list is not required.
+    // In addition, the +link{SelectItem.specialValues,specialValues} system allows you
+    // to open a custom form or other UI for adding new DataSource records, rather than just
+    // the simple single-value input dialog of SelectOtherItem.
     //
     // @treeLocation Client Reference/Forms/Form Items
     // @visibility external
@@ -53832,7 +54085,11 @@ isc.SelectItem.addMethods({
 
     _valueIsValid : function (value) {
 
-        if (this.addUnknownValues || this.getOptionDataSource()) return true;
+
+        // addUnknownValues is true, or there's an explicit optionDataSource, accept the value
+        if (this.addUnknownValues || this.optionDataSource) return true;
+        // there's an *implicit* ODS, and there is NOT a valueMap, accept the value
+        if (!this.valueMap && this.getOptionDataSource()) return true;
 
         // Allow null values regardless of what the valueMap looks like
 
@@ -54299,7 +54556,7 @@ isc.SelectItem.addMethods({
         // multiselect mode
 
         if (value != null && !isc.isAn.Array(value)) {
-            if (records.find(valueField, value) == null) {
+            if (this.addUnknownValues != false && records.find(valueField, value) == null) {
                 var newRecord = {};
                 newRecord[valueField] = value;
                 records.addAt(newRecord, 0);
@@ -56811,6 +57068,9 @@ isc.LinkItem.addMethods({
         var valueIconHTML = this._getValueIconHTML(this._value);
         if (this.showValueIconOnly) return valueIconHTML;
 
+        // if showInputElement is false, don't add the link to the DOM
+        if (this.showInputElement == false) return "";
+
         // convert to String
         if (text != null) text = isc.iscToLocaleString(text);
         if (text == null) text = isc.emptyString;
@@ -57206,8 +57466,18 @@ isc.RadioGroupItem.addMethods({
                 items.add(this._getRadioItem(title, value));
             }
         }
+        this._needsSetValueOnRedrawn = true;
         // call the superclass method to actually create the items
         return this.Super("setItems", [items]);
+    },
+
+    redrawn : function () {
+        this.Super("redrawn", arguments);
+        if (this._needsSetValueOnRedrawn) {
+            delete this._needsSetValueOnRedrawn;
+            var value = this._value != null ? this._value : this.value;
+            this.setValue(value);
+        }
     },
 
     //> @method radioGroupItem._getRadioItem() (A)
@@ -57281,6 +57551,12 @@ isc.RadioGroupItem.addMethods({
                 suppressItemChanged: true
             };
 
+            if (value == this.value) {
+                // the item might have come from the cache, so update it's value so it shows
+                // as selected
+                itemObj._value = this.value;
+            }
+
             if (this.useNativeRadioItems) {
                 isc.addProperties(itemObj, {
                     type:"radio",
@@ -57309,6 +57585,7 @@ isc.RadioGroupItem.addMethods({
             itemObj.form = this.form;
 
             item = this.itemCache[value+"|"+title] = isc.FormItemFactory.makeItem(itemObj);
+            //item.setElementValue(null);
         }
         // The RadioGroup manages the disabled status of individual sub-items based on their
         // value.
@@ -58219,8 +58496,8 @@ isc.DateItem.addProperties({
     // use in-field hints (set showHintInField to false) in conjunction with a native HTML5 date
     // input.
     // <p>
-    // <b>NOTE:</b> This feature requires specific CSS changes. Currently these changes have
-    // been made to the Enterprise, EnterpriseBlue, and Graphite skins only.
+    // <b>NOTE:</b> For optimal appearance this feature requires specific CSS which may
+    // not be present in certain legacy skins.
     //
     // @visibility external
     //<
@@ -61100,6 +61377,14 @@ isc.TextAreaItem.addMethods({
         return this.Super("_getClipValue", arguments);
     },
 
+    //> @attr textAreaItem.showInputElement (boolean : true : IRWA)
+    // When set to false, prevents this item's input element from being written into the DOM.
+    // If there are +link{formItem.valueIcons, valueIcons} or a
+    // +link{formItem.showPickerIcon, picker icon}, these are displayed as normal, and the item
+    // will auto-sizing to that content if its +link{formItem.width, width} is set to null.
+    // @visibility external
+    //<
+
     //> @method textAreaItem.getElementHTML() (A)
     // Output the HTML for a text field element
     //
@@ -61116,7 +61401,8 @@ isc.TextAreaItem.addMethods({
             output = isc.StringBuffer.create(),
             valueIconHTML = this._getValueIconHTML(dataValue);
         if (valueIconHTML != null) output.append(valueIconHTML);
-        if (!this.showValueIconOnly) {
+        // don't write out the element if showValueIconOnly is true or showInputElement is false
+        if (!this.showValueIconOnly && this.showInputElement != false) {
             // If we're printing, only use the static path (which will expand) if printFullText is true,
             // In this case we'll also disallow clipping so the static text-box will expand to accomodate
             // content.
@@ -71373,6 +71659,27 @@ isc.SpinnerItem.addMethods({
         return width;
 
     },
+    getLogicalTextBoxWidth : function () {
+        var width = this.Super("getLogicalTextBoxWidth", arguments);
+        // If we're writing spinners into the control table we want to reduce the
+        // text box width to accomodate them while keeping the control table width looking
+        // right.
+        if (this._writeSpinnersIntoControlTable()) {
+            // assumption: icons are stacked and increaseIcon / decreaseIcon should
+            // have the same width, hspace, padding on styling, etc
+            var icon = this.increaseIcon;
+            width -= (icon.width || this.iconWidth);
+
+            if (icon.hspace) width -= icon.hspace;
+            if (icon.baseStyle) width -= isc.Element._getHBorderPad(icon.baseStyle);
+
+            if (this.controlStyle) {
+                width -= isc.Element._getHBorderPad(this.getControlStyle());
+            }
+        }
+        return width;
+    },
+
 
     // Override getIconsHTML to write the increase / decrease icons out, one above the other
     // if we're not writing the icons into the control table.
@@ -72349,7 +72656,8 @@ isc.ColorItem.addMethods({
     updateValue : function () {
 
         var oldValue = this._value,
-            value = this.getElementValue();
+            // if there's no element, eg showInputElement is false, call getValue() instead
+            value = this.hasElement() ? this.getElementValue() : this.getValue();
 
         // unmap the value if necessary
         value = this._getDisplayValue(value);
@@ -72436,7 +72744,9 @@ isc.ColorItem.addMethods({
         if (!this.mask) {
             color = this.mapValueToDisplay(color);
         }
-        this.setElementValue(color);
+        // if there's no element, eg showInputElement is false, call setValue() instead
+        if (this.hasElement()) this.setElementValue(color);
+        else this.setValue(color);
         this.updateValue();
     },
 
@@ -73223,12 +73533,18 @@ isc.PickTreeItem.addProperties({
     // @group display_values
     // @visibility external
     //<
-    emptyDisplayValue: null,
+    emptyDisplayValue: null
 
-    //> @attr pickTreeItem.readOnlyDisplay (ReadOnlyDisplayAppearance : "disabled" : IRW)
-    // @include FormItem.readOnlyDisplay
+    //> @attr pickTreeItem.readOnlyDisplay (ReadOnlyDisplayAppearance : null : IRW)
+    // If +link{formItem.canEdit} is set to <code>false</code>, how should this item
+    // be displayed to the user?
+    // <P>
+    // For PickTreeItems, this setting affects only the item's title - the button itself will
+    // always appear disabled when canEdit is false, since buttons don't provide
+    // <code>readOnly</code> or <code>static</code> appearances.
+    //
+    // @visibility external
     //<
-    readOnlyDisplay: "disabled"
 
     //> @attr pickTreeItem.canSelectParentItems (Boolean : null : IRW)
     // @include menu.canSelectParentItems
@@ -74896,7 +75212,9 @@ isc.ValuesManager.addMethods({
                 this._synchronizingMembers = true;
                 for (var i = 0; i < fields.length; i++) {
                     if (fields[i].form == member) continue;
-                    fields[i].storeValue(value, true);
+
+                    fields[i].saveValue(value);
+                    fields[i]._showValue(value);
                 }
                 delete this._synchronizingMembers;
             }
@@ -76381,6 +76699,24 @@ isc.ValuesManager.addMethods({
     // @visibility external
     //<
 
+    //> @attr valuesManager.deepCloneNonFieldValuesOnEdit (Boolean : null : IRWA)
+    // When editing values in this ValuesManager in one or more DataBoundComponents, should we
+    // perform a deep clone of values that are not associated with a field (ie, attributes on
+    // the record that do not map to a component field either directly by name, or by
+    // +link{formItem.dataPath}.  If this value is not explicitly set, it defaults to the value of
+    // +link{dataSource.deepCloneNonFieldValuesOnEdit} if there is a dataSource, or to the value
+    // of the static +link{classAttr:DataSource.deepCloneNonFieldValuesOnEdit} if there is no
+    // dataSource.
+    // <p>
+    // Like the other <code>deepCloneOnEdit</code> settings, this flag only has an effect if you are
+    // editing a values object that contains nested objects or arrays.
+    //
+    // @see canvas.dataPath
+    // @see formItem.dataPath
+    // @see dataSourceField.deepCloneOnEdit
+    // @see dataSource.deepCloneOnEdit
+    // @visibility external
+    //<
 
     //> @method valuesManager.setValues()
     // Replaces the current values of the ValuesManager and all member components with the
@@ -76717,7 +77053,9 @@ isc.ValuesManager.addMethods({
                         var type = item.type ? isc.SimpleType.getType(item.type) : null,
                             itemValue = newValue,
                             isUndef = (newValue === undef);
-                        if (!isUndef && type && type.getAtomicValue && type.updateAtomicValue) {
+                        if (!item.canEditOpaqueValues && !isUndef &&
+                            type && type.getAtomicValue && type.updateAtomicValue)
+                        {
                             // store the new atomic type on our values object
 
                             // getFullDataPath will prepend any member-widget level dataPath if necessary
@@ -82897,8 +83235,16 @@ isc.RelativeDateItem.addMethods({
 
 
                 if (parts.qualifier) {
-                    if (value.rangePosition && ["+0D", "-0D"].contains(parts.qualifier)) {
-                        parts.qualifier = null;
+                    if (["+0D", "-0D"].contains(parts.qualifier)) {
+
+                        if (value.rangePosition == null && this.allowAbsoluteDates == false) {
+                            // if absoluteDates aren't allowed and there's no rangePosition,
+                            // map one from the qualifier - "-0D", start of the day, end of the
+                            // day otherwise
+                            value.rangePosition = (parts.qualifier == "-0D" ? "start" : "end");
+                        }
+                        // if there's a rangePosition, clear the qualifier
+                        if (value.rangePosition) parts.qualifier = null;
                     }
                 }
 
@@ -82913,10 +83259,23 @@ isc.RelativeDateItem.addMethods({
                     // the period to which this relativeDate applies is not in the list
                     // just resolve to an absolute date and store that value
                     isRelativeDate = false;
-                    this.valueField.setValue(this.formatDate(absoluteDate));
-                    // overwrite the passed value (string) with the absolute date - that will
-                    // be stored and the relative string discarded
-                    value = absoluteDate;
+                    if (this.allowAbsoluteDates == false) {
+                        this.logWarn("setValue() passed an invalid RelativeDate value: " +
+                            relativeDateString + ".  This value cannot be represented in a " +
+                            "RelativeDateItem " +
+                            (parts.qualifier ?
+                                "(qualifiers, like " + parts.qualifier + ", are invalid) "
+                                : "") +
+                            "and cannot be converted to an absoluteDate because " +
+                            "allowAbsoluteDates is set to false.  The item's value " +
+                            "will be cleared.");
+                        value = null;
+                    } else {
+                        this.valueField.setValue(this.formatDate(absoluteDate));
+                        // overwrite the passed value (string) with the absolute date - that will
+                        // be stored and the relative string discarded
+                        value = absoluteDate;
+                    }
                 }
             }
         }
@@ -83009,11 +83368,13 @@ isc.RelativeDateItem.addMethods({
                 // return "+3w[-0D]"
                 var string = (negative ? "-" : "+") + quantity + key;
 
-                var offsetDirection = this.rangePosition == "end" ? "+" : "-",
-                    offset = this.rangeRoundingGranularity[periodName];
-                if (offset != null && offset.toLowerCase() != "millisecond") {
-                    offset = isc.RelativeDateItem.getPeriodKey(offset).toUpperCase();
-                    string += "[" + offsetDirection + "0" + offset + "]";
+                if (this.rangePosition != null) {
+                    var qualifierDirection = this.rangePosition == "end" ? "+" : "-",
+                        offset = this.rangeRoundingGranularity[periodName];
+                    if (offset != null && offset.toLowerCase() != "millisecond") {
+                        offset = isc.RelativeDateItem.getPeriodKey(offset).toUpperCase();
+                        string += "[" + qualifierDirection + "0" + offset + "]";
+                    }
                 }
                 return this.getRelativeDateObject(string);
             }
@@ -86041,7 +86402,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version v12.0p_2018-06-28/LGPL Deployment (2018-06-28)
+  Version v12.0p_2018-09-15/LGPL Deployment (2018-09-15)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

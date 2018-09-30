@@ -1,7 +1,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version v12.0p_2018-06-28/LGPL Deployment (2018-06-28)
+  Version v12.0p_2018-09-15/LGPL Deployment (2018-09-15)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,9 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
 
-if (window.isc && isc.version != "v12.0p_2018-06-28/LGPL Deployment" && !isc.DevUtil) {
+if (window.isc && isc.version != "v12.0p_2018-09-15/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'v12.0p_2018-06-28/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'v12.0p_2018-09-15/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -1070,7 +1070,7 @@ isc.Canvas.addMethods({
     // @visibility animation
     //<
 
-    //> @attr AnimateShowEffect.endsAt (String : null : IR)
+    //> @attr AnimateShowEffect.endAt (String : null : IR)
     //   For hide animations of type <code>"wipe</code> and
     //   <code>"slide"</code> this attribute specifies where the wipe / slide should finish.
     //   Valid options are <code>"T"</code> (vertical animation upwards to the top of the canvas,
@@ -2639,7 +2639,46 @@ isc.StatefulCanvas.addProperties({
     // <P>
     // See +link{statefulCanvas.getStateSuffix()} for a description of the default set
     // of suffixes which may be applied to the baseStyle
+    // <P>
+    // <h4>Rotated Titles</h4>
+    // <p>
+    // The Framework doesn't have built-in support for rotating button titles in a fashion
+    // similar to +link{FacetChart.rotateLabels}.  However, you can manually configure
+    // a button to render with a rotated title by applying custom CSS via this property.
+    // <P>
+    // For example, given a button with a height of 120 and a width of 48, if you
+    // copied the existing buttonXXX style declarations from skin_styles.css as new,
+    // rotatedTitleButtonXXX declarations, and then added the lines:
+    // <pre>
+    //     -ms-transform:     translate(-38px,0px) rotate(270deg);
+    //     -webkit-transform: translate(-38px,0px) rotate(270deg);
+    //     transform:         translate(-38px,0px) rotate(270deg);
+    //     overflow: hidden;
+    //     text-overflow: ellipsis;
+    //     width:116px;</pre>
+    // in the declaration section beginning:
+    // <pre>
+    // .rotatedTitleButton,
+    // .rotatedTitleButtonSelected,
+    // .rotatedTitleButtonSelectedOver,
+    // .rotatedTitleButtonSelectedDown,
+    // .rotatedTitleButtonSelectedDisabled,
+    // .rotatedTitleButtonOver,
+    // .rotatedTitleButtonDown,
+    // .rotatedTitleButtonDisabled {</pre>
+    // then applying that style to the button with +link{canvas.overflow,overflow}: "clip_h"
+    // would yield a vertically-rendered title with overflow via ellipsis as expected, and also
+    // wrap with +link{button.wrap}.
     //
+    // Note that:<ul>
+    // <li> The explicit width applied via CSS is needed because rotated
+    // elements don't inherit dimensions in their new orientation from the DOM -
+    // the transform/rotation occurs independently of layout.
+    // <li> The translation transform required along the x-axis is roughly
+    // (width - height) / 2, but may need slight offsetting for optimal centering.
+    // <li>We've explicitly avoided describing an approach based on CSS "writing-mode", since
+    // support is incomplete and bugs are present in popular browsers such as Firefox and
+    // Safari that would prevent it from being used without Framework assistance.</ul>
     // @visibility external
     //<
 
@@ -10527,11 +10566,11 @@ getInnerHTML : function () {
         var isTitleClipper = !iconAtEdge && clipTitle;
 
 
-        var writeStyle = isTitleClipper || this.cssText || this._buttonBorder || this._buttonPadding ||
-                         this._buttonBGColor || this.margin || this._writeZeroVPadding() ||
-                         this.shouldPushTableBorderStyleToDiv() ||
-                         this.shouldPushTableShadowStyleToDiv() ||
-                         (this._getAfterPadding != null);
+        var writeStyle =
+            isTitleClipper || this.cssText || this._buttonBorder || this._buttonPadding ||
+            this._buttonBGColor || this.margin || this._writeZeroVPadding() ||
+            this.shouldPushTableBorderStyleToDiv() || this.shouldPushTableShadowStyleToDiv() ||
+            (this._getAfterPadding != null) || (this._getTopPadding != null);
 
         if (writeStyle) buttonHTML[8] = this._getCellStyleHTML(null, isTitleClipper);
         else buttonHTML[8] = null;
@@ -10861,8 +10900,14 @@ _getCellStyleHTML : function (template, isTitleClipper) {
         template[6] = null;
         template[7] = null;
     }
-    if (this._writeZeroVPadding()) {
-        template[7] = (template[7] || isc.emptyString) + this._$zeroVPad;
+
+
+    var vPadding = this._getTopPadding ?
+            "padding-top:" + this._getTopPadding() + "px;padding-bottom:0px;" :
+            (this._writeZeroVPadding() ? this._$zeroVPad : null);
+    if (vPadding) {
+        if (template[7]) template[7] += vPadding;
+        else             template[7]  = vPadding;
     }
 
     if (this._buttonBGColor != null) {
@@ -10910,7 +10955,7 @@ _getCellStyleHTML : function (template, isTitleClipper) {
 
 
 _writeZeroVPadding : function () {
-    return this.overflow == isc.Canvas.HIDDEN &&
+    return this.overflow == isc.Canvas.HIDDEN && !this.rotateTitle &&
            // don't remove padding during animations or text may reflow
            !this.isAnimating() &&
             (isc.Browser.isMoz || isc.Browser.isSafari || isc.Browser.isIE);
@@ -21946,6 +21991,13 @@ isc.NativeScrollbar.addProperties({
 
         canFocus: false,
 
+        // parallels Scrollbar.thumbOut()
+        mouseOut : function (event) {
+            if (this.creator._shouldSuppressMouseOut(event)) {
+                return isc.EH.STOP_BUBBLING;
+            }
+        },
+
         // Respond to a user scrolling this scrollbar by scrolling our scroll target
         _handleCSSScroll : function (waited, fromFocus) {
             this.Super("_handleCSSScroll", arguments);
@@ -22019,6 +22071,11 @@ isc.NativeScrollbar.addProperties({
             this.ignore(this.scrollTarget, "scrollTo");
         }
 
+        // setScrollTarget() can be called to switch targets, so clear any previous eventParent
+        if (this.scrollTarget && this.scrollTarget.receiveScrollbarEvents) {
+            this._redirectEvents();
+        }
+
         // If a newTarget was specified, set the scrollTarget to it.
         // If a newTarget was not specified, we'll use the current scrollTarget. If the
         // current scrollTarget isn't set, we use the scrollBar itself to avoid
@@ -22031,12 +22088,13 @@ isc.NativeScrollbar.addProperties({
         // if we've got a scrollTarget and we weren't created by adjustOverflow in the target,
         //    we should observe the _adjustOverflow method of the target to make sure the
         //    size of the thumb matches the visible portion of the target.
-        if (this._selfManaged &&
-             this.scrollTarget != this &&
-             this.scrollTarget != newTarget) {
+        var scrollTarget = this.scrollTarget;
+        if (this._selfManaged && scrollTarget != this && scrollTarget != newTarget) {
             this.observe(this.scrollTarget, "scrollTo", "observer.setThumb()");
         }
 
+
+        if (scrollTarget.receiveScrollbarEvents) this._redirectEvents(scrollTarget);
     },
 
     //>    @method    nativeScrollbar.setThumb()    (A)
@@ -22137,10 +22195,37 @@ isc.NativeScrollbar.addProperties({
     setShowCorner : function (showCorner) {
         this.showCorner = showCorner;
         this.sizeScrollbarCanvas();
+    },
+
+    //
+    // Handle Canvas.receiveScrollbarEvents - migrated from Scrollbar class
+
+    handleMouseOut : function (event) {
+        if (this._shouldSuppressMouseOut(event)) return isc.EH.STOP_BUBBLING;
+    },
+
+    // helper to set eventParent of both this scrollbar and the thumb
+    _redirectEvents : function (eventParent) {
+        if (!eventParent) eventParent = null;
+        this.eventParent = eventParent;
+
+        var scrollbarCanvas = this.scrollbarCanvas;
+        if (scrollbarCanvas != null) {
+            scrollbarCanvas.eventParent = eventParent;
+        }
+    },
+
+
+    _shouldSuppressMouseOut : function (event) {
+        var target = event.target;
+        return target && target == this.scrollTarget && target.receiveScrollbarEvents;
+    },
+
+    // whether canvas is one of ours (the scrollbar or thumb) that bubbles to scrollTarget
+    _hasScrollTargetEventParent : function (canvas) {
+        if (this.disabled) return false;
+        return canvas == this || canvas && canvas == this.scrollbarCanvas;
     }
-
-
-
 });
 
 
@@ -23164,7 +23249,7 @@ applyNewStretchResizePolicy : function (sizes, totalSize, commonMinSize, modifyI
             }
         }
         if (i < 0) {
-            this.logWarn("stretchResize" + (propertyTarget ? " for " + propertyTarget.ID : "") +
+            this.logInfo("stretchResize" + (propertyTarget ? " for " + propertyTarget.ID : "") +
                          " with totalSize: " + totalSize + " and calculated sizes: " +
                          resultSizes + "; cannot assign remainingSpace: " + remainingSpace +
                          " due to member max size limits", "listPolicy");
@@ -23479,15 +23564,21 @@ isc.GroupingMessages.addClassProperties({
     timezoneSecondsSuffix: "seconds"
 });
 
+
 isc.builtinTypes =
 {
     // basic types
 
 
     //any:{},
-    text:{validators:{type:"isString", typeCastValidator:true}},
-    "boolean":{validators:{type:"isBoolean", typeCastValidator:true}},
+    text:{validators:{type:"isString", typeCastValidator:true},
+        defaultOperator: "iContains"
+    },
+    "boolean":{validators:{type:"isBoolean", typeCastValidator:true},
+        defaultOperator: "equals"
+    },
     integer:{validators:{type:"isInteger", typeCastValidator:true},
+        defaultOperator: "equals",
         normalDisplayFormatter : function (value, field) {
            if (isc.isA.Number(value)) return value.toFormattedString();
            return value;
@@ -23513,6 +23604,7 @@ isc.builtinTypes =
         }
     },
     "float":{validators:{type:"isFloat", typeCastValidator:true},
+        defaultOperator: "equals",
         normalDisplayFormatter : function (value, field) {
            if (isc.isA.Number(value)) return value.toFormattedString();
            return value;
@@ -23540,6 +23632,7 @@ isc.builtinTypes =
         }
     },
     date:{validators:{type:"isDate", typeCastValidator:true},
+        defaultOperator: "equals",
         normalDisplayFormatter : function (value, field) {
            if (isc.isA.Date(value)) return value.toNormalDate();
            return value;
@@ -23757,6 +23850,7 @@ isc.builtinTypes =
         }
     },
     time:{validators:{type:"isTime", typeCastValidator:true},
+        defaultOperator: "equals",
         normalDisplayFormatter : function (value, field) {
            if (isc.isA.Date(value)) return isc.Time.toTime(value, null, true);
            return value;
@@ -23851,15 +23945,15 @@ isc.builtinTypes =
     },
     percent:{inheritsFrom:"integerPercent"},
     sequence:{inheritsFrom:"integer"},
-    "enum":{validators:"isOneOf"},
+    "enum":{validators:"isOneOf", defaultOperator: "equals" },
     "intEnum":{inheritsFrom:"integer",validators:"isOneOf"},
     regexp:{inheritsFrom:"text", validators:"isRegexp"},
     identifier:{inheritsFrom:"text", validators:"isIdentifier"},
     URL:{inheritsFrom:"text"},
     image:{inheritsFrom:"text"},
     HTML:{inheritsFrom:"text"},
-    measure:{validators:"isMeasure"},
-    integerOrAuto:{validators:"integerOrAuto"},
+    measure:{validators:"isMeasure", defaultOperator: "equals"},
+    integerOrAuto:{validators:"integerOrAuto", defaultOperator: "equals"},
     expression:{inheritsFrom:"text"},
     method:{inheritsFrom:"text"},
     "function":{inheritsFrom:"text"},
@@ -25042,6 +25136,49 @@ isc.SimpleType.addClassMethods({
         if (isc.isA.Function(summaryFunction)) {
             return summaryFunction(records, field, summaryConfig, displayComponent);
         }
+    },
+
+    //> @attr simpleType.validOperators (Array of OperatorId : null : IR)
+    // Set of search operators valid for this type.
+    // <P>
+    // If not specified, the +link{inheritsFrom,inherited} type's operators will be used, finally
+    // defaulting to the default operators for the basic types (eg, integer).
+    // @group advancedFilter
+    // @visibility external
+    //<
+
+    getValidOperators : function (typeName) {
+        typeName = typeName || "text";
+        var typeObj = this.getType(typeName);
+        if (typeObj) {
+            if (typeObj.validOperators != null) {
+                return typeObj.validOperators;
+            }
+            if (typeObj.inheritsFrom != null && typeObj.inheritsFrom != typeName) {
+                return this.getValidOperators(typeObj.inheritsFrom);
+            }
+        }
+    },
+
+    //> @attr simpleType.defaultOperator (OperatorId : null : IR)
+    // The default search-operator for this data-type.
+    // @group advancedFilter
+    // @visibility external
+    //<
+
+    getDefaultOperator : function (typeName) {
+        typeName = typeName || "text";
+        var typeObj = this.getType(typeName);
+        if (typeObj) {
+            if (typeObj.defaultOperator != null) {
+                return typeObj.defaultOperator;
+            }
+            if (typeObj.inheritsFrom != null && typeObj.inheritsFrom != typeName) {
+                return this.getDefaultOperator(typeObj.inheritsFrom);
+            }
+        }
+        // if there's no type or defaultOp, return "iContains"
+        //return "iContains";
     }
 
 });
@@ -31435,7 +31572,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version v12.0p_2018-06-28/LGPL Deployment (2018-06-28)
+  Version v12.0p_2018-09-15/LGPL Deployment (2018-09-15)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

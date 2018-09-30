@@ -1,7 +1,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version v12.0p_2018-06-28/LGPL Development Only (2018-06-28)
+  Version v12.0p_2018-09-15/LGPL Development Only (2018-09-15)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -48,7 +48,8 @@ _14.addList(_12)}else{_14=_12}
 var _15=_14.indexOf("other");if(_15!=-1){_14.removeAt(_15);_14.add("other")}
 _1=[];if(this.canSwitchClass){var _16=this.getClassSwitcher();if(_16)_1[0]=_16}
 if(this.creator.shouldShowDataPathFields&&this.creator.shouldShowDataPathFields()){_1[_1.length]=this.getDataPathField(true)}
-for(var i=0;i<_14.length;i++){var _11=_14[i],_17=_8[_11],_18=isc.jsdoc.getGroupItem(_11),_19=_18&&_18.title?_18.title:isc.DataSource.getAutoTitle(_11);if(this.sortFields)_17.sortByProperty("name",Array.ASCENDING);_1[_1.length]={editorType:"TSectionItem",defaultValue:_19,sectionExpanded:false,items:_17}}
+for(var i=0;i<_14.length;i++){var _11=_14[i],_17=_8[_11],_18=isc.jsdoc.getGroupItem(_11),_19=_18&&_18.title?_18.title:isc.DataSource.getAutoTitle(_11);if(this.sortFields)_17.sortByProperty("name",Array.ASCENDING);_1[_1.length]={editorType:"TSectionItem",defaultValue:_19,sectionExpanded:false,items:_17,canvasProperties:{hoverWidth:this.itemHoverWidth,hoverStyle:this.itemHoverStyle,canHover:true,groupName:_11,getHoverHTML:function(){if(this.groupName){var _20=isc.jsdoc.hoverHTML(this.groupName);if(_20)return _20}
+return"<nobr><code><b>"+this.groupName+"</b></code> (no doc available)</nobr>"}}}}
 return _1},isc.A.addField=function isc_ComponentEditor_addField(_1,_2){if(this.fields)this.fields.addAt(_1,_2)},isc.A.getDataPathField=function isc_ComponentEditor_getDataPathField(_1){var _2=this.creator,_3=_2.operationsPalette,_4=_3?_3.data:null,_5=_2.trimOperationsTreeData(_4,_1);return{name:_1?"inputDataPath":"dataPath",title:_1?"Input DataPath":"DataPath",isInput:_1,type:"DataPathItem",operationsPalette:_3,operationsTreeData:_5}},isc.A.getClassSwitcher=function isc_ComponentEditor_getClassSwitcher(){var _1=isc.DS.get(this.dataSource),_2=isc.ClassFactory.getClass(_1.ID);if(!_2)return null;return{name:"classSwitcher",title:this.componentTypeTitle,defaultValue:_2.getClassName(),type:"select",valueMap:this.getClassSwitcherValueMap(_1,_2)}},isc.A.getClassSwitcherValueMap=function isc_ComponentEditor_getClassSwitcherValueMap(_1,_2){var _3,_4=[];if(_2)_3=this.getInheritanceChain(_2,_1);if(!_3)return null;for(var i=0;i<_3.length;i++){var _6=isc.DS.getNearestSchema(_3[i].getClassName()),_7=_6.substituteClasses;if(_6.createStandalone!=false){if(!_4.contains(_3[i].getClassName())){_4.add(_3[i].getClassName())}}
 if(!_7)continue;var _8=_7.split(",");for(var i=0;i<_8.length;i++){_8[i]=_8[i].trim();if(!_4.contains(_8[i]))_4.add(_8[i])}}
 _4.sort();return _4},isc.A.createMethodGroups=function isc_ComponentEditor_createMethodGroups(_1,_2){var _3=isc.ClassFactory.getClass(_2.ID);this.$46e=[];var _4=this.$694==null?this.basicMode:this.$694;if(!_4&&_3&&_3._stringMethodRegistry&&!isc.isAn.emptyObject(_3._stringMethodRegistry))

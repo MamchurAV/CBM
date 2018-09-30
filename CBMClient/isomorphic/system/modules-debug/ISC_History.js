@@ -1,7 +1,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version v12.0p_2018-06-28/LGPL Deployment (2018-06-28)
+  Version v12.0p_2018-09-15/LGPL Deployment (2018-09-15)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -91,9 +91,9 @@ isc._start = new Date().getTime();
 
 // versioning - values of the form ${value} are replaced with user-provided values at build time.
 // Valid values are: version, date, project (not currently used)
-isc.version = "v12.0p_2018-06-28/LGPL Deployment";
-isc.versionNumber = "v12.0p_2018-06-28";
-isc.buildDate = "2018-06-28";
+isc.version = "v12.0p_2018-09-15/LGPL Deployment";
+isc.versionNumber = "v12.0p_2018-09-15";
+isc.buildDate = "2018-09-15";
 isc.expirationDate = "";
 
 isc.scVersion = "12.0p";
@@ -1591,6 +1591,7 @@ isc.Browser.setIsTouch = function (isTouch) {
 //<
 
 isc.Browser.pointerEnabled = window.PointerEvent != null &&
+        navigator.pointerEnabled != false && navigator.msPointerEnabled != false &&
         (isc.Browser.isIE || isc.Browser.isEdge) && !isc.Browser.isMobileIE;
 
 //> @classAttr browser.hasDualInput (boolean : false : RW)
@@ -1917,12 +1918,39 @@ isc.Browser.nativeMouseMoveOnCanvasScroll =
     !isc.Browser.isTouch && (isc.Browser.isSafari || isc.Browser.isChrome);
 
 //> @classAttr Browser.seleniumPresent (boolean : varies : R)
-// Whether current page has been loaded by Selenium RC/WebDriver.
+// Whether current page has been loaded by Selenium WebDriver.
 //<
 isc.Browser.seleniumPresent = (function () {
     var match = location.href.match(/[?&](?:sc_selenium)=([^&#]*)/);
     return match && match.length > 1 && "true" == match[1];
 })();
+
+
+if (isc.Browser.isSafariStrict) {
+    isc.Browser._writingModeCSS = {
+        vertical_ltr: "vertical-rl;",
+        vertical_rtl: "vertical-lr;",
+        rotate_ltr: true,
+        rotate_rtl: true,
+        horizontal: "horizontal-tb;"
+    };
+} else if (isc.Browser.isEdge) {
+    isc.Browser._writingModeCSS = {
+        vertical_ltr: "tb-rl;",
+        vertical_rtl: "tb;",
+        rotate_ltr: true,
+        rotate_rtl: true,
+        horizontal: "unset;"
+    };
+} else {
+    isc.Browser._writingModeCSS = {
+        vertical_ltr: "tb-rl;",
+        vertical_rtl: "tb;",
+        rotate_ltr: true,
+        rotate_rtl: true,
+        horizontal: "lr;"
+    };
+}
 
 //> @type Autotest
 // @value isc.Browser.SHOWCASE autotest is targeting SmartClient or SGWT showcases
@@ -3320,7 +3348,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version v12.0p_2018-06-28/LGPL Deployment (2018-06-28)
+  Version v12.0p_2018-09-15/LGPL Deployment (2018-09-15)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
