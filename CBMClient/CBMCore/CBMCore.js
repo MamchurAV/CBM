@@ -151,7 +151,7 @@ function syncronize(src, dest, exclude) {
 };
 
 
-// ----- Includes properties (with values) from secontd and more objects to first one.
+// ----- Includes properties (with values) from second and next objects to first one.
 // Properties from first object (or just included) are NOT replaced by that in later objects.
 // - So priority is established from first to lust.
 function collectObjects() {
@@ -230,7 +230,7 @@ isc.RPCManager.addClassProperties({
    handleTransportError : function (transactionNum, status, httpResponseCode, httpResponseText) 
    {
     if (status === -90 && httpResponseCode === 0) {
-      isc.warn("Операция не удалась. Проблема с сетью, либо не работает сервер.");
+      isc.warn(isc.CBMStrings.ServerCall_Fail);
       return false;        
     }
    }
@@ -1124,18 +1124,23 @@ TransactionManager.commit = function (transact, callback, reverseOrder) {
     }
     // For more complicated cases - TODO: analyse dependensies and establish right order...
     var i = 0;
+    
     for (i; i < len - 1; i++) {
-      currTrans.Changes[i].save(true); // Call CBMobject's save()
+      // Imoptant to clean up transaction in object _before_ it'll be saved to avoid infinite recurcion
       currTrans.Changes[i].currentTransaction = null;
+      currTrans.Changes[i].save(true); // Call CBMobject's save()
+      // >>> ??? currTrans.Changes[i].currentTransaction = null;
     }
     // The last object in transaction 
+    // Imoptant to clean up transaction in object _before_ it'll be saved to avoid infinite recurcion
+    currTrans.Changes[i].currentTransaction = null;
     if (currTrans.Id !== "default") {
       currTrans.Changes[i].save(true, undefined, undefined);
     } else {
       // Last call CBMobject's save() - with callback
       currTrans.Changes[i].save(true, undefined, undefined, callback);
     }
-    currTrans.Changes[i].currentTransaction = null;
+    // >>> ??? currTrans.Changes[i].currentTransaction = null;
     
     this.clear(currTrans);
     this.close(currTrans); // <<<<TODO Test uncommented (23.05.2017)
@@ -1468,6 +1473,11 @@ isc.CBMDataSource.addProperties({
 					dsRequest.data = {};
 					dsRequest.data.data = tmpData;
 				}
+        // Clean up OldValues from unnessesary fields (important!!!)
+        //var persistentOldValues = dsRequest.oldValues.getPersistent();
+        //dsRequest.oldValues = persistentOldValues;
+        delete dsRequest.oldValues;
+        
 			}
 		}  
     }
@@ -1640,6 +1650,7 @@ isc.CBMDataSource.addProperties({
     }
   },
 
+
   // ======================= Copying logic section =======================
   cloneMainInstance: function (srcRecord) {
     var thatDS = this;
@@ -1803,7 +1814,8 @@ isc.CBMDataSource.addProperties({
     return newRecord;
   },
 
-  // ------------- Functions - interceptors group -------------
+
+  // ======================= Interceptor Functions group =======================
   beforeCopy: function (srcRecord, callbacks) {
     var record = this.copyRecord(srcRecord);
     // Special actions here
@@ -1837,6 +1849,7 @@ isc.CBMDataSource.addProperties({
     }
     return false;
   },
+
 
   // ======= Some peace of presentation logic (even in DS): =================
   // ===== - default editing form. Can be overriden in child DS classes =====
@@ -2406,7 +2419,7 @@ var CBMobject = {
                     }
                   }
                 );
-        this.infoState = "loaded";       
+        this.infoState = "loaded";  
         addDataToCache(this); // <<< uncommented - was good for relations refresh
       } else {
         addDataToCache(this);

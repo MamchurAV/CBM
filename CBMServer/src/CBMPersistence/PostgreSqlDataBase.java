@@ -370,6 +370,7 @@ public class PostgreSqlDataBase implements I_DataBase {
 			if (!(dsRequest.data.data.containsKey(sysCode))) {
 				continue;
 			}
+			// !!! TODO: Check if this is still actual: on client oldValues are discarded, and data.data values already contains only changed ones.
 			// --- If value not changed - don't use its Table
 			Object v1 = dsRequest.data.data.get(sysCode);
 			Object v2 = null;

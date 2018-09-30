@@ -373,7 +373,7 @@ isc.CBMDataSource.create({
     startRow: true
 //        UIPath: "Properties"
   }, {
-    name: "Actuality",
+    name: "Actual",
     type: "ConceptActuality",
     defaultValue: "Actual",
     inList: true,
@@ -1665,14 +1665,15 @@ isc.CBMDataSource.create({
    displayField: "Description",
    hidden: true
    },*/ {
-    name: "MenuItemActionType", // TODO: substitute with Method link
+    name: "MenuItemActionType", 
     type: "MenuItemActionType",
     title: "Item Action Type",
     editorType: "ComboBoxItem",
     foreignKey: "MenuItemActionType.SysCode",
     optionDataSource: "MenuItemActionType",
     valueField: "SysCode",
-    displayField: "Description"
+    displayField: "Description",
+    inList: true
   }, {
     name: "CalledMethod", // TODO: substitute with Method link
     type: "PrgFunction",
