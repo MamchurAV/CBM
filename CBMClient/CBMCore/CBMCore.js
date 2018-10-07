@@ -993,10 +993,10 @@ function getRelationsForConceptName(conceptName, callback) {
   var conceptRecord = conceptDS.getCacheData().find(filter);
   var conceptID = conceptRecord.ID;
   getRelationsForConcept(conceptID, 
-      function (rel) {
-        isc.DataSource.get(conceptName).relations = rel;
+      function (rels) {
+        isc.DataSource.get(conceptName).relations = rels;
         if (callback) {
-          callback(rel); 
+          callback(rels); 
         }
       }
   );
@@ -1016,11 +1016,11 @@ function getRelationsForViewConcept(forView, callback) {
   
 //  if (viewRec) {
     getRelationsForConcept(viewRec.ForConcept, 
-        function (rel) {
+        function (rels) {
           var ds = isc.DataSource.get(conceptName);
-          if(ds) { ds.relations = rel; }
+          if(ds) { ds.relations = rels; }
           if (callback) {
-            callback(rel); 
+            callback(rels); 
           }
         }
     );
@@ -1431,13 +1431,28 @@ isc.CBMDataSource.addProperties({
 
 
   // --- Return CBM-metadata Relation record for this isc DataSource field ---
-  findRelation: function (criteria) {
+  findRelation: function (criteria, callback) {
     // If this.relations is null - initialise it (once!)
     if (this.relations === null) {
-      getRelationsForViewConcept(this.ID, null);
+      var that = this;
+      getRelationsForViewConcept(this.ID, 
+      function(rels) {
+          var rel = that.relations.find(criteria);
+          rel = rel ? rel : {};
+          if (callback) {
+            callback(rel);
+          }
+        });
+    } else {
+      var rel = this.relations.find(criteria);
+      rel = rel ? rel : {};
+      if (callback) {
+        callback(rel);
+      } else {
+        return rel;
+      }
     }
-    var rel = this.relations.find(criteria);
-    return (rel ? rel : {} );
+    return {};
   },
 
 
@@ -1952,6 +1967,8 @@ isc.CBMDataSource.addProperties({
             } catch (e) {
               if (e instanceof SyntaxError || e instanceof ReferenceError) {
                 // Simply ignore
+                // If not evaluated - assign explicit value
+                items[j][0].defaultValue = this.getField(atrNames[i]).defaultValue;
               } else {
                 throw(e);
               }
@@ -2395,14 +2412,12 @@ var CBMobject = {
   // ----------------- Complete record save to persistent storage -------------------------
   save: function (real, context, contextField, callback) {
     var that = this;
-    if (!this.ds) {
-      this.ds = isc.DataSource.get(this.Concept);
-    }
+    ds = isc.DataSource.get(this.Concept);
     // Save main object
     if (this.infoState === "new" || this.infoState === "copy") {
       // If Data Source contains unsaved data of <this> object 
       //   - remove it, and then add with normal save
-      if (this.ds.getCacheData() && this.ds.getCacheData().find({ID: this.ID})) {
+      if (ds.getCacheData() && ds.getCacheData().find({ID: this.ID})) {
         removeDataFromCache(this);
       }
       // - If context defined - set new record to context's collection
@@ -2412,9 +2427,9 @@ var CBMobject = {
       }
 
       if (real) {
-        this.ds.addData(this.getPersistentChanged(),
+        ds.addData(this.getPersistentChanged(),
                   function(){
-                    if (that.ds.getCacheData() && !that.ds.getCacheData().find({ID:that.ID})) {
+                    if (ds.getCacheData() && !ds.getCacheData().find({ID:that.ID})) {
                       addDataToCache(that); 
                     }
                   }
@@ -2427,7 +2442,7 @@ var CBMobject = {
     } else if (this.infoState === "changed") {
       if (real) {
         var that = this;
-        this.ds.updateData(this.getPersistentChanged(), 
+        ds.updateData(this.getPersistentChanged(), 
                     function(){ 
                       //Quick update
                       updateDataInCache(that.fullRecord); 
@@ -2440,7 +2455,7 @@ var CBMobject = {
       }
     } else if (this.infoState === "deleted") {
       if (real) {
-        this.ds.removeData(this);
+        ds.removeData(this);
         removeDataFromCache(this); // <<< More likely redundant. Remove after tests...
       } else {
         removeDataFromCache(this);
@@ -2455,10 +2470,9 @@ var CBMobject = {
   
   // Defaults setting
   setDefaults: function(){
-    if (!this.ds) {
-      this.ds = isc.DataSource.get(this.Concept);
-    }
-    var flds = this.ds.getFields(false);
+    ds = isc.DataSource.get(this.Concept);
+    
+    var flds = ds.getFields(false);
     for (var fld  in flds) {
       if (flds.hasOwnProperty(fld)) {
         if (flds[fld].defaultValue) {
@@ -2543,9 +2557,7 @@ var CBMobject = {
 
   // -------- Compete record retrieval from DS (/persistent storage) and construction ----------
   /*  loadRecord: function(ID, callback){
-   if (!this.ds) {
-   this.ds = isc.DataSource.get(this.Concept);
-   }
+   ds = isc.DataSource.get(this.Concept);
    var atrNames = this.ds.getFieldNames(false);
    ////// TODO Recursive in callback fields initialisation
    for (var i = 0; i < atrNames.length; i++) {
@@ -2568,16 +2580,14 @@ var CBMobject = {
   // -------- Returns object that has only persistent fields ---------
   // TODO: Will be better to drop this and use only getPersistentChanged() below
   getPersistent: function () {
-    if (!this.ds) {
-      this.ds = isc.DataSource.get(this.Concept);
-    }
+    ds = isc.DataSource.get(this.Concept); 
     // Get CBM metadata descriptions (we need it to discover really persistent fields)
     var rec = {}; // Object.create();
-    var atrNames = this.ds.getFieldNames(false);
+    var atrNames = ds.getFieldNames(false);
     var n = atrNames.length;
     for (var i = 0; i < n; i++) {
-      var rel = this.ds.getRelation(atrNames[i]);
-      var fld = this.ds.getFields()[atrNames[i]];
+      var rel = ds.getRelation(atrNames[i]);
+      var fld = ds.getFields()[atrNames[i]];
       // Copy to returned "rec" only persistent fields
       if (rel && ((rel.DBColumn && rel.DBColumn !== null && rel.DBTable && rel.DBTable !== null)
          /* TODO >>> What for ??? || rel.RelationKind === "Value" || rel.RelationKind === "Link"*/)
@@ -2592,15 +2602,14 @@ var CBMobject = {
 
   // -------- Returns object that has only persistent fields ---------
   getPersistentChanged: function () {
-    if (!this.ds) {
-      this.ds = isc.datasource.get(this.concept);
-    }
+    ds = isc.DataSource.get(this.Concept);
+
     // get cbm metadata descriptions (we need it to discover really persistent fields)
     var rec = {};
     
     for (var existingFld in this) {
-      var rel = this.ds.getRelation(existingFld);
-      var fld = this.ds.getFields()[existingFld];
+      var rel = ds.getRelation(existingFld);
+      var fld = ds.getFields()[existingFld];
       // copy to returned "rec" only persistent fields
       if (rel && ((rel.DBColumn && rel.DBColumn !== null && rel.DBTable && rel.DBTable !== null))
           // and - field is not explicitly marked as not-persistent
@@ -2714,7 +2723,6 @@ function editRecords(records, context, conceptRecord, trans) {
     (typeof(cls) == "undefined" || cls === null || cls === "loading" || records.getLength() > 1) || !cls.SysCode) 
   { // DS by Context
     ds = context.getDataSource();
-    records[0].ds = ds;
     if (records.getLength() === 1) {
       ds.edit(records[0], context);
     } else {
@@ -2722,7 +2730,6 @@ function editRecords(records, context, conceptRecord, trans) {
     }
   } else if (records.getLength() === 1) { // DS by exact record Class
     ds = isc.DataSource.getDataSource(cls.SysCode);
-    records[0].ds = ds;
     // --- Load concrete class instance data, if record's class not equal (is subclass) of context class (DataSource)
     if (context.dataSource != cls["SysCode"] && records[0]["infoState"] == "loaded") {
       var currentRecordRS = isc.ResultSet.create({
@@ -2744,7 +2751,6 @@ function editRecords(records, context, conceptRecord, trans) {
       });
       currentRecordRS.getRange(0, 1);
     } else {
-      records[0].ds = ds;
       ds.edit(records[0], context);
     }
   }
@@ -2786,10 +2792,10 @@ function createFrom(srcRecords, resultClass, initFunc, context) {
         // mainObjID and mainConcept exists, Sync record to context placement
         initFunc(record, srcRecords[iteration], mainObjID, mainConcept);
         if (context) {
-          //////BETTER record.store();
-          //////BETTER context.data.add(record);
-            record =  record.getPersistent();       // <<< To change to BETTER 
-            setTimeout(context.addData(record), 0); // <<< To change to BETTER
+          record.store(); // BETTER 
+          context.data.add(record); // BETTER 
+          //  record =  record.getPersistent();       // <<< To change to BETTER 
+          //  setTimeout(context.addData(record), 0); // <<< To change to BETTER
         }
       } else {
         // No mainObjID and mainConcept exists, Async to context placement
@@ -4088,19 +4094,25 @@ isc.InnerGrid.addProperties({
             records[0] = ds.createInstance(this);
             records[0]["infoState"] = "new";
             // If hierarchy - set parent value as in selected record (if any selected)
-            var hierarchyLink = ds.findRelation({HierarchyLink: true}).SysCode; 
-            if (hierarchyLink && this.getSelection().length > 0) {
-              records[0][hierarchyLink] = this.getSelection()[0][hierarchyLink];
-            }
-            // --- Set fields partisipating in criteria to criteria value ---
-            var criter = this.getCriteria();
-            for (var fld in criter) {
-              if (records[0].hasOwnProperty(fld)) {
-                records[0][fld] = criter[fld];
+            var thatInnerGrid = this;
+            ds.findRelation({HierarchyLink: true}, 
+            ////
+              function(hierarchyRelation) {
+                var hierarchyLink = hierarchyRelation.SysCode; 
+                if (hierarchyLink && thatInnerGrid.getSelection().length > 0) {
+                  records[0][hierarchyLink] = thatInnerGrid.getSelection()[0][hierarchyLink];
+                }
+                // --- Set fields partisipating in criteria to criteria value ---
+                var criter = thatInnerGrid.getCriteria();
+                for (var fld in criter) {
+                  if (records[0].hasOwnProperty(fld)) {
+                    records[0][fld] = criter[fld];
+                  }
+                }
+                editRecords(records, thatInnerGrid, conceptRS.find("SysCode", ds.ID));
               }
-            }
-            var that = this;
-            editRecords(records, that, conceptRS.find("SysCode", ds.ID));
+            ////
+            );
           }
           this.selection.deselectAll();
         }

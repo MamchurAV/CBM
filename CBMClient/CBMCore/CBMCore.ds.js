@@ -1822,3 +1822,90 @@ isc.CBMDataSource.create({
 });
 
 // =====^^^===== END Core DS definitions =====^^^=====
+/*
+isc.CBMDataSource.create({
+	ID: "HumanGroup",
+	title: "Human Group",
+	titleField: "Description",
+	infoField: "Description",
+	fields: [{
+		name: "ID",
+		kind: "Value",
+		title: "ID",
+		showTitle: false,
+		hidden: true,
+		required: true,
+		canEdit: false,
+		colSpan: 1,
+		rowSpan: 1,
+		align: "left",
+		emptyDisplayValue: "",
+		type: "text"
+	}, {
+		name: "Concept",
+		kind: "Value",
+		title: "Is of the Kind",
+		showTitle: true,
+		length: 1000,
+		inList: true,
+		colSpan: 1,
+		rowSpan: 1,
+		prompt: "Even if we imagine something absolutely unique, not belongs to any analogues - it will form its own concept, and this will be pointer to that.?If something combines features of several concepts - ??? ...",
+		align: "left",
+		copyValue: true,
+		emptyDisplayValue: "",
+		type: "text"
+	}, {
+		name: "EntityKind",
+		kind: "Link",
+		title: "Thing Type",
+		showTitle: true,
+		length: 100,
+		inList: true,
+		colSpan: 1,
+		rowSpan: 1,
+		align: "left",
+		copyValue: true,
+		emptyDisplayValue: "",
+		type: "EntityKind",
+		editorType: "LinkControl",
+		optionDataSource: "EntityKind",
+		valueField: "ID",
+		displayField: "Description",
+		pickListWidth: 400
+	}, {
+		name: "Description",
+		kind: "Value",
+		title: "Any kind of human-acceptable representation of the thing",
+		showTitle: true,
+		length: 1000,
+		inList: true,
+		colSpan: 1,
+		rowSpan: 1,
+		prompt: "Description",
+		align: "left",
+		copyValue: true,
+		emptyDisplayValue: "",
+		type: "text"
+	}, {
+		name: "Paticipants",
+		kind: "Link",
+		title: "Paticipants",
+		showTitle: true,
+		canSave: false,
+		canEdit: true,
+		inList: true,
+		colSpan: 1,
+		rowSpan: 1,
+		align: "left",
+		copyValue: true,
+		emptyDisplayValue: "",
+		type: "Participant",
+		editorType: "LinkControl",
+		optionDataSource: "Participant",
+		valueField: "ID",
+		displayField: "Description",
+		pickListWidth: 400
+	}]
+})
+*/
