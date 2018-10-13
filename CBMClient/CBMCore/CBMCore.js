@@ -4083,6 +4083,26 @@ isc.InnerGrid.addProperties({
                   records[0][fld] = criter[fld];
                 }
               }
+            
+              // --- Set context-dependency link ---
+              if (this.innerGrid.context 
+                  && this.innerGrid.context.dataSource) {
+                var contextDsCode = this.innerGrid.context.dataSource.ID;
+                var contextLinkRelation;
+                if (this.getFieldByName("For" + contextDsCode) 
+                    && this.getFieldByName("For" + contextDsCode).type === contextDsCode) {
+                      contextLinkRelation = this.getFieldByName("For" + contextDsCode);
+                } else {
+                  if (this.getFieldByName("For" + contextDsCode) 
+                      && this.getFieldByName(contextDsCode).type === contextDsCode) {
+                        contextLinkRelation = this.getFieldByName(contextDsCode);
+                  }
+                }  
+                if (contextLinkRelation) {
+                  records[0][contextLinkRelation.name] = this.innerGrid.context.valuesManager.values.ID;
+                }
+              }
+            
               if (records != null && records.getLength() > 0) {
                 editRecords(records, that /*this*/, conceptRecord); // <<< 11.22 try
               }
@@ -4090,28 +4110,49 @@ isc.InnerGrid.addProperties({
             var table = createTable("Concept", this, newChild, cretin, dsRecord["ID"]);
             return;
           } else {
+            var thatInnerGrid = this;
             // Not superclass - create instance directly
             records[0] = ds.createInstance(this);
             records[0]["infoState"] = "new";
-            // If hierarchy - set parent value as in selected record (if any selected)
-            var thatInnerGrid = this;
+            
+            // --- Set fields partisipating in criteria to criteria value ---
+            var criter = thatInnerGrid.getCriteria();
+            for (var fld in criter) {
+              if (records[0].hasOwnProperty(fld)) {
+                records[0][fld] = criter[fld];
+              }
+            }
+            
+            // --- Set context-dependency link ---
+            if (this.innerGrid.context 
+                && this.innerGrid.context.dataSource) {
+              var contextDsCode = this.innerGrid.context.dataSource.ID;
+              var contextLinkRelation;
+              if (this.getFieldByName("For" + contextDsCode) 
+                  && this.getFieldByName("For" + contextDsCode).type === contextDsCode) {
+                    contextLinkRelation = this.getFieldByName("For" + contextDsCode);
+              } else {
+                if (this.getFieldByName("For" + contextDsCode) 
+                    && this.getFieldByName(contextDsCode).type === contextDsCode) {
+                      contextLinkRelation = this.getFieldByName(contextDsCode);
+                }
+              }  
+              if (contextLinkRelation) {
+                records[0][contextLinkRelation.name] = this.innerGrid.context.valuesManager.values.ID;
+              }
+            }
+            
+            // --- If hierarchy - set parent value as in selected record (if any selected) ---
             ds.findRelation({HierarchyLink: true}, 
-            ////
               function(hierarchyRelation) {
                 var hierarchyLink = hierarchyRelation.SysCode; 
                 if (hierarchyLink && thatInnerGrid.getSelection().length > 0) {
                   records[0][hierarchyLink] = thatInnerGrid.getSelection()[0][hierarchyLink];
-                }
-                // --- Set fields partisipating in criteria to criteria value ---
-                var criter = thatInnerGrid.getCriteria();
-                for (var fld in criter) {
-                  if (records[0].hasOwnProperty(fld)) {
-                    records[0][fld] = criter[fld];
-                  }
+                  // TODO: Update HierCode here 
+                  // * * *
                 }
                 editRecords(records, thatInnerGrid, conceptRS.find("SysCode", ds.ID));
               }
-            ////
             );
           }
           this.selection.deselectAll();
