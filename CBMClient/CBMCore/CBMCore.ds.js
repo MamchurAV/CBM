@@ -761,12 +761,49 @@ isc.CBMDataSource.create({
     }],
     inList: true,
     //hidden: true
-  }, { // VVVVVVVVVVVV  Does ForConceptSysCode used for any purpose?
-    name: "ForConceptSysCode",
-    type: "text",
-    title: "Belongs to Concept (string Code)",
-    length: 100,
-    hidden: true
+  //}, { // VVVVVVVVVVVV  Does ForConceptSysCode used for any purpose?
+    //name: "ForConceptSysCode",
+    //type: "text",
+    //title: "Belongs to Concept (string Code)",
+    //length: 100,
+    //hidden: true
+  }, {
+    name: "RelationKind",
+    type: "RelationKind",
+    title: "Relation Kind",
+    foreignKey: "RelationKind.SysCode",
+    editorType: "LinkControl",
+    required: true,
+    optionDataSource: "RelationKind",
+    valueField: "SysCode",
+    displayField: "SysCode",
+    pickListWidth: 550,
+    pickListFields: [{
+      name: "SysCode",
+      width: 100
+    }, {
+      name: "Description",
+      width: 450
+    }],
+    inList: true
+  }, {
+    name: "RelatedConcept",
+    type: "Concept",
+    title: "Relation value Type",
+    foreignKey: "Concept.ID",
+    editorType: "LinkControl",
+    required: true,
+    optionDataSource: "Concept",
+    valueField: "ID",
+    displayField: "SysCode",
+    pickListWidth: 450,
+    pickListFields: [{
+      name: "SysCode",
+      width: 100
+    }, {
+      name: "Description"
+    }],
+    inList: true
   }, {
     // Property provide very imortant (in most cases ignored) aspect
     // of Semantic meaning of Relation.
@@ -788,43 +825,6 @@ isc.CBMDataSource.create({
     }, {
       name: "Description"
     }]
-  }, {
-    name: "RelatedConcept",
-    type: "Concept",
-    title: "Relation value Type",
-    foreignKey: "Concept.ID",
-    editorType: "LinkControl",
-    required: true,
-    optionDataSource: "Concept",
-    valueField: "ID",
-    displayField: "SysCode",
-    pickListWidth: 450,
-    pickListFields: [{
-      name: "SysCode",
-      width: 100
-    }, {
-      name: "Description"
-    }],
-    inList: true
-  }, {
-    name: "RelationKind",
-    type: "RelationKind",
-    title: "Relation Kind",
-    foreignKey: "RelationKind.SysCode",
-    editorType: "LinkControl",
-    required: true,
-    optionDataSource: "RelationKind",
-    valueField: "SysCode",
-    displayField: "SysCode",
-    pickListWidth: 550,
-    pickListFields: [{
-      name: "SysCode",
-      width: 100
-    }, {
-      name: "Description",
-      width: 450
-    }],
-    inList: true
   }, {
     name: "Countable",
     type: "boolean",

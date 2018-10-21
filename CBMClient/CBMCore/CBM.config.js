@@ -4,7 +4,7 @@ var CBM_URL = "http://CBModel.ru:5588/"; // Work URL for global CBM server
 
 ///////////////////////// Application settings ////////////////////
 
-//////////////////////////// AyDa settings ////////////////////////
-var AYDA_WS_URL = "http://ayda.eastus.cloudapp.azure.com/api/";
-var AZURE_BLOB_URL = "https://ayda.blob.core.windows.net/media/";
+//////////////////////////// App settings ////////////////////////
+var MAPITEMS_WS_URL = "http://app.eastus.cloudapp.azure.com/api/";
+var AZURE_BLOB_URL = "https://app.blob.core.windows.net/media/";
 
