@@ -2398,18 +2398,19 @@ var CBMobject = {
   // ----------------- Link this object (record) with some transaction -------------------------
   store: function (trans) {
     //TODO: Transactions seemed to be processed not on by-record basis
-    // if (trans) {
-    // this.curentTransaction = trans;
-    // }
-    // if (!this.curentTransaction) {
-    // this.curentTransaction = TransactionManager.getTransaction()
-    // }
-//    TransactionManager.add(this, this.curentTransaction)
+    if (trans) {
+      this.curentTransaction = trans;
+    }
+    if (!this.curentTransaction) {
+    this.curentTransaction = TransactionManager.getTransaction()
+    }
+    TransactionManager.add(this, this.curentTransaction)
 
     this.save(false);
   },
 
   // ----------------- Complete record save to persistent storage -------------------------
+  // ----------------- or, to cache (if real == false) -------------------------
   save: function (real, context, contextField, callback) {
     var that = this;
     ds = isc.DataSource.get(this.Concept);
@@ -2428,14 +2429,16 @@ var CBMobject = {
 
       if (real) {
         ds.addData(this.getPersistentChanged(),
+                  // Record already stored to cache - for immediate updates of UI (like Relations list)
                   function(){
                     if (ds.getCacheData() && !ds.getCacheData().find({ID:that.ID})) {
                       addDataToCache(that); 
+                      this.infoState = "loaded";  
                     }
                   }
                 );
         this.infoState = "loaded";  
-        addDataToCache(this); // <<< uncommented - was good for relations refresh
+        addDataToCache(this); // <<< Don't wait for record saved - was good for relations refresh
       } else {
         addDataToCache(this);
       }
@@ -2476,11 +2479,15 @@ var CBMobject = {
     for (var fld  in flds) {
       if (flds.hasOwnProperty(fld)) {
         if (flds[fld].defaultValue) {
+          var defValue = flds[fld].defaultValue;
           try{
-            this[fld] = eval(flds[fld].defaultValue);
+            this[fld] = eval(defValue);
           } catch (e) {
             if (e instanceof SyntaxError || e instanceof ReferenceError) {
-            // Simply ignore
+              if (typeof defValue === 'string' || defValue instanceof String) {
+                this[fld] = defValue;
+              }
+              // else - Simply ignore
             } else {
               throw(e);
             }
@@ -4085,6 +4092,7 @@ isc.InnerGrid.addProperties({
               }
             
               // --- Set context-dependency link ---
+              // --- (that link MUST follow name agriment: to be "For{Concept}" or "{Concept}" ) ---
               if (this.innerGrid.context 
                   && this.innerGrid.context.dataSource) {
                 var contextDsCode = this.innerGrid.context.dataSource.ID;
@@ -4124,6 +4132,7 @@ isc.InnerGrid.addProperties({
             }
             
             // --- Set context-dependency link ---
+            // --- (that link MUST follow name agriment: to be "For{Concept}" or "{Concept}" ) ---
             if (this.innerGrid.context 
                 && this.innerGrid.context.dataSource) {
               var contextDsCode = this.innerGrid.context.dataSource.ID;
@@ -4164,6 +4173,27 @@ isc.InnerGrid.addProperties({
           //        records[0]["infoState"] = "copy"; // <<<<<<<<<<< ???????? Here? Not in cloneInstance() ???
           var that = this;
           var editCopy = function (records) {
+// ???                        
+            // --- Set context-dependency link ---
+            // --- (that link MUST follow name agriment: to be "For{Concept}" or "{Concept}" ) ---
+            if (that.innerGrid.context 
+                && that.innerGrid.context.dataSource) {
+              var contextDsCode = that.innerGrid.context.dataSource.ID;
+              var contextLinkRelation;
+              if (that.getFieldByName("For" + contextDsCode) 
+                  && that.getFieldByName("For" + contextDsCode).type === contextDsCode) {
+                    contextLinkRelation = that.getFieldByName("For" + contextDsCode);
+              } else {
+                if (that.getFieldByName("For" + contextDsCode) 
+                    && that.getFieldByName(contextDsCode).type === contextDsCode) {
+                      contextLinkRelation = that.getFieldByName(contextDsCode);
+                }
+              }  
+              if (contextLinkRelation) {
+                records[0][contextLinkRelation.name] = that.innerGrid.context.valuesManager.values.ID;
+              }
+            }
+// ???            
             editRecords(records, that);
           }
           ds.cloneInstance(records[0], editCopy);
