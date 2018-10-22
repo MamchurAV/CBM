@@ -291,6 +291,9 @@ function generateDStext(forView, futherActions) {
   if (conceptRec.IsHierarchy === true) {
     resultDS += "isHierarchy: " + conceptRec.IsHierarchy + ", ";
   }
+  if (conceptRec.EditByCopy === true) {
+    resultDS += "editByCopy: " + conceptRec.EditByCopy + ", ";
+  }
   if (viewRec.CanExpandRecords && viewRec.CanExpandRecords === true) {
     resultDS += "canExpandRecords: true, ";
   }
@@ -1381,7 +1384,7 @@ isc.CBMDataSource.addProperties({
   // resultBatchSize:100, // <<< TODO  optimization here
   inheritsFrom: BaseDataSource,
   useParentFieldOrder: true,
-  allowAdvancedCriteria : true,
+  allowAdvancedCriteria: true,
   //~ nullStringValue: "",
   //~ nullIntegerValue: "", 
   //~ nullFloatValue: "", 
@@ -1393,6 +1396,7 @@ isc.CBMDataSource.addProperties({
   relations: null,
   abstr: false,
   isHierarchy: false,
+  editByCopy: false,
   rec: null,
   // run-time client-defined flag that linkes-kind relations DataSourses are actual
   hasResolvedLinks: false,
@@ -4037,14 +4041,19 @@ isc.InnerGrid.addProperties({
       //         this.grid.cellContextClick = function (record, row, cell) {
       //          return this.showContextMenu();
       //        };
-
+      
+      // Call records editing from InnerGrid //
       that.grid.callObjectsEdit = function (mode) {
         'use strict';
         var ds = this.getDataSource();
         var records = [];
 
-        // !!! TODO: --- VVV Provide full View properties (in favor of Concept!!!)
         var viewRecord = viewRS.find("SysCode", (this.dataSource.ID ? this.dataSource.ID : this.dataSource));
+
+        // --- If class defined with editByCopy == true, change "edit" mode to "copy"
+        if (mode == "edit" && ds.editByCopy) {
+          mode = "copy";
+        }
 
         // --- Edit New record ---
         if (mode == "new") {
@@ -4201,7 +4210,7 @@ isc.InnerGrid.addProperties({
         }
 
         // --- Edit Selected record[s] ---
-        else if (mode == "loaded") {
+        else if (mode == "edit") {
           records = this.getSelectedRecords();
           for (var i = 0; i < records.getLength(); i++) {
             records[i]["infoState"] = "loaded";
@@ -4318,7 +4327,7 @@ isc.InnerGrid.addProperties({
           prompt: isc.CBMStrings.InnerGrid_Edit,
           hoverWidth: 120,
           click: function () {
-            this.parentElement.parentElement.parentElement.grid.callObjectsEdit("loaded");
+            this.parentElement.parentElement.parentElement.grid.callObjectsEdit("edit");
             return false;
           }
         }),
@@ -4480,7 +4489,7 @@ isc.InnerGrid.addProperties({
           prompt: isc.CBMStrings.InnerGrid_Edit,
           hoverWidth: 120,
           click: function () {
-            this.parentElement.parentElement.parentElement.grid.callObjectsEdit("loaded");
+            this.parentElement.parentElement.parentElement.grid.callObjectsEdit("edit");
             return false;
           }
         })

@@ -457,6 +457,12 @@ isc.CBMDataSource.create({
       title: "Hierarchical",
       UIPath: "Information System aspects"
     }, {
+      name: "EditByCopy",
+      type: "boolean",
+      defaultValue: false,
+      title: "Edit by Copy",
+      UIPath: "Information System aspects"
+    }, {
       name: "Views",
       type: "PrgView",
       title: "Interface presentations",
@@ -710,7 +716,8 @@ isc.CBMDataSource.create({
 //  	cacheAllData: true, 
   titleField: "SysCode",
   infoField: "Description",
-
+  editByCopy: true,
+  
   fields: [{
     name: "Del",
     type: "boolean",
