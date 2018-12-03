@@ -409,5 +409,149 @@ function createPayload(dstRec, srcRec, callback) {
 }
 
 //////////////////////////////////////////////////////////////
-
+/*
+isc.CBMDataSource.create({
+    ID: "Dictionary",
+    title: "Dictionary",
+    titleField: "Description",
+    infoField: "Description",
+    fields: [{
+        name: "ID",
+        kind: "Value",
+        title: "ID",
+        showTitle: false,
+        hidden: true,
+        required: true,
+        canEdit: false,
+        colSpan: 1,
+        rowSpan: 1,
+        align: "left",
+        emptyDisplayValue: "",
+        type: "text"
+    }, {
+        name: "Concept",
+        kind: "Value",
+        title: "Is of the Kind",
+        showTitle: true,
+        length: 1000,
+        inList: true,
+        colSpan: 1,
+        rowSpan: 1,
+        prompt: "Even if we imagine something absolutely unique, not belongs to any analogues - it will form its own concept, and this will be pointer to that.↵If something combines features of several concepts - ??? ...",
+        align: "left",
+        copyValue: true,
+        emptyDisplayValue: "",
+        type: "text"
+    }, {
+        name: "Odr",
+        kind: "Value",
+        title: "Order of value",
+        showTitle: true,
+        inList: true,
+        colSpan: 1,
+        rowSpan: 1,
+        align: "left",
+        copyValue: true,
+        emptyDisplayValue: "",
+        type: "localeInt"
+    }, {
+        name: "SysCode",
+        kind: "Value",
+        title: "SysCode",
+        showTitle: true,
+        inList: true,
+        colSpan: 1,
+        rowSpan: 1,
+        align: "left",
+        copyValue: true,
+        emptyDisplayValue: "",
+        type: "text"
+    }, {
+        name: "Code",
+        kind: "Value",
+        title: "Code",
+        treeField: true,
+        showTitle: true,
+        inList: true,
+        colSpan: 1,
+        rowSpan: 1,
+        align: "left",
+        copyValue: true,
+        emptyDisplayValue: "",
+        type: "text"
+    }, {
+        name: "Description",
+        kind: "Value",
+        title: "Any kind of human-acceptable representation of the thing",
+        showTitle: true,
+        length: 1000,
+        inList: true,
+        colSpan: 1,
+        rowSpan: 1,
+        prompt: "Description",
+        align: "left",
+        copyValue: true,
+        emptyDisplayValue: "",
+        type: "text"
+    }, {
+        name: "Notes",
+        kind: "Value",
+        title: "Notes",
+        showTitle: true,
+        inList: true,
+        colSpan: 1,
+        rowSpan: 1,
+        align: "left",
+        copyValue: true,
+        emptyDisplayValue: "",
+        type: "multiLangText",
+        filterEditorType: "text",
+        editorType: "MultilangTextItem"
+    }, {
+        name: "Parent",
+        kind: "Link",
+        title: "Parent",
+        showTitle: true,
+        inList: true,
+        colSpan: 1,
+        rowSpan: 1,
+        align: "left",
+        copyValue: true,
+        emptyDisplayValue: "",
+        type: "Dictionary",
+        editorType: "LinkControl",
+        foreignKey: "Dictionary.ID",
+        rootValue: null,
+        optionDataSource: "Dictionary",
+        valueField: "ID",
+        displayField: "Description",
+        pickListWidth: 400
+    }, {
+        name: "HierCode",
+        kind: "Value",
+        title: "Root in Hierarchy",
+        showTitle: true,
+        inList: true,
+        colSpan: 1,
+        rowSpan: 1,
+        align: "left",
+        copyValue: true,
+        emptyDisplayValue: "",
+        type: "text"
+    }, {
+        name: "Actual",
+        kind: "Value",
+        title: "",
+        showTitle: true,
+        defaultValue: "true",
+        inList: true,
+        colSpan: 1,
+        rowSpan: 1,
+        align: "left",
+        copyValue: true,
+        emptyDisplayValue: "",
+        type: "boolean"
+    }]
+})
+*/
 

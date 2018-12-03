@@ -2,6 +2,7 @@
             addGlobalId="false">
 	<fields>
         <field name="mockData" type="string"/>
+        <field name="mockDataFormat" type="string"/>
         <field name="mockDataType" type="string"/>
         <field name="fieldNamingConvention" type="string" xmlAttribute="true"/>
 	</fields>

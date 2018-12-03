@@ -1,7 +1,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version v12.0p_2018-09-15/LGPL Deployment (2018-09-15)
+  Version SNAPSHOT_v12.1d_2018-11-30/LGPL Deployment (2018-11-30)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,9 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
 
-if (window.isc && isc.version != "v12.0p_2018-09-15/LGPL Deployment" && !isc.DevUtil) {
+if (window.isc && isc.version != "SNAPSHOT_v12.1d_2018-11-30/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'v12.0p_2018-09-15/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v12.1d_2018-11-30/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -1233,7 +1233,8 @@ isc.RichTextCanvas.addMethods({
             // If no  previous selection, just bail
             if (!this._savedSelection) return;
 
-            var newSelectionText = isc.Browser._hasDOMRanges ? String(this._savedSelection) : this._savedSelection.text;
+            var newSelectionText = isc.Browser._hasDOMRanges ?
+                String(this._savedSelection) : this._savedSelection.text;
 
             // If the content of the range has changed since it was selected, avoid selecting
             // the modified text
@@ -1406,6 +1407,24 @@ isc.RichTextCanvas.addMethods({
                                                  "else event.returnValue=(returnValue!=false)"
                                                 );
             }
+            if (!this._editClickHandler) {
+                this._editClickHandler = isc._makeFunction(
+                                                 "event",
+                                                 "event=event||" + this.getID() + ".getContentWindow().event;" +
+                                                 "var returnValue=" + thisAccessPath + this.getID() + "._iFrameClick(event);" +
+                                                 "/*if(returnValue==false && event.preventDefault)event.preventDefault();" +
+                                                 "else*/ event.returnValue=(returnValue!=false)"
+                                                );
+            }
+            if (!this._editDoubleClickHandler) {
+                this._editDoubleClickHandler = isc._makeFunction(
+                                                 "event",
+                                                 "event=event||" + this.getID() + ".getContentWindow().event;" +
+                                                 "var returnValue=" + thisAccessPath + this.getID() + "._iFrameClick(event,true);" +
+                                                 "/*if(returnValue==false && event.preventDefault)event.preventDefault();" +
+                                                 "else*/ event.returnValue=(returnValue!=false)"
+                                                );
+            }
             if (!this._editKeyDownHandler) {
                 this._editKeyDownHandler = isc._makeFunction(
                                                  "event",
@@ -1469,6 +1488,9 @@ isc.RichTextCanvas.addMethods({
                 keyboardListenersReceiver.addEventListener("keypress", this._editKeyPressHandler, false);
                 keyboardListenersReceiver.addEventListener("keydown", this._editKeyDownHandler, false);
                 keyboardListenersReceiver.addEventListener("keyup", this._editKeyUpHandler, false);
+
+                keyboardListenersReceiver.addEventListener("click", this._editClickHandler, false);
+                keyboardListenersReceiver.addEventListener("dblclick", this._editDoubleClickHandler, false);
 
                 win.addEventListener("scroll", this._editScrollHandler, false);
                 win.addEventListener("focus", this._editFocusHandler, false);
@@ -1547,13 +1569,21 @@ isc.RichTextCanvas.addMethods({
         this._queueContentsChanged();
     },
 
+    _iFrameClick : function (event, doubleClick) {
+        if (doubleClick) {
+            return this.handleDoubleClick({ target: this });
+        } else {
+            return this.handleClick({ target: this });
+        }
+    },
+
     // If using designMode, we need a handler for the native keypress event on our IFRAME
     _iFrameKeyPress : function (event) {
         // apply the properties (keyName, etc.) to EH.lastEvent
         isc.EH.getKeyEventProperties(event);
         // Fall through to standard handling, making sure this widget is logged as the
         // keyTarget
-       return isc.EH.handleKeyPress(event, {keyTarget:this});
+        return isc.EH.handleKeyPress(event, {keyTarget:this});
 
     },
     _iFrameKeyDown : function (event) {
@@ -3749,17 +3779,30 @@ isc.RichTextEditor.addProperties({
         if (this.toolbarHeight > 0) this._createToolArea();
 
         var props = isc.addProperties({ backgroundColor:this.editAreaBackgroundColor },
-                this.editAreaProperties,
-                {  top:this.toolbarHeight, className:this.editAreaClassName,
-                  left:0, width:"100%", height:"*",
-                  contents:this.value,
-                  moveFocusOnTab:this.moveFocusOnTab,
+            this.editAreaProperties,
+            {
+                top:this.toolbarHeight, className:this.editAreaClassName,
+                left:0, width:"100%", height:"*",
+                contents:this.value,
+                moveFocusOnTab:this.moveFocusOnTab,
 
-                  changed : isc.RichTextEditor._canvasContentsChanged,
+                changed : isc.RichTextEditor._canvasContentsChanged,
 
-                  getBrowserSpellCheck : function () {
-                      return this.parentElement.getBrowserSpellCheck()
-                  }
+                getBrowserSpellCheck : function () {
+                    return this.parentElement.getBrowserSpellCheck()
+                },
+                handleClick : function () {
+                    // if the canvas doesn't cancel bubbling, fire on the editor
+                    var result = this.Super("handleClick", arguments);
+                    if (result != false) result = this.parentElement.handleClick(arguments);
+                    return result;
+                },
+                handleDoubleClick : function () {
+                    // if the canvas doesn't cancel bubbling, fire on the editor
+                    var result = this.Super("handleDoubleClick", arguments);
+                    if (result != false) result = this.creator.handleDoubleClick(arguments);
+                    return result;
+                }
             }
         );
         this.addAutoChild("editArea", props);
@@ -4403,7 +4446,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version v12.0p_2018-09-15/LGPL Deployment (2018-09-15)
+  Version SNAPSHOT_v12.1d_2018-11-30/LGPL Deployment (2018-11-30)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

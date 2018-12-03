@@ -1,7 +1,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version v12.0p_2018-09-15/LGPL Deployment (2018-09-15)
+  Version SNAPSHOT_v12.1d_2018-11-30/LGPL Deployment (2018-11-30)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,9 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
 
-if (window.isc && isc.version != "v12.0p_2018-09-15/LGPL Deployment" && !isc.DevUtil) {
+if (window.isc && isc.version != "SNAPSHOT_v12.1d_2018-11-30/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'v12.0p_2018-09-15/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v12.1d_2018-11-30/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -2682,7 +2682,6 @@ isc.StatefulCanvas.addProperties({
     // @visibility external
     //<
 
-
     //>    @attr    statefulCanvas.cursor        (Cursor : Canvas.ARROW : IRW)
     //            Specifies the cursor to show when over this canvas.
     //            See Cursor type for different cursors.
@@ -3448,7 +3447,9 @@ setHandleDisabled : function (disabled,b,c,d) {
         // hang onto the enable state so that when we're next enabled we can reset to it.
         this._enabledState = this.state;
         this._doMouseOutStateChange(true);
-        if (this.showDisabled) this.setState(isc.StatefulCanvas.STATE_DISABLED);
+        if (this.showDisabled) {
+            this.setState(isc.StatefulCanvas.STATE_DISABLED);
+        }
     }
 
     if (this.showDisabled && this.iconCursor != null) {
@@ -4422,8 +4423,8 @@ handleMouseDown : function (event, eventInfo) {
         if (rv == false) return false;
     }
     if (this.showDown && !this.isDisabled()) {
-            this.setState(isc.StatefulCanvas.STATE_DOWN);
-        }
+        this.setState(isc.StatefulCanvas.STATE_DOWN);
+    }
     return rv;
 },
 
@@ -11256,6 +11257,10 @@ _getStatefulIconURL : function (icon) {
     if (!this.showIconState) {
         state = null;
         customState = null;
+
+
+    } else if (this.showIconCustomState == false) {
+        customState = null;
     }
 
     if (selected && !this.showSelectedIcon) selected = false;
@@ -11283,6 +11288,10 @@ _getIconStyleSuffix : function () {
 
     if (!this.showIconState) {
         state = isc.emptyString;
+        customState = null;
+
+
+    } else if (this.showIconCustomState == false) {
         customState = null;
     }
 
@@ -15604,11 +15613,7 @@ isc.defineClass("ImgButton", "Img").addProperties({
     //>    @attr ImgButton.overflow      (String : "hidden" : IRW)
     // Clip by default, because expanding to the label (if present) is likely to distort image
     //<
-    overflow:isc.Canvas.HIDDEN,
-
-
-    useImageForSVG:isc.Browser.isEdge
-
+    overflow:isc.Canvas.HIDDEN
 });
 
 isc.ImgButton.addMethods({
@@ -17874,11 +17879,7 @@ isc.SectionStack.addProperties({
         overflow: "hidden",
         visibility: "hidden",
         // Hide using display:none so as not to affect scrollHeight
-        hideUsingDisplayNone: true,
-        // Suppress adjustOverflow() because the tabPanel is always hidden using display:none,
-        // so _browserDoneDrawing() is always false and this causes an infinite loop of delayed
-        // adjustOverflow() attempts.
-        _suppressAdjustOverflow: true
+        hideUsingDisplayNone: true
 
     },
 
@@ -18562,8 +18563,8 @@ isc.SectionStack.addMethods({
     // @visibility external
     //<
     removeItem : function (section, item) {
-        if (!section) section = this.sectionForItem(item);
-        if (!section) return;
+        if (section == null) section = this.sectionForItem(item);
+        if (section == null) return;
 
         var sectionHeader = this.getSection(section);
         sectionHeader.items.remove(item);
@@ -18583,12 +18584,12 @@ isc.SectionStack.addMethods({
     // Sets a new list of canvii as items into the specified section by removing the existing
     // items, then adding the new ones.  Initial items for a section should be specified using
     // the property +link{sectionStackSection.items}.
-    // @param section (String | Number) ID or index of the section to remove item from
+    // @param section (String | Number) ID or index of the section to set items on
     // @param items (Array of Canvas) new items to add
     // @visibility external
     //<
     setItems : function (section, items) {
-        if (!section) return;
+        if (section == null) return;
 
         // delay reflow until we're done
         var oldSetting = this.instantRelayout;
@@ -20597,10 +20598,33 @@ isc._thumbProperties = {
     _updateTriggerArea : function (scrollTarget) {
         var vertical = this.scrollbar.vertical,
             offset = isc.Browser.isTouch ? 8 : 0,
-            scrollTargetIsRTL = scrollTarget == null ? isc.Page.isRTL() : scrollTarget.isRTL()
+            minThumbLength = isc.Browser.minDualInputThumbLength
         ;
-        this.setTriggerAreaLeft(vertical && !scrollTargetIsRTL ? offset : 0);
-        this.setTriggerAreaRight(vertical && scrollTargetIsRTL ? offset : 0);
+        if (vertical) { // vertical thumb - expand on left (non-RTL) or right (RTL)
+            var isRTL = scrollTarget == null ? isc.Page.isRTL() : scrollTarget.isRTL();
+            this.setTriggerAreaLeft(!isRTL ? offset : 0);
+            this.setTriggerAreaRight(isRTL ? offset : 0);
+
+            // enforce minimum effective thumb height in dual input mode
+            if (minThumbLength != null && isc.Browser.hasDualInput) {
+                var height = this.getVisibleHeight();
+                offset = height < minThumbLength ? Math.ceil((minThumbLength - height) / 2) : 0;
+                this.setTriggerAreaTop(offset);
+                this.setTriggerAreaBottom(offset);
+            }
+
+        } else { // horizontal thumb - expand on top
+            this.setTriggerAreaTop(offset);
+            this.setTriggerAreaBottom(0);
+
+            // enforce minimum effective thumb width in dual input mode
+            if (minThumbLength != null && isc.Browser.hasDualInput) {
+                var width = this.getVisibleWidth();
+                offset = width < minThumbLength ? Math.ceil((minThumbLength - width) / 2) : 0;
+                this.setTriggerAreaLeft(offset);
+                this.setTriggerAreaRight(offset);
+            }
+        }
     },
 
     enableTouchSupport : function () {
@@ -20660,6 +20684,19 @@ isc._thumbProperties = {
         this.Super("masterMoved", arguments);
     }
 };
+
+
+if (isc.Browser.minDualInputThumbLength != null) {
+    isc._thumbProperties.triggerAreaDefaults =
+        isc.addProperties({}, isc.StatefulCanvas.getPrototype().triggerAreaDefaults, {
+            _fitToMaster : function () {
+                var master = this.masterElement;
+                master._updateTriggerArea();
+                this.setRect(master._getTriggerAreaRect());
+            }
+        });
+}
+
 isc.defineClass("ScrollThumb", "StretchImg").addProperties(isc._thumbProperties);
 isc.ScrollThumb.addProperties({
     hSrc:"[SKIN]hthumb.gif",
@@ -21864,6 +21901,12 @@ _shouldSuppressMouseOut : function (event) {
 _hasScrollTargetEventParent : function (canvas) {
     if (this.disabled) return false;
     return canvas == this || canvas && canvas == this.thumb;
+},
+
+
+enableTouchSupport : function () {
+    this.Super("enableTouchSupport", arguments);
+    if (isc.Browser.isChrome && this.thumb) this.thumb._updateTouchSupport();
 }
 
 });
@@ -23564,7 +23607,6 @@ isc.GroupingMessages.addClassProperties({
     timezoneSecondsSuffix: "seconds"
 });
 
-
 isc.builtinTypes =
 {
     // basic types
@@ -23747,7 +23789,7 @@ isc.builtinTypes =
                         else if (today.isTomorrow(value)) return 2;
                         else if (today.isThisWeek(value)) return 3;
                         else if (today.isNextWeek(value)) return 4;
-                        else if (today.isNextMonth(value)) return 5;
+                        else if (isc.DateUtil.isWithinPeriodOf(today, value, 1, "m")) return 5;
                         else if (today.isBeforeToday(value)) return 7;
                         else return 6;
                         break;
@@ -28031,22 +28073,42 @@ isc.defineClass("SplitPanePagedPanel", "Canvas").addProperties({
         height: "100%",
         overflow: "visible",
 
-        getTransformCSS : function () {
+        _getTranslateX : function () {
             var creator = this.creator;
-            if (!creator.animateTransitions || !isc.Browser._supportsCSSTransitions || !creator.skinUsesCSSTransitions) {
+            if (!creator.animateTransitions || !isc.Browser._supportsCSSTransitions ||
+                !creator.skinUsesCSSTransitions)
+            {
                 return null;
             } else {
                 var currentPage = creator.currentPage,
                     left;
                 if (currentPage >= 0) {
-                    left = -(creator.isRTL() ? creator.pages.length - 1 - currentPage : currentPage) * creator.getInnerWidth();
+                    left = -(creator.isRTL() ? creator.pages.length - 1 - currentPage :
+                             currentPage) * creator.getInnerWidth();
                 } else {
                     left = 0;
                 }
-                // Android 2.x does not support 3D transforms.
-                // http://caniuse.com/transforms3d
-                return ";" + isc.Element._transformCSSName + ": translateX(" + left + "px);";
+                return left;
             }
+        },
+
+        getTransformCSS : function () {
+            var left = this._getTranslateX();
+            if (left == null) return null;
+
+            // Android 2.x does not support 3D transforms.
+            // http://caniuse.com/transforms3d
+            return ";" + isc.Element._transformCSSName + ": translateX(" + left + "px);";
+        },
+
+
+        scrollIntoView : function (x, y) {
+
+            if (x != null) {
+                var left = this._getTranslateX();
+                if (left != null) x += left;
+            }
+            return this.Super("scrollIntoView", arguments);
         },
 
         _transitionEnded : function (transitionRemoved) {
@@ -31572,7 +31634,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version v12.0p_2018-09-15/LGPL Deployment (2018-09-15)
+  Version SNAPSHOT_v12.1d_2018-11-30/LGPL Deployment (2018-11-30)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

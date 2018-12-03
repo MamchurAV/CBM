@@ -1426,11 +1426,16 @@ isc.CBMDataSource.addProperties({
   getRelation: function (fldName) {
     // If this.relations is null - initialise it (once!)
     if (this.relations === null) {
-//      this.relations = relationRS.findAll({ForConcept: this.getConcept().ID});
-     getRelationsForViewConcept(this.ID, null);
-   }
-    var rel = this.relations.find({SysCode: fldName});
-    return (rel ? rel : {} );
+      this.relations = relationRS.findAll({ForConcept: this.getConcept().ID});
+      if (this.relations === null) {
+        getRelationsForViewConcept(this.ID, null);
+      }
+    }
+    if (this.relations) {
+      var rel = this.relations.find({SysCode: fldName});
+      return (rel ? rel : {} );
+    }
+    return {};
   },
 
 
@@ -1636,7 +1641,7 @@ isc.CBMDataSource.addProperties({
     }
   },
 
-  // --- Constructing initial empty record of this DataSource - type
+  // --- Constructing initial empty record of type of this DataSource
   constructNull: function (record) {
     var atrNames = this.getFieldNames(false);
     var n = atrNames.length;
@@ -2316,7 +2321,7 @@ isc.CBMDataSource.addProperties({
       case "copy":
         stateTitle = isc.CBMStrings.InfoState_copy;
         break;
-      case "loaded":
+      case "edit":
         stateTitle = isc.CBMStrings.InfoState_loaded;
         break;
       case "deleted":
@@ -3534,7 +3539,7 @@ isc.LinkControl.addProperties({
   //~ },
 
   init: function() {
-  this.setProperty("icons", [ {
+    this.setProperty("icons", [ {
 	    src: isc.Page.getAppImgDir() + "deleteLink.png",
 	    showFocused: true,
 	    showOver: false,
@@ -3562,10 +3567,10 @@ isc.LinkControl.addProperties({
       showIf: function(form,item) {
                 return !item.getValue();
               },
-        click: function(form, item) {
-			     var ds = isc.DataSource.get(item.relatedConcept);
-			     var record = ds.createInstance(item);
-				 record.infoState = "new";
+      click: function(form, item) {
+        var ds = isc.DataSource.get(item.relatedConcept);
+			  var record = ds.createInstance(item);
+        record.infoState = "new";
 				//~ // If hierarchy - set parent value as in selected record (if any selected)
 				//~ var hierarchyLink = ds.findRelation({HierarchyLink: true}).SysCode; 
 				//~ if (hierarchyLink && this.getSelection().length > 0) {
@@ -3579,10 +3584,8 @@ isc.LinkControl.addProperties({
 				  //~ }
 				//~ }
 				// var that = this;
-				editRecords([record], item, conceptRS.find("SysCode", ds.ID));
-				
-            
-             }
+        editRecords([record], item, conceptRS.find("SysCode", ds.ID));
+      }
 	  },{
 	    src: isc.Page.getAppImgDir() + "list.png",
 	    showFocused: true,
@@ -3599,8 +3602,8 @@ isc.LinkControl.addProperties({
                     }); // filter, rootIdValue, afterCreate)
              }
 	  }
-   ]);
-  return this.Super("init", arguments);
+    ]);
+    return this.Super("init", arguments);
   },
 
 // useClientFiltering : true,
@@ -3714,7 +3717,7 @@ var defaultContextMenuData = [{
 }, {
   icon: isc.Page.getAppImgDir() + "edit.png",
   click: function () {
-    this.context.callObjectsEdit("loaded");
+    this.context.callObjectsEdit("edit");
     return false;
   }
 }, {
@@ -3767,7 +3770,7 @@ var binContextMenuData = [{
 }, {
   icon: isc.Page.getAppImgDir() + "edit.png",
   click: function () {
-    this.context.callObjectsEdit("loaded");
+    this.context.callObjectsEdit("edit");
     return false;
   }
 }];
@@ -3882,7 +3885,7 @@ isc.InnerGrid.addProperties({
           // TODO: Set some user action to inline record editing
 //          recordDoubleClick: function () {
 //            if(that.grid.getSelectedRecord() != null) {
-//              that.grid.callObjectsEdit("loaded");
+//              that.grid.callObjectsEdit("edit");
 //              return false;
 //            }
 //          },
@@ -3965,7 +3968,7 @@ isc.InnerGrid.addProperties({
           // TODO: Set some user action to inline record editing
           recordDoubleClick: function () {
             if (that.grid.getSelectedRecord() != null) {
-              that.grid.callObjectsEdit("loaded");
+              that.grid.callObjectsEdit("edit");
               return false;
             }
           },
@@ -4101,7 +4104,7 @@ isc.InnerGrid.addProperties({
               }
             
               // --- Set context-dependency link ---
-              // --- (that link MUST follow name agriment: to be "For{Concept}" or "{Concept}" ) ---
+              // --- (that link MUST follow name agreement: to be "For{Concept}" or "{Concept}" ) ---
               if (this.innerGrid.context 
                   && this.innerGrid.context.dataSource) {
                 var contextDsCode = this.innerGrid.context.dataSource.ID;
@@ -4121,7 +4124,7 @@ isc.InnerGrid.addProperties({
               }
             
               if (records != null && records.getLength() > 0) {
-                editRecords(records, that /*this*/, conceptRecord); // <<< 11.22 try
+                editRecords(records, that, conceptRecord);
               }
             }
             var table = createTable("Concept", this, newChild, cretin, dsRecord["ID"]);
@@ -4141,7 +4144,7 @@ isc.InnerGrid.addProperties({
             }
             
             // --- Set context-dependency link ---
-            // --- (that link MUST follow name agriment: to be "For{Concept}" or "{Concept}" ) ---
+            // --- (that link MUST follow name agreement: to be "For{Concept}" or "{Concept}" ) ---
             if (this.innerGrid.context 
                 && this.innerGrid.context.dataSource) {
               var contextDsCode = this.innerGrid.context.dataSource.ID;
@@ -4166,8 +4169,10 @@ isc.InnerGrid.addProperties({
                 var hierarchyLink = hierarchyRelation.SysCode; 
                 if (hierarchyLink && thatInnerGrid.getSelection().length > 0) {
                   records[0][hierarchyLink] = thatInnerGrid.getSelection()[0][hierarchyLink];
-                  // TODO: Update HierCode here 
-                  // * * *
+                  // ??? Update HierCode field 
+ //                 if ((thatInnerGrid.getSelection()[0]).hierCode != 'undefined') {
+ //                   records[0][hierCode] = thatInnerGrid.getSelection()[0][hierCode];
+ //                 }
                 }
                 editRecords(records, thatInnerGrid, conceptRS.find("SysCode", ds.ID));
               }
@@ -4182,9 +4187,9 @@ isc.InnerGrid.addProperties({
           //        records[0]["infoState"] = "copy"; // <<<<<<<<<<< ???????? Here? Not in cloneInstance() ???
           var that = this;
           var editCopy = function (records) {
-// ???                        
+                        
             // --- Set context-dependency link ---
-            // --- (that link MUST follow name agriment: to be "For{Concept}" or "{Concept}" ) ---
+            // --- (that link MUST follow name agreement: to be "For{Concept}" or "{Concept}" ) ---
             if (that.innerGrid.context 
                 && that.innerGrid.context.dataSource) {
               var contextDsCode = that.innerGrid.context.dataSource.ID;
@@ -4193,7 +4198,7 @@ isc.InnerGrid.addProperties({
                   && that.getFieldByName("For" + contextDsCode).type === contextDsCode) {
                     contextLinkRelation = that.getFieldByName("For" + contextDsCode);
               } else {
-                if (that.getFieldByName("For" + contextDsCode) 
+                if (that.getFieldByName(contextDsCode) // that.getFieldByName("For" + contextDsCode) 
                     && that.getFieldByName(contextDsCode).type === contextDsCode) {
                       contextLinkRelation = that.getFieldByName(contextDsCode);
                 }
@@ -4202,7 +4207,7 @@ isc.InnerGrid.addProperties({
                 records[0][contextLinkRelation.name] = that.innerGrid.context.valuesManager.values.ID;
               }
             }
-// ???            
+            
             editRecords(records, that);
           }
           ds.cloneInstance(records[0], editCopy);

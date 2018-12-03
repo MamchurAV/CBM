@@ -1,7 +1,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version v12.0p_2018-09-15/LGPL Deployment (2018-09-15)
+  Version SNAPSHOT_v12.1d_2018-11-30/LGPL Deployment (2018-11-30)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,9 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
 
-if (window.isc && isc.version != "v12.0p_2018-09-15/LGPL Deployment" && !isc.DevUtil) {
+if (window.isc && isc.version != "SNAPSHOT_v12.1d_2018-11-30/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'v12.0p_2018-09-15/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v12.1d_2018-11-30/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -8126,7 +8126,7 @@ scrollToTime : function (time, view) {
         var sRowTop = view.getRowHeight(view.getRecord(0), 0) * sRow;
         view.body.scrollTo(0, sRowTop);
         view.redraw();
-    }
+   }
 },
 
 //> @method calendar.scrollToStart()
@@ -15703,7 +15703,7 @@ getDayBodyHTML : function (date, events, calendar, rowNum, colNum) {
                 rowNum + "," + colNum + "," + moreItemIndex + ");' class='"
                 + this.calMonthEventLinkStyle + "'>",
             str = this.monthMoreEventsLinkTitle,
-            title = str.evalDynamicString(this, { eventCount: (events.length - 1 - i) })
+            title = str.evalDynamicString(this, { eventCount: (events.length - i) })
         ;
         html += moreLink + title + "</a><br/>";
     }
@@ -18458,7 +18458,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version v12.0p_2018-09-15/LGPL Deployment (2018-09-15)
+  Version SNAPSHOT_v12.1d_2018-11-30/LGPL Deployment (2018-11-30)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

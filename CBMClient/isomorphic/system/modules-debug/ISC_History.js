@@ -1,7 +1,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version v12.0p_2018-09-15/LGPL Deployment (2018-09-15)
+  Version SNAPSHOT_v12.1d_2018-11-30/LGPL Deployment (2018-11-30)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -91,15 +91,15 @@ isc._start = new Date().getTime();
 
 // versioning - values of the form ${value} are replaced with user-provided values at build time.
 // Valid values are: version, date, project (not currently used)
-isc.version = "v12.0p_2018-09-15/LGPL Deployment";
-isc.versionNumber = "v12.0p_2018-09-15";
-isc.buildDate = "2018-09-15";
+isc.version = "SNAPSHOT_v12.1d_2018-11-30/LGPL Deployment";
+isc.versionNumber = "SNAPSHOT_v12.1d_2018-11-30";
+isc.buildDate = "2018-11-30";
 isc.expirationDate = "";
 
-isc.scVersion = "12.0p";
-isc.scVersionNumber = "12.0";
-isc.sgwtVersion = "12.0p";
-isc.sgwtVersionNumber = "12.0";
+isc.scVersion = "12.1d";
+isc.scVersionNumber = "12.1";
+isc.sgwtVersion = "12.1d";
+isc.sgwtVersionNumber = "12.1";
 
 // these reflect the latest stable version relative to the branch from which this build is
 // created.  So for example for 11.0d/6.0d, this will be 10.1/5.1.  But for 10.0/5.0 this will
@@ -1424,6 +1424,10 @@ isc.Browser.isUnix = (!isc.Browser.isMac &&! isc.Browser.isWin);
 // real hardware. Refer to Apple's +externalLink{https://developer.apple.com/library/ios/documentation/IDEs/Conceptual/AppDistributionGuide/Introduction/Introduction.html,App Distribution Guide} for complete instructions on provisioning the app for testing devices, in particular, the section titled
 // +externalLink{https://developer.apple.com/library/ios/documentation/IDEs/Conceptual/AppDistributionGuide/TestingYouriOSApp/TestingYouriOSApp.html#//apple_ref/doc/uid/TP40012582-CH8-SW1,Beta Testing Your iOS App}.
 //
+// <p>Apple has deprecated UIWebView and we recommend switching to the officially supported
+// +externalLink{https://github.com/apache/cordova-plugin-wkwebview-engine,WKWebView} plugin to
+// resolve momentum scrolling issues and obtain more Safari-like behavior.
+//
 // <h3>Android Platform</h3>
 // To begin targeting Android devices, follow the instructions on the
 // +externalLink{http://docs.phonegap.com/en/edge/guide_platforms_android_index.md.html,Android Platform Guide}.
@@ -1536,6 +1540,11 @@ isc.Browser._useTouchMoveImageCSS = isc.Browser.supportsDualInput &&
 
 isc.Browser._useTouchMoveCanvasCSS = isc.Browser._useTouchMoveImageCSS &&
         window.isc_useNativeTouchScrolling == false;
+
+
+if (isc.Browser.supportsDualInput && isc.Browser.isChrome) {
+    isc.Browser.minDualInputThumbLength = 28;
+}
 
 //> @classAttr browser.isTouch (boolean : auto-detected based on device : RW)
 // Is the application running on a touch device (e.g. iPhone, iPad, Android device, etc.)?
@@ -1652,10 +1661,16 @@ if (isc.Browser.isIPhone) {
     // not contain the word "Safari".
     isc.Browser.isUIWebView = navigator.userAgent.indexOf("Safari") < 0;
 
-    isc.Browser.isMobileSafari = !isc.Browser.isUIWebView &&
-                                 // Exclude Chrome for iOS
-                                 // https://developers.google.com/chrome/mobile/docs/user-agent#chrome_for_ios_user-agent
-                                 navigator.userAgent.indexOf("CriOS/") < 0;
+    // Chrome for iOS
+    // https://developers.google.com/chrome/mobile/docs/user-agent#chrome_for_ios_user-agent
+    isc.Browser.isIOSChrome = navigator.userAgent.indexOf("CriOS/") >= 0;
+    // Firefox for iOS
+    // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/User-Agent/Firefox
+    isc.Browser.isIOSFirefox = navigator.userAgent.indexOf("FxiOS/") >= 0;
+
+    isc.Browser.isMobileSafari = !isc.Browser.isUIWebView && !isc.Browser.isIOSChrome
+                                    && !isc.Browser.isIOSFirefox;
+
 }
 
 // iPad.  Checks for "iPhone" OS + "iPad" in UA String.
@@ -3348,7 +3363,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version v12.0p_2018-09-15/LGPL Deployment (2018-09-15)
+  Version SNAPSHOT_v12.1d_2018-11-30/LGPL Deployment (2018-11-30)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

@@ -37,6 +37,8 @@
         <mustQualify type="boolean" visibility="internal"/>
         <!-- whether this field (and children) shoud include explicit xsi type in XML -->
         <xmlExplicitTypes type="boolean" visibility="internal"/>
+        <!-- whether this field is represented as an attribute in XML when found in rule criteria -->
+        <xmlAttributeInRuleCriteria type="boolean" visibility="internal"/>
 
         <!-- XML binding -->
         <valueXPath type="XPath" title="Value XPath" xmlAttribute="true"/>
@@ -221,6 +223,9 @@
         <validOperators type="string" />
         <fieldTypeProperty type="string" />
         <moveTo type="string" />
+
+        <uploadFieldName type="string" />
+        <batchUploadOperationId type="string" />
 
 	</fields>
 </Object>

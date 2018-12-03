@@ -7,6 +7,8 @@
         <field name="buttonConstructor" type="className"/>
         <field name="buttonProperties"  type="Object"/>
 
+        <field name="buttonTitleAlign" type="alignEnum"/>
+
 		<field name="defaultValue"      inapplicable="true"/>   
         <field name="defaultDynamicValue" inapplicable="true"/>
 
