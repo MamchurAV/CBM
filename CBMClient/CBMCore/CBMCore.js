@@ -4052,12 +4052,47 @@ isc.InnerGrid.addProperties({
         var records = [];
 
         var viewRecord = viewRS.find("SysCode", (this.dataSource.ID ? this.dataSource.ID : this.dataSource));
+        var that = this;
+        var contextLinkRelation;
 
         // --- If class defined with editByCopy == true, change "edit" mode to "copy"
-        if (mode == "edit" && ds.editByCopy) {
-          mode = "copy";
+        // Do it only if:
+        // The concept is Historic,
+        // OR
+        // The concept has "Actual" property
+        // OR 
+        //The concept has context, and context link is different to current edition value (need change)
+        if (mode === "edit" && ds.editByCopy) {
+          records = this.getSelectedRecords();
+          // Test if context-dependency link varies ---
+          // (that link MUST follow name agreement: to be "For{context_concept_name}" or "{context_concept_name}" )
+          if (that.innerGrid.context && that.innerGrid.context.dataSource) {
+            var contextDsCode = that.innerGrid.context.dataSource.ID;
+            if (that.getFieldByName("For" + contextDsCode) 
+                && that.getFieldByName("For" + contextDsCode).type === contextDsCode) {
+                  contextLinkRelation = that.getFieldByName("For" + contextDsCode);
+            } else {
+              if (that.getFieldByName(contextDsCode) // that.getFieldByName("For" + contextDsCode) 
+                  && that.getFieldByName(contextDsCode).type === contextDsCode) {
+                    contextLinkRelation = that.getFieldByName(contextDsCode);
+              }
+            }  
+            if (contextLinkRelation) {
+              if (records[0][contextLinkRelation.name] != that.innerGrid.context.valuesManager.values.ID) {
+                mode = "copy";
+              }
+            }
+          }
+          //Test if concept is Historic
+          // TODO
+          // Test if concept has "Actual" property
+          if (that.getFieldByName("Actual")) {
+            // TODO finish...
+            //records[0]["Actual"] = false;
+            mode = "copy";
+          }
         }
-
+        
         // --- Edit New record ---
         if (mode == "new") {
           //        this.selection.deselectAll();
@@ -4084,7 +4119,7 @@ isc.InnerGrid.addProperties({
               ]
             }
 
-            var that = this;
+            //var that = this;
             var newChild = function (record) {
               var dsNew = isc.DataSource.getDataSource(record[0].SysCode);
               if (dsNew == null) {
@@ -4104,7 +4139,7 @@ isc.InnerGrid.addProperties({
               }
             
               // --- Set context-dependency link ---
-              // --- (that link MUST follow name agreement: to be "For{Concept}" or "{Concept}" ) ---
+              // --- (that link MUST follow name agreement: to be "For{context_concept_name}" or "{context_concept_name}" ) ---
               if (this.innerGrid.context 
                   && this.innerGrid.context.dataSource) {
                 var contextDsCode = this.innerGrid.context.dataSource.ID;
@@ -4148,12 +4183,12 @@ isc.InnerGrid.addProperties({
             if (this.innerGrid.context 
                 && this.innerGrid.context.dataSource) {
               var contextDsCode = this.innerGrid.context.dataSource.ID;
-              var contextLinkRelation;
+              //var contextLinkRelation;
               if (this.getFieldByName("For" + contextDsCode) 
                   && this.getFieldByName("For" + contextDsCode).type === contextDsCode) {
                     contextLinkRelation = this.getFieldByName("For" + contextDsCode);
               } else {
-                if (this.getFieldByName("For" + contextDsCode) 
+                if (this.getFieldByName(contextDsCode) 
                     && this.getFieldByName(contextDsCode).type === contextDsCode) {
                       contextLinkRelation = this.getFieldByName(contextDsCode);
                 }
@@ -4181,15 +4216,34 @@ isc.InnerGrid.addProperties({
           this.selection.deselectAll();
         }
 
+        // --- Edit Selected record[s] ---
+        else if (mode === "edit") {
+          records = this.getSelectedRecords();
+          for (var i = 0; i < records.getLength(); i++) {
+            records[i]["infoState"] = "loaded";
+          }
+          if (records != null && records.getLength() > 0) {
+            if (viewRecord["StrictConcept"]) {
+              // Strict non-polymorphic editing
+              editRecords(records, this, viewRecord);
+            } else {
+              // Typical polymorphic editing
+              editRecords(records, this);
+            }
+          } else {
+            isc.warn(isc.CBMStrings.InnerGrid_NoSelection);
+          }
+        }
+
         // --- Copy Selected record ---
-        else if (mode == "copy") {
+        if (mode == "copy") {
           records[0] = this.getSelectedRecord();
           //        records[0]["infoState"] = "copy"; // <<<<<<<<<<< ???????? Here? Not in cloneInstance() ???
-          var that = this;
+          //var that = this;
           var editCopy = function (records) {
                         
             // --- Set context-dependency link ---
-            // --- (that link MUST follow name agreement: to be "For{Concept}" or "{Concept}" ) ---
+            // --- (that link MUST follow name agreement: to be "For{context_concept_name}" or "{context_concept_name}" ) ---
             if (that.innerGrid.context 
                 && that.innerGrid.context.dataSource) {
               var contextDsCode = that.innerGrid.context.dataSource.ID;
@@ -4207,30 +4261,11 @@ isc.InnerGrid.addProperties({
                 records[0][contextLinkRelation.name] = that.innerGrid.context.valuesManager.values.ID;
               }
             }
-            
+
             editRecords(records, that);
           }
           ds.cloneInstance(records[0], editCopy);
           this.selection.deselectAll();
-        }
-
-        // --- Edit Selected record[s] ---
-        else if (mode == "edit") {
-          records = this.getSelectedRecords();
-          for (var i = 0; i < records.getLength(); i++) {
-            records[i]["infoState"] = "loaded";
-          }
-          if (records != null && records.getLength() > 0) {
-            if (viewRecord["StrictConcept"]) {
-              // Strict non-polymorphic editing
-              editRecords(records, this, viewRecord);
-            } else {
-              // Typical polymorphic editing
-              editRecords(records, this);
-            }
-          } else {
-            isc.warn(isc.CBMStrings.InnerGrid_NoSelection);
-          }
         }
       };
 
