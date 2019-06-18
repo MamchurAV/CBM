@@ -1,7 +1,7 @@
 <DataSource	ID="ButtonItem" inheritsFrom="CanvasItem" Constructor="ButtonItem">
 	<fields>
         <field name="baseStyle"         type="cssClass"/>
-        <field name="icon" type="string"/>
+        <field name="icon" type="string" title="Icon URL"/>
         <field name="autoFit" type="boolean"/>
 
         <field name="buttonConstructor" type="className"/>

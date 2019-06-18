@@ -1531,7 +1531,7 @@ isc.CBMDataSource.addProperties({
   // },
 
   
-  // --- Ensure existing DataSources for link attributes to one level in depth.
+  // --- Ensure existing Views (for iSC - means DataSource) for link attributes to one level in depth.
   // (DataSources if needed are generated in cycle asyncroniously, result callback maybe called earlier)
   resolveLinks: function (callback){
     that = this;
@@ -1555,9 +1555,24 @@ isc.CBMDataSource.addProperties({
                   || relation.RelationKind === "Aggregate")
               {
                 var conceptDS = isc.DataSource.get("Concept");
-                var filter = {ID: relation.RelatedConcept };
+                var filter = {ID: relation.RelatedConcept};
                 var conceptRecord = conceptDS.getCacheData().find(filter);
-                var forView = conceptRecord.SysCode;
+                // Use default View for just found Concept
+                var viewDS = isc.DataSource.get("PrgView");
+                var cretin = {
+                  _constructor: "AdvancedCriteria",
+                  operator: "and",
+                  criteria: [
+                    {fieldName: "ForConcept", operator: "equals", value: conceptRecord.ID},
+                    {fieldName: "Role", operator: "equals", value: 'Default'},
+                  ]
+                }
+                var viewRecord = viewDS.getCacheData().find(cretin);
+                if (viewRecord) {
+                  var forView = viewRecord.SysCode;
+                } else {
+                  var forView = conceptRecord.SysCode;
+                }
                 
                 if (forView !== that.ID) {
                   var ds = isc.DataSource.getDataSource(forView); 
@@ -4759,7 +4774,7 @@ isc.RelationsAggregateControl.addProperties({
     [
       {
         fieldName: ["SysCode", "Description", "ForConcept", "RelatedConcept", "PrgNotes", "DBTable", "DBColumn"],
-        cssText: "background-color:#C8E0F0;", 
+        cssText: "background-color:#CFE7F7;", // more dark >>> #C8E0F0;"
         criteria: {
           fieldName: "_inherited", 
           operator: "equals", 
@@ -4792,7 +4807,7 @@ isc.RelationsAggregateControl.addProperties({
       }
     ];
     this.innerGrid.grid.hilites = hiliteArray;
-     return this.innerGrid;
+    return this.innerGrid;
   },
   
   // showValue() function overriden
@@ -5277,9 +5292,9 @@ isc.TableWindow.addProperties({
 
 
 //---- Stand-along independent function, that creates TableWindow from elsewhere for entity view (DS) type ----
-function createTable(forType, context, callback, filter, rootIdValue, afterCreate) {
+function createTable(forView, context, callback, filter, rootIdValue, afterCreate) {
   // Dynamic DS creation if needed
-  testCreateDS(forType, 
+  testCreateDS(forView, 
     function(){
       
       var initCreatedTable = function(table){
@@ -5290,7 +5305,7 @@ function createTable(forType, context, callback, filter, rootIdValue, afterCreat
         if (rootIdValue) {
           table.innerGrid.treeRoot = rootIdValue;
         }
-
+        
         // TODO here - add previous stored Filters if any
         //    filter = {Del:false};
         if (context === undefined) {
@@ -5305,10 +5320,10 @@ function createTable(forType, context, callback, filter, rootIdValue, afterCreat
         }
         
         table.innerGrid.grid.fetchData(filter, function (dsResponse, data, dsRequest) {
-		  if(!context.innerGrid || !context.getDataSource()) {
-			  // Context isn't of grid nature - do nothing
-			  return;
-		  }
+          if(!context.innerGrid || !context.getDataSource()) {
+            // Context isn't of grid nature - do nothing
+            return;
+          }
           if (context.getDataSource === undefined) {
             if (!context.innerGrid.grid.hasAllData()) {
               context.innerGrid.grid.setCacheData(data);
@@ -5319,6 +5334,16 @@ function createTable(forType, context, callback, filter, rootIdValue, afterCreat
             }
           }
         });
+        
+		var viewRec = viewRS.find("SysCode", forView);
+        //if (viewRec === null) {
+        //  isc.warn(isc.CBMStrings.MD_NoPrgViewFound + forView, null);
+        //  return;
+        //}
+        if (viewRec.ExprTextFormat) {
+          this.innerGrid.grid.hilites = eval(viewRec.ExprTextFormat);
+        }
+
         table.show();
         if (afterCreate){
           afterCreate(table);
@@ -5327,7 +5352,7 @@ function createTable(forType, context, callback, filter, rootIdValue, afterCreat
       }
       
       var table = isc.TableWindow.create({
-        dataSource: forType,
+        dataSource: forView,
         context: context,
         callback: callback,
         treeRoot: rootIdValue,

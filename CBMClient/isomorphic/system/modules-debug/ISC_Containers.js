@@ -1,7 +1,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v12.1d_2018-11-30/LGPL Deployment (2018-11-30)
+  Version SNAPSHOT_v12.1d_2019-05-29/LGPL Deployment (2019-05-29)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,9 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
 
-if (window.isc && isc.version != "SNAPSHOT_v12.1d_2018-11-30/LGPL Deployment" && !isc.DevUtil) {
+if (window.isc && isc.version != "SNAPSHOT_v12.1d_2019-05-29/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v12.1d_2018-11-30/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v12.1d_2019-05-29/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -1092,7 +1092,7 @@ scrollBack : function (animated) {
 dragReorderMove : function () {
     var currentPosition = this.getDropPosition();
     var firstInvalidPos = this.canAddTabs ? this.tabs.length - 1 : this.tabs.length;
-    if (this.canAddTabs && currentPosition >= firstInvalidPos) {
+    if (this.canAddTabs && currentPosition > firstInvalidPos) {
         return this.ns.EH.STOP_BUBBLING;
     }
 
@@ -1180,7 +1180,6 @@ isc.Window.addClassProperties({
     // @constant
     //<
     //HORIZONTAL: "horizontal" // NOTE: constant declared by Canvas
-
 });
 
 //> @groupDef body
@@ -1208,6 +1207,13 @@ isc.Window.addClassProperties({
 // @title Window Items
 // @visibility internal
 //<
+
+//> @groupDef windowHeader
+// Things related to the header subobject of Window
+// @title Window Header
+// @visibility external
+//<
+
 
 // add standard instance properties
 isc.Window.addProperties({
@@ -1277,20 +1283,18 @@ isc.Window.addProperties({
         return this.canDragReposition;
     },
 
-    //>    @attr    window.keepInParentRect        (boolean | Rect: null : IRWA)
-    // If +link{window.canDragReposition} or +link{window.canDragResize} is true, should the
-    // windows size and position be constrained such that it remains within the viewport of
-    // its parent element (or for top level windows, within the viewport of the browser window)?
-    // <br>
-    // Can also be set to an array denoting an arbitrary rect [Left,Top,Width,Height] beyond
-    // which the window cannot be moved.
-    // <p>
-    // Note: keepInParentRect affects only user drag interactions, not programmatic moves.
+    //>    @attr    window.keepInParentRect        (Boolean | Array of Integer : true : IRWA)
+    // @include canvas.keepInParentRect
     //
     // @see window.canDragReposition
     // @group dragdrop
     // @visibility external
     //<
+    // Default keepInParentRect to true. This avoids users accidentally dragging a window
+    // offscreen and being unable to then reach the header controls to drag it back on screen.
+    // If the window is modal this is doubly bad as the user may be stuck with a blocked
+    // application
+    keepInParentRect : true,
 
     dragAppearance : isc.EventHandler.OUTLINE,
 
@@ -1314,10 +1318,6 @@ isc.Window.addProperties({
     //<
 
     resizeFrom:["R","B","BR"],
-
-    // quick fix for odd drawing behaviors when window is too small
-    minWidth:100,
-    minHeight:100,
 
     // Internal
     // ---------------------------------------------------------------------------------------
@@ -1445,8 +1445,15 @@ isc.Window.addProperties({
 
     //> @attr   window.dismissOnEscape  (Boolean : null : [IRW])
     // Should this window be dismissed (same effect as pressing the "Cancel" button) when the
-    // user presses the "Escape" key? Behavior will only occur while the window or one of its
-    // descendants has focus, and does not cancel the Escape keypress.
+    // user presses the "Escape" key?<br>
+    // Windows with this setting will dismiss on Escape keypresses in any of the following
+    // cases:
+    // <ul>
+    // <li>The window or one of its descendants has focus (and does not cancel the Escape
+    //     keypress)</li>
+    // <li>The window is +link{window.isModal,modal}, and not itself masked. This ensures
+    //     that focus is not on some unrelated element on the page.</li>
+    // </ul>
     // <P>
     // If unset default behavior depends on whether a close / cancel button is visible for
     // this item.
@@ -1476,7 +1483,7 @@ isc.Window.addProperties({
     //>    @attr    window.showBody        (Boolean : true : IRWA)
     //      If true, draw the body contents when this Window is drawn.
     //  @visibility external
-    //  @group  appearance, body
+    //  @group  windowMembers, appearance, body
     //<
     showBody:true,
 
@@ -1634,7 +1641,7 @@ isc.Window.addProperties({
     // </pre>
     //
     //      @visibility external
-    //        @group  appearance, header
+    //        @group  windowMembers, appearance, header
     //<
     showHeader:true,
 
@@ -1695,6 +1702,7 @@ isc.Window.addProperties({
                         "[SKIN]Window/headerGradient.gif" : null),
 
     headerDefaults:{
+
         // Note - other defaults applied in Window.makeHeader()
         height:18,
         layoutMargin:1,
@@ -1785,6 +1793,7 @@ isc.Window.addProperties({
     // </pre>
     //
     // @visibility external
+    // @group windowHeader
     // @example windowHeaderControls
     //<
     headerControls : ["headerIcon", "headerLabel",
@@ -1824,7 +1833,7 @@ isc.Window.addProperties({
     //>    @attr    window.showTitle        (Boolean : true : [IRW])
     //        Show a title (typically just text) on the header for this window.
     //      @visibility external
-    //      @group    appearance, headerLabel
+    //      @group    windowHeader, appearance, headerLabel
     //<
     showTitle:true,
 
@@ -1891,7 +1900,7 @@ isc.Window.addProperties({
     //>    @attr    window.showHeaderIcon        (Boolean : true : [IRW])
     //          If true, we show an icon on the left in the header.
     //      @visibility external
-    //      @group  appearance, header
+    //      @group  windowHeader, appearance, header
     //<
     showHeaderIcon:true,
 
@@ -1950,7 +1959,7 @@ isc.Window.addProperties({
     //>    @attr    window.showCloseButton        (Boolean : true : [IRW])
     // If true, show a close button in the header, which will dismiss this window by
     // calling +link{closeClick()}.
-    // @group  appearance, header
+    // @group  windowHeader, appearance, header
     // @visibility external
     //<
     showCloseButton:true,
@@ -1976,7 +1985,7 @@ isc.Window.addProperties({
     //>    @attr    window.showMinimizeButton        (Boolean : true : [IRW])
     // If true, show a minimize button in the header--clicking it minimizes the Window.
     //      @visibility external
-    //      @group  appearance, header
+    //      @group  windowHeader, appearance, header
     //<
     showMinimizeButton:true,
 
@@ -2092,7 +2101,7 @@ isc.Window.addProperties({
     //>    @attr    window.showMaximizeButton        (Boolean : false : [IRW])
     // If true, show a maximize button in the header - clicking it maximizes the Window
     //      @visibility external
-    //      @group  appearance, header
+    //      @group  windowHeader, appearance, header
     //<
     showMaximizeButton:false,
 
@@ -2125,7 +2134,7 @@ isc.Window.addProperties({
     // If true, show a footer for this Window, including resizer, statusBar, etc.
     // This setting is commonly overridden for skinning purposes.
     //      @visibility external
-    //      @group  appearance, footer
+    //      @group  windowMembers, appearance, footer
     // @example windowFooter
     //<
     showFooter:true,
@@ -2189,8 +2198,10 @@ isc.Window.addProperties({
 
     //>    @attr    window.showStatusBar        (Boolean : true : [IRW])
     // If true, show a statusBar for this Window, including resizer.
+    // Note that the status bar will only be displayed if the footer
+    // is showing for the window (+link{window.showFooter}).
     //      @visibility external
-    //      @group  appearance, footer
+    //      @group  windowMembers, appearance, footer
     //<
     showStatusBar:true,
 
@@ -2218,7 +2229,7 @@ isc.Window.addProperties({
     // If true, show a button in the lower right corner that allows users to resize the Window.
     // Note that the resizer will only be displayed if the footer is showing for the window
     // (+link{window.showFooter}) and +link{window.canDragResize} is true.
-    // @group  appearance, dragging
+    // @group  windowMembers, appearance, dragging
     // @visibility external
     //<
     showResizer:true,
@@ -2366,8 +2377,9 @@ initWidget : function () {
     */
 
     if (this.autoSize) {
-        this.vPolicy = "none";
         this.overflow = "visible";
+        this.neverExpandWidth = true;
+        this.neverExpandHeight = true;
     }
 
     this.Super(this._$initWidget);
@@ -2410,6 +2422,13 @@ createChildren : function () {
 
     // make the body of the Window, and set up the items in the Window as children of the body
     this.makeBody();
+
+    // Set this.minBreadthMember to the body - this is a Layout feature where a member can
+    // be used to drive the breadth available to other members.
+    // In other words, if the body overflows the avalable space horizontally due to
+    // autoSize:true, which sets bodyOverflow to "visible", we size the header and footer etc
+    // to match it.
+    this.minBreadthMember = this.body;
 
     this.makeToolbar();
 
@@ -2668,7 +2687,7 @@ setHeaderControls : function (headerControls) {
 
 addHeaderControl : function (control, index) {
     // On first call to addHeaderControl clear the header
-    if (!this._addingHeaderControls) {
+    if (isc._loadingNodeTree && !this._addingHeaderControls) {
         this._addingHeaderControls = true;
         this.setHeaderControls([]);
     }
@@ -2788,6 +2807,7 @@ setShowHeaderControl : function (controlName, show, showControlAttrName) {
 // @see window.headerControls
 // @see window.showCloseButton
 // @visibility external
+// @group windowHeader
 //<
 setShowCloseButton : function (show) {
     this.setShowHeaderControl("closeButton", show, "showCloseButton");
@@ -3007,7 +3027,7 @@ setHeaderLabelProperties : function (newHeaderLabelProperties) {
 //> @method window.setTitle()
 // Sets the +link{attr:title,title} that appears in the window +link{attr:header,header}.
 // The header will be redrawn if necessary.
-// @group header
+// @group windowHeader
 // @param newTitle (HTMLString) new title.
 // @visibility external
 //<
@@ -3154,7 +3174,7 @@ removeFooter : function () {
 
 addFooterControl : function (control, index) {
     // On first call to addFooterControl clear the footer
-    if (!this._addingFooterControls) {
+    if (isc._loadingNodeTree && !this._addingFooterControls) {
         if (this.footer) {
             // Remove existing footer controls
             var oldFooterControls = this.footerControls; //this.footer.getMembers();
@@ -3328,20 +3348,14 @@ makeBody : function() {
         } else if (contents) {
             this.bodyConstructor = "Canvas";
 
-        } else if (!this.autoSize) {
+        } else {
             // if the Window dictates body size, and contentLayout hasn't been set to none, use
             // a Layout
             if (this.contentLayout != "none") this.bodyConstructor = "Layout";
+
+
             // if contentLayout is set to none, use a Canvas
             else this.bodyConstructor = "Canvas";
-        } else {
-            // use a Layout with a none/none policy for autoSize:true
-            // so that contents will not be resized when they're first drawn
-            // when the window is drag resized, the body's policy will be set to fill/fill
-            this.bodyConstructor = "Layout";
-            var policyProps = {vPolicy:"none", hPolicy:"none"};
-            if (!this.bodyProperties) this.bodyProperties = policyProps;
-            else isc.addProperties(this.bodyProperties, policyProps);
         }
     }
 
@@ -3361,8 +3375,7 @@ makeBody : function() {
     var bodyProps = ("body", {
             contents : contents || "&nbsp;",
 
-            // XXX watch tab can't handle showing non-generated children of generated components.
-            // We should fix that.  For now, just flag the body as non-generated
+
             _generated: false,
             defaultHeight : this.autoSize ? 50 : 100,
 
@@ -3382,7 +3395,22 @@ makeBody : function() {
 
             // when Window size dictates body size, scroll as needed.  Otherwise, expand to body
             // contents
-            overflow:this.autoSize ? "visible" : "auto"
+            overflow:this.autoSize ? "visible" : "auto",
+
+            getBreadthPolicy : function () {
+
+                if (this.minBreadthMember == null) {
+                    var policy = this.creator.getBodyBreadthPolicy();
+                    if (policy != null) return policy;
+                }
+                return this.Super("getBreadthPolicy", arguments);
+            },
+            getLengthPolicy : function () {
+                var policy = this.creator.getBodyLengthPolicy();
+                if (policy != null) return policy;
+                return this.Super("getLengthPolicy", arguments);
+            }
+
     });
 
     // should the window.items become members or children of the body?
@@ -3398,6 +3426,23 @@ makeBody : function() {
         this._bodyDynamicDefaults = bodyProps;
     }
 
+},
+
+// If autoSize is enabled set body breadth policy (hPolicy) to "none"
+// This means we'll respect the items' widths and size to them
+// horizontally, even if they're applied as canvas.defaultWidth rather than canvas.width
+getBodyBreadthPolicy : function () {
+    if (this.autoSize) {
+        return "none";
+    }
+    // no explicit return value will cause the standard 'getBreadthPolicy()' logic to run
+    // for the body.
+},
+
+getBodyLengthPolicy : function () {
+    if (this.autoSize) {
+        return "none";
+    }
 },
 
 setBodyProperties : function (newBodyProperties) {
@@ -3643,62 +3688,13 @@ layoutChildren : function (a,b,c,d) {
         this.disableAutoSize();
     }
 
-    if (this.autoSize) this._matchBodyWidth();
-
     this.invokeSuper(isc.Window, "layoutChildren", a,b,c,d);
-
-    // overflow set to visible -- similar to autoSize except content expands to fill
-    // specified space as a minimum (but we'll then react to it overflowing)
-    if (this.header != null &&
-        this.body.overflow == isc.Canvas.VISIBLE && this.overflow == isc.Canvas.VISIBLE)
-    {
-        // Ensure the header fills the available space.
-        // Note that to support shrinking we'll need to shrink to our default specified
-        // width, then re-expand to fit available space.
-        this.header.setWidth(this.body.getVisibleWidth());
-    }
 
 
     var edge = this.edgesAsChild ? this._edgedCanvas : null;
     if (edge) edge.setHeight(this.getVisibleHeight(true));
 },
 
-_matchBodyWidth : function () {
-    if (this.minimized) return;
-
-    if (this._matchingWidth) return;
-    this._matchingWidth = true;
-
-    var edge = this.edgesAsChild ? this._edgedCanvas : null;
-
-    if (!this.body.isDrawn()) this.body.draw();
-
-    // if autoSizing, once the body has received an initial width from the Window, don't have
-    // the Window's layout code manage the width of the body.  Otherwise, the first time we
-    // autoSize to an overflowed body, we'll size the body to it's overflow'd size,
-    // establishing the overflowed size as a minimum from then on.
-    this.body.inherentWidth = true;
-
-    // the window should be larger than the body by styling width (margin/border/padding) on
-    // Window as a whole, plus the layoutMargin, which is interior to styling.
-    var edgeWidth = (this.getWidth() - this.getInnerWidth()) +
-            this._leftMargin + this._rightMargin;
-
-    // plus the width of rounded edges, if edges are done as a child (otherwise these are
-    // already factored in as native margins)
-    if (edge) edgeWidth += edge._leftMargin + edge._rightMargin;
-
-    var windowWidth = this.body.getVisibleWidth() + edgeWidth;
-    this.logInfo("edgeWidth is: " + edgeWidth + ", setting window width to: " + windowWidth,
-                 "layout");
-
-    // setting the Window's width to match the body means all other children (eg the header)
-    // will be sized to match the Window's width
-
-    if (this.getWidth() != windowWidth) this.setWidth(windowWidth);
-
-    this._matchingWidth = null;
-},
 
 disableAutoSize : function () {
     this.setAutoSize(false);
@@ -3713,30 +3709,26 @@ setAutoSize : function (autoSize) {
     this.autoSize = autoSize;
 
     if (autoSize) {
+        // If we're embedded in a layout, don't have the layout expand us beyond our
+        // specified size by default
+        this.neverExpandHeight = true;
+        this.neverExpandWidth = true;
+
+        // set body overflow and our overflow to visible. We already have the
+        // minBreadthMember set to this.body so other members (header/footer) will
+        // size to match it horizontally
         if (this.body) {
-            // set the body to apply a "fill" policy if its a Layout (in autoSize mode we just
-            // stack the body items by default)
-            if (isc.isA.Layout(this.body)) this.body.vPolicy = this.body.hPolicy = "none";
-            // set the body to start scrolling
             this.body.setOverflow("visible");
         }
-        // change the policy of the Window as a whole to start setting the size of the body
-        // based on the Window size instead of vice versa
-        this.vPolicy = "none";
         this.setOverflow("visible");
     } else {
+        this.neverExpandHeight = false;
+        this.neverExpandWidth = false;
         if (this.body) {
-            // set the body to apply a "fill" policy if its a Layout (in autoSize mode we just
-            // stack the body items by default)
-            if (isc.isA.Layout(this.body)) this.body.vPolicy = this.body.hPolicy = "fill";
-            // set the body to start scrolling
             this.body.setOverflow("auto");
-            this.body.inherentWidth = false;
         }
-        // change the policy of the Window as a whole to start setting the size of the body
-        // based on the Window size instead of vice versa
-        this.vPolicy = "fill";
         this.setOverflow("hidden");
+
 
         if (this.header != null) delete this.header._userWidth;
     }
@@ -3815,10 +3807,14 @@ show : function (a,b,c,d) {
         // Explicitly catch the case of a developer specifying isModal on a non top-level window
         // this will be clearer than a log message about clickMasks.
         } else if (this.topElement != null) {
-            this.logWarn("Window specified with 'isModal' set to true, but this window has a " +
-                         "parentElement. Only top level Windows can be shown modally.");
-            this.isModal = false;
 
+            //>EditMode
+            if (!this.editProxy && !this.editingOn) {
+                this.logWarn("Window specified with 'isModal' set to true, but this window has a " +
+                    "parentElement. Only top level Windows can be shown modally.");
+               this.isModal = false;
+            }
+            //<EditMode
         } else {
             this.showClickMask(
                     {
@@ -3832,6 +3828,12 @@ show : function (a,b,c,d) {
                     [this]);
             if (this.showModalMask) this.makeModalMask();
         }
+    }
+
+    // If we're modal, set up the "dismissOnEscape" behavior to catch Escape keypresses
+    // outside this Window
+    if (this.shouldDismissOnEscape() && this.isModal) {
+        this._setDismissOnEscapeEvent();
     }
 
     // If we're going to be auto-centered, draw offscreen before centering
@@ -3983,6 +3985,35 @@ handleEscape : function () {
     this.handleCloseClick();
 },
 
+// For modal windows with dismissOnEscape:true, we want to intercept Escape keypresses at
+// the page level
+
+
+_setDismissOnEscapeEvent : function () {
+    if (this._escapeRegistered) return;
+    isc.Page.registerKey("Escape", "target.handlePageLevelEscape()", this);
+    this._escapeRegistered = true;
+},
+_clearDismissOnEscapeEvent : function () {
+    if (this._escapeRegistered) {
+        isc.Page.unregisterKey("Escape", this);
+        this._escapeRegistered = false;
+    }
+},
+
+// Page level notification of escape keypress
+handlePageLevelEscape : function () {
+    // If we have focus, handleEscape is called directly from the bubbled keypress handler
+    if (this.containsFocus()) return;
+    // If something else is masking us, bail
+    if (this.isMasked()) return;
+    // Sanity check: we only want to do this for modal windows
+    if (!this.isModal) return;
+
+    this.handleEscape();
+},
+
+
 resized : function (a,b,c,d) {
     this.invokeSuper(isc.Window, "resized", a,b,c,d);
     if (this.autoCenter) this.centerInPage();
@@ -4005,6 +4036,7 @@ hide : function (a,b,c,d) {
         } else {
             this.hideClickMask();
             this.hideModalMask();
+            this._clearDismissOnEscapeEvent();
         }
     }
 },
@@ -4027,6 +4059,7 @@ clear : function (a,b,c,d) {
         } else {
             this.hideClickMask();
             this.hideModalMask();
+            this._clearDismissOnEscapeEvent();
         }
     }
 },
@@ -4178,6 +4211,19 @@ minimize : function () {
         this._restoreVisibleHeight = this.getVisibleHeight();
         // see comments in 'restore' for explanation of '_userHeight' / '_restoreUserHeight'.
         this._restoreUserHeight = this._userHeight;
+
+
+        // If we're currently at "restored" size, ensure we explicitly set to this width
+        // while minimized.
+        // This is required for autoSize:true windows where our visible width is
+        // driven by our body's rendered size. On minimize we clear out the
+        // 'minBreadthMember' flag meaning if we don't explicitly size to our current
+        // rendered width, our visible width will suddenly shrink to our current
+        // specified width.
+        this._restoreWidth = this.getWidth();
+        this._restoreVisibleWidth = this.getVisibleWidth();
+        this._restoreUserWidth = this._userWidth;
+
 
         // disable drag resize while minimized
         // (No need to do this if we're maximized - already disabled)
@@ -4348,7 +4394,6 @@ animateMinimizeStep : function (ratio, ID, earlyFinish, restore, maximize) {
         bodySize = 0,
         footerMax = (footer ? this.footerHeight : 0),
         membersMargin = this.membersMargin || 0;
-
     // At any point during animation (either direction), if there's just, or less than enough
     // room for the footer, it will be showing and nothing else...
     // If there's enough room for the footer the body will start to show too.
@@ -4464,6 +4509,8 @@ completeMinimize : function (minimizeHeight, animated) {
     this.minimized = true;
     this.maximized = false;
 
+    if (this.body && this.minBreadthMember == this.body) delete this.minBreadthMember;
+
     // Hide everything except the header
     // (If this was an animated minimize they may already be hidden)
     // Note: toolbar is a child of the body
@@ -4483,7 +4530,7 @@ completeMinimize : function (minimizeHeight, animated) {
     // If this._restoreWidth is set, we were previously maximized - ensure we shrink to the
     // appropriate width
     if (this._restoreWidth != null) {
-        if (!animated) this.setWidth(this._restoreWidth);
+        if (!animated) this.setWidth(this._restoreVisibleWidth);
         this.updateUserSize(this._restoreWidth, this._$width);
     }
 
@@ -4515,6 +4562,7 @@ completeMinimize : function (minimizeHeight, animated) {
 // @visibility external
 //<
 restore : function () {
+    if (this.body && this.minBreadthMember != this.body) this.minBreadthMember = this.body;
 
     //>Animation
     // Calling restore() during a minimize (or maximize/restore) animation must kill it right
@@ -4649,6 +4697,8 @@ _showComponents : function () {
 // @visibility external
 //<
 maximize : function () {
+
+    if (this.body && this.minBreadthMember != this.body) this.minBreadthMember = this.body;
 
     //>Animation
     if (this._animatingMinimize) isc.Animation.finishAnimation(this._animatingMinimize);
@@ -4921,7 +4971,7 @@ isc.WindowHeaderIcon.addMethods({
     _generated: true,
     // Don't write anything but constructor in Component XML
     updateEditNode : function (editContext, editNode) {
-        editContext.removeNodeProperties(editNode, ["autoDraw", "ID", "title"]);
+        editContext.removeNodeProperties(editNode, ["autoDraw", "ID", "autoID", "title"]);
     }
 });
 
@@ -4947,7 +4997,7 @@ isc.WindowHeaderLabel.addMethods({
     _markerName:"headerLabel",
     _generated:true,
     updateEditNode : function (editContext, editNode) {
-        editContext.removeNodeProperties(editNode, ["autoDraw", "ID", "title"]);
+        editContext.removeNodeProperties(editNode, ["autoDraw", "ID", "autoID", "title"]);
     }
 });
 
@@ -4973,7 +5023,7 @@ isc.WindowMinimizeButton.addMethods({
     _markerName:"minimizeButton",
     _generated:true,
     updateEditNode : function (editContext, editNode) {
-        editContext.removeNodeProperties(editNode, ["autoDraw", "ID", "title"]);
+        editContext.removeNodeProperties(editNode, ["autoDraw", "ID", "autoID", "title"]);
     }
 });
 
@@ -4999,7 +5049,7 @@ isc.WindowMaximizeButton.addMethods({
     _markerName:"maximizeButton",
     _generated:true,
     updateEditNode : function (editContext, editNode) {
-        editContext.removeNodeProperties(editNode, ["autoDraw", "ID", "title"]);
+        editContext.removeNodeProperties(editNode, ["autoDraw", "ID", "autoID", "title"]);
     }
 });
 
@@ -5025,7 +5075,7 @@ isc.WindowCloseButton.addMethods({
     _markerName:"closeButton",
     _generated:true,
     updateEditNode : function (editContext, editNode) {
-        editContext.removeNodeProperties(editNode, ["autoDraw", "ID", "title"]);
+        editContext.removeNodeProperties(editNode, ["autoDraw", "ID", "autoID", "title"]);
     }
 });
 
@@ -5051,7 +5101,7 @@ isc.WindowFooterSpacer.addMethods({
     _markerName:"spacer",
     _generated:true,
     updateEditNode : function (editContext, editNode) {
-        editContext.removeNodeProperties(editNode, ["autoDraw", "ID", "title"]);
+        editContext.removeNodeProperties(editNode, ["autoDraw", "ID", "autoID", "title"]);
     }
 });
 
@@ -5077,10 +5127,33 @@ isc.WindowResizer.addMethods({
     _markerName:"resizer",
     _generated:true,
     updateEditNode : function (editContext, editNode) {
-        editContext.removeNodeProperties(editNode, ["autoDraw", "ID", "title"]);
+        editContext.removeNodeProperties(editNode, ["autoDraw", "ID", "autoID", "title"]);
     }
 });
 
+//> @class InlineWindow
+// This class is a synonym for Window that can be used to make intent clearer.
+// It is used by some development tools for that purpose.
+// @inheritsFrom Window
+// @treeLocation Client Reference/Layout
+// @visibility external
+//<
+isc.ClassFactory.defineClass("InlineWindow", "Window").addProperties({
+    canMinimize:true
+});
+
+//> @class ModalWindow
+// This class is a synonym for Window that can be used to make intent clearer.
+// It is used by some development tools for that purpose.
+// @inheritsFrom Window
+// @treeLocation Client Reference/Layout
+// @visibility external
+//<
+isc.ClassFactory.defineClass("ModalWindow", "Window").addProperties({
+    autoCenter:true,
+    isModal:true,
+    visibility:"hidden"
+});
 
 
 //> @object PortalPosition
@@ -5440,7 +5513,7 @@ isc.defineClass("Portlet", "Window").addProperties({
         if (this.parentElement) {
             this.masterLayout = this.parentElement;
             this.masterLayout.portletMaximizing = true;
-            this.masterLayout.replaceMember(this, this._portletPlaceholder, false);
+            this.masterLayout._replaceMember(this, this._portletPlaceholder, false);
             this.masterLayout.portletMaximizing = false;
         }
 
@@ -5462,7 +5535,7 @@ isc.defineClass("Portlet", "Window").addProperties({
 
         if (this.masterLayout && this.masterLayout.hasMember(this._portletPlaceholder)) {
             this.masterLayout.portletMaximizing = true;
-            this.masterLayout.replaceMember(this._portletPlaceholder, this);
+            this.masterLayout._replaceMember(this._portletPlaceholder, this);
             this.masterLayout.portletMaximizing = false;
         }
         this._portletPlaceholder._portlet = null;
@@ -6120,12 +6193,14 @@ isc.defineClass("PortalRow", "Layout").addProperties({
         // If we have an editContext and we aren't coming from addPortlets, then we check
         // whether the portlets have an editNode ... if so, we should add it
         if (this.editContext && !this._addingPortlets) {
+            this.editContext.dontShowFieldMapper = true;
             for (var i = 0; i < portlets.length; i++) {
                 var portlet = portlets[i];
                 if (portlet.editNode) {
-                    this.editContext.addNode(portlet.editNode, this.editNode, index + i, null, true);
+                    this.editContext.addNode(portlet.editNode, this.editNode, index + i);
                 }
             }
+            delete this.editContext.dontShowFieldMapper;
         }
         //<EditMode
     },
@@ -7506,12 +7581,14 @@ isc.defineClass("PortalLayout", "Layout").addProperties({
         // If we have an editContext and we aren't coming from addPortalColumns, then we check
         // whether the columns have an editNode ... if so, we should add it
         if (this.editContext && !this._addingPortalColumns) {
+            this.editContext.dontShowFieldMapper = true;
             for (var i = 0; i < columns.length; i++) {
                 var column = columns[i];
                 if (column.editNode) {
-                    this.editContext.addNode(column.editNode, this.editNode, index + i, null, true);
+                    this.editContext.addNode(column.editNode, this.editNode, index + i);
                 }
             }
+            delete this.editContext.dontShowFieldMapper;
         }
         //<EditMode
     },
@@ -8494,10 +8571,19 @@ isc.Dialog.addProperties({
 
     //>    @attr dialog.autoFocus (Boolean : true : IR)
     // If a toolbar is showing, automatically place keyboard focus in the first button.
+    // <p>
+    // An alternative button can be specified by +link{autoFocusButton,autoFocusButton}.
     // @group appearance, toolbar
     // @visibility external
     //<
     autoFocus :true,
+
+    //>    @attr dialog.autoFocusButton (Canvas | String | int : true : IR)
+    // If a toolbar is showing and +link{autoFocus,autoFocus} is enabled, which button should
+    // receive initial focus.
+    // @group appearance, toolbar
+    // @visibility external
+    //<
 
     //> @attr Dialog.toolbar (AutoChild Toolbar : null : IR)
     // +link{AutoChild} of type Toolbar used to create the +link{toolbarButtons}.
@@ -8635,6 +8721,21 @@ initWidget : function () {
     if (buttons && !isc.isAn.Array(buttons)) this.toolbarButtons = [buttons];
 },
 
+// If we're showing a message in the dialog we want to have it expand to fill the
+// available space by default.
+// Handle this by overriding the getBodyBreadthPolicy
+
+getBodyBreadthPolicy : function () {
+    if (this.autoSize) {
+        if (this.message != null) {
+            return "fill";
+        }
+        return "none";
+    }
+    // no explicit return value will cause the standard 'getBreadthPolicy()' logic to run
+    // for the body.
+},
+
 createChildren : function () {
 
     // HACK: prevent toolbar from being created, since we want it placed in "messageStack", which
@@ -8646,8 +8747,6 @@ createChildren : function () {
     this.showToolbar = origSetting;
 
     if (this.message != null) {
-        // can't be done via defaults because policy and direction are dynamically determined
-        this.body.hPolicy = "fill";
 
         this.addAutoChild("messageStack", null, isc.HLayout);
         if (this.icon != null) {
@@ -8703,10 +8802,14 @@ draw : function () {
     if (!this.readyToDraw()) return this;
     this.Super("draw", arguments);
     if (this.toolbar != null && this.autoFocus) {
-        var firstButton = this.toolbar.getMember(0);
-        if (firstButton) firstButton.focus();
+        var button = this._getAutoFocusButton();
+        if (button) button.focus();
     }
     return this;
+},
+
+_getAutoFocusButton : function () {
+    return this.toolbar.getMember(this.autoFocusButton || 0);
 },
 
 //>    @method    Dialog.saveData()    (A)
@@ -9216,15 +9319,15 @@ isc.Dialog.Warn = {
 
         // focus in the first button so you can hit Enter to do the default thing
         if (this.toolbar != null && this.autoFocus) {
-            var firstButton = this.toolbar.getMember(0);
+            var button = this._getAutoFocusButton();
             /*
-            this.logWarn("focusing on first button: " + firstButton +
-                         ", drawn: " + firstButton.isDrawn() +
-                         ", disabled: " + firstButton.isDisabled() +
-                         ", visible: " + firstButton.isVisible() +
-                         ", canFocus: " + firstButton._canFocus());
+            this.logWarn("focusing on button: " + button +
+                         ", drawn: " + button.isDrawn() +
+                         ", disabled: " + button.isDisabled() +
+                         ", visible: " + button.isVisible() +
+                         ", canFocus: " + button._canFocus());
             */
-            firstButton.focus();
+            if (button) button.focus();
         }
     },
     destroy : function () {
@@ -9312,6 +9415,12 @@ isc.addGlobal("showMessage", function (message, messageType, callback, propertie
     if (!properties.icon) properties.icon = isc.Dialog.getInstanceProperty(messageType + "Icon");
     if (callback) properties.callback = callback;
 
+    if (message == null) message = "&nbsp;";
+    else if (!isc.isA.String(message)) {
+        message = isc.echo(message);
+        //this.logWarn("Stringifying object passed to showMessage() - '" + message + "'");
+    }
+
     isc.Dialog.Warn.showMessage(message, properties);
 });
 
@@ -9383,6 +9492,7 @@ isc.addGlobal("warn", function (message, callback, properties) {
 //                                        eg:    { buttons : [Dialog.OK, Dialog.CANCEL] }
 // @group Prompting
 // @visibility external
+// @see isc.notify()
 // @see classAttr:Dialog.Warn
 // @see staticMethod:isc.warn()
 // @see staticMethod:isc.ask()
@@ -9445,6 +9555,7 @@ isc.addGlobal("ask", function (message, callback, properties) {
 //
 // @group Prompting
 // @visibility external
+// @see isc.notify()
 // @see Dialog.Warn
 // @see staticMethod:isc.warn()
 // @see method:Dialog.okClick()
@@ -11937,6 +12048,13 @@ isc.TabSet.addProperties({
     // <smartclient>"tabScroller"</smartclient>
     // <smartgwt>{@link com.smartgwt.client.types.TabBarControls#TAB_SCROLLER}</smartgwt>
     // to the <code>tabBarControls</code> array.
+    // <P>
+    // <b>Note:</b> Due to tabs supporting +link{tab.canAdaptWidth,adaptive width} and other
+    // complexities of TabSet widget layout, +link{canvas.width,flexible-sized} controls
+    // (including +link{LayoutSpacer,spacers}) aren't supported in <code>tabBarControls</code>.
+    // However, if you take into account the width of your tabs and whether the +link{tabPicker,
+    // picker} and +link{scroller} are present, you can add a fixed-width spacer to achieve the
+    // desired appearance, as long as the set of tabs and TabSet width are static.
     //
     // @group tabBarControls
     // @visibility external
@@ -12003,8 +12121,9 @@ isc.TabSet.addProperties({
         noDoubleClicks: true,
 
         // Disable normal over/down styling as that would style both buttons at once
-        showRollOver: false,
-        showDown: false,
+
+        autoApplyDownState:false,
+        autoApplyOverState:false,
 
         mouseMove : function () {
             if (!this.creator.showScrollerRollOver) return;
@@ -15212,7 +15331,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v12.1d_2018-11-30/LGPL Deployment (2018-11-30)
+  Version SNAPSHOT_v12.1d_2019-05-29/LGPL Deployment (2019-05-29)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

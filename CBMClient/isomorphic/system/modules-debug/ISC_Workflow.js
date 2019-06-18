@@ -1,7 +1,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v12.1d_2018-11-30/LGPL Deployment (2018-11-30)
+  Version SNAPSHOT_v12.1d_2019-05-29/LGPL Deployment (2019-05-29)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -36,6 +36,23 @@ if(window.isc&&window.isc.module_Core&&!window.isc.module_Workflow){isc.module_W
 if(isc.Log && isc.Log.logDebug)isc.Log.logDebug(isc._pTM.message,'loadTime');
 else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;isc.defineClass("ProcessElement");
+isc.A=isc.ProcessElement;
+isc.B=isc._allFuncs;
+isc.C=isc.B._maxIndex;
+isc.D=isc._funcClasses;
+isc.D[isc.C]=isc.A.Class;
+isc.B.push(isc.A.getTitle=function isc_c_ProcessElement_getTitle(){
+        var title=this.getInstanceProperty("title");
+        if(!title){
+            title=this.getClassName();
+            if(title.endsWith("Task"))title=title.substring(0,title.length-4);
+            title=isc.DataSource.getAutoTitle(title);
+        }
+        return title;
+    }
+);
+isc.B._maxIndex=isc.C+1;
+
 isc.A=isc.ProcessElement.getPrototype();
 isc.B=isc._allFuncs;
 isc.C=isc.B._maxIndex;
@@ -77,15 +94,12 @@ isc.B.push(isc.A.getElementDescription=function isc_ProcessElement_getElementDes
 ,isc.A._resolveObjectDynamicExpressions=function isc_ProcessElement__resolveObjectDynamicExpressions(object,inputData,inputRecord,process){
         var newObject={};
         for(var key in object){
-            if(isc.isA.String(object[key])){
-                newObject[key]=this._resolveDynamicExpression(object[key],inputData,inputRecord,process);
-            }else{
-                newObject[key]=object[key];
-            }
+            newObject[key]=this._resolveDynamicExpression(object[key],inputData,inputRecord,process);
         }
         return newObject;
     }
 ,isc.A._resolveDynamicExpression=function isc_ProcessElement__resolveDynamicExpression(value,inputData,inputRecord,process){
+        if(!isc.isA.String(value))return value;
         if(inputRecord&&value.startsWith("$inputRecord")){
             if(inputRecord){
                 var dataPath=value.replace("$inputRecord","state");
@@ -664,6 +678,7 @@ isc.C=isc.B._maxIndex;
 isc.D=isc._funcClasses;
 isc.D[isc.C]=isc.A.Class;
 isc.A.operationType="fetch";
+isc.A.title="DataSource Fetch Data";
 isc.A.editorType="ServiceTaskEditor";
 isc.B.push(isc.A.executeElement=function isc_ServiceTask_executeElement(process){
         var ds=this.dataSource;
@@ -679,7 +694,7 @@ isc.B.push(isc.A.executeElement=function isc_ServiceTask_executeElement(process)
             ds.exportData(requestData,requestProperties);
             return true;
         }
-        var params=isc.addProperties({},this.requestParams,{operationId:this.operationId});
+        var params=isc.addProperties({},this.requestProperties,{operationId:this.operationId});
         params.willHandleError=true;
         var task=this;
         ds.performDSOperation(this.operationType,requestData,function(dsResponse,data,request){
@@ -843,6 +858,7 @@ isc.B.push(isc.A.executeElement=function isc_ServiceTask_executeElement(process)
         return null;
     }
 ,isc.A.getElementDescription=function isc_ServiceTask_getElementDescription(){
+        if(!this.dataSource)return"";
         var description=this.dataSource+" "+this.operationType+(this.operationId?" ("+this.operationId+")":""),
             data=this._createRequestData({getStateVariable:function(stateVariablePath){return stateVariablePath;}},true)
         ;
@@ -870,6 +886,42 @@ isc.B.push(isc.A.executeElement=function isc_ServiceTask_executeElement(process)
 );
 isc.B._maxIndex=isc.C+6;
 
+isc.defineClass("DSFetchTask","ServiceTask");
+isc.A=isc.DSFetchTask.getPrototype();
+isc.A.title="DataSource Fetch";
+isc.A.classDescription="Retrieve data from a DataSource which match specified criteria";
+isc.A.editorType="ServiceTaskEditor";
+isc.A.editorProperties={showOperationTypePicker:false};
+isc.A.operationType="fetch"
+;
+
+isc.defineClass("DSAddTask","ServiceTask");
+isc.A=isc.DSAddTask.getPrototype();
+isc.A.title="DataSource Add";
+isc.A.classDescription="Add a new record";
+isc.A.editorType="ServiceTaskEditor";
+isc.A.editorProperties={showOperationTypePicker:false};
+isc.A.operationType="add"
+;
+
+isc.defineClass("DSUpdateTask","ServiceTask");
+isc.A=isc.DSUpdateTask.getPrototype();
+isc.A.title="DataSource Update";
+isc.A.classDescription="Update an existing record";
+isc.A.editorType="ServiceTaskEditor";
+isc.A.editorProperties={showOperationTypePicker:false};
+isc.A.operationType="update"
+;
+
+isc.defineClass("DSRemoveTask","ServiceTask");
+isc.A=isc.DSRemoveTask.getPrototype();
+isc.A.title="DataSource Remove";
+isc.A.classDescription="Remove an existing record";
+isc.A.editorType="ServiceTaskEditor";
+isc.A.editorProperties={showOperationTypePicker:false};
+isc.A.operationType="remove"
+;
+
 isc.defineClass("ScriptTask","Task");
 isc.A=isc.ScriptTask.getPrototype();
 isc.B=isc._allFuncs;
@@ -877,7 +929,10 @@ isc.C=isc.B._maxIndex;
 isc.D=isc._funcClasses;
 isc.D[isc.C]=isc.A.Class;
 isc.A.isAsync=false;
-isc.B.push(isc.A.getInputData=function isc_ScriptTask_getInputData(){
+isc.B.push(isc.A.getProcess=function isc_ScriptTask_getProcess(){
+        return this._process;
+    }
+,isc.A.getInputData=function isc_ScriptTask_getInputData(){
         return this.inputData;
     }
 ,isc.A.setOutputData=function isc_ScriptTask_setOutputData(taskOutput){
@@ -987,7 +1042,7 @@ isc.B.push(isc.A.getInputData=function isc_ScriptTask_getInputData(){
         return{execute:isc.Func.getBody(this.execute)};
     }
 );
-isc.B._maxIndex=isc.C+8;
+isc.B._maxIndex=isc.C+9;
 
 isc.ScriptTask.registerStringMethods({
     execute:"input,inputRecord"
@@ -1045,6 +1100,8 @@ isc.B=isc._allFuncs;
 isc.C=isc.B._maxIndex;
 isc.D=isc._funcClasses;
 isc.D[isc.C]=isc.A.Class;
+isc.A.title="Single Decision";
+isc.A.classDescription="Choose the next task based on criteria";
 isc.A.editorType="XORGatewayEditor";
 isc.B.push(isc.A.executeElement=function isc_XORGateway_executeElement(process){
         process.setTaskOutput(this.getClassName(),this.ID,process.getLastTaskOutput());
@@ -1097,6 +1154,8 @@ isc.B=isc._allFuncs;
 isc.C=isc.B._maxIndex;
 isc.D=isc._funcClasses;
 isc.D[isc.C]=isc.A.Class;
+isc.A.title="Confirm with user";
+isc.A.classDescription="Choose the next task based on user confirmation";
 isc.A.editorType="UserConfirmationGatewayEditor";
 isc.B.push(isc.A.executeElement=function isc_UserConfirmationGateway_executeElement(process){
         process.setTaskOutput(this.getClassName(),this.ID,process.getLastTaskOutput());
@@ -1134,6 +1193,8 @@ isc.C=isc.B._maxIndex;
 isc.D=isc._funcClasses;
 isc.D[isc.C]=isc.A.Class;
 isc.A._canAddNextElement=false;
+isc.A.title="Multi Decision";
+isc.A.classDescription="Choose multiple possible next tasks based on criteria";
 isc.A.editorType="DecisionGatewayEditor";
 isc.B.push(isc.A.executeElement=function isc_DecisionGateway_executeElement(process){
         this._convertCriteriaMap();
@@ -1544,8 +1605,14 @@ isc.B=isc._allFuncs;
 isc.C=isc.B._maxIndex;
 isc.D=isc._funcClasses;
 isc.D[isc.C]=isc.A.Class;
+isc.A.classDescription="Show a message in a modal dialog";
 isc.A.editorType="ShowMessageTaskEditor";
 isc.A.type="normal";
+isc.A._typeDescriptionMap={
+        "normal":"",
+        "warning":"warning",
+        "error":"error"
+    };
 isc.B.push(isc.A.executeElement=function isc_ShowMessageTask_executeElement(process){
         var messageType=this.type,
             callback=function(){process.start()}
@@ -1571,7 +1638,127 @@ isc.B.push(isc.A.executeElement=function isc_ShowMessageTask_executeElement(proc
         return false;
     }
 ,isc.A.getElementDescription=function isc_ShowMessageTask_getElementDescription(){
-        return"Show Message";
+        var message=this.message||"",
+            messageParts=message.split(" "),
+            shortMessage=messageParts.getRange(0,3).join(" "),
+            type=this.type||"message"
+        ;
+        if(shortMessage.length>25)shortMessage=shortMessage.substring(0,25);
+        if(shortMessage!=message)shortMessage+=" ...";
+        return"Show "+this._typeDescriptionMap[type]+" message:<br>"+shortMessage;
+    }
+);
+isc.B._maxIndex=isc.C+2;
+
+isc.defineClass("AskForValueTask","UserConfirmationGateway");
+isc.A=isc.AskForValueTask.getPrototype();
+isc.B=isc._allFuncs;
+isc.C=isc.B._maxIndex;
+isc.D=isc._funcClasses;
+isc.D[isc.C]=isc.A.Class;
+isc.A.title="Ask for Value";
+isc.A.classDescription="Ask the user to input a value";
+isc.A.editorType="AskForValueTaskEditor";
+isc.B.push(isc.A.executeElement=function isc_AskForValueTask_executeElement(process){
+        var properties=(this.defaultValue?{defaultValue:this.defaultValue}:null);
+        var task=this;
+        isc.askForValue(this.message,function(value){
+            if(value){
+                process.setTaskOutput(task.getClassName(),task.ID,value);
+                if(task.nextElement)process.setNextElement(task.nextElement);
+            }else{
+                if(!task.failureElement){
+                    task.logWarn("Ask For Value Task does not have a failureElement. Process is aborting.");
+                }
+                process.setNextElement(task.failureElement);
+            }
+            process.start();
+        },properties);
+        return false;
+    }
+,isc.A.getElementDescription=function isc_AskForValueTask_getElementDescription(){
+        var description="Ask user for a value";
+        return description;
+    }
+);
+isc.B._maxIndex=isc.C+2;
+
+isc.defineClass("ShowNotificationTask","ProcessElement");
+isc.A=isc.ShowNotificationTask.getPrototype();
+isc.B=isc._allFuncs;
+isc.C=isc.B._maxIndex;
+isc.D=isc._funcClasses;
+isc.D[isc.C]=isc.A.Class;
+isc.A.classDescription="Show a message which fades out automatically";
+isc.A.editorType="ShowNotificationTaskEditor";
+isc.A.autoDismiss=true;
+isc.A.position="T";
+isc.A.notifyType="message";
+isc.A._notifyTypeDescriptionMap={
+        "message":"",
+        "warn":"warning",
+        "error":"error"
+    };
+isc.B.push(isc.A.executeElement=function isc_ShowNotificationTask_executeElement(process){
+        var notifyType=this.notifyType,
+            settings={position:this.position};
+        if(!this.autoDismiss){
+            settings.duration=0;
+            settings.canDismiss=true;
+        }
+        isc.Notify.addMessage(this.message,null,notifyType,settings);
+        return true;
+    }
+,isc.A.getElementDescription=function isc_ShowNotificationTask_getElementDescription(){
+        var message=this.message||"",
+            messageParts=message.split(" "),
+            shortMessage=messageParts.getRange(0,3).join(" "),
+            notifyType=this.notifyType||"message"
+        ;
+        if(shortMessage.length>25)shortMessage=shortMessage.substring(0,25);
+        if(shortMessage!=message)shortMessage+=" ...";
+        return"Show "+this._notifyTypeDescriptionMap[notifyType]+" notification:<br>"+
+            shortMessage;
+    }
+);
+isc.B._maxIndex=isc.C+2;
+
+isc.defineClass("StartTransactionTask","ProcessElement");
+isc.A=isc.StartTransactionTask.getPrototype();
+isc.B=isc._allFuncs;
+isc.C=isc.B._maxIndex;
+isc.D=isc._funcClasses;
+isc.D[isc.C]=isc.A.Class;
+isc.A.classDescription="Starts queuing all DataSource operations so they can be sent "+
+        "to the server all together as a transaction";
+isc.A.editorType=null;
+isc.B.push(isc.A.executeElement=function isc_StartTransactionTask_executeElement(process){
+        process.setTaskOutput(this.getClassName(),this.ID,process.getLastTaskOutput());
+        isc.RPC.startQueue();
+        return true;
+    }
+,isc.A.getElementDescription=function isc_StartTransactionTask_getElementDescription(){
+        return"Start queuing";
+    }
+);
+isc.B._maxIndex=isc.C+2;
+
+isc.defineClass("SendTransactionTask","ProcessElement");
+isc.A=isc.SendTransactionTask.getPrototype();
+isc.B=isc._allFuncs;
+isc.C=isc.B._maxIndex;
+isc.D=isc._funcClasses;
+isc.D[isc.C]=isc.A.Class;
+isc.A.classDescription="Sends any currently queued DataSource operations "+
+        "as a single transactional request to the server";
+isc.A.editorType=null;
+isc.B.push(isc.A.executeElement=function isc_SendTransactionTask_executeElement(process){
+        process.setTaskOutput(this.getClassName(),this.ID,process.getLastTaskOutput());
+        isc.RPC.sendQueue();
+        return true;
+    }
+,isc.A.getElementDescription=function isc_SendTransactionTask_getElementDescription(){
+        return"Send queue";
     }
 );
 isc.B._maxIndex=isc.C+2;
@@ -1583,11 +1770,12 @@ isc.C=isc.B._maxIndex;
 isc.D=isc._funcClasses;
 isc.D[isc.C]=isc.A.Class;
 isc.B.push(isc.A.isApplicableComponent=function isc_c_ComponentTask_isApplicableComponent(component){
+        var clazz=(component.getClass?component.getClass():null);
+        if(!clazz)return false;
         var baseClasses=this.getInstanceProperty("componentBaseClass"),
             requiresDataSource=this.getInstanceProperty("componentRequiresDataSource")||false
         ;
         baseClasses=(isc.isAn.Array(baseClasses)?baseClasses:[baseClasses]);
-        var clazz=component.getClass();
         for(var i=0;i<baseClasses.length;i++){
             if(clazz.isA(baseClasses[i])&&(!requiresDataSource||component.dataSource)){
                 return true;
@@ -1649,6 +1837,7 @@ isc.C=isc.B._maxIndex;
 isc.D=isc._funcClasses;
 isc.D[isc.C]=isc.A.Class;
 isc.A.componentBaseClass="Label";
+isc.A.classDescription="Sets the text of a label";
 isc.A.editorType="SetLabelTextTaskEditor";
 isc.B.push(isc.A.executeElement=function isc_SetLabelTextTask_executeElement(process){
         var label=this.getTargetComponent(process);
@@ -1675,6 +1864,7 @@ isc.C=isc.B._maxIndex;
 isc.D=isc._funcClasses;
 isc.D[isc.C]=isc.A.Class;
 isc.A.componentBaseClass=["Button","Window"];
+isc.A.classDescription="Sets the title of a button or window";
 isc.A.editorType="SetButtonTitleTaskEditor";
 isc.B.push(isc.A.executeElement=function isc_SetButtonTitleTask_executeElement(process){
         var button=this.getTargetComponent(process);
@@ -1701,6 +1891,8 @@ isc.C=isc.B._maxIndex;
 isc.D=isc._funcClasses;
 isc.D[isc.C]=isc.A.Class;
 isc.A.componentBaseClass="Canvas";
+isc.A.title="Show";
+isc.A.classDescription="Show a currently hidden component";
 isc.A.editorType="ShowComponentTaskEditor";
 isc.B.push(isc.A.executeElement=function isc_ShowComponentTask_executeElement(process){
         var canvas=this.getTargetComponent(process);
@@ -1721,6 +1913,8 @@ isc.C=isc.B._maxIndex;
 isc.D=isc._funcClasses;
 isc.D[isc.C]=isc.A.Class;
 isc.A.componentBaseClass="Canvas";
+isc.A.title="Hide";
+isc.A.classDescription="Hide a component";
 isc.A.editorType="HideComponentTaskEditor";
 isc.B.push(isc.A.executeElement=function isc_HideComponentTask_executeElement(process){
         var canvas=this.getTargetComponent(process);
@@ -1740,8 +1934,9 @@ isc.B=isc._allFuncs;
 isc.C=isc.B._maxIndex;
 isc.D=isc._funcClasses;
 isc.D[isc.C]=isc.A.Class;
-isc.A.componentBaseClass="DynamicForm";
+isc.A.componentBaseClass=["DynamicForm","ValuesManager"];
 isc.A.componentRequiresDataSource=true;
+isc.A.classDescription="Set form values";
 isc.A.editorType="FormSetValuesTaskEditor";
 isc.B.push(isc.A.executeElement=function isc_FormSetValuesTask_executeElement(process){
         this.process=process;
@@ -1776,8 +1971,9 @@ isc.B=isc._allFuncs;
 isc.C=isc.B._maxIndex;
 isc.D=isc._funcClasses;
 isc.D[isc.C]=isc.A.Class;
-isc.A.componentBaseClass="DynamicForm";
+isc.A.componentBaseClass=["DynamicForm","ValuesManager"];
 isc.A.componentRequiresDataSource=true;
+isc.A.classDescription="Put a value into just one field of a form";
 isc.A.editorType="FormSetFieldValueTaskEditor";
 isc.B.push(isc.A.executeElement=function isc_FormSetFieldValueTask_executeElement(process){
         var form=this.getTargetComponent(process);
@@ -1796,13 +1992,35 @@ isc.B.push(isc.A.executeElement=function isc_FormSetFieldValueTask_executeElemen
 );
 isc.B._maxIndex=isc.C+2;
 
+isc.defineClass("FormClearValuesTask","ComponentTask");
+isc.A=isc.FormClearValuesTask.getPrototype();
+isc.B=isc._allFuncs;
+isc.C=isc.B._maxIndex;
+isc.D=isc._funcClasses;
+isc.D[isc.C]=isc.A.Class;
+isc.A.componentBaseClass=["DynamicForm","ValuesManager"];
+isc.A.classDescription="Clear form values and errors";
+isc.A.editorType="FormClearValuesTaskEditor";
+isc.B.push(isc.A.executeElement=function isc_FormClearValuesTask_executeElement(process){
+        var form=this.getTargetComponent(process);
+        if(!form)return true;
+        form.clearValues();
+        return true;
+    }
+,isc.A.getElementDescription=function isc_FormClearValuesTask_getElementDescription(){
+        return"Clear '"+this.componentId+"' values";
+    }
+);
+isc.B._maxIndex=isc.C+2;
+
 isc.defineClass("FormResetValuesTask","ComponentTask");
 isc.A=isc.FormResetValuesTask.getPrototype();
 isc.B=isc._allFuncs;
 isc.C=isc.B._maxIndex;
 isc.D=isc._funcClasses;
 isc.D[isc.C]=isc.A.Class;
-isc.A.componentBaseClass="DynamicForm";
+isc.A.componentBaseClass=["DynamicForm","ValuesManager"];
+isc.A.classDescription="Reset values in a form to defaults";
 isc.A.editorType="FormResetValuesTaskEditor";
 isc.B.push(isc.A.executeElement=function isc_FormResetValuesTask_executeElement(process){
         var form=this.getTargetComponent(process);
@@ -1822,7 +2040,8 @@ isc.B=isc._allFuncs;
 isc.C=isc.B._maxIndex;
 isc.D=isc._funcClasses;
 isc.D[isc.C]=isc.A.Class;
-isc.A.componentBaseClass="DynamicForm";
+isc.A.componentBaseClass=["DynamicForm","ValuesManager"];
+isc.A.classDescription="Validate a form and show errors to user";
 isc.A.editorType="FormValidateValuesTaskEditor";
 isc.B.push(isc.A.executeElement=function isc_FormValidateValuesTask_executeElement(process){
         var form=this.getTargetComponent(process);
@@ -1842,21 +2061,63 @@ isc.B=isc._allFuncs;
 isc.C=isc.B._maxIndex;
 isc.D=isc._funcClasses;
 isc.D[isc.C]=isc.A.Class;
-isc.A.componentBaseClass="DynamicForm";
+isc.A.componentBaseClass=["DynamicForm","ValuesManager"];
+isc.A.classDescription="Save changes made in a form (validates first)";
 isc.A.editorType="FormSaveDataTaskEditor";
 isc.B.push(isc.A.executeElement=function isc_FormSaveDataTask_executeElement(process){
         var form=this.getTargetComponent(process);
         if(!form)return true;
-        form.saveData(function(){
+        var params=isc.addProperties({},this.requestProperties,{willHandleError:true});
+        var task=this;
+        form.saveData(function(dsResponse,data,request){
+            var results=dsResponse.results;
+            if(dsResponse.isStructured&&
+                (!results||results.status<0||(results.status==null&&dsResponse.status<0)))
+            {
+                if(!isc.RPC.runDefaultErrorHandling(dsResponse,request,task.errorFormatter)){
+                    task.fail(process);
+                    return;
+                }
+            }
             process.start();
-        },this.requestProperties);
+        },params);
         return false;
+    }
+,isc.A.fail=function isc_FormSaveDataTask_fail(process){
+        if(!this.failureElement){
+            this.logWarn("FormSaveDataTask does not have a failureElement. Process is aborting.");
+        }
+        process.setNextElement(this.failureElement);
+    }
+,isc.A.errorFormatter=function isc_FormSaveDataTask_errorFormatter(codeName,response,request){
+        if(codeName=="VALIDATION_ERROR"){
+            var errors=response.errors,
+                message=["Server returned validation errors:<BR><UL>"]
+            ;
+            if(!isc.isAn.Array(errors))errors=[errors];
+            for(var i=0;i<errors.length;i++){
+                var error=errors[i];
+                for(var field in error){
+                    var fieldErrors=error[field];
+                    message.add("<LI><B>"+field+":</B> ");
+                    if(!isc.isAn.Array(fieldErrors))fieldErrors=[fieldErrors];
+                    for(var j=0;j<fieldErrors.length;j++){
+                        var fieldError=fieldErrors[j];
+                        message.add((j>0?"<BR>":"")+(isc.isAn.Object(fieldError)?fieldError.errorMessage:fieldError));
+                    }
+                    message.add("</LI>");
+                }
+            }
+            message.add("</UL>");
+            return message.join("");
+        }
+        return null;
     }
 ,isc.A.getElementDescription=function isc_FormSaveDataTask_getElementDescription(){
         return"Save '"+this.componentId+"' data";
     }
 );
-isc.B._maxIndex=isc.C+2;
+isc.B._maxIndex=isc.C+4;
 
 isc.defineClass("FormEditNewRecordTask","ComponentTask");
 isc.A=isc.FormEditNewRecordTask;
@@ -1884,7 +2145,8 @@ isc.B=isc._allFuncs;
 isc.C=isc.B._maxIndex;
 isc.D=isc._funcClasses;
 isc.D[isc.C]=isc.A.Class;
-isc.A.componentBaseClass="DynamicForm";
+isc.A.componentBaseClass=["DynamicForm","ValuesManager"];
+isc.A.classDescription="Start editing a new record";
 isc.A.editorType="FormEditNewRecordTaskEditor";
 isc.B.push(isc.A.executeElement=function isc_FormEditNewRecordTask_executeElement(process){
         var form=this.getTargetComponent(process);
@@ -1928,7 +2190,7 @@ isc.B=isc._allFuncs;
 isc.C=isc.B._maxIndex;
 isc.D=isc._funcClasses;
 isc.D[isc.C]=isc.A.Class;
-isc.A.componentBaseClass="DynamicForm";
+isc.A.componentBaseClass=["DynamicForm","ValuesManager"];
 isc.A.componentRequiresDataSource=true;
 isc.A.editorType="FormEditRecordTaskEditor";
 isc.B.push(isc.A.executeElement=function isc_FormEditRecordTask_executeElement(process){
@@ -1989,8 +2251,10 @@ isc.B=isc._allFuncs;
 isc.C=isc.B._maxIndex;
 isc.D=isc._funcClasses;
 isc.D[isc.C]=isc.A.Class;
-isc.A.componentBaseClass="DynamicForm";
+isc.A.componentBaseClass=["DynamicForm","ValuesManager"];
 isc.A.componentRequiresDataSource=true;
+isc.A.title="Edit Selected Record";
+isc.A.classDescription="Edit a record currently showing in some other component";
 isc.A.editorType="FormEditSelectedTaskEditor";
 isc.B.push(isc.A.executeElement=function isc_FormEditSelectedTask_executeElement(process){
         var form=this.getTargetComponent(process);
@@ -2025,6 +2289,8 @@ isc.C=isc.B._maxIndex;
 isc.D=isc._funcClasses;
 isc.D[isc.C]=isc.A.Class;
 isc.A.componentBaseClass="DynamicForm";
+isc.A.title="Show / Hide Field";
+isc.A.classDescription="Show or hide a field of a form";
 isc.A.editorType="FormHideFieldTaskEditor";
 isc.B.push(isc.A.executeElement=function isc_FormHideFieldTask_executeElement(process){
         var form=this.getTargetComponent(process);
@@ -2056,6 +2322,8 @@ isc.C=isc.B._maxIndex;
 isc.D=isc._funcClasses;
 isc.D[isc.C]=isc.A.Class;
 isc.A.componentBaseClass="DynamicForm";
+isc.A.title="Enable / Disable Field";
+isc.A.classDescription="Enable or disable a field of a form";
 isc.A.editorType="FormDisableFieldTaskEditor";
 isc.B.push(isc.A.executeElement=function isc_FormDisableFieldTask_executeElement(process){
         var form=this.getTargetComponent(process);
@@ -2090,6 +2358,7 @@ isc.D=isc._funcClasses;
 isc.D[isc.C]=isc.A.Class;
 isc.A.componentBaseClass=["ListGrid","TileGrid","DetailViewer"];
 isc.A.componentRequiresDataSource=true;
+isc.A.classDescription="Cause a grid to fetch data matching specified criteria";
 isc.A.editorType="GridFetchDataTaskEditor";
 isc.B.push(isc.A.executeElement=function isc_GridFetchDataTask_executeElement(process){
         var grid=this.getTargetComponent(process);
@@ -2147,6 +2416,7 @@ isc.D=isc._funcClasses;
 isc.D[isc.C]=isc.A.Class;
 isc.A.componentBaseClass=["ListGrid","TileGrid","DetailViewer"];
 isc.A.componentRequiresDataSource=true;
+isc.A.classDescription="Cause a grid to fetch data related to a record in another grid";
 isc.A.editorType="GridFetchRelatedDataTaskEditor";
 isc.B.push(isc.A.executeElement=function isc_GridFetchRelatedDataTask_executeElement(process){
         var grid=this.getTargetComponent(process);
@@ -2190,6 +2460,7 @@ isc.C=isc.B._maxIndex;
 isc.D=isc._funcClasses;
 isc.D[isc.C]=isc.A.Class;
 isc.A.componentBaseClass=["ListGrid","TileGrid"];
+isc.A.classDescription="Remove data that is selected in a grid";
 isc.A.editorType="GridRemoveSelectedDataTaskEditor";
 isc.B.push(isc.A.executeElement=function isc_GridRemoveSelectedDataTask_executeElement(process){
         var grid=this.getTargetComponent(process);
@@ -2212,6 +2483,7 @@ isc.C=isc.B._maxIndex;
 isc.D=isc._funcClasses;
 isc.D[isc.C]=isc.A.Class;
 isc.A.componentBaseClass="ListGrid";
+isc.A.classDescription="Start editing a new record";
 isc.A.editorType="GridStartEditingTaskEditor";
 isc.B.push(isc.A.executeElement=function isc_GridStartEditingTask_executeElement(process){
         var grid=this.getTargetComponent(process);
@@ -2237,6 +2509,7 @@ isc.D=isc._funcClasses;
 isc.D[isc.C]=isc.A.Class;
 isc.A.componentBaseClass="ListGrid";
 isc.A.componentRequiresDataSource=true;
+isc.A.classDescription="Set a value in an editable grid as if the user had made the edit";
 isc.A.editorType="GridSetEditValueTaskEditor";
 isc.B.push(isc.A.executeElement=function isc_GridSetEditValueTask_executeElement(process){
         var grid=this.getTargetComponent(process);
@@ -2293,6 +2566,7 @@ isc.C=isc.B._maxIndex;
 isc.D=isc._funcClasses;
 isc.D[isc.C]=isc.A.Class;
 isc.A.componentBaseClass="ListGrid";
+isc.A.classDescription="Save all changes in a grid with auto-saving disabled";
 isc.A.editorType="GridSaveAllEditsTaskEditor";
 isc.B.push(isc.A.executeElement=function isc_GridSaveAllEditsTask_executeElement(process){
         var grid=this.getTargetComponent(process);
@@ -2316,6 +2590,8 @@ isc.D=isc._funcClasses;
 isc.D[isc.C]=isc.A.Class;
 isc.A.componentBaseClass=["ListGrid","TileGrid","DetailViewer"];
 isc.A.componentRequiresDataSource=true;
+isc.A.title="Export Data (Server)";
+isc.A.classDescription="Export data currently shown in a grid";
 isc.A.editorType="GridExportDataTaskEditor";
 isc.B.push(isc.A.executeElement=function isc_GridExportDataTask_executeElement(process){
         var grid=this.getTargetComponent(process);
@@ -2338,6 +2614,8 @@ isc.C=isc.B._maxIndex;
 isc.D=isc._funcClasses;
 isc.D[isc.C]=isc.A.Class;
 isc.A.componentBaseClass=["ListGrid","TileGrid","DetailViewer"];
+isc.A.title="Export Data (Client)";
+isc.A.classDescription="Export data currently shown in a grid keeping all grid-specific formatting";
 isc.A.editorType="GridExportClientDataTaskEditor";
 isc.B.push(isc.A.executeElement=function isc_GridExportClientDataTask_executeElement(process){
         var grid=this.getTargetComponent(process);
@@ -2380,6 +2658,8 @@ isc.C=isc.B._maxIndex;
 isc.D=isc._funcClasses;
 isc.D[isc.C]=isc.A.Class;
 isc.A.componentBaseClass="Canvas";
+isc.A.title="Show Next To";
+isc.A.classDescription="Show a component next to some other component";
 isc.A.editorType="ShowNextToComponentTaskEditor";
 isc.B.push(isc.A.executeElement=function isc_ShowNextToComponentTask_executeElement(process){
         var canvas=this.getTargetComponent(process);
@@ -2410,6 +2690,7 @@ isc.C=isc.B._maxIndex;
 isc.D=isc._funcClasses;
 isc.D[isc.C]=isc.A.Class;
 isc.A.componentBaseClass="SectionStack";
+isc.A.classDescription="Sets the title of a section in a SectionStack";
 isc.A.editorType="SetSectionTitleTaskEditor";
 isc.B.push(isc.A.executeElement=function isc_SetSectionTitleTask_executeElement(process){
         var sectionStack=this.getTargetComponent(process);
@@ -2429,7 +2710,12 @@ isc.B.push(isc.A.executeElement=function isc_SetSectionTitleTask_executeElement(
             isc.logWarn("Target section not identified by targetSectionName or targetSectionTitle. Task skipped");
             return true;
         }
-        sectionStack.setSectionTitle(sectionName,this.title);
+        var title=this.title;
+        if(title){
+            var values=this._resolveObjectDynamicExpressions({value:title},null,null,process);
+            title=values.value;
+        }
+        sectionStack.setSectionTitle(sectionName,title);
         return true;
     }
 ,isc.A.getElementDescription=function isc_SetSectionTitleTask_getElementDescription(){
@@ -2438,19 +2724,74 @@ isc.B.push(isc.A.executeElement=function isc_SetSectionTitleTask_executeElement(
 );
 isc.B._maxIndex=isc.C+2;
 
+isc.defineClass("NavigateListPaneTask","ComponentTask");
+isc.A=isc.NavigateListPaneTask.getPrototype();
+isc.B=isc._allFuncs;
+isc.C=isc.B._maxIndex;
+isc.D=isc._funcClasses;
+isc.D[isc.C]=isc.A.Class;
+isc.A.componentBaseClass="TriplePane";
+isc.A.classDescription="Navigate to the List pane in a TriplePane, using the selection "+
+        "in the Navigation pane to refresh the list, if applicable";
+isc.A.editorType="NavigateListPaneTaskEditor";
+isc.B.push(isc.A.executeElement=function isc_NavigateListPaneTask_executeElement(process){
+        var triplePane=this.getTargetComponent(process);
+        if(!triplePane)return true;
+        var title=this.title;
+        if(title){
+            var values=this._resolveObjectDynamicExpressions({value:title},null,null,process);
+            title=values.value;
+        }
+        triplePane.navigateListPane(title);
+        return true;
+    }
+,isc.A.getElementDescription=function isc_NavigateListPaneTask_getElementDescription(){
+        return"Navigate '"+this.componentId+"' list pane";
+    }
+);
+isc.B._maxIndex=isc.C+2;
+
+isc.defineClass("NavigateDetailPaneTask","ComponentTask");
+isc.A=isc.NavigateDetailPaneTask.getPrototype();
+isc.B=isc._allFuncs;
+isc.C=isc.B._maxIndex;
+isc.D=isc._funcClasses;
+isc.D[isc.C]=isc.A.Class;
+isc.A.componentBaseClass=["SplitPane","TriplePane"];
+isc.A.classDescription="Navigate to the Detail pane in a SplitPane or TriplePane, "+
+        "using the selection in the Navigation pane (for SplitPane) or List Pane (for TriplePane)";
+isc.A.editorType="NavigateDetailPaneTaskEditor";
+isc.B.push(isc.A.executeElement=function isc_NavigateDetailPaneTask_executeElement(process){
+        var splitPane=this.getTargetComponent(process);
+        if(!splitPane)return true;
+        var title=this.title;
+        if(title){
+            var values=this._resolveObjectDynamicExpressions({value:title},null,null,process);
+            title=values.value;
+        }
+        splitPane.navigateDetailPane(title);
+        return true;
+    }
+,isc.A.getElementDescription=function isc_NavigateDetailPaneTask_getElementDescription(){
+        return"Navigate '"+this.componentId+"' detail pane";
+    }
+);
+isc.B._maxIndex=isc.C+2;
+
 isc.defineClass("WorkflowEditor","VStack");
 isc.A=isc.WorkflowEditor.getPrototype();
 isc.A.elementWidth=180;
 isc.A.elementHeight=100;
-isc.A.elementSpacing=15;
-isc.A.lineSpacing=20;
+isc.A.elementSpacing=45;
+isc.A.lineSpacing=40;
 isc.A.autoWrapSequences=false;
 isc.A.autoWrapSequenceCount=6;
 isc.A.markUnreferencedTasks=true;
 isc.A.unnamedSequencePrefix="_notNamed_";
-isc.A.linkColor="#808080";
+isc.A.linkColor="#7B8284";
+isc.A.linkWidth=2;
 isc.A.connectorLineColors=[
-        "#7ae02d",
+        "#2ecc71",
         "#4d89f9",
         "#2de0e0",
         "#99FF33",
@@ -2464,9 +2805,9 @@ isc.A.connectorLineColors=[
         "#C0C0C0",
         "#000000",
         "#996100",
-        "#636300",
+        "#3498db",
         "#006300",
-        "#006366",
+        "#1abc9c",
         "#000080",
         "#636399",
         "#636363"
@@ -2479,144 +2820,144 @@ isc.A.failureConnectorLineColors=[
         "#9933FF",
         "#800080",
         "#FF00FF",
-        "#FFCC00"
+        "#FFCC00",
+        "#c0392b",
+        "#FFC312",
+        "#FDA7D0",
+        "#EE5A24",
+        "#9980FA",
+        "#B53471",
+        "#D980FA",
+        "#F79F1F",
+        "#b71540",
+        "#8e44ad",
+        "#EA2027",
+        "#E58E26"
     ];
 isc.A.unreferencedLineColor="black";
 isc.A.unreferencedLinkPointBackgroundColor="red";
 isc.A.unreferencedLinkPointForegroundColor="white";
+isc.A.startLineColor="#7B8284";
+isc.A.startLinkPointBorderColor="#6bd77d";
+isc.A.startLinkPointBackgroundColor="#b4f1c3";
 isc.A.gatewayPlaceholderTaskType="EndProcessTask";
 isc.A.addElementTitle="Add a step";
-isc.A.addElementHint="Pick a new task to add..";
+isc.A.addElementHint="Pick a task...";
 isc.A.canceledLinkPrompt="canceled";
 isc.A.failedLinkPrompt="failed";
 isc.A.continuationLinkPrompt="continuation";
+isc.A.startTaskLinkPrompt="Initial task to be executed";
 isc.A.unreferencedTaskLinkPrompt="No other tasks currently lead to this task so it will never be executed";
 isc.A.newElementTypes=[
-        {title:"DataSource Tasks",canSelect:false,children:[
-            {title:"Fetch",description:"Retrieve data from a DataSource which match specified criteria",
-                editor:"ServiceTaskEditor",
-                elementType:"ServiceTask",
-                elementDefaults:{operationType:"fetch"}
+        {title:"DataSource Tasks",prefix:"DataSource",icon:"workflow/dataSourceTasks.png",canSelect:false,children:[
+            {icon:"workflow/fetch.png",
+                elementType:"DSFetchTask"
             },
-            {title:"Update",description:"Update and existing record",
-                editor:"ServiceTaskEditor",
-                elementType:"ServiceTask",
-                elementDefaults:{operationType:"update"}
+            {icon:"workflow/update.png",
+                elementType:"DSUpdateTask"
             },
-            {title:"Add",description:"Add a new record",
-                editor:"ServiceTaskEditor",
-                elementType:"ServiceTask",
-                elementDefaults:{operationType:"add"}
+            {icon:"workflow/add.png",
+                elementType:"DSAddTask"
             },
-            {title:"Remove",description:"Remove an existing record",
-                editor:"ServiceTaskEditor",
-                elementType:"ServiceTask",
-                elementDefaults:{operationType:"remove"}
+            {icon:"workflow/remove.png",
+                elementType:"DSRemoveTask"
             }
           ]
         },
-        {title:"Grid Tasks",canSelect:false,children:[
-            {title:"Fetch Data",description:"Cause a grid to fetch data matching specified criteria",
-                editor:"GridFetchDataTaskEditor",
+        {title:"Grid Tasks",prefix:"Grid",icon:"workflow/gridTasks.png",canSelect:false,children:[
+            {icon:"workflow/fetch.png",
                 elementType:"GridFetchDataTask"
-            },{title:"Fetch Related Data",description:"Cause a grid to fetch data related to a record in another grid",
-                editor:"GridFetchRelatedDataTaskEditor",
+            },{icon:"workflow/fetch.png",
                 elementType:"GridFetchRelatedDataTask"
-            },{title:"Remove Selected Data",description:"Remove data that is selected in a grid",
-                editor:"GridRemoveSelectedDataTaskEditor",
+            },{icon:"workflow/remove.png",
                 elementType:"GridRemoveSelectedDataTask"
-            },{title:"Start Editing",description:"Start editing a new record",
-                editor:"GridStartEditingTaskEditor",
+            },{icon:"workflow/edit.png",
                 elementType:"GridStartEditingTask"
-            },{title:"Save All Edits",description:"Save all changes in a grid with auto-saving disabled",
-                editor:"GridSaveAllEditsTaskEditor",
+            },{icon:"workflow/save.png",
                 elementType:"GridSaveAllEditsTask"
-            },{title:"Export Data (Server)",description:"Export data currently shown in a grid",
-                editor:"GridExportDataTaskEditor",
+            },{icon:"workflow/export.png",
                 elementType:"GridExportDataTask"
-            },{title:"Export Data (Client)",description:"Export data currently shown in a grid keeping all grid-specific formatting",
-                editor:"GridExportClientDataTaskEditor",
+            },{icon:"workflow/export.png",
                 elementType:"GridExportClientDataTask"
-            },{title:"Set Edit Value",description:"Set a value in an editable grid as if the user had made the edit",
-                editor:"GridSetEditValueTaskEditor",
+            },{icon:"workflow/setValue.png",
                 elementType:"GridSetEditValueTask"
             }
           ]
         },
-        {title:"Form Tasks",canSelect:false,children:[
-            {title:"Set Values",description:"Set form values",
-                editor:"FormSetValuesTaskEditor",
+        {title:"Form Tasks",prefix:"Form",icon:"workflow/formTasks.png",canSelect:false,children:[
+            {icon:"workflow/setValue.png",
                 elementType:"FormSetValuesTask"
-            },{title:"Show / Hide Field",description:"Show or hide a field of a form",
-                editor:"FormHideFieldTaskEditor",
+            },{icon:"workflow/showOrHide.png",
                 elementType:"FormHideFieldTask"
-            },{title:"Enable / Disable Field",description:"Enable or disable a field of a form",
-                editor:"FormDisableFieldTaskEditor",
+            },{icon:"workflow/enableOrDisable.png",
                 elementType:"FormDisableFieldTask"
-            },{title:"Save Data",description:"Save changes made in a form (validates first)",
-                editor:"FormSaveDataTaskEditor",
+            },{icon:"workflow/save.png",
                 elementType:"FormSaveDataTask"
-            },{title:"Edit Selected Record",description:"Edit a record currently showing in some other component",
-                editor:"FormEditSelectedTaskEditor",
+            },{icon:"workflow/update.png",
                 elementType:"FormEditSelectedTask"
-            },{title:"Edit New Record",description:"Start editing a new record",
-                editor:"FormEditNewRecordTaskEditor",
+            },{icon:"workflow/edit.png",
                 elementType:"FormEditNewRecordTask"
-            },{title:"Set Field Value",description:"Put a value into just one field of a form",
-                editor:"FormSetFieldValueTaskEditor",
+            },{icon:"workflow/setValue.png",
                 elementType:"FormSetFieldValueTask"
-            },{title:"Reset Values",description:"Reset values in a form to defaults",
-                editor:"FormResetValuesTaskEditor",
-                elementType:"FormResetValuesTask"
-            },{title:"Validate Values",description:"Validate a form and show errors to user",
-                editor:"FormValidateValuesTaskEditor",
+            },{icon:"workflow/remove.png",
+                elementType:"FormClearValuesTask"
+            },{icon:"workflow/validate.png",
                 elementType:"FormValidateValuesTask"
             }
           ]
         },
-        {title:"Widget Tasks",canSelect:false,children:[
-            {title:"Set Label Text",description:"Sets the text of a label",
-                editor:"SetLabelTextTaskEditor",
+        {title:"Widget Tasks",icon:"workflow/widgetTasks.png",canSelect:false,children:[
+            {icon:"workflow/setLabelText.png",
                 elementType:"SetLabelTextTask"
-            },{title:"Set Button Title",description:"Sets the title of a button or window",
-                editor:"SetButtonTitleTaskEditor",
+            },{icon:"workflow/setButtonText.png",
                 elementType:"SetButtonTitleTask"
-            },{title:"Set Section Title",description:"Sets the title of a section in a SectionStack",
-                editor:"SetSectionTitleTaskEditor",
+            },{icon:"workflow/setSectionTitle.png",
                 elementType:"SetSectionTitleTask"
-            },{title:"Show",description:"Show a currently hidden component",
-                editor:"ShowComponentTaskEditor",
+            },{icon:"workflow/show.png",
                 elementType:"ShowComponentTask"
-            },{title:"Hide",description:"Hide a component",
-                editor:"HideComponentTaskEditor",
+            },{icon:"workflow/hide.png",
                 elementType:"HideComponentTask"
-            },{title:"Show Next To",description:"Show a component next to some other component",
-                editor:"ShowNextToComponentTaskEditor",
+            },{icon:"workflow/showNextTo.png",
                 elementType:"ShowNextToComponentTask"
-            },{title:"Show Message",description:"Show a message",
-                editor:"ShowMessageTaskEditor",
+            },{icon:"workflow/showMessage.png",
                 elementType:"ShowMessageTask"
+            },{icon:"workflow/askForValue.png",
+                elementType:"AskForValueTask"
+            },{icon:"workflow/showNotification.png",
+                elementType:"ShowNotificationTask"
+            },{icon:"workflow/navigate.png",
+                elementType:"NavigateListPaneTask"
+            },{icon:"workflow/navigate.png",
+                elementType:"NavigateDetailPaneTask"
             }
           ]
         },
-        {title:"Decisions",canSelect:false,children:[
-            {title:"Single Decision",description:"Choose the next task based on criteria",
-                editor:"XORGatewayEditor",
+        {title:"Decisions",icon:"workflow/decisions.png",canSelect:false,children:[
+            {icon:"workflow/singleDecision.png",
                 elementType:"XORGateway"
             },
-            {title:"Multi Decision",description:"Choose multiple possible next tasks based on criteria",
-                editor:"DecisionGatewayEditor",
+            {icon:"workflow/multiDecision.png",
                 elementType:"DecisionGateway"
             },
-            {title:"Confirm with user",description:"Choose the next task based on user confirmation",
-                editor:"UserConfirmationGatewayEditor",
+            {icon:"workflow/confirm.png",
                 elementType:"UserConfirmationGateway"
+            }
+          ]
+        },
+        {title:"Advanced Tasks",icon:null,canSelect:false,children:[
+            {icon:null,
+                elementType:"StartTransactionTask"
+            },
+            {icon:null,
+                elementType:"SendTransactionTask"
             }
           ]
         }
     ];
-isc.A.arrowOffset=5;
-isc.A.unreferencedLinkPointSize=12;
+isc.A.arrowOffsetX=10;
+isc.A.arrowOffsetY=5;
+isc.A.showSolidArrows=true;
+isc.A.unreferencedLinkPointSize=24;
 isc.A.divergingLinkPointSize=6;
 isc.A.divergingLinkStartPointSpread=10
 ;
@@ -2635,7 +2976,7 @@ isc.A.containerDefaults={
             this.destroyMembers();
         },
         destroyMembers:function(){
-            var members=this.getMembers();
+            var members=this.getMembers().duplicate();
             this.removeMembers(members);
             for(var i=0;i<members.length;i++){
                 members[i].destroy();
@@ -2654,6 +2995,7 @@ isc.A.containerDefaults={
                 this.removeChild(promptPanes[i]);
                 promptPanes[i].destroy()
             }
+            this._promptPanes=null;
         }
     };
 isc.A.elementDefaults={
@@ -2664,7 +3006,7 @@ isc.A.elementDefaults={
                 this.setContents(node.title);
         },
         doubleClick:function(){
-            if(this.creator.canEditElements){
+            if(this.creator.canEditElements&&this.canEdit){
                 var node=this._node,
                     editor=this.creator
                 ;
@@ -2679,13 +3021,14 @@ isc.A.elementAddDefaults={
         contributeToRuleContext:false,
         styleName:"processElementNew",
         createCanvas:function(){
-            var _this=this;
-            var newElementTree=isc.Tree.create({data:this.newElementTypes,autoOpen:"all"}),
+            var _this=this,
+                newElementTree=this.creator.newElementTypeTree,
                 hint=this.creator.addElementHint
             ;
             var form=isc.DynamicForm.create({
                 numCols:1,
-                width:"100%",
+                layoutAlign:"center",
+                width:140,
                 fields:[
                     {name:"type",
                         type:"SelectItem",
@@ -2758,13 +3101,9 @@ isc.A.elementAddDefaults={
                     }
                     if(parentWindow&&parentWindow.isAnimating()){
                         var showPicker=function(){
-                            if(parentWindow.isAnimating()){
-                                isc.Timer.setTimeout(showPicker,250);
-                                return;
-                            }
                             field.showPicker();
                         }
-                        showPicker();
+                        isc.Page.waitFor(parentWindow,"animateShowComplete",showPicker);
                     }else{
                         field.showPicker();
                     }
@@ -2799,7 +3138,7 @@ isc.A.promptDrawPaneDefaults={
     };
 isc.A._actionTargetPrefixes={
         "ListGrid":"Grid",
-        "Dynamicform":"Form"
+        "DynamicForm":"Form"
     };
 isc.A._actionTargetExceptions={
         "ShowTask":"ShowComponentTask",
@@ -2809,11 +3148,13 @@ isc.A._actionTargetExceptions={
 isc.A.canRemoveElements=true;
 isc.A.removeIcon="[SKIN]/actions/remove.png";
 isc.A.removeIconSize=16;
+isc.A.removeIconPrompt="Delete Task";
 isc.A.warnOnRemoval=false;
 isc.A.warnOnRemovalMessage="Are you sure you want to delete this element?";
 isc.A.canEditElements=true;
 isc.A.editIcon="[SKIN]/actions/edit.png";
 isc.A.editIconSize=16;
+isc.A.editIconPrompt="Edit Task";
 isc.A.editorWindowDefaults={
         _constructor:"Window",
         autoSize:true,
@@ -2845,6 +3186,7 @@ isc.B.push(isc.A.initWidget=function isc_WorkflowEditor_initWidget(){
         this.container.addChild(this.drawPane);
         this.drawPane.observe(this.container,"resized","observer.resizeToMatch(observed)");
         this.drawPane.observe(this.container,"adjustOverflow","observer.resizeToMatch(observed)");
+        this.newElementTypeTree=this.createNewElementTypeTree();
         if(this.process){
             this.setProcess(this.process);
         }else{
@@ -2858,26 +3200,73 @@ isc.B.push(isc.A.initWidget=function isc_WorkflowEditor_initWidget(){
         this.drawPane.show();
         this.drawPane.moveAbove(this);
     }
+,isc.A.createNewElementTypeTree=function isc_WorkflowEditor_createNewElementTypeTree(tree,parentNode){
+        if(!tree)tree=isc.Tree.create({data:this.newElementTypes,autoOpen:"all"});
+        var children=tree.getChildren(parentNode||tree.getRoot());
+        for(var i=0;i<children.length;i++){
+            var node=children[i];
+            if(node.elementType){
+                var elementType=node.elementType,
+                    clazz=isc.ClassFactory.getClass(elementType)
+                ;
+                if(clazz){
+                    var editorType=clazz.getInstanceProperty("editorType");
+                    if(editorType){
+                        node.editor=editorType;
+                    }
+                    var title=clazz.getTitle(),
+                        parentPrefix=parentNode.prefix
+                    ;
+                    if(parentPrefix&&title.startsWith(parentPrefix+" ")){
+                        title=title.replace(parentPrefix+" ","");
+                    }
+                    node.title=title;
+                    var description=clazz.getInstanceProperty("classDescription");
+                    if(!node.description)node.description=description;
+                    node.editorProperties=clazz.getInstanceProperty("editorProperties");
+                }
+            }
+            if(node.children){
+                this.createNewElementTypeTree(tree,node);
+            }
+        }
+        return tree;
+    }
+,isc.A.getTaskIcon=function isc_WorkflowEditor_getTaskIcon(elementType){
+        var node=this.newElementTypeTree.find("elementType",elementType);
+        return(node?node.icon:null);
+    }
+,isc.A.getTaskTitle=function isc_WorkflowEditor_getTaskTitle(elementType){
+        var node=this.newElementTypeTree.find("elementType",elementType);
+        return(node?node.title:null);
+    }
+,isc.A.getTaskEditorProperties=function isc_WorkflowEditor_getTaskEditorProperties(elementType){
+        var node=this.newElementTypeTree.find("elementType",elementType);
+        return(node?node.editorProperties:null);
+    }
 ,isc.A.drawWorkflow=function isc_WorkflowEditor_drawWorkflow(){
         var tree=this._processTree,
-            parentNode=tree.getRoot(),
-            childNodes=tree.getChildren(parentNode),
-            series=[]
+            parentNode=tree.getRoot()
         ;
         this.clearRoutes();
         this.nextSegmentId=0;
         if(this.drawTree(tree,parentNode)){
-            this.delayCall("drawLinks",[tree]);
+            if(this._scheduledDrawLinks)isc.Timer.clear(this._scheduledDrawLinks);
+            this._scheduledDrawLinks=this.delayCall("drawLinks",[tree]);
         }
     }
-,isc.A.rebuildWorkflow=function isc_WorkflowEditor_rebuildWorkflow(){
+,isc.A.rebuildWorkflow=function isc_WorkflowEditor_rebuildWorkflow(init){
+        if(!init)this.process=this.getProcessLiveObject();
+        if(this._scheduledDrawLinks){
+            isc.Timer.clear(this._scheduledDrawLinks);
+            delete this._scheduledDrawLinks;
+        }
         this.container.destroyWorkflowComponents();
         this.container.scrollTo(0,0);
         this.drawPane.destroyItems();
         if(this._processTree)this._processTree.destroy();
         var tree=this.buildProcessTree();
         this._processTree=isc.Tree.create({root:tree});
-        var nodes=this._processTree.getAllNodes();
     }
 ,isc.A.drawTree=function isc_WorkflowEditor_drawTree(tree,parentNode,parentSegment){
         var nodes=tree.getChildren(parentNode),
@@ -2891,11 +3280,16 @@ isc.B.push(isc.A.initWidget=function isc_WorkflowEditor_initWidget(){
         }
         if(nodes.length==0){
             if(this.canAddElements){
-                series.add(this.createElementAdd({parentWidget:parentNode._widget,autoOpenTaskList:true,segmentId:segment.segmentId,rowId:segment.nextRowId++}));
+                series.add(this.createElementAdd({
+                    parentWidget:parentNode._widget,
+                    autoOpenTaskList:true,
+                    segmentId:segment.segmentId,
+                    rowId:segment.nextRowId++
+                }));
                 this.drawSeries(series,tree.getLevel(parentNode),segment);
                 delete parentNode._widget;
             }
-            return false;
+            return true;
         }
         var foldersToDraw=[],
             _this=this,
@@ -2969,6 +3363,7 @@ isc.B.push(isc.A.initWidget=function isc_WorkflowEditor_initWidget(){
         segment.addMember(row);
     }
 ,isc.A.drawLinks=function isc_WorkflowEditor_drawLinks(tree){
+        delete this._scheduledDrawLinks;
         var container=this.container,
             links={}
         ;
@@ -3114,7 +3509,7 @@ isc.B.push(isc.A.initWidget=function isc_WorkflowEditor_initWidget(){
                 ;
                 for(var j=0;j<elements.length;j++){
                     var element=elements[j];
-                    if(element._addElement||isc.isA.LayoutSpacer(element))continue;
+                    if(isc.isA.LayoutSpacer(element))continue;
                     var elementID=(element._node?element._node.elementID:element.ID),
                         sequenceID=(element._node&&element._node._sequence!=null&&(!previousElement||previousElement._node._sequence!=element._node._sequence)?element._node._sequence:null)
                     ;
@@ -3125,6 +3520,12 @@ isc.B.push(isc.A.initWidget=function isc_WorkflowEditor_initWidget(){
                             lineColor=targetLinkColors[elementID]
                         ;
                         promptPanes.addList(this.drawElementLink(element,elementID,firstElement,startPoints,lineColor));
+                    }else if(!previousElement&&(!element._node||!element._node.orphan)&&s==0&&i==0){
+                        elementID=elementID||sequenceID;
+                        var point=this.getCanvasLeftCenterPoint(container,element);
+                        point[0]=this.unreferencedLinkPointOffset+2;
+                        var startPoints=[{startPoint:point,prompt:this.startTaskLinkPrompt,pointColor:this.startLinkPointBorderColor,fillColor:this.startLinkPointBackgroundColor}];
+                        promptPanes.addList(this.drawElementLink(element,elementID,true,startPoints));
                     }
                     previousElement=element;
                 }
@@ -3139,21 +3540,28 @@ isc.B.push(isc.A.initWidget=function isc_WorkflowEditor_initWidget(){
         ;
         isc.DrawLine.create({
             drawPane:this.drawPane,
-            lineWidth:1,
+            lineWidth:this.linkWidth,
             lineColor:this.linkColor,
             startPoint:lineStartPoint,
             endPoint:lineEndPoint
         });
         var endX=lineEndPoint[0],
             endY=lineEndPoint[1],
-            topArrowPoint=[endX-this.arrowOffset,endY-this.arrowOffset],
-            bottomArrowPoint=[endX-this.arrowOffset,endY+this.arrowOffset]
+            topArrowPoint=[endX-this.arrowOffsetX,endY-this.arrowOffsetY],
+            bottomArrowPoint=[endX-this.arrowOffsetX,endY+this.arrowOffsetY],
+            arrowPoints=[topArrowPoint,lineEndPoint,bottomArrowPoint],
+            arrowFillColor
         ;
+        if(this.showSolidArrows){
+            arrowPoints.add(topArrowPoint);
+            arrowFillColor=this.linkColor;
+        }
         isc.DrawPath.create({
             drawPane:this.drawPane,
-            lineWidth:1,
+            lineWidth:this.linkWidth,
             lineColor:this.linkColor,
-            points:[topArrowPoint,lineEndPoint,bottomArrowPoint]
+            fillColor:arrowFillColor,
+            points:arrowPoints
         });
     }
 ,isc.A.drawElementLink=function isc_WorkflowEditor_drawElementLink(element,elementID,firstElement,startPoints,lineColor){
@@ -3166,6 +3574,9 @@ isc.B.push(isc.A.initWidget=function isc_WorkflowEditor_initWidget(){
                 elementBottom=startPoints[sp].bottom,
                 linkPointOffset=this.divergingLinkPointOffset,
                 prompt=startPoints[sp].prompt,
+                pointColor=startPoints[sp].pointColor,
+                fillColor=startPoints[sp].fillColor,
+                orphan=startPoints[sp].orphan,
                 isUnreferencedLink=(startPoint[1]==endPoint[1])
             ;
             var horizontalRouteY=this.getHorizontalRoute(elementBottom,elementID),
@@ -3176,7 +3587,7 @@ isc.B.push(isc.A.initWidget=function isc_WorkflowEditor_initWidget(){
                 lastPoint=[startPoint[0],horizontalRouteY]
                 isc.DrawLine.create({
                     drawPane:this.drawPane,
-                    lineWidth:1,
+                    lineWidth:this.linkWidth,
                     lineColor:lineColor,
                     startPoint:startPoint,
                     endPoint:lastPoint
@@ -3186,11 +3597,12 @@ isc.B.push(isc.A.initWidget=function isc_WorkflowEditor_initWidget(){
                     top:startPoint[1],
                     width:linkPointOffset*2,
                     height:linkPointOffset,
-                    prompt:prompt
+                    prompt:prompt,
+                    hoverStyle:this.hoverStyle
                 });
                 isc.DrawCurve.create({
                     drawPane:promptDrawPane,
-                    lineWidth:1,
+                    lineWidth:this.linkWidth,
                     lineColor:lineColor,
                     fillColor:lineColor,
                     startPoint:[0,0],
@@ -3202,7 +3614,7 @@ isc.B.push(isc.A.initWidget=function isc_WorkflowEditor_initWidget(){
                 var nextPoint=[startPoint[0]+Math.round(this.elementSpacing/2),startPoint[1]];
                 isc.DrawLine.create({
                     drawPane:this.drawPane,
-                    lineWidth:1,
+                    lineWidth:this.linkWidth,
                     lineColor:lineColor,
                     startPoint:startPoint,
                     endPoint:nextPoint
@@ -3214,11 +3626,12 @@ isc.B.push(isc.A.initWidget=function isc_WorkflowEditor_initWidget(){
                         top:startPoint[1]-linkPointOffset,
                         width:linkPointOffset,
                         height:linkPointOffset*2,
-                        prompt:prompt
+                        prompt:prompt,
+                        hoverStyle:this.hoverStyle
                     });
                     isc.DrawCurve.create({
                         drawPane:promptDrawPane,
-                        lineWidth:1,
+                        lineWidth:this.linkWidth,
                         lineColor:lineColor,
                         fillColor:lineColor,
                         startPoint:[0,0],
@@ -3229,7 +3642,7 @@ isc.B.push(isc.A.initWidget=function isc_WorkflowEditor_initWidget(){
                 }
                 isc.DrawLine.create({
                     drawPane:this.drawPane,
-                    lineWidth:1,
+                    lineWidth:this.linkWidth,
                     lineColor:lineColor,
                     startPoint:nextPoint,
                     endPoint:lastPoint
@@ -3238,7 +3651,7 @@ isc.B.push(isc.A.initWidget=function isc_WorkflowEditor_initWidget(){
             if(!isUnreferencedLink){
                 isc.DrawLine.create({
                     drawPane:this.drawPane,
-                    lineWidth:1,
+                    lineWidth:this.linkWidth,
                     lineColor:lineColor,
                     startPoint:lastPoint,
                     endPoint:[verticalRouteX,lastPoint[1]]
@@ -3250,7 +3663,7 @@ isc.B.push(isc.A.initWidget=function isc_WorkflowEditor_initWidget(){
                 }
                 isc.DrawLine.create({
                     drawPane:this.drawPane,
-                    lineWidth:1,
+                    lineWidth:this.linkWidth,
                     lineColor:lineColor,
                     startPoint:lastPoint,
                     endPoint:[verticalRouteX,returnHorizontalRouteY]
@@ -3260,7 +3673,7 @@ isc.B.push(isc.A.initWidget=function isc_WorkflowEditor_initWidget(){
             if(!firstElement){
                 isc.DrawLine.create({
                     drawPane:this.drawPane,
-                    lineWidth:1,
+                    lineWidth:this.linkWidth,
                     lineColor:lineColor,
                     startPoint:lastPoint,
                     endPoint:[endPoint[0]-Math.round(this.elementSpacing/2),lastPoint[1]]
@@ -3268,7 +3681,7 @@ isc.B.push(isc.A.initWidget=function isc_WorkflowEditor_initWidget(){
                 lastPoint=[endPoint[0]-Math.round(this.elementSpacing/2),lastPoint[1]];
                 isc.DrawLine.create({
                     drawPane:this.drawPane,
-                    lineWidth:1,
+                    lineWidth:this.linkWidth,
                     lineColor:lineColor,
                     startPoint:lastPoint,
                     endPoint:[lastPoint[0],endPoint[1]]
@@ -3280,44 +3693,49 @@ isc.B.push(isc.A.initWidget=function isc_WorkflowEditor_initWidget(){
             }
             var endX=endPoint[0],
                 endY=endPoint[1],
-                topArrowPoint=[endX-this.arrowOffset,endY-this.arrowOffset],
-                bottomArrowPoint=[endX-this.arrowOffset,endY+this.arrowOffset],
+                topArrowPoint=[endX-this.arrowOffsetX,endY-this.arrowOffsetY],
+                bottomArrowPoint=[endX-this.arrowOffsetX,endY+this.arrowOffsetY],
                 pointOffset=(isUnreferencedLink?this.unreferencedLinkPointOffset:this.divergingLinkPointOffset),
-                pointColor=(isUnreferencedLink?this.unreferencedLinkPointBackgroundColor:lineColor)
+                pointColor=(isUnreferencedLink?pointColor||this.unreferencedLinkPointBackgroundColor:lineColor),
+                fillColor=(isUnreferencedLink?fillColor||pointColor||this.unreferencedLinkPointBackgroundColor:lineColor)
             ;
+            if(isUnreferencedLink&&!orphan)lineColor=this.startLineColor;
             if(prompt&&firstElement&&startPoints.length==1){
                 var promptDrawPane=promptItems[promptItems.length]=this.createAutoChild("promptDrawPane",{
                     left:lastPoint[0]-pointOffset-1,
                     top:lastPoint[1]-pointOffset-1,
                     width:endX-lastPoint[0],
                     height:pointOffset*2+2,
-                    prompt:prompt
+                    prompt:prompt,
+                    hoverStyle:this.hoverStyle
                 });
                 isc.DrawOval.create({
                     drawPane:promptDrawPane,
-                    lineWidth:1,
+                    lineWidth:this.linkWidth,
                     lineColor:pointColor,
-                    fillColor:pointColor,
+                    fillColor:fillColor,
                     centerPoint:[pointOffset+1,pointOffset+1],
                     radius:pointOffset
                 });
-                if(isUnreferencedLink){
+                if(isUnreferencedLink&&orphan){
                     var offset=Math.round(pointOffset/2);
                     isc.DrawLine.create({
                         drawPane:promptDrawPane,
-                        lineWidth:1,
+                        lineWidth:this.linkWidth,
                         lineColor:this.unreferencedLinkPointForegroundColor,
                         prompt:prompt,
                         canHover:true,
+                        hoverStyle:this.hoverStyle,
                         startPoint:[pointOffset-offset,pointOffset-offset],
                         endPoint:[pointOffset+offset+1,pointOffset+offset+1]
                     });
                     isc.DrawLine.create({
                         drawPane:promptDrawPane,
-                        lineWidth:1,
+                        lineWidth:this.linkWidth,
                         lineColor:this.unreferencedLinkPointForegroundColor,
                         prompt:prompt,
                         canHover:true,
+                        hoverStyle:this.hoverStyle,
                         startPoint:[pointOffset+offset+1,pointOffset-offset],
                         endPoint:[pointOffset-offset,pointOffset+offset+1]
                     });
@@ -3325,17 +3743,24 @@ isc.B.push(isc.A.initWidget=function isc_WorkflowEditor_initWidget(){
             }
             isc.DrawLine.create({
                 drawPane:this.drawPane,
-                lineWidth:1,
+                lineWidth:this.linkWidth,
                 lineColor:lineColor,
                 startPoint:lastPoint,
                 endPoint:endPoint
             });
-            if(!isUnreferencedLink){
+            if(!orphan){
+                var arrowPoints=[topArrowPoint,endPoint,bottomArrowPoint],
+                    arrowFillColor;
+                if(this.showSolidArrows){
+                    arrowPoints.add(topArrowPoint);
+                    arrowFillColor=lineColor;
+                }
                 isc.DrawPath.create({
                     drawPane:this.drawPane,
-                    lineWidth:1,
+                    lineWidth:this.linkWidth,
                     lineColor:lineColor,
-                    points:[topArrowPoint,endPoint,bottomArrowPoint]
+                    fillColor:arrowFillColor,
+                    points:arrowPoints
                 });
             }
         }
@@ -3356,12 +3781,12 @@ isc.B.push(isc.A.initWidget=function isc_WorkflowEditor_initWidget(){
             var y=~~key,
                 yReservations=this._horizontalRouteReservations[y]
             ;
-            var routeCount=isc.getKeys(this._horizontalRouteReservations[y]).length,
+            var routeCount=isc.getKeys(yReservations).length,
                 spread=Math.floor(space/routeCount)-1,
                 center=y+Math.round(space/2),
                 routeY=center+Math.round(spread*(routeCount-1)/2)
             ;
-            for(var elementID in this._horizontalRouteReservations[y]){
+            for(var elementID in yReservations){
                 var routes=this._horizontalRoutes[elementID];
                 if(!routes){
                     routes=this._horizontalRoutes[elementID]={};
@@ -3438,23 +3863,32 @@ isc.B.push(isc.A.initWidget=function isc_WorkflowEditor_initWidget(){
             element._node=node;
             return element;
         }
-        return this.createAutoChild("element",{
+        var defaults={
             editor:this,
             height:this.elementHeight,
             width:this.elementWidth,
             title:title,
             prompt:prompt,
+            taskTitle:this.getTaskTitle(elementType),
+            icon:this.getTaskIcon(elementType),
+            hoverStyle:this.hoverStyle,
             _node:node,
             elementType:elementType,
             canEdit:this.canEditElements,
             editIcon:this.editIcon,
             editIconSize:this.editIconSize,
+            editIconPrompt:this.editIconPrompt,
             canRemove:this.canRemoveElements,
             removeIcon:this.removeIcon,
-            removeIconSize:this.removeIconSize
-        });
+            removeIconSize:this.removeIconSize,
+            removeIconPrompt:this.removeIconPrompt
+        };
+        if(!node.element.editorType)defaults.canEdit=false;
+        if(this.elementBackgroundColor)defaults.backgroundColor=this.elementBackgroundColor;
+        return this.createAutoChild("element",defaults);
     }
-,isc.A.createElementAdd=function isc_WorkflowEditor_createElementAdd(overrides){
+);
+isc.evalBoundary;isc.B.push(isc.A.createElementAdd=function isc_WorkflowEditor_createElementAdd(overrides){
         var defaults=isc.addProperties({
             editor:this,
             height:this.elementHeight,
@@ -3462,6 +3896,7 @@ isc.B.push(isc.A.initWidget=function isc_WorkflowEditor_initWidget(){
             title:this.addElementTitle,
             newElementTypes:this.newElementTypes
         },overrides);
+        if(this.elementBackgroundColor)defaults.backgroundColor=this.elementBackgroundColor;
         return this.createAutoChild("elementAdd",defaults);
     }
 ,isc.A.getCanvasRightCenterPoint=function isc_WorkflowEditor_getCanvasRightCenterPoint(container,canvas){
@@ -3500,11 +3935,13 @@ isc.B.push(isc.A.initWidget=function isc_WorkflowEditor_initWidget(){
         return[pageLeft,pageBottom];
     }
 ,isc.A.clearProcess=function isc_WorkflowEditor_clearProcess(){
-        this.setProcess(isc.Process.create());
+        var process=(!this.process||this.process.getAllElements().length>0
+            ?isc.Process.create():this.process);
+        this.setProcess(process);
     }
 ,isc.A.setProcess=function isc_WorkflowEditor_setProcess(process){
         this.process=process;
-        this.rebuildWorkflow();
+        this.rebuildWorkflow(true);
         this.drawWorkflow();
     }
 ,isc.A.getProcess=function isc_WorkflowEditor_getProcess(){
@@ -3543,12 +3980,19 @@ isc.B.push(isc.A.initWidget=function isc_WorkflowEditor_initWidget(){
             if(callback)callback(process);
         });
     }
-);
-isc.evalBoundary;isc.B.push(isc.A.serializeProcess=function isc_WorkflowEditor_serializeProcess(){
+,isc.A.serializeProcess=function isc_WorkflowEditor_serializeProcess(){
         var editContext=this.getProcessEditContext();
         var xml=editContext.serializeAllEditNodes();
         editContext.destroyAll();
         return xml;
+    }
+,isc.A.getProcessLiveObject=function isc_WorkflowEditor_getProcessLiveObject(){
+        var editContext=this.getProcessEditContext(),
+            tree=editContext.getEditNodeTree(),
+            process=tree.getChildren(editContext.getRootEditNode())[0].liveObject
+        ;
+        editContext.removeAll();
+        return process;
     }
 ,isc.A.getProcessEditContext=function isc_WorkflowEditor_getProcessEditContext(){
         var tree=this._processTree,
@@ -3754,6 +4198,10 @@ isc.evalBoundary;isc.B.push(isc.A.serializeProcess=function isc_WorkflowEditor_s
         });
     }
 ,isc.A.editElement=function isc_WorkflowEditor_editElement(element,previousNode,callback){
+        if(!element.editorType){
+            callback(element);
+            return;
+        }
         var editorWindow=this.editorWindow=this.createAutoChild("editorWindow",{
             closeClick:function(){this.destroy();callback();}
         });
@@ -3814,7 +4262,7 @@ isc.evalBoundary;isc.B.push(isc.A.serializeProcess=function isc_WorkflowEditor_s
             if(e!=element)allElements.add(e);
         }
         var editNode=this._createEditNode(className,elementDefaults,true);
-        var taskEditorDefaults={
+        var taskEditorDefaults=isc.addProperties({
             locatorParent:this,
             editor:this,
             ruleScope:this.ruleScope,
@@ -3833,17 +4281,16 @@ isc.evalBoundary;isc.B.push(isc.A.serializeProcess=function isc_WorkflowEditor_s
                 if(editNode)isc.addProperties(element,editNode.defaults);
                 callback(editNode?element:null,this.invalidateEditor);
             }
-        };
+        },this.getTaskEditorProperties(className));
         var taskEditor=isc.ClassFactory.newInstance(element.editorType,taskEditorDefaults);
         editorWindow.addItems([taskEditor]);
-        editorWindow.setTitle(taskEditor.getEditorTitle());
+        var editorTitle=this.getTaskTitle(className)||taskEditor.getEditorTitle();
+        editorWindow.setTitle(editorTitle);
         editorWindow.show();
     }
 ,isc.A.addElementClick=function isc_WorkflowEditor_addElementClick(element,elementType,elementDefaults,previousNode,callback){
         var workflowEditor=this,
-            tree=this._processTree,
             addNode=this.getProcessTreeNode(element),
-            parentNode=(previousNode?tree.getParent(previousNode):tree.getRoot()),
             newElement=isc.ClassFactory.newInstance(elementType,elementDefaults)
         ;
         workflowEditor.editElement(newElement,previousNode,function(newElement,rebuild){
@@ -3948,7 +4395,7 @@ isc.evalBoundary;isc.B.push(isc.A.serializeProcess=function isc_WorkflowEditor_s
             }
         }else{
             var parentNode=tree.getRoot();
-            tree.add(newNode,parentNode,0);
+            tree.add(newNode,parentNode);
             this.process.addElement(newElement);
             var layout=this.getFirstDrawnRow(),
                 elementCanvas=this.createElement(newNode);
@@ -3969,20 +4416,17 @@ isc.evalBoundary;isc.B.push(isc.A.serializeProcess=function isc_WorkflowEditor_s
         if(elementClass&&!elementClass.isA("ComponentTask"))return true;
         var hasAvailableComponents=false;
         var availableComponents=this.availableComponents||[];
-        if(isc.isA.Tree(availableComponents)){
-            var components=this.filterComponentsTree(availableComponents,elementClass);
-            if(components&&components.length>0)return true;
-        }else{
-            for(var i=0;i<availableComponents.length;i++){
-                var componentRecord=availableComponents[i],
-                    component=window[componentRecord.ID]
-                ;
-                if(component&&elementClass.isApplicableComponent(component)){
-                    return true;
-                }
+        if(isc.isA.Tree(availableComponents))availableComponents=this.availableComponents.getAllNodes();
+        for(var i=0;i<availableComponents.length;i++){
+            var componentRecord=availableComponents[i],
+                component=window[componentRecord.ID]
+            ;
+            if(component&&elementClass.isApplicableComponent(component)){
+                hasAvailableComponents=true;
+                break;
             }
         }
-        return false;
+        return hasAvailableComponents;
     }
 ,isc.A.getTargetComponents=function isc_WorkflowEditor_getTargetComponents(elementType){
         if(!elementType)return null;
@@ -4036,18 +4480,18 @@ isc.evalBoundary;isc.B.push(isc.A.serializeProcess=function isc_WorkflowEditor_s
     }
 ,isc.A._filterComponentsTree=function isc_WorkflowEditor__filterComponentsTree(tree,parentNode,newTree,newParentNode,elementClass,baseClass){
         var children=tree.getChildren(parentNode);
-        if(!children)return;
+        if(!children){
+            parentNode.isFolder=false;
+            return;
+        }
         for(var i=0;i<children.length;i++){
-            var child=children[i];
-            if((child.canSelect==false&&tree.hasChildren(child))||this.isApplicableComponent(child,elementClass,baseClass)){
-                var newChild=tree.getCleanNodeData(child);
-                delete newChild.children;
-                newTree.add(newChild,newParentNode);
-                this._filterComponentsTree(tree,child,newTree,newChild,elementClass,baseClass);
-                if(tree.hasChildren(child)&&!newTree.hasChildren(newChild)){
-                    newTree.remove(newChild);
-                }
-            }
+            var child=children[i],
+                newChild=tree.getCleanNodeData(child)
+            ;
+            delete newChild.children;
+            newChild.enabled=(child.canSelect!=false&&this.isApplicableComponent(child,elementClass,baseClass));
+            newTree.add(newChild,newParentNode);
+            this._filterComponentsTree(tree,child,newTree,newChild,elementClass,baseClass);
         }
         return newTree;
     }
@@ -4330,7 +4774,8 @@ isc.evalBoundary;isc.B.push(isc.A.serializeProcess=function isc_WorkflowEditor_s
             context.idsSeen[currentTask.ID]=true;
         }
     }
-,isc.A.getCriteriaDescription=function isc_WorkflowEditor_getCriteriaDescription(criteria){
+);
+isc.evalBoundary;isc.B.push(isc.A.getCriteriaDescription=function isc_WorkflowEditor_getCriteriaDescription(criteria){
         var dsFields=isc.XORGateway._processFieldsRecursively(criteria);
         var fieldsDS=isc.DataSource.create({
             addGlobalId:false,
@@ -4382,8 +4827,7 @@ isc.evalBoundary;isc.B.push(isc.A.serializeProcess=function isc_WorkflowEditor_s
     }
 ,isc.A._getPreviousElementNodes=function isc_WorkflowEditor__getPreviousElementNodes(element,tree,parentNode){
         var nodes=tree.getChildren(parentNode),
-            previousElementNodes=[],
-            lastNode
+            previousElementNodes=[]
         ;
         for(var i=0;i<nodes.length;i++){
             var node=nodes[i];
@@ -4451,8 +4895,7 @@ isc.evalBoundary;isc.B.push(isc.A.serializeProcess=function isc_WorkflowEditor_s
         }
     }
 );
-isc.evalBoundary;isc.B.push();
-isc.B._maxIndex=isc.C+70;
+isc.B._maxIndex=isc.C+75;
 
 isc.WorkflowEditor.registerStringMethods({
     changed:null
@@ -4463,40 +4906,65 @@ isc.B=isc._allFuncs;
 isc.C=isc.B._maxIndex;
 isc.D=isc._funcClasses;
 isc.D[isc.C]=isc.A.Class;
-isc.A.layoutMargin=5;
 isc.A.align="center";
 isc.A.styleName="processElement";
 isc.A.canEdit=true;
 isc.A.editIcon="[SKIN]/actions/edit.png";
 isc.A.editIconSize=16;
+isc.A.editIconPrompt="Edit Task";
 isc.A.canRemove=true;
 isc.A.removeIcon="[SKIN]/actions/remove.png";
 isc.A.removeIconSize=16;
+isc.A.removeIconPrompt="Delete Task";
+isc.A.headerDefaults={
+        _constructor:"HLayout",
+        styleName:"processElementHeader",
+        height:26,
+        width:"100%",
+        layoutMargin:2,
+        membersMargin:5
+    };
+isc.A.headerIconDefaults={
+        _constructor:"Img",
+        width:18,
+        height:18,
+        imageType:"normal",
+        layoutAlign:"center",
+        padding:2
+    };
+isc.A.headerTitleDefaults={
+        _constructor:"Label",
+        styleName:"processElementHeaderLabel",
+        height:20,
+        width:"*",
+        overflow:"hidden",
+        layoutAlign:"center",
+        wrap:false
+    };
 isc.B.push(isc.A.init=function isc_WorkflowEditorElement_init(){
         this.Super("init",arguments);
-        var titleProperties={maxWidth:this.getInnerWidth()-10,overflow:"hidden",align:"center",contents:this.title,prompt:this.prompt};
-        if(!this.elementType)titleProperties.height=25;
-        this.addMember(isc.Label.create(titleProperties));
         if(this.elementType){
-            var typeLabel=isc.Label.create({
-                height:20,
-                autoFitWidth:true,
-                wrap:false,
-                contents:"<span style='font-size:12px;color:#0066cc'>"+this.elementType+"</span>",
-                snapTo:"TL",
-                snapOffsetLeft:3
-            });
-            this.addChild(typeLabel);
+            var header=this.addAutoChild("header");
+            if(this.icon){
+                header.addMember(this.createAutoChild("headerIcon",{src:this.icon}));
+            }
+            var title=this.createAutoChild("headerTitle",{contents:this.taskTitle||this.elementType});
+            header.addMember(title);
             if(this.canEdit){
                 this.editButton=isc.ImgButton.create({
                     width:this.editIconSize,
                     height:this.editIconSize,
+                    layoutAlign:"center",
                     src:this.editIcon,
+                    prompt:this.editIconPrompt,
+                    hoverWrap:false,
+                    hoverAutoFitWidth:false,
+                    hoverStyle:this.hoverStyle,
                     showDown:false,
                     showRollOver:false,
                     showFocused:false,
                     click:function(){
-                        var elementCanvas=this.parentElement.parentElement,
+                        var elementCanvas=this.parentElement.parentElement.parentElement,
                             node=elementCanvas._node,
                             editor=elementCanvas.creator
                         ;
@@ -4508,12 +4976,17 @@ isc.B.push(isc.A.init=function isc_WorkflowEditorElement_init(){
                 this.removeButton=isc.ImgButton.create({
                     width:this.removeIconSize,
                     height:this.removeIconSize,
+                    layoutAlign:"center",
                     src:this.removeIcon,
+                    prompt:this.removeIconPrompt,
+                    hoverWrap:false,
+                    hoverAutoFitWidth:false,
+                    hoverStyle:this.hoverStyle,
                     showDown:false,
                     showRollOver:false,
                     showFocused:false,
                     click:function(){
-                        var elementCanvas=this.parentElement.parentElement,
+                        var elementCanvas=this.parentElement.parentElement.parentElement,
                             node=elementCanvas._node,
                             editor=elementCanvas.creator
                         ;
@@ -4524,18 +4997,29 @@ isc.B.push(isc.A.init=function isc_WorkflowEditorElement_init(){
             if(this.canEdit||this.canRemove){
                 this.iconLayout=isc.HLayout.create({
                     height:Math.max(this.editIconSize,this.removeIconSize),
-                    width:1,
-                    snapTo:"TR",
-                    snapOffsetTop:3,
-                    snapOffsetLeft:-3,
+                    width:(this.canEdit?this.editIconSize:0)+5+(this.canRemove?this.removeIconSize:0),
+                    layoutAlign:"center",
                     visibility:"hidden",
-                    membersMargin:Math.max(this.editIconSize,this.removeIconSize)
+                    membersMargin:5
                 });
                 if(this.canEdit)this.iconLayout.addMember(this.editButton);
                 if(this.canRemove)this.iconLayout.addMember(this.removeButton);
-                this.addChild(this.iconLayout);
+                this.header.addMember(this.iconLayout);
             }
-        }else if(this.createCanvas){
+        }
+        var titleProperties={
+            maxWidth:this.getInnerWidth()-10,
+            overflow:"hidden",
+            align:"center",
+            contents:this.title,
+            hoverWrap:false,
+            hoverAutoFitWidth:false,
+            hoverStyle:this.hoverStyle,
+            prompt:this.prompt
+        };
+        if(!this.elementType)titleProperties.height=25;
+        this.addMember(isc.Label.create(titleProperties));
+        if(!this.elementType&&this.createCanvas){
             this.canvas=this.createCanvas();
             this.addMember(this.canvas);
         }
@@ -4585,7 +5069,7 @@ isc.A.descriptionEditorDefaults={
         _constructor:isc.DynamicForm,
         wrapItemTitles:false,
         fields:[
-            {name:"description",type:"ProcessElementDescriptionItem",title:"Description",width:"*",height:50,staticHeight:50}
+            {name:"description",type:"ProcessElementDescriptionItem",title:"Task Description",width:"*"}
         ],
         itemChanged:function(){
             if(this.creator.valuesChanged){
@@ -5549,6 +6033,7 @@ isc.A.messageEditorDefaults={
         _constructor:isc.DynamicForm,
         wrapItemTitles:false,
         fixedColWidths:true,
+        numCols:3,
         itemChanged:function(){
             if(this.creator.valuesChanged){
                 this.creator.valuesChanged();
@@ -5561,6 +6046,7 @@ isc.A.messageFieldDefaults={
         title:"Message",
         width:"*",
         height:50,
+        colSpan:2,
         required:true
     };
 isc.A.nextElementPickerDefaults={
@@ -5812,9 +6298,6 @@ isc.A.componentIdEditorDefaults={
             this.Super("setFocus",arguments);
             var currentItem=(hasFocus?this.getFocusSubItem():null);
             if(!initialItem&&currentItem&&currentItem.showPicker){
-                var currentItemValue=currentItem.getValue(),
-                    undef
-                ;
                 if(currentItem.getValue()==null)currentItem.showPicker();
             }
         }
@@ -5826,12 +6309,13 @@ isc.A.componentIdPickerDefaults={
         required:true,
         valueField:"ID",
         displayField:"ID",
-        pickListWidth:250,
+        pickListHeight:700,
         pickListFields:[
-            {name:"ID",autoFitWidth:true},
+            {name:"ID",autoFitWidth:true,treeField:true},
             {name:"title",width:"*",showHover:true,formatCellValue:function(value,record,rowNum,colNum,grid){return value||record.className;}}
         ],
-        pickListProperties:{showHeader:false,bodyOverflow:"hidden"}
+        pickListProperties:{showHeader:false},
+        autoOpenTree:"all"
     };
 isc.A.editedFields=["ID","description","componentId"];
 isc.B.push(isc.A.destroy=function isc_ComponentTaskEditor_destroy(){
@@ -5841,16 +6325,16 @@ isc.B.push(isc.A.destroy=function isc_ComponentTaskEditor_destroy(){
 ,isc.A.getEditorTitle=function isc_ComponentTaskEditor_getEditorTitle(){
         return isc.DS.getAutoTitle(this.processElementType);
     }
-,isc.A.addComponentIdEditor=function isc_ComponentTaskEditor_addComponentIdEditor(){
+,isc.A.addComponentIdEditor=function isc_ComponentTaskEditor_addComponentIdEditor(forceTree){
         var task=isc.ClassFactory.newInstance(this.processElementType),
             supportedComponentBaseClasses=task.getComponentBaseClasses()
         ;
         var fields=[
-            this.getFormFieldForAvailableComponents("componentIdPicker",this.targetComponents,null,{
+            this.getFormFieldForAvailableComponents("componentIdPicker",this.targetComponents,supportedComponentBaseClasses,{
                 changed:function(){
                     this.form.creator.componentIdChanged();
                 }
-            })
+            },forceTree)
         ];
         this.addAutoChild("componentIdEditor",{fields:fields});
     }
@@ -5900,12 +6384,26 @@ isc.B.push(isc.A.destroy=function isc_ComponentTaskEditor_destroy(){
         var dataSource=component.dataSource;
         return isc.DS.get(dataSource);
     }
-,isc.A.getFormFieldForAvailableComponents=function isc_ComponentTaskEditor_getFormFieldForAvailableComponents(fieldName,availableComponents,baseClass,properties){
+,isc.A.getFormFieldForAvailableComponents=function isc_ComponentTaskEditor_getFormFieldForAvailableComponents(fieldName,availableComponents,baseClass,properties,forceTree){
         availableComponents=availableComponents||[];
+        baseClass=(baseClass?(isc.isAn.Array(baseClass)?baseClass:[baseClass]):null);
+        if(forceTree==null&&baseClass&&baseClass.length==1&&baseClass[0]=="Canvas"){
+            forceTree=true;
+        }
+        if(!forceTree&&isc.isA.Tree(availableComponents)){
+            availableComponents=availableComponents.getCleanNodeData(availableComponents.getAllNodes());
+            for(var i=0;i<availableComponents.length;i++){
+                var componentRecord=availableComponents[i];
+                delete componentRecord.isFolder;
+                delete componentRecord.children;
+            }
+        }
+        if(!isc.isA.Tree(availableComponents)){
+            availableComponents.sortByProperty("ID",true);
+        }
         var components=availableComponents;
         if(baseClass){
             var workflowEditor=this.editor;
-            baseClass=(isc.isAn.Array(baseClass)?baseClass:[baseClass]);
             if(isc.isA.Tree(availableComponents)){
                 components=workflowEditor.filterComponentsTree(availableComponents,null,baseClass);
                 components.openAll();
@@ -5927,7 +6425,7 @@ isc.B.push(isc.A.destroy=function isc_ComponentTaskEditor_destroy(){
                 dataArrived:function(){
                     if(this.getValue()==null){
                         var choices=this.getClientPickListData();
-                        if(choices&&choices.length>0){
+                        if(choices&&choices.getLength()>0){
                             var choice=choices[0];
                             this.setValue(choice.ID);
                             this.form.creator.setEditorValues();
@@ -5938,7 +6436,7 @@ isc.B.push(isc.A.destroy=function isc_ComponentTaskEditor_destroy(){
                     }
                 }
             };
-        }else if(components&&components.length==1){
+        }else if(components&&!isc.isA.Tree(components)&&components.getLength()==1){
             additionalProperties={
                 defaultToFirstOption:true,
                 dataArrived:function(){
@@ -5951,6 +6449,24 @@ isc.B.push(isc.A.destroy=function isc_ComponentTaskEditor_destroy(){
                     }
                 }
             };
+        }else if(components&&isc.isA.Tree(components)){
+            var filteredComponents=(isc.isA.Tree(components)?
+                    components.getAllNodes().findAll("enabled",true):
+                    components);
+            if(filteredComponents&&filteredComponents.getLength()==1){
+                additionalProperties={
+                    dataArrived:function(){
+                        if(!this._calledSetEditorValues){
+                            this.setValue(filteredComponents[0].ID);
+                            this.form.creator.setEditorValues();
+                            this._calledSetEditorValues=true;
+                            if(this.form.creator.valuesChanged){
+                                this.form.creator.valuesChanged();
+                            }
+                        }
+                    }
+                };
+            }
         }
         var field=isc.addProperties({},defaults,{
             optionDataSource:ds,
@@ -5966,8 +6482,11 @@ isc.B.push(isc.A.destroy=function isc_ComponentTaskEditor_destroy(){
             fieldNames={}
         ;
         if(fieldProperties.valueField){
-            fields.add({name:fieldProperties.valueField});
+            fields.add({name:fieldProperties.valueField,primaryKey:true});
             fieldNames[fieldProperties.valueField]=true;
+            if(isc.isA.Tree(data)){
+                fields.add({name:"parentId",foreignKey:fieldProperties.valueField});
+            }
         }
         if(fieldProperties.displayField&&!fieldNames[fieldProperties.displayField]){
             fields.add({name:fieldProperties.displayField});
@@ -5977,7 +6496,7 @@ isc.B.push(isc.A.destroy=function isc_ComponentTaskEditor_destroy(){
             ID:ID,
             clientOnly:true,
             fields:fields,
-            cacheData:data
+            cacheData:(isc.isA.Tree(data)?data.getAllNodes():data)
         });
         if(!this._componentPickerDataSources)this._componentPickerDataSources=[];
         this._componentPickerDataSources.add(ds);
@@ -6074,7 +6593,8 @@ isc.B.push(isc.A.initWidget=function isc_GridFetchDataTaskEditor_initWidget(){
         }
         if(!valid&&message){
             var templateField=this.componentIdEditor.getField("componentId");
-            var iconHTML=isc.Canvas.imgHTML(templateField.errorIconSrc,templateField.errorIconWidth,templateField.errorIconHeight);
+            var iconHTML=isc.Canvas.imgHTML(templateField.errorIconSrc,
+                               templateField.errorIconWidth,templateField.errorIconHeight);
             this.criteriaError.setContents(iconHTML+"&nbsp;"+message);
             this.criteriaError.show();
         }else{
@@ -6130,10 +6650,11 @@ isc.A.recordSourceComponentPickerDefaults={
         displayField:"ID",
         pickListWidth:250,
         pickListFields:[
-            {name:"ID",autoFitWidth:true},
+            {name:"ID",autoFitWidth:true,treeField:true},
             {name:"title",width:"*",showHover:true,formatCellValue:function(value,record,rowNum,colNum,grid){return value||record.className;}}
         ],
-        pickListProperties:{showHeader:false,bodyOverflow:"hidden"}
+        pickListProperties:{showHeader:false},
+        autoOpenTree:"all"
     };
 isc.A.relatedEditorDefaults={
         _constructor:"DynamicForm",
@@ -6363,7 +6884,8 @@ isc.A.valueFieldDefaults={
         type:"DynamicValueItem",
         title:"Value",
         required:true,
-        allowRuleScopeValues:true
+        allowRuleScopeValues:true,
+        fieldName:"value"
     };
 isc.A.editedFields=["ID","description","componentId","targetField","value"];
 isc.B.push(isc.A.initWidget=function isc_GridSetEditValueTaskEditor_initWidget(){
@@ -6450,20 +6972,65 @@ isc.B=isc._allFuncs;
 isc.C=isc.B._maxIndex;
 isc.D=isc._funcClasses;
 isc.D[isc.C]=isc.A.Class;
+isc.A.width=500;
+isc.A.minWidth=500;
 isc.A.processElementType="FormSaveDataTask";
+isc.A.failureElementPickerDefaults={
+        name:"failureElement",
+        type:"SelectItem",
+        title:"If save <b>fails</b>, next task",
+        showHintInField:true,
+        hint:"terminate workflow",
+        width:300,
+        allowEmptyValue:true
+    };
+isc.A.navigationEditorLayoutDefaults={
+        _constructor:"HLayout",
+        align:"center",
+        height:1
+    };
+isc.A.navigationEditorDefaults={
+        _constructor:"DynamicForm",
+        autoParent:"navigationEditorLayout",
+        wrapItemTitles:false
+    };
+isc.A.editedFields=["ID","description","componentId","failureElement"];
 isc.B.push(isc.A.initWidget=function isc_FormSaveDataTaskEditor_initWidget(){
         this.Super("initWidget",arguments);
         this.addIdEditor();
         this.addComponentIdEditor();
+        var fields=[],
+            targetableElementsValueMap=this.getTargetableElementsValueMap()
+        ;
+        fields.add(isc.addProperties({},this.failureElementPickerDefaults,this.failureElementPickerProperties,
+            {valueMap:targetableElementsValueMap}));
+        this.addAutoChild("navigationEditorLayout");
+        this.addAutoChild("navigationEditor",{fields:fields});
         this.addDescriptionEditor();
         this.addEditButtons();
         this.setEditorValues();
+    }
+,isc.A.setEditorValues=function isc_FormSaveDataTaskEditor_setEditorValues(){
+        this.Super("setEditorValues",arguments);
+        var values=this.elementEditNodeDefaults;
+        this.navigationEditor.setValues(values);
+    }
+,isc.A.validate=function isc_FormSaveDataTaskEditor_validate(){
+        var valid=this.Super("validate",arguments)&&this.navigationEditor.validate();
+        return valid;
+    }
+,isc.A.getEditedElementDefaults=function isc_FormSaveDataTaskEditor_getEditedElementDefaults(){
+        var editedDefaults=this.Super("getEditedElementDefaults",arguments),
+            navigationValues=this.navigationEditor.getValues()
+        ;
+        editedDefaults.failureElement=navigationValues.failureElement;
+        return editedDefaults;
     }
 ,isc.A.createDescription=function isc_FormSaveDataTaskEditor_createDescription(defaults){
         return"Save '"+defaults.componentId+"' data";
     }
 );
-isc.B._maxIndex=isc.C+2;
+isc.B._maxIndex=isc.C+5;
 
 isc.defineClass("FormEditNewRecordTaskEditor","ComponentTaskEditor");
 isc.A=isc.FormEditNewRecordTaskEditor.getPrototype();
@@ -6550,10 +7117,11 @@ isc.A.recordSourceComponentPickerDefaults={
         displayField:"ID",
         pickListWidth:250,
         pickListFields:[
-            {name:"ID",autoFitWidth:true},
+            {name:"ID",autoFitWidth:true,treeField:true},
             {name:"title",width:"*",showHover:true,formatCellValue:function(value,record,rowNum,colNum,grid){return value||record.className;}}
         ],
-        pickListProperties:{showHeader:false,bodyOverflow:"hidden"}
+        pickListProperties:{showHeader:false},
+        autoOpenTree:"all"
     };
 isc.A.relatedEditorDefaults={
         _constructor:"DynamicForm",
@@ -6614,10 +7182,11 @@ isc.A.selectionComponentPickerDefaults={
         displayField:"ID",
         pickListWidth:250,
         pickListFields:[
-            {name:"ID",autoFitWidth:true},
+            {name:"ID",autoFitWidth:true,treeField:true},
             {name:"title",width:"*",showHover:true,formatCellValue:function(value,record,rowNum,colNum,grid){return value||record.className;}}
         ],
-        pickListProperties:{showHeader:false,bodyOverflow:"hidden"}
+        pickListProperties:{showHeader:false},
+        autoOpenTree:"all"
     };
 isc.A.selectedEditorDefaults={
         _constructor:"DynamicForm",
@@ -6759,7 +7328,7 @@ isc.B.push(isc.A.initWidget=function isc_FormHideFieldTaskEditor_initWidget(){
 ,isc.A.createDescription=function isc_FormHideFieldTaskEditor_createDescription(defaults){
         var hide=defaults.hide;
         if(isc.isA.String(hide))hide=(hide=="true");
-        return(hide?"Hide":"Show")+" '"+defaults.componentId+"."+defaults.targetField+"'";
+        return(hide?"Hide":"Show")+" "+defaults.componentId+"."+defaults.targetField;
     }
 );
 isc.B._maxIndex=isc.C+8;
@@ -6895,7 +7464,8 @@ isc.A.valueFieldDefaults={
         type:"DynamicValueItem",
         title:"Value",
         required:true,
-        allowRuleScopeValues:true
+        allowRuleScopeValues:true,
+        fieldName:"value"
     };
 isc.A.editedFields=["ID","description","componentId","targetField","value"];
 isc.B.push(isc.A.initWidget=function isc_FormSetFieldValueTaskEditor_initWidget(){
@@ -7053,6 +7623,27 @@ isc.B.push(isc.A.initWidget=function isc_FormSetValuesTaskEditor_initWidget(){
 );
 isc.B._maxIndex=isc.C+5;
 
+isc.defineClass("FormClearValuesTaskEditor","ComponentTaskEditor");
+isc.A=isc.FormClearValuesTaskEditor.getPrototype();
+isc.B=isc._allFuncs;
+isc.C=isc.B._maxIndex;
+isc.D=isc._funcClasses;
+isc.D[isc.C]=isc.A.Class;
+isc.A.processElementType="FormClearValuesTask";
+isc.B.push(isc.A.initWidget=function isc_FormClearValuesTaskEditor_initWidget(){
+        this.Super("initWidget",arguments);
+        this.addIdEditor();
+        this.addComponentIdEditor();
+        this.addDescriptionEditor();
+        this.addEditButtons();
+        this.setEditorValues();
+    }
+,isc.A.createDescription=function isc_FormClearValuesTaskEditor_createDescription(defaults){
+        return"Clear '"+defaults.componentId+"' values";
+    }
+);
+isc.B._maxIndex=isc.C+2;
+
 isc.defineClass("FormResetValuesTaskEditor","ComponentTaskEditor");
 isc.A=isc.FormResetValuesTaskEditor.getPrototype();
 isc.B=isc._allFuncs;
@@ -7117,13 +7708,14 @@ isc.A.valueFieldDefaults={
         type:"DynamicValueItem",
         title:"Value",
         required:true,
-        allowRuleScopeValues:true
+        allowRuleScopeValues:true,
+        fieldName:"value"
     };
 isc.A.editedFields=["ID","description","componentId","value"];
 isc.B.push(isc.A.initWidget=function isc_SetLabelTextTaskEditor_initWidget(){
         this.Super("initWidget",arguments);
         this.addIdEditor();
-        this.addComponentIdEditor();
+        this.addComponentIdEditor(true);
         this.addValueEditor();
         this.addDescriptionEditor();
         this.addEditButtons();
@@ -7176,13 +7768,14 @@ isc.A.valueFieldDefaults={
         type:"DynamicValueItem",
         title:"Title",
         required:true,
-        allowRuleScopeValues:true
+        allowRuleScopeValues:true,
+        fieldName:"value"
     };
 isc.A.editedFields=["ID","description","componentId","value"];
 isc.B.push(isc.A.initWidget=function isc_SetButtonTitleTaskEditor_initWidget(){
         this.Super("initWidget",arguments);
         this.addIdEditor();
-        this.addComponentIdEditor();
+        this.addComponentIdEditor(true);
         this.addValueEditor();
         this.addDescriptionEditor();
         this.addEditButtons();
@@ -7229,7 +7822,7 @@ isc.B.push(isc.A.initWidget=function isc_ShowComponentTaskEditor_initWidget(){
         this.setEditorValues();
     }
 ,isc.A.createDescription=function isc_ShowComponentTaskEditor_createDescription(defaults){
-        return"Show '"+defaults.componentId+"'";
+        return"Show "+defaults.componentId;
     }
 );
 isc.B._maxIndex=isc.C+2;
@@ -7250,10 +7843,127 @@ isc.B.push(isc.A.initWidget=function isc_HideComponentTaskEditor_initWidget(){
         this.setEditorValues();
     }
 ,isc.A.createDescription=function isc_HideComponentTaskEditor_createDescription(defaults){
-        return"Hide '"+defaults.componentId+"'";
+        return"Hide "+defaults.componentId;
     }
 );
 isc.B._maxIndex=isc.C+2;
+
+isc.defineClass("ShowNotificationTaskEditor","ProcessElementEditor");
+isc.A=isc.ShowNotificationTaskEditor.getPrototype();
+isc.B=isc._allFuncs;
+isc.C=isc.B._maxIndex;
+isc.D=isc._funcClasses;
+isc.D[isc.C]=isc.A.Class;
+isc.A.width=500;
+isc.A.height=200;
+isc.A.minWidth=500;
+isc.A.minHeight=200;
+isc.A.processElementType="ShowNotificationTask";
+isc.A.editorTitle="Show Notification Task";
+isc.A.messageEditorDefaults={
+        _constructor:isc.DynamicForm,
+        wrapItemTitles:false,
+        fixedColWidths:true,
+        itemChanged:function(){
+            if(this.creator.valuesChanged){
+                this.creator.valuesChanged();
+            }
+        }
+    };
+isc.A.notifyTypePickerDefaults={
+        name:"notifyType",
+        type:"RadioGroupItem",
+        title:"Notify Type",
+        defaultValue:"message",
+        vertical:false,
+        valueMap:{
+            "message":"Normal",
+            "warn":"Warning",
+            "error":"Error"
+        },
+        required:true
+    };
+isc.A.positionPickerDefaults={
+        name:"position",
+        type:"selectItem",
+        title:"Screen Edge",
+        defaultValue:"T",
+        valueMap:{
+            "L":"Left",
+            "T":"Top",
+            "R":"Right",
+            "B":"Bottom"
+        }
+    };
+isc.A.messageFieldDefaults={
+        name:"message",
+        type:"TextArea",
+        title:"Message",
+        width:"*",
+        required:true
+    };
+isc.A.autoDismissFieldDefaults={
+        name:"autoDismiss",
+        type:"boolean",
+        title:"Auto dismiss",
+        labelAsTitle:true,
+        defaultValue:true
+    };
+isc.A.editedFields=["ID","description","message","notifyType","position","autoDismiss"];
+isc.A._notifyTypeDescriptionMap={
+        "message":"",
+        "warn":"warning",
+        "error":"error"
+    };
+isc.B.push(isc.A.initWidget=function isc_ShowNotificationTaskEditor_initWidget(){
+        this.Super("initWidget",arguments);
+        this.addIdEditor();
+        this.addMessageEditor();
+        this.addDescriptionEditor();
+        this.addEditButtons();
+        this.setEditorValues();
+    }
+,isc.A.addMessageEditor=function isc_ShowNotificationTaskEditor_addMessageEditor(){
+        var fields=[
+            isc.addProperties({},this.notifyTypePickerDefaults,this.notifyTypePickerProperties),
+            isc.addProperties({},this.messageFieldDefaults,this.messageFieldProperties),
+            isc.addProperties({},this.autoDismissFieldDefaults,this.autoDismissFieldProperties),
+            isc.addProperties({},this.positionPickerDefaults,this.positionPickerProperties)
+        ];
+        this.addAutoChild("messageEditor",{fields:fields});
+    }
+,isc.A.setEditorValues=function isc_ShowNotificationTaskEditor_setEditorValues(){
+        var values=this.elementEditNodeDefaults;
+        this.idEditor.setValues(values);
+        this.descriptionEditor.setValues(values);
+        this.messageEditor.setValues(this.elementEditNodeDefaults);
+    }
+,isc.A.validate=function isc_ShowNotificationTaskEditor_validate(){
+        var valid=this.Super("validate",arguments)&&this.messageEditor.validate();
+        return valid;
+    }
+,isc.A.getEditedElementDefaults=function isc_ShowNotificationTaskEditor_getEditedElementDefaults(){
+        var editedDefaults=this.Super("getEditedElementDefaults",arguments),
+            message=this.messageEditor.getValue("message"),
+            notifyType=this.messageEditor.getValue("notifyType"),
+            position=this.messageEditor.getValue("position"),
+            autoDismiss=this.messageEditor.getValue("autoDismiss")
+        ;
+        editedDefaults.message=message;
+        editedDefaults.notifyType=notifyType;
+        editedDefaults.position=position;
+        editedDefaults.autoDismiss=autoDismiss;
+        return editedDefaults;
+    }
+,isc.A.createDescription=function isc_ShowNotificationTaskEditor_createDescription(defaults){
+        var message=defaults.message||"",
+            notifyType=defaults.notifyType||"message"
+        ;
+        return"Show "+this._notifyTypeDescriptionMap[notifyType]+" notification:<br>"+
+            message;
+    }
+);
+isc.B._maxIndex=isc.C+6;
 
 isc.defineClass("ShowMessageTaskEditor","ProcessElementEditor");
 isc.A=isc.ShowMessageTaskEditor.getPrototype();
@@ -7266,6 +7976,7 @@ isc.A.height=200;
 isc.A.minWidth=500;
 isc.A.minHeight=200;
 isc.A.processElementType="ShowMessageTask";
+isc.A.editorTitle="Show Message Task";
 isc.A.messageEditorDefaults={
         _constructor:isc.DynamicForm,
         wrapItemTitles:false,
@@ -7283,9 +7994,9 @@ isc.A.messageTypePickerDefaults={
         defaultValue:"normal",
         vertical:false,
         valueMap:{
-            "normal":"Normal message",
-            "warning":"Warning message",
-            "error":"Error message"
+            "normal":"Normal",
+            "warning":"Warning",
+            "error":"Error"
         },
         required:true
     };
@@ -7297,6 +8008,11 @@ isc.A.messageFieldDefaults={
         required:true
     };
 isc.A.editedFields=["ID","description","type","message"];
+isc.A._typeDescriptionMap={
+        "normal":"",
+        "warning":"warning",
+        "error":"error"
+    };
 isc.B.push(isc.A.initWidget=function isc_ShowMessageTaskEditor_initWidget(){
         this.Super("initWidget",arguments);
         this.addIdEditor();
@@ -7331,10 +8047,66 @@ isc.B.push(isc.A.initWidget=function isc_ShowMessageTaskEditor_initWidget(){
         return editedDefaults;
     }
 ,isc.A.createDescription=function isc_ShowMessageTaskEditor_createDescription(defaults){
-        return"Show "+defaults.type+" message";
+        var message=defaults.message||"",
+            type=defaults.type||"normal"
+        ;
+        return"Show "+this._typeDescriptionMap[type]+" notification:<br>"+message;
     }
 );
 isc.B._maxIndex=isc.C+6;
+
+isc.defineClass("AskForValueTaskEditor","UserConfirmationGatewayEditor");
+isc.A=isc.AskForValueTaskEditor.getPrototype();
+isc.B=isc._allFuncs;
+isc.C=isc.B._maxIndex;
+isc.D=isc._funcClasses;
+isc.D[isc.C]=isc.A.Class;
+isc.A.processElementType="AskForValueTask";
+isc.A.editorTitle="Ask For Value Task";
+isc.A.hasDefaultValueFieldDefaults={
+        name:"hasDefaultValue",
+        type:"boolean",
+        title:"Provide a default value of: ",
+        defaultValue:false
+    };
+isc.A.defaultValueFieldDefaults={
+        name:"defaultValue",
+        type:"text",
+        showTitle:false,
+        width:"*",
+        disabled:true
+    };
+isc.A.editedFields=["ID","description","message","nextElement","failureElement","defaultValue"];
+isc.B.push(isc.A.addMessageEditor=function isc_AskForValueTaskEditor_addMessageEditor(){
+        var fields=[
+            isc.addProperties({},this.messageFieldDefaults),
+            isc.addProperties({},this.hasDefaultValueFieldDefaults),
+            isc.addProperties({},this.defaultValueFieldDefaults)
+        ];
+        this.addAutoChild("messageEditor",{fields:fields});
+        var _this=this;
+        this.observe(this,"valuesChanged",function(){
+            if(_this.messageEditor.getValue("hasDefaultValue")){
+                _this.messageEditor.getField("defaultValue").enable();
+                _this.messageEditor.getField("defaultValue").setRequired(true);
+            }else{
+                _this.messageEditor.getField("defaultValue").disable();
+                _this.messageEditor.getField("defaultValue").setRequired(false);
+            }
+        });
+    }
+,isc.A.getEditedElementDefaults=function isc_AskForValueTaskEditor_getEditedElementDefaults(){
+        var editedDefaults=this.Super("getEditedElementDefaults",arguments),
+            messageValues=this.messageEditor.getValues()
+        ;
+        editedDefaults.defaultValue=(messageValues.hasDefaultValue?messageValues.defaultValue:null);
+        return editedDefaults;
+    }
+,isc.A.createDescription=function isc_AskForValueTaskEditor_createDescription(defaults){
+        return"Ask user for value";
+    }
+);
+isc.B._maxIndex=isc.C+3;
 
 isc.defineClass("SetSectionTitleTaskEditor","ComponentTaskEditor");
 isc.A=isc.SetSectionTitleTaskEditor.getPrototype();
@@ -7367,7 +8139,7 @@ isc.A.sectionPickerDefaults={
             {name:"name",autoFitWidth:true},
             {name:"title",width:"*",showHover:true}
         ],
-        pickListProperties:{showHeader:false,bodyOverflow:"hidden"},
+        pickListProperties:{showHeader:false},
         formatValue:function(value,record,form,item){
             var selectedRecord=item.getSelectedRecord();
             if(selectedRecord!=null){
@@ -7392,13 +8164,14 @@ isc.A.valueFieldDefaults={
         type:"DynamicValueItem",
         title:"Title",
         required:true,
-        allowRuleScopeValues:true
+        allowRuleScopeValues:true,
+        fieldName:"title"
     };
-isc.A.editedFields=["ID","description","componentId","value"];
+isc.A.editedFields=["ID","description","componentId","title"];
 isc.B.push(isc.A.initWidget=function isc_SetSectionTitleTaskEditor_initWidget(){
         this.Super("initWidget",arguments);
         this.addIdEditor();
-        this.addComponentIdEditor();
+        this.addComponentIdEditor(true);
         this.addValuesEditor();
         this.addDescriptionEditor();
         this.addEditButtons();
@@ -7502,10 +8275,11 @@ isc.A.nextToComponentPickerDefaults={
         displayField:"ID",
         pickListWidth:250,
         pickListFields:[
-            {name:"ID",autoFitWidth:true},
+            {name:"ID",autoFitWidth:true,treeField:true},
             {name:"title",width:"*",showHover:true,formatCellValue:function(value,record,rowNum,colNum,grid){return value||record.className;}}
         ],
-        pickListProperties:{showHeader:false,bodyOverflow:"hidden"}
+        pickListProperties:{showHeader:false},
+        autoOpenTree:"all"
     };
 isc.A.otherEditorDefaults={
         _constructor:"DynamicForm",
@@ -7550,14 +8324,143 @@ isc.B.push(isc.A.initWidget=function isc_ShowNextToComponentTaskEditor_initWidge
 );
 isc.B._maxIndex=isc.C+5;
 
-isc.defineClass("ProcessElementDescriptionItem","TextAreaItem");
+isc.defineClass("NavigateListPaneTaskEditor","ComponentTaskEditor");
+isc.A=isc.NavigateListPaneTaskEditor.getPrototype();
+isc.B=isc._allFuncs;
+isc.C=isc.B._maxIndex;
+isc.D=isc._funcClasses;
+isc.D[isc.C]=isc.A.Class;
+isc.A.processElementType="NavigateListPaneTask";
+isc.A.valuesEditorDefaults={
+        _constructor:isc.DynamicForm,
+        wrapItemTitles:false,
+        fixedColWidths:true,
+        itemChanged:function(){
+            if(this.creator.valuesChanged){
+                this.creator.valuesChanged();
+            }
+        }
+    };
+isc.A.valueFieldDefaults={
+        name:"title",
+        type:"DynamicValueItem",
+        title:"Title",
+        allowRuleScopeValues:true,
+        fieldName:"title"
+    };
+isc.A.editedFields=["ID","description","componentId","title"];
+isc.B.push(isc.A.initWidget=function isc_NavigateListPaneTaskEditor_initWidget(){
+        this.Super("initWidget",arguments);
+        this.addIdEditor();
+        this.addComponentIdEditor(true);
+        this.addValuesEditor();
+        this.addDescriptionEditor();
+        this.addEditButtons();
+        this.setEditorValues();
+    }
+,isc.A.addValuesEditor=function isc_NavigateListPaneTaskEditor_addValuesEditor(){
+        var fields=[
+            isc.addProperties({},this.valueFieldDefaults,this.valueFieldProperties,
+                {targetRuleScope:this._targetRuleScope,_ruleScopeDataSources:this.getRuleScopeDataSources()})
+        ];
+        this.addAutoChild("valuesEditor",{fields:fields});
+    }
+,isc.A.setEditorValues=function isc_NavigateListPaneTaskEditor_setEditorValues(){
+        this.Super("setEditorValues",arguments);
+        this.componentIdChanged();
+        var values=this.elementEditNodeDefaults;
+        this.valuesEditor.setValues(values);
+    }
+,isc.A.validate=function isc_NavigateListPaneTaskEditor_validate(){
+        var valid=this.Super("validate",arguments)&&this.valuesEditor.validate();
+        return valid;
+    }
+,isc.A.getEditedElementDefaults=function isc_NavigateListPaneTaskEditor_getEditedElementDefaults(){
+        var editedDefaults=this.Super("getEditedElementDefaults",arguments),
+            values=this.valuesEditor.getValues()
+        ;
+        editedDefaults.title=values.title;
+        return editedDefaults;
+    }
+,isc.A.createDescription=function isc_NavigateListPaneTaskEditor_createDescription(defaults){
+        var section=defaults.targetSectionName||defaults.targetSectionTitle;
+        return"Navigate List Pane of '"+defaults.componentId+"'";
+    }
+);
+isc.B._maxIndex=isc.C+6;
+
+isc.defineClass("NavigateDetailPaneTaskEditor","ComponentTaskEditor");
+isc.A=isc.NavigateDetailPaneTaskEditor.getPrototype();
+isc.B=isc._allFuncs;
+isc.C=isc.B._maxIndex;
+isc.D=isc._funcClasses;
+isc.D[isc.C]=isc.A.Class;
+isc.A.processElementType="NavigateDetailPaneTask";
+isc.A.valuesEditorDefaults={
+        _constructor:isc.DynamicForm,
+        wrapItemTitles:false,
+        fixedColWidths:true,
+        itemChanged:function(){
+            if(this.creator.valuesChanged){
+                this.creator.valuesChanged();
+            }
+        }
+    };
+isc.A.valueFieldDefaults={
+        name:"title",
+        type:"DynamicValueItem",
+        title:"Title",
+        allowRuleScopeValues:true,
+        fieldName:"title"
+    };
+isc.A.editedFields=["ID","description","componentId","title"];
+isc.B.push(isc.A.initWidget=function isc_NavigateDetailPaneTaskEditor_initWidget(){
+        this.Super("initWidget",arguments);
+        this.addIdEditor();
+        this.addComponentIdEditor(true);
+        this.addValuesEditor();
+        this.addDescriptionEditor();
+        this.addEditButtons();
+        this.setEditorValues();
+    }
+,isc.A.addValuesEditor=function isc_NavigateDetailPaneTaskEditor_addValuesEditor(){
+        var fields=[
+            isc.addProperties({},this.valueFieldDefaults,this.valueFieldProperties,
+                {targetRuleScope:this._targetRuleScope,_ruleScopeDataSources:this.getRuleScopeDataSources()})
+        ];
+        this.addAutoChild("valuesEditor",{fields:fields});
+    }
+,isc.A.setEditorValues=function isc_NavigateDetailPaneTaskEditor_setEditorValues(){
+        this.Super("setEditorValues",arguments);
+        this.componentIdChanged();
+        var values=this.elementEditNodeDefaults;
+        this.valuesEditor.setValues(values);
+    }
+,isc.A.validate=function isc_NavigateDetailPaneTaskEditor_validate(){
+        var valid=this.Super("validate",arguments)&&this.valuesEditor.validate();
+        return valid;
+    }
+,isc.A.getEditedElementDefaults=function isc_NavigateDetailPaneTaskEditor_getEditedElementDefaults(){
+        var editedDefaults=this.Super("getEditedElementDefaults",arguments),
+            values=this.valuesEditor.getValues()
+        ;
+        editedDefaults.title=values.title;
+        return editedDefaults;
+    }
+,isc.A.createDescription=function isc_NavigateDetailPaneTaskEditor_createDescription(defaults){
+        var section=defaults.targetSectionName||defaults.targetSectionTitle;
+        return"Navigate Detail Pane of '"+defaults.componentId+"'";
+    }
+);
+isc.B._maxIndex=isc.C+6;
+
+isc.defineClass("ProcessElementDescriptionItem","BlurbItem");
 isc.A=isc.ProcessElementDescriptionItem.getPrototype();
 isc.B=isc._allFuncs;
 isc.C=isc.B._maxIndex;
 isc.D=isc._funcClasses;
 isc.D[isc.C]=isc.A.Class;
-isc.A.canEdit=false;
-isc.A.disableIconsOnReadOnly=false;
+isc.A.showTitle=true;
 isc.A.icons=[{
         src:"[SKINIMG]actions/edit.png",
         prompt:"Enter a custom description",
@@ -7570,10 +8473,11 @@ isc.A.icons=[{
     }];
 isc.A.valueDialogDefaults={
         _constructor:"ProcessElementValueDialog",
-        height:175,
+        height:185,
         width:600,
         title:"Custom Description"
     };
+isc.A._autoGeneratedSuffix=" [auto-generated]";
 isc.B.push(isc.A.editDescription=function isc_ProcessElementDescriptionItem_editDescription(){
         var item=this,
             originalValue=item.getValue(),
@@ -7613,8 +8517,24 @@ isc.B.push(isc.A.editDescription=function isc_ProcessElementDescriptionItem_edit
             this.setValue(this.form.elementEditor.createDescription(defaults));
         }
     }
+,isc.A.mapDisplayToValue=function isc_ProcessElementDescriptionItem_mapDisplayToValue(value){
+        return value.replace(this._autoGeneratedSuffix,"");
+    }
+,isc.A.mapValueToDisplay=function isc_ProcessElementDescriptionItem_mapValueToDisplay(value){
+        if(value!=null&&this.form.elementEditor.createDescription){
+            var defaults=this.form.elementEditor.getEditedElementDefaults();
+            var defaultValue=this.form.elementEditor.createDescription(defaults);
+            if(value!=defaultValue){
+                this._manualDescription=true;
+            }else{
+                value+=this._autoGeneratedSuffix;
+                this._manualDescription=false;
+            }
+        }
+        return value;
+    }
 );
-isc.B._maxIndex=isc.C+2;
+isc.B._maxIndex=isc.C+4;
 
 isc.defineClass("BindingContainer","VLayout");
 isc.A=isc.BindingContainer.getPrototype();
@@ -8361,7 +9281,8 @@ isc.B.push(isc.A.initWidget=function isc_TaskDecisionEditor_initWidget(){
         }
         if(!valid&&message){
             var templateField=this.targetEditor.getField("targetTask");
-            var iconHTML=isc.Canvas.imgHTML(templateField.errorIconSrc,templateField.errorIconWidth,templateField.errorIconHeight);
+            var iconHTML=isc.Canvas.imgHTML(templateField.errorIconSrc,
+                               templateField.errorIconWidth,templateField.errorIconHeight);
             this.criteriaError.setContents(iconHTML+"&nbsp;"+message);
             this.criteriaError.show();
         }else{
@@ -8573,7 +9494,7 @@ isc.B.push(isc.A.initWidget=function isc_DynamicValuePicker_initWidget(){
                 }
             })
         ;
-        this.addItems([ruleScopeGrid,isc.HLayout.create({height:1,layoutAlign:"right",membersMargin:5,members:[okButton,cancelButton]})]);
+        this.addItems([ruleScopeGrid,isc.HLayout.create({height:1,layoutAlign:"right",membersMargin:5,members:[cancelButton,okButton]})]);
         this.observe(ruleScopeGrid,"dataArrived","observer._selectDynamicValuePath()");
         this.ruleScopeGrid=ruleScopeGrid;
         this.ruleScopeDS=ds;
@@ -8612,7 +9533,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v12.1d_2018-11-30/LGPL Deployment (2018-11-30)
+  Version SNAPSHOT_v12.1d_2019-05-29/LGPL Deployment (2019-05-29)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

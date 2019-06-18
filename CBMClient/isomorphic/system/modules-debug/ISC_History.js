@@ -1,7 +1,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v12.1d_2018-11-30/LGPL Deployment (2018-11-30)
+  Version SNAPSHOT_v12.1d_2019-05-29/LGPL Deployment (2019-05-29)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -42,8 +42,9 @@ if (!window.isc || typeof isc.Packager != "object") {
 
 
 //> @object isc
-// The <code>isc</code> object contains global methods and objects of the Isomorphic SmartClient
-// framework.
+// <code>window.isc</code> is the base object for the Isomorphic SmartClient framework.
+// Every SmartClient class is available on this object as <code>isc.<i>ClassName</i></code>.
+// The <code>isc</code> also contains a number of static utility methods.
 // <P>
 // See also +link{group:simpleNamesMode,Simple Names mode}.
 //
@@ -91,9 +92,9 @@ isc._start = new Date().getTime();
 
 // versioning - values of the form ${value} are replaced with user-provided values at build time.
 // Valid values are: version, date, project (not currently used)
-isc.version = "SNAPSHOT_v12.1d_2018-11-30/LGPL Deployment";
-isc.versionNumber = "SNAPSHOT_v12.1d_2018-11-30";
-isc.buildDate = "2018-11-30";
+isc.version = "SNAPSHOT_v12.1d_2019-05-29/LGPL Deployment";
+isc.versionNumber = "SNAPSHOT_v12.1d_2019-05-29";
+isc.buildDate = "2019-05-29";
 isc.expirationDate = "";
 
 isc.scVersion = "12.1d";
@@ -3363,7 +3364,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v12.1d_2018-11-30/LGPL Deployment (2018-11-30)
+  Version SNAPSHOT_v12.1d_2019-05-29/LGPL Deployment (2019-05-29)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

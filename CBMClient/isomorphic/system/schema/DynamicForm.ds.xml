@@ -90,6 +90,9 @@
 		<field name="peers" type="Canvas" multiple="true" propertiesOnly="true" 
                inapplicable="true"/>
 
+        <!-- override groupTitle to make it basic -->
+        <field name="groupTitle" type="string" title="Group Title" basic="true"/> 
+
         <!-- visualBuilder: enable databinding on this component -->
 		<field name="dataSource"		type="DataSource" hidden="false" idAllowed="true"/>
         <field name="initialCriteria"   type="AdvancedCriteria"/>
@@ -103,7 +106,7 @@
 		<field name="autoSendTarget" 		type="boolean" visibility="internal"/>
 		<field name="autoSendTargetFieldName" type="propertyName" visibility="internal"/>
 		<field name="showTitlesWithErrorMessages" 	type="boolean"/>
-        <field name="valuesManager" type="ValuesManager" idAllowed="true"/>
+        <field name="valuesManager" type="ValuesManager" editorType="ValuesManagerChooserItem" idAllowed="true" destroyOnReplace="false" basic="true"/>
         
         <field name="showErrorIcons" type="boolean"/>
         <field name="showErrorText" type="boolean"/>
@@ -118,7 +121,10 @@
         <group>appearance</group>
         <group>sizing</group>
         <group>focus</group>
+        <group>formLayout</group>
         <group>formTitles</group>
+        <group>ruleCriteria</group>
+        <group>formValuesManager</group>
     </groups>
 
     <methods>

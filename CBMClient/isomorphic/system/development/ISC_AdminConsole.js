@@ -1,7 +1,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version SNAPSHOT_v12.1d_2018-11-30/LGPL Development Only (2018-11-30)
+  Version SNAPSHOT_v12.1d_2019-05-29/LGPL Development Only (2019-05-29)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -37,7 +37,7 @@ if(window.isc&&window.isc.module_Core&&!window.isc.module_AdminConsole){isc.modu
 if(this.showDataSourceNavigator){this.addTab({ID:"dataSourceNavigator",title:"DataSources",pane:this.dataSourceNavigator,tabSelected:function(){}.bind(this)})}
 if(this.showDSImporter){this.addTab({ID:"dsImporter",title:"Import DataSources",pane:this.dsImporter,tabSelected:function(){if(this.dsImporter.dsList&&this.dsImporter.dsList.getTotalRows()===0)
 {this.dsImporter.getDefinedDataSources()}}.bind(this)})}
-if(this.showServerLogViewer){this.addTab({ID:"serverLogViewer",title:"Server Logs",pane:this.serverLogViewer,tabSelected:function(){this.serverLogViewer.refreshLogList()}.bind(this)})}
+if(this.showServerLogViewer){this.addTab({ID:"serverLogViewer",title:"Server Logs",pane:this.serverLogViewer})}
 if(this.showDatabaseBrowser){this.addTab({ID:"databaseBrowser",title:"SQL Browser",pane:this.databaseBrowser,tabSelected:function(){if(this.databaseBrowser.databaseList&&this.databaseBrowser.databaseList.getTotalRows()===0)
 {this.databaseBrowser.getDefinedDatabases()}}.bind(this)})}
 if(this.showOtherTools){this.addTab({ID:"otherTools",title:"Other Tools",pane:this.otherTools})}

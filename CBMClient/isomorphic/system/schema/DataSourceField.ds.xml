@@ -226,6 +226,7 @@
 
         <uploadFieldName type="string" />
         <batchUploadOperationId type="string" />
+        <batchUploadCaseSensitive type="boolean" />
 
 	</fields>
 </Object>

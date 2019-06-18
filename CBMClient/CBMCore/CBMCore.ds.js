@@ -314,12 +314,6 @@ isc.CBMDataSource.create({
       }
     }
   }, {
-    name: "HierCode",
-    type: "text",
-    title: "Hirarchy Root",
-  //  hidden: true,
-    length: 2367
-  }, {
     name: "Primitive",
     type: "boolean",
     defaultValue: false,
@@ -329,6 +323,12 @@ isc.CBMDataSource.create({
     type: "boolean",
     defaultValue: false,
     title: "Abstract class"
+  }, {
+    name: "Significance",
+    type: "text",
+    valueMap: ["Root", "Ordinary", "Slave"],
+    defaultValue: "Ordinary",
+    title: "Significance of Concept"
   }, {
     name: "AbnormalInherit",
     type: "boolean",
@@ -457,7 +457,13 @@ isc.CBMDataSource.create({
       title: "Hierarchical",
       UIPath: "Information System aspects"
     }, {
-      name: "EditByCopy",
+      name: "HierCode",
+      type: "text",
+      title: "Hirarchy Root",
+      hidden: true,
+    length: 2367
+    }, {
+     name: "EditByCopy",
       type: "boolean",
       defaultValue: false,
       title: "Edit by Copy",
@@ -1238,12 +1244,18 @@ isc.CBMDataSource.create({
     name: "Role",
     type: "text",
     title: "View role",
+    valueMap: ["Default", "Simple", "..."],
     inList: true
   }, {
     name: "CanExpandRecords",
     type: "boolean",
     defaultValue: false,
     title: "Records can be expanded"
+  }, {
+    name: "MainTabName",
+    type: "multiLangText",
+    title: "Name for main (first) tab",
+    Prompt: "Optional substitution for localized config-based tab title"
   }, {
     name: "ExpandedConcept",
     type: "text",
@@ -1261,11 +1273,19 @@ isc.CBMDataSource.create({
     valueMap: [null, "related", "detailField", "details", "detailRelated", "editor"],
     editorType: "select"
   }, {
-    name: "MainTabName",
-    type: "multiLangText",
-    title: "Name for main (first) tab",
-    Prompt: "Optional substitution for localized config-based tab title"
-  }, {
+    name: "ExprTextFormat",
+    type: "text",
+    title: "Text format expression",
+    Prompt: "Expression for color and text modificetions of fields in grid row",
+    length: 2000,
+	 colSpan: 2
+  }, /*{
+    name: "ExprBackFormat",
+    type: "text",
+    title: "Background color expression",
+    Prompt: "Expression for color of background in fields of row",
+    length: 2000
+  },*/ {
     name: "Fields",
     type: "PrgViewField",
     copyLinked: true,
