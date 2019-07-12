@@ -5252,9 +5252,9 @@ isc.TableWindow.addProperties({
   
       this.addItems(
         [
-        // TODO Activate Filter by special button
-        // isc.FilterBuilder.create({ dataSource: this.dataSource, topOperator: "and" }),
-        this.innerGrid
+          // TODO Activate Filter by special button
+          isc.FilterBuilder.create({ dataSource: this.dataSource, topOperator: "and" }),
+          this.innerGrid
         ]);
     
       var titleDS = this.getDataSource().title;

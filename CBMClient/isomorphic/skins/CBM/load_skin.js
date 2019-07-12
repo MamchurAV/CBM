@@ -14,6 +14,13 @@ isc.loadSkin = function (theWindow) {
         //----------------------------------------
         // must be relative to your application file or isomorphicDir
         isc.Page.setSkinDir("CBMClient/isomorphic/skins/CBM/");
+        //----------------------------------------
+        // Register skin
+        //----------------------------------------
+        /*var currentSkin = isc.setCurrentSkin({
+            // name is autoderived to be the containing folder
+            name: "autoDetect"
+        });*/
 
         //----------------------------------------
         // Load skin style sheet(s)
@@ -1725,7 +1732,8 @@ isc.loadSkin = function (theWindow) {
         }
 
         // remember the current skin so we can detect multiple skins being loaded
-        if (isc.setCurrentSkin) isc.setCurrentSkin("EnterpriseBlue");
+        //if (isc.setCurrentSkin) isc.setCurrentSkin("EnterpriseBlue");
+        if (isc.setCurrentSkin) isc.setCurrentSkin("CBM");
     }   // end with()
 }   // end loadSkin()
 
