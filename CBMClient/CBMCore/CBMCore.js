@@ -6365,8 +6365,8 @@ isc.LeafletCanvas.addProperties({
                     'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="http://mapbox.com">Mapbox</a>',
                 maxZoom: 21,
                 id: "mapbox.streets",
-                accessToken:
-                    "pk.eyJ1IjoiYWxleG1hdiIsImEiOiJjajJkcWNoOGcwMDNpMndudDF0M2xpaHVpIn0.iLB4oEdNFOAZPo_PVrFdfw",
+                accessToken: "<Leaflet_token_here>"
+//                    //"pk.eyJ1IjoiYWxleG1hdiIsImEiOiJjajJkcWNoOGcwMDNpMndudDF0M2xpaHVpIn0.iLB4oEdNFOAZPo_PVrFdfw",
             },
         ).addTo(this.mymap);
 
