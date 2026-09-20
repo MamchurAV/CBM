@@ -1,0 +1,5 @@
+<DataSource ID="HiddenPalette" Constructor="HiddenPalette" addGlobalId="false">
+    <fields>
+        <field name="data" type="PaletteNode" multiple="true" />
+    </fields>
+</DataSource>

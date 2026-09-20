@@ -1,0 +1,19 @@
+<!-- 
+This DataSource is the special "DataSource DataSource".  It defines the schema by which other 
+XML DataSources are loaded, and it is itself a DataSource.  Because it would be the schema *for
+itself*, it has to be written assuming schemaless transform.
+
+In W3C XML Schema this bootstrap problem is solved by using the older DTD schema language to define
+the schema for the XML Schema language.  
+
+Also part of this bootstrap are the subobjects of DataSources:
+DataSourceField.ds.xml
+Validator.ds.xml
+-->
+<Object ID="DataSources"	Constructor="DataSource" __autoConstruct="DataSource"
+        addGlobalId="false">
+    <fields>
+        <loadID type="string" xmlAttribute="true" />
+    </fields>
+</Object>
+

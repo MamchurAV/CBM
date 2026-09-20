@@ -1,0 +1,13 @@
+<DataSource ID="ProjectAuthenticationUser" inheritsFrom="Record">
+    <!-- should match format returned by Authentication.getUserSchema -->
+    <fields>
+        <field name="userId" type="string" xmlAttribute="true" />
+        <field name="email" type="string" xmlAttribute="true" />
+        <field name="firstName" type="string" xmlAttribute="true" />
+        <field name="lastName" type="string" xmlAttribute="true" />
+        <field name="phone" type="phoneNumber" xmlAttribute="true" />
+        <field name="title" type="string" xmlAttribute="true" />
+        <field name="superUser" type="boolean" xmlAttribute="true" />
+        <field name="email" type="string" xmlAttribute="true" />
+    </fields>
+</DataSource>

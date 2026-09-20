@@ -1,0 +1,26 @@
+<DataSource ID="DSRequest">
+    <fields>
+        <field name="exportAs" type="string" xmlAttribute="true">
+            <valueMap>
+                <value>csv</value>
+                <value>xml</value>
+                <value>json</value>
+                <value>xls</value>
+                <value>ooxml</value>
+                <value>custom</value>
+            </valueMap>
+        </field>
+        <field name="exportDisplay" type="string" xmlAttribute="true">
+            <valueMap>
+                <value>download</value>
+                <value>window</value>
+                <value>return</value>
+            </valueMap>
+        </field>
+        <field name="groupBy" type="string" multiple="true"/>
+        <field name="summaryFunctions" type="Object"/>
+        <!-- use type "any" because this can be a string, Array of String, or Array of SortSpecifier -->
+        <field name="sortBy" type="any"/>
+        <field name="applyCriteriaBeforeAggregation" type="boolean"/>
+    </fields>
+</DataSource>

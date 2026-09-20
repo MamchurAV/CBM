@@ -1,0 +1,52 @@
+<DataSource ID="MetricSettings">
+    <fields>
+        <field name="axisStartValue" type="float"/>
+        <field name="chartType" type="ChartType" basic="true">
+			<valueMap>
+				<value>Area</value>
+				<value>Column</value>
+				<value>Bar</value>
+				<value>Line</value>
+				<value>Radar</value>
+				<value>Pie</value>
+				<value>Doughnut</value>
+				<!-- <value>Bubble</value> -->
+				<value>Histogram</value>
+				<!-- <value>Scatter</value> -->
+			</valueMap>
+        </field>
+        <field name="stacked" type="boolean" allowEmptyValue="true" basic="true"/>
+        <field name="filled" type="boolean" allowEmptyValue="true" basic="true"/>
+        <field name="multiFacet" type="boolean"/>     
+
+        <field name="showValueAxisLabel" type="boolean" allowEmptyValue="true" basic="true"/>
+        <field name="decimalPrecision" type="integer" title="Axis Label Precision"/>
+        <field name="valueTitle" type="string"/>
+        <field name="showDataValues" type="boolean"/>
+
+        <field name="showDataPoints" type="boolean" title="Draw Points for Values"/>
+        <field name="dataPointSize" type="positiveInteger"/>        
+        <field name="dataColors" type="string" multiple="true"/>
+
+        <field name="showShadows" type="boolean"/>
+        <field name="showValueOnHover" type="boolean"/>
+
+        <field name="fixedFacetValue" type="number"/>
+        <field name="legendLabel" type="string"/>
+
+        <field name="useLogGradations" type="boolean"/>
+        <field name="logScale" type="boolean"/>
+        <field name="logBase" type="positiveInteger"/>
+        <field name="logGradations" type="float" multiple="true" hidden="true"/>
+
+        <field name="matchGradiations" type="string"/>
+        <field name="minDataSpreadPercent" type="integer"/>
+
+        <field name="proportional" type="boolean"/>        
+        <field name="proportionalAxisLabel" type="string"/>
+        <field name="showAxis" type="boolean"/>
+        <field name="showAxisLine" type="boolean"/>
+
+        <field name="xAxisEndValue" type="float"/>
+    </fields>
+</DataSource>

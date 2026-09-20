@@ -1,0 +1,2 @@
+<ComponentSchema ID="DBCField" __autoConstruct="ComponentSchema" inheritsFrom="Field">
+</ComponentSchema>

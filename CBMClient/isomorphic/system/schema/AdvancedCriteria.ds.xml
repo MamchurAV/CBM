@@ -1,0 +1,7 @@
+<Object ID="AdvancedCriteria" __autoConstruct="DataSource" addGlobalId="false"
+        inheritsFrom="Criterion">
+    <fields>
+        <strictSQLFiltering type="boolean" xmlAttribute="true" />
+        <fixedValue type="boolean" xmlAttribute="true"/>
+    </fields>
+</Object>

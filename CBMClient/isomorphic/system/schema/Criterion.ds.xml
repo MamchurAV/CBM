@@ -1,0 +1,14 @@
+<Object ID="Criterion" __autoConstruct="DataSource" addGlobalId="false">
+    <fields>
+        <fieldName type="string" xmlAttribute="true"/>
+        <fieldQuery type="AdvancedCriterionSubquery"/>
+        <operator type="string" xmlAttribute="true"/>
+        <value type="any" xmlExplicitSimpleTypes="true" xmlAttributeInRuleCriteria="true"/>
+        <valuePath type="string" xmlAttribute="true"/>
+        <valueQuery type="AdvancedCriterionSubquery"/>
+        <start type="any" xmlExplicitTypes="true"/>
+        <end type="any" xmlExplicitTypes="true"/>
+        <criteria type="Criterion" multiple="true"/>
+    </fields>
+</Object>
+        

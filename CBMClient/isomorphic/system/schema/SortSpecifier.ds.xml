@@ -1,0 +1,15 @@
+<DataSource	ID="SortSpecifier">
+    <fields>
+		<field name="direction" type="sortEnum"/>
+        <field name="property" type="identifier" />
+        <field name="normalizer" type="function" />
+    </fields>
+	<types>
+        <type ID="sortEnum"		inheritsFrom="enum"	 >
+                <valueMap>
+                    <value>ascending</value>
+                    <value>descending</value>
+                </valueMap>
+		</type>
+	</types>
+</DataSource>

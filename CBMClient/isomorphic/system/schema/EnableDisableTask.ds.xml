@@ -1,0 +1,8 @@
+<DataSource ID="EnableDisableTask" inheritsFrom="ComponentTask" Constructor="EnableDisableTask">
+    <fields>
+        <field name="targetTabName" type="text" xmlAttribute="true" />
+        <field name="targetFieldName" type="text" xmlAttribute="true" />
+        <field name="disable" type="boolean" xmlAttribute="true" />
+    </fields>
+</DataSource>
+

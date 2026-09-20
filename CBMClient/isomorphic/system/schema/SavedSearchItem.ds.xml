@@ -1,0 +1,54 @@
+<DataSource ID="SavedSearchItem" inheritsFrom="SelectItem" Constructor="SavedSearchItem">
+    <fields>
+        <field name="canAddSearch" type="boolean" basic="true" recreateOnChange="true" />
+        <!-- specialValues are not yet supported in Reify so addSearchValue is not applicable -->
+        <!-- <field name="addSearchValue" type="string"/> -->
+        <field name="addSearchIcon"	type="SCImgURL" editorType="ImageChooserItem"
+            defaultValue="/DynamicForm/default_formItem_icon.gif"/>
+        <field name="targetEditsCriteria" type="boolean"/>
+        <field name="canModifyProperty" type="string"
+            requiresDSField="optionDataSource" editorType="SingleFieldPicker" />
+        <field name="editSearchField" type="ListGridField"/>
+        <field name="editSearchHoverText" type="string"/>
+        <field name="removeSearchHoverText" type="string"/>
+        <field name="copySearchHoverText" type="string"/>
+        <field name="markAsDefaultHoverText" type="string"/>
+        <field name="canEditSearch" type="boolean" basic="true" recreateOnChange="true" />
+        <field name="canRemoveSearch" type="boolean" recreateOnChange="true" />
+        <field name="canCopySearch" type="boolean" basic="true" recreateOnChange="true" />
+        <field name="targetComponent" type="Canvas" idAllowed="true"
+            editorType="NonFormDBCPicker" xmlAttribute="true" basic="true" />
+        <field name="targetDataSource" type="DataSource" idAllowed="true"
+            editorType="ProjectDataSourcePicker" xmlAttribute="true" basic="true" />
+
+        <field name="confirmRemoval" type="boolean" basic="true" />
+        <field name="confirmRemovalMessage" type="string" basic="true" />
+        <field name="editSearchWindow" type="EditSearchWindow"/>
+        <field name="adminRole" type="string"/>
+        <field name="newRecordValues" type="Record"/>
+        <field name="saveLastSearch" type="boolean" basic="true" />
+        <field name="saveDefaultSearch" type="boolean"/>
+        <field name="storedState" type="SavedSearchStoredState"/>
+        <field name="offlineStorageKey" type="string"/>
+        <field name="adminSeparatorRecord" type="ListGridRecord"/>
+
+        <field name="valueMap" inapplicable="true"/>
+        <field name="optionDataSource" inapplicable="true"/>
+        <field name="colSpan" inapplicable="true"/>
+        <field name="filterLocally" inapplicable="true"/>
+        <field name="pickListFields" inapplicable="true"/>
+        <field name="showTitle" inapplicable="true"/>
+        <field name="type" inapplicable="true"/>
+    </fields>
+    <methods>
+        <method action="event" name="searchChanged" basic="true" />
+    </methods>
+
+    <types>
+        <type ID="SavedSearchStoredState" inheritsFrom="enum">
+            <valueMap>
+                <value>criteria</value>
+            </valueMap>
+        </type>	
+    </types>
+</DataSource>

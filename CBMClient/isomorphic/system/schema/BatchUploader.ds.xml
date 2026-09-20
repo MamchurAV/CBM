@@ -1,0 +1,9 @@
+<DataSource ID="BatchUploader"  inheritsFrom="VStack">
+    <fields>
+        <field name="gridFields" type="ListGridField" childTagName="LGField" multiple="true"/>
+        <field name="gridProperties" type="ListGrid" propertiesOnly="true"/>
+
+        <field name="uploadFormFields" type="FormItem" multiple="true" propertiesOnly="true"/>
+        <field name="uploadFormProperties" type="DynamicForm" propertiesOnly="true"/>
+    </fields>
+</DataSource>

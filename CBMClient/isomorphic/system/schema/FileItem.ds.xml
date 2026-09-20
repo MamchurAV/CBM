@@ -1,0 +1,10 @@
+<DataSource ID="FileItem" inheritsFrom="TextItem" Constructor="FileItem">
+    <fields>
+        <field name="defaultValue" inapplicable="true"/>
+   		<field name="length" inapplicable="true"/>                
+        <field name="defaultDynamicValue" inapplicable="true"/>
+    </fields>
+    <methods>
+        <method action="event" name="changed" basic="true"/>
+    </methods>
+</DataSource>

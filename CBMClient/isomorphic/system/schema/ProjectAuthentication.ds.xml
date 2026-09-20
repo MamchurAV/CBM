@@ -1,0 +1,10 @@
+<DataSource ID="ProjectAuthentication">
+    <fields>
+        <field name="provider" type="text" xmlAttribute="true"/>
+
+        <!-- user should match format returned by Authentication.getUserSchema -->
+        <field name="users" type="ProjectAuthenticationUser" childTagName="user" multiple="true" />
+        <field name="availableRoles" type="ProjectAuthenticationRole" childTagName="role" multiple="true" />
+        <field name="lastSelectedUser" type="text" />
+    </fields>
+</DataSource>

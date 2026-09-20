@@ -1,0 +1,7 @@
+<DataSource ID="ComponentSchema" inheritsFrom="DataSource" Constructor="ComponentSchema">
+    <fields>
+        <alwaysValidateSchemaFieldNames type="string" multiple="true" />
+
+        <field name="fields" type="ComponentSchemaField" multiple="true" propertiesOnly="true" childTagName="field"/>
+    </fields>
+</DataSource>

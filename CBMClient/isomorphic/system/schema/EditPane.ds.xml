@@ -1,0 +1,8 @@
+<DataSource ID="EditPane" inheritsFrom="Canvas" Constructor="EditPane" addGlobalId="false">
+    <fields>
+        <field name="extraPalettes"  type="HiddenPalette" multiple="true" propertiesOnly="true" />
+        <!-- Allow children to include DrawItems which derive from BaseWidget.
+             Canvas also derives from it, so those still work as well. -->
+		<field name="children"		type="BaseWidget" multiple="true"	propertiesOnly="true" tagName="childComponents"/>
+    </fields>
+</DataSource>

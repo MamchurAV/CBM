@@ -1,0 +1,1 @@
+<DataSource ID="TilePalette" inheritsFrom="TileGrid" Constructor="TilePalette"/>

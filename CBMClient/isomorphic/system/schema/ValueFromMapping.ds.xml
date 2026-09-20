@@ -1,0 +1,9 @@
+<Object ID="ValueFromMapping" __autoConstruct="DataSource" addGlobalId="false">
+    <fields>
+        <value type="any" xmlAttribute="true" />
+        <dataPath type="text" xmlAttribute="true" />
+        <formula type="text" xmlAttribute="true" />
+        <template type="text" xmlAttribute="true" />
+        <criteria type="AdvancedCriteria"/>
+    </fields>
+</Object>

@@ -1,0 +1,5 @@
+<DataSource ID="IntegerItem" inheritsFrom="TextItem" Constructor="IntegerItem" >
+    <fields>
+		<field name="defaultValue" xmlAttribute="true"  type="integer"  title="Default Value" basic="true" />
+    </fields>
+</DataSource>

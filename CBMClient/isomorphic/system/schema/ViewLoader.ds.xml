@@ -1,0 +1,9 @@
+<DataSource	ID="ViewLoader" inheritsFrom="Canvas" Constructor="ViewLoader">
+    <fields>
+        <field name="viewURL"             type="url"/>
+        <field name="viewURLParams"       type="Object"/>
+        <field name="loadingMessage"      type="string"/>
+        <field name="httpMethod"          type="SendMethod"/>
+        <field name="allowCaching" type="boolean"/>
+    </fields>
+</DataSource>

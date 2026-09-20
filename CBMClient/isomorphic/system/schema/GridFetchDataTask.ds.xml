@@ -1,0 +1,9 @@
+<DataSource ID="GridFetchDataTask" inheritsFrom="ComponentTask" Constructor="GridFetchDataTask">
+    <fields>
+        <field name="criteria" type="Criterion" />
+        <field name="applyToImplicitCriteria" type="boolean" />
+        <field name="summaryFunctions" type="SummaryFunction" strictValidation="false" />
+        <field name="groupBy" type="string" multiple="true" fallbackToSingle="true" />
+        <field name="requestProperties" type="DSRequest" />
+    </fields>
+</DataSource>

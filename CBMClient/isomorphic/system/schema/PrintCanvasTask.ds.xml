@@ -1,0 +1,4 @@
+<DataSource ID="PrintCanvasTask" inheritsFrom="ComponentTask" Constructor="PrintCanvasTask">
+    <field name="exportAsPdf" type="boolean" xmlAttribute="true"/>
+    <field name="exportFilename" type="string" xmlAttribute="true"/>
+</DataSource>

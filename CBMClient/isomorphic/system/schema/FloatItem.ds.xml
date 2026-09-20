@@ -1,0 +1,9 @@
+<DataSource ID="FloatItem" inheritsFrom="TextItem" Constructor="FloatItem" >
+    <fields>
+        <field name="defaultValue" type="float"/>
+    </fields>
+    <methods>
+        <method action="event" name="click" basic="true"/>
+        <method action="event" name="changed" basic="true" />
+    </methods>
+</DataSource>

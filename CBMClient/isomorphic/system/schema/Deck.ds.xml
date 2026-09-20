@@ -1,0 +1,14 @@
+<DataSource ID="Deck" inheritsFrom="Layout" Constructor="Deck">
+
+    <fields>
+        <!-- mark this as inapplicable, so visualBuilder use addPane method instead of -->
+        <!-- setCurrentPane which otherwise do nothing because panes should contain currentPane -->
+        <field name="currentPane" type="Canvas" idAllowed="true" editorType="LayoutMemberPicker"
+            title="Initial Pane" group="basics" basic="true" />
+        <field name="children" type="Canvas" multiple="true" propertiesOnly="true" inapplicable="true"/>
+        <!-- This is the property to be used by addPane(). Place it last so it has priority
+             over currentPane which is also an eligible property. See DataSource.getObjectField() -->
+        <field name="panes" type="Canvas" multiple="true" />
+    </fields>
+
+</DataSource>

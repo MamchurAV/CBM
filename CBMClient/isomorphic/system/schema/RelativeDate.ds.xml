@@ -1,0 +1,12 @@
+<DataSource ID="RelativeDate" Constructor="RelativeDate">
+    <fields>
+        <field name="rangePosition" type="string" xmlAttribute="true">
+            <valueMap>
+                <value>start</value>
+                <value>end</value>
+            </valueMap>
+        </field>
+        <field name="value" type="string" xmlAttribute="true" />
+    </fields>
+</DataSource>
+

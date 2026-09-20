@@ -1,0 +1,1 @@
+<DataBoundComponentSchema ID="TreeViewer" Constructor="TreeGrid" inheritsFrom="TreeGrid"/>

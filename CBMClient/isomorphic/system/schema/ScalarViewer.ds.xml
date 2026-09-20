@@ -1,0 +1,8 @@
+<DataBoundComponentSchema ID="ScalarViewer" inheritsFrom="DynamicForm" Constructor="ScalarViewer">
+    <alwaysValidateSchemaFieldNames>fieldName</alwaysValidateSchemaFieldNames>
+    <fields>
+        <field name="fieldName" />
+        <field name="title" />
+        <field name="valueItemProperties" type="FormItem" />
+    </fields>
+</DataBoundComponentSchema>

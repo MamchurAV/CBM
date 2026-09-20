@@ -1,0 +1,14 @@
+<Object ID="AdvancedCriterionSubquery" __autoConstruct="DataSource" addGlobalId="false">
+    <!-- This should really be a sparse subclass of DSRequest, but in fact the schema for 
+         DSRequest is already more sparse than we need for AdvancedCriteriaSubquery -->
+    <fields>
+		<dataSource type="DataSource" idAllowed="true" xmlAttribute="true"/>
+        <criteria type="Criterion" multiple="true"/>
+        <groupBy type="string" multiple="true" fallbackToSingle="true" />
+        <summaryFunctions type="SummaryFunction" strictValidation="false" />
+        <queryOutput type="fieldName" xmlAttribute="true"/>
+        <queryFK type="string" xmlAttribute="true"/>
+        <operationId type="string" />
+        <canEmbedSQL type="boolean" />
+    </fields>
+</Object>

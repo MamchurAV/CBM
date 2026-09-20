@@ -1,0 +1,2 @@
+<ComponentSchema ID="DataBoundComponentSchema" inheritsFrom="ComponentSchema" Constructor="DataBoundComponentSchema">
+</ComponentSchema>

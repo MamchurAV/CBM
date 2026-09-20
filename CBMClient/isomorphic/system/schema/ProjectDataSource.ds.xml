@@ -1,0 +1,6 @@
+<DataSource ID="ProjectDataSource" inheritsFrom="Record">
+    <fields>
+        <field name="dsName" type="string" xmlAttribute="true" />
+        <field name="dsType" type="string" xmlAttribute="true" />
+    </fields>
+</DataSource>

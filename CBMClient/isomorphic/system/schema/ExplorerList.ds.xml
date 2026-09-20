@@ -1,0 +1,5 @@
+<DataBoundComponentSchema ID="ExplorerList" inheritsFrom="TreeGrid" Constructor="ExplorerList">
+	<fields>
+		<field name="explorer" type="TreeGrid"/>	
+	</fields>
+</DataBoundComponentSchema>

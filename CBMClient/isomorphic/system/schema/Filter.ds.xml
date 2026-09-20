@@ -1,0 +1,1 @@
+<DataBoundComponentSchema ID="Filter" inheritsFrom="DynamicForm" Constructor="Filter"/>

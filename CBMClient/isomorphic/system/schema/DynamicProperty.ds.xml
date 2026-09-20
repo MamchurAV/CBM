@@ -1,0 +1,14 @@
+<DataSource ID="DynamicProperty" Constructor="DynamicProperty" addGlobalId="false" autoIdField="name">
+    <fields>
+        <field name="name" type="string" xmlAttribute="true"/>
+        <field name="dataPath" type="string" xmlAttribute="true"/>
+        <field name="formula" type="string" xmlAttribute="true"/>
+        <field name="template" type="string" xmlAttribute="true"/>
+        <field name="trueWhen" type="TrueWhen"/>
+        <field name="valueFrom" type="ValueFromMapping" multiple="true" childTagName="case" propertiesOnly="true"/>
+        <field name="type" type="string" xmlAttribute="true"/>
+
+        <!-- Old format - replaced by template above -->
+        <field name="textFormula" type="UserSummary"/>
+    </fields>
+</DataSource>

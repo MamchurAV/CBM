@@ -1,0 +1,23 @@
+<Object ID="Field" __autoConstruct="ComponentSchema" addGlobalId="false" autoIdField="name" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <fields>
+        <name type="string" required="true" xmlAttribute="true" primaryKey="true" recreateOnChange="true" basic="true"/>
+        <type type="string" xmlAttribute="true" basic="true"/>
+        <valueMap type="ValueMap" title="Value Map"/>
+        <multiple type="boolean" xmlAttribute="true"/>
+        <required type="boolean" xmlAttribute="true"/>
+        <primaryKey type="boolean" title="Is Primary Key" xmlAttribute="true"/>
+
+        <title type="string" xmlAttribute="true"/>
+        <description type="string" xmlAttribute="true"/>
+
+        <escapeHTML type="boolean" title="HTML-Escape Values" xmlAttribute="true"/>
+
+        <canEdit type="boolean" title="Can Edit" xmlAttribute="true"/>
+
+        <canExport type="boolean" xmlAttribute="true"/>
+        <exportTitle type="string" xmlAttribute="true"/>
+        <exportFormat type="string" xmlAttribute="true"/>
+
+        <sortByField type="string"/>
+    </fields>
+</Object>

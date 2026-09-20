@@ -1,0 +1,6 @@
+<DataSource ID="FileAssemblyEntry" inheritsFrom="Object">
+	<fields>
+        <field name="components" type="Object" multiple="true"/>
+        <field name="uri" type="string" xmlAttribute="true"/>
+    </fields>
+</DataSource>

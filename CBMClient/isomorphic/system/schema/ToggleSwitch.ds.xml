@@ -1,0 +1,17 @@
+<DataSource	ID="ToggleSwitch" inheritsFrom="StatefulCanvas" Constructor="ToggleSwitch">
+	<fields>
+        <field name="animateThumb" type="boolean" />
+        <field name="defaultValue" type="boolean" />
+        <field name="thumbProperties" type="Canvas"    propertiesOnly="true" />
+        <field name="thumbDefaults" type="Canvas"      propertiesOnly="true" />
+        <field name="thumbOffset" type="positiveInteger" />
+        <field name="thumbRadius" type="string" />
+        <field name="toggleOnThumbClick" type="boolean" />
+        <field name="toggleOnKeypress" type="boolean" />
+        <field name="value" type="boolean" />
+	</fields>
+    <methods>
+        <method action="event" name="valueChanged" basic="true" whenRuleTip="true" />
+    </methods>
+</DataSource>
+

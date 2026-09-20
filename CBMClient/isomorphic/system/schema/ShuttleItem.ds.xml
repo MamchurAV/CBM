@@ -1,0 +1,5 @@
+<DataSource	ID="ShuttleItem" inheritsFrom="CanvasItem" Constructor="ShuttleItem">
+    <fields>
+        <field name="shuttleFields" multiple="true" type="ListGridField" />
+    </fields>
+</DataSource>

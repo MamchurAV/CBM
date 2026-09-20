@@ -1,0 +1,40 @@
+<!--
+This component schema for the DataBoundComponent interface is not used directly; it contains
+fields common to DBC types:
+- Calendar
+  (base component schema for Timeline)
+- ColumnTree
+- DetailViewer
+- DynamicForm
+  (base component schema for PropertySheet, SearchForm)
+- FacetChart
+- ListGrid
+  (base component schema for CalendarView, CubeGrid, DateGrid, Menu, PickListMenu, RecordEditor, TreeGrid)
+- TileGrid
+
+Component schemas for DBC types should be defined with <DataBoundComponentSchema>. That class
+copies these fields and their validators into the fields of the derived type.
+-->
+<ComponentSchema ID="DataBoundComponent">
+    <alwaysValidateSchemaFieldNames>dataSource</alwaysValidateSchemaFieldNames>
+    <fields>
+        <field name="dataSource" type="DataSource" idAllowed="true" hidden="false"
+            editorType="ProjectDataSourcePicker" basic="true"/>
+        <field name="addOperation" type="string" requiresDSField="dataSource"/>
+        <field name="exportOperation" type="string" requiresDSField="dataSource"/>
+        <field name="fetchOperation" type="string" requiresDSField="dataSource"/>
+        <field name="removeOperation" type="string" requiresDSField="dataSource"/>
+        <field name="updateOperation" type="string" requiresDSField="dataSource"/>
+
+        <field name="autoFetchData"	type="boolean" basic="true"/>
+        <field name="autoFetchTextMatchStyle" type="textMatchStyleEnum" recreateOnChange="true"/>
+        <field name="implicitCriteria" type="AdvancedCriteria" hidden="true"/>
+        <field name="initialCriteria" type="AdvancedCriteria" basic="true"/>
+        <field name="fetchRequestProperties" type="DSRequest"/>
+        <field name="initialSort" type="SortSpecifier" multiple="true"/>
+        <field name="recordLimit" type="integer"/>
+        <field name="recordLimitClientOperations" type="boolean"/>
+
+        <field name="fields" type="DBCField" multiple="true" propertiesOnly="true" childTagName="DBCField"/>
+    </fields>
+</ComponentSchema>

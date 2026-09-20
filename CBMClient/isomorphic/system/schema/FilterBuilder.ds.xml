@@ -1,0 +1,5 @@
+<DataSource ID="FilterBuilder" inheritsFrom="Layout" Constructor="FilterBuilder">
+	<fields>
+        <field name="criteria" type="AdvancedCriteria" hidden="true"/>
+	</fields>
+</DataSource>

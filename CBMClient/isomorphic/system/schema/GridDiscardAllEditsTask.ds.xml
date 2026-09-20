@@ -1,0 +1,2 @@
+<DataSource ID="GridDiscardAllEditsTask" inheritsFrom="ComponentTask" Constructor="GridDiscardAllEditsTask">
+</DataSource>
