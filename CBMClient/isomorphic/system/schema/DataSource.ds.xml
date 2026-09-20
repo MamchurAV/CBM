@@ -30,6 +30,9 @@ Validator.ds.xml
         </dataFormat>
         <useStrictJSON type="boolean" xmlAttribute="true"/>
 
+        <apidoc type="boolean" />
+        <isSampleDS type="boolean" />
+
         <!-- special attribute used by VisualBuilder to suppress autoFetch -->
         <noAutoFetch type="boolean" xmlAttribute="true"/>
         <serverType type="string" title="Server Type" xmlAttribute="true">
@@ -254,6 +257,7 @@ Validator.ds.xml
         
         <requiredMessage type="string" title="Required Message" xmlAttribute="true"/>
 
+        <implicitCriteria type="AdvancedCriteria" xmlAttribute="true"/>
     </fields>
 </Object>
 

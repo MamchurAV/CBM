@@ -2,7 +2,7 @@
 	<fields>
 		<field name="multiple" 			type="boolean" title="Select Multiple"/>
 		<field name="addUnknownValues"	type="boolean"/>
-		<field name="valueMap" type="ValueMap" title="Value Map"/>
+		<field name="valueMap" type="ValueMap" title="Value Map" basic="true" readOnlyIfOptionDataSource="true"/>
         <field name="showOver" type="boolean"/>
 
         <field name="pickerIconWidth" type="number"/>

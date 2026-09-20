@@ -1,7 +1,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version v12.0p_2018-09-15/LGPL Deployment (2018-09-15)
+  Version SNAPSHOT_v12.1d_2019-05-29/LGPL Deployment (2019-05-29)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,9 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
 
-if (window.isc && isc.version != "v12.0p_2018-09-15/LGPL Deployment" && !isc.DevUtil) {
+if (window.isc && isc.version != "SNAPSHOT_v12.1d_2019-05-29/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'v12.0p_2018-09-15/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v12.1d_2019-05-29/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -4521,6 +4521,11 @@ isc.defineClass("DataSource");
 // specifying a "locale" parameter on HTTP requests to the <code>ScreenLoaderServlet</code>
 // (this is done for you when you pass a locale to the +link{RPCManager.loadScreen} method).</li>
 // </ul>
+// <h4>Custom localization provider support</h4>
+// Custom localization providers can be configured for the entire framework or for specific
+// DataSource and Component XML instances based on their names. For more details see
+// javadoc for <code>com.isomorphic.util.LocaleMessageProviderRegistry</code> server-side API.
+//
 // @treeLocation Concepts/Internationalization and Localization
 // @title DataSource and Component XML Localization
 // @visibility external
@@ -4772,7 +4777,7 @@ isc.defineClass("DataSource");
 // <tr><td></td><td><i>IBM WebSphere 5.x, 6.x, 7.x, 8.x</i></td><td></td></tr>
 // <tr><td></td><td><i>IBM WebSphere Community Edition 1.x, 2.x, 3.x</i></td><td></td></tr>
 // <tr><td></td><td><i>JBoss 3.2.x, 4.0.x, 4.2.x, 5.x, 6.x, 7.x; EAP 6.x, 7.x</i></td><td></td></tr>
-// <tr><td></td><td><i>WildFly 8.x, 9.x, 10.x, 11.x, 12.x</i></td><td></td></tr>
+// <tr><td></td><td><i>WildFly 8.x, 9.x, 10.x, 11.x, 12.x, 13.x, 14.x, 15.x</i></td><td></td></tr>
 // <tr><td></td><td><i>Mortbay Jetty 4.x, 5.x, 6.x, 7.x, 8.x, 9.x</i></td><td></td></tr>
 // <tr><td></td><td><i>Oracle Containers for J2EE (OC4J) 9.x, 10.x, 11.x</i></td><td></td></tr>
 // <tr><td></td><td><i>Oracle Application Server 10g 9.x, 10.x; 11g</i></td><td></td></tr>
@@ -5024,7 +5029,15 @@ isc.defineClass("DataSource");
 // where JSP tags can't be used for some reason (such as with SmartGWT).  See
 // +link{group:dataSourceDeclaration,Creating DataSources} for more details.
 // <li>ScreenLoaderServlet - a servlet that returns the definition of one or more screens in
-// JavaScript notation.</li>
+// JavaScript notation.
+// Can be invoked using a traditional HTTP GET, the +link{group:loadUITag,loadUI JSP tag},
+// or the +link{rpcManager.loadScreen} function.</li>
+// <li>ProjectLoaderServlet - returns a JavaScript fragment that when executed loads a named project
+// and +link{rpcManager.cacheScreens,caches} all (or a specified subset) of its screens up-front.
+// Can be invoked using a traditional HTTP GET, or the +link{rpcManager.loadProject} function.
+// Refer to +serverDocLink{com.isomorphic.servlet.ProjectLoaderServlet,javadoc}  for parameter names
+// and their meanings.
+// </li>
 // </ul>
 // Note that not all of the servlets and filters listed under <i>Optional Functionality</i>
 // above are present in the web.xml that ships with the smartclientRuntime - if you need to use
@@ -5087,20 +5100,46 @@ isc.defineClass("DataSource");
 
 
 
+//> @groupDef reifyMaven
+// <smartclient>SmartClient</smartclient><smartgwt>SmartGWT</smartgwt>
+// +link{group:mavenSupport, support for Maven} includes the ability to
+// +externalLink{http://github.smartclient.com/isc-maven-plugin/reify-import-mojo.html, import}
+// assets from +externalLink{http://reify.com, reify.com} into your project either on-demand or
+// during your build process.  Using the
+// +externalLink{http://github.smartclient.com/isc-maven-plugin/examples/configuration.html, example configuration},
+// the command might look something like the following:
+// <p>
+// <pre>
+//   mvn com.isomorphic:isc-maven-plugin:1.4.0-SNAPSHOT:reify-import -Pisc
+// </pre>
+// <strong>Important:</strong> This flow is unidirectional.  That is, whatever changes are to
+// be made to these resources should be made using the collaborative Reify environment and then
+// re-imported.  There is, by design, no reason to modify them locally.  Refer to the
+// +link{group:reifyExport, Reify Export} documentation topic for further discussion.
+//
+// @treeLocation Concepts
+// @title Importing from Reify
+// @visibility external
+//<
+
 //> @groupDef mavenSupport
-// <smartclient>SmartClient</smartclient><smartgwt>SmartGWT</smartgwt> artifacts are not published to any public repository, but a
-// POM for each is included in the SDK, and can be used to install them to your own private Maven repository.  The official
-// +externalLink{http://github.smartclient.com/isc-maven-plugin/,Isomorphic plugin for Maven} contains a handful of targets intended
-// to simplify that process through automation.  Please refer to the plugin's documentation for usage and examples.
+// <smartclient>SmartClient</smartclient><smartgwt>SmartGWT</smartgwt> artifacts are not
+// published to any public repository, but a POM for each is included in the SDK, and can be
+// used to install them to your own private Maven repository.  The official
+// +externalLink{http://github.smartclient.com/isc-maven-plugin/,Isomorphic plugin for Maven}
+// contains a handful of targets intended to simplify that process through automation.  Please
+// refer to the plugin's documentation for usage and examples.
 // <p />
-// For a complete listing of artifacts installed in your environment, consult your repository manager.  Where no repository manager
-// is in use, a directory listing can often provide all the detail you need.  Once you've made an artifact available to your build,
-// you can use it just like you'd use any other dependency.
+// For a complete listing of artifacts installed in your environment, consult your repository
+// manager.  Where no repository manager is in use, a directory listing can often provide all
+// the detail you need.  Once you've made an artifact available to your build, you can use it
+// just like you'd use any other dependency.
 // <smartclient>
 // <p />
 // That said, typical installations of the current build will include the artifacts documented
-// <a target="_blank" href="./mavendoc/maven-usage.html">here</a>, where coordinates in most cases will vary slightly by date and license.
-// A sample configuration using a few artifacts from an eval build released on November 14, 2016 follows:
+// <a target="_blank" href="./mavendoc/maven-usage.html">here</a>, where coordinates in most
+// cases will vary slightly by date and license.  A sample configuration using a few artifacts
+// from an eval build released on November 14, 2016 follows:
 // <p/>
 //
 // <pre>
@@ -5139,18 +5178,19 @@ isc.defineClass("DataSource");
 //
 // <smartgwt>
 // <p/>
-// Following execution of the plugin's install or deploy goal, your Maven repository will include a handful of archetypes meant to
-// jump start development with the SmartGWT framework.  Most users will want to start new projects with either the
-// <b>archetype-smartgwt-quickstart</b> or <b>archetype-smartgwt-quickstart-unprotected</b> archetypes.  To generate a new project
-// based on the former:
+// Following execution of the plugin's install or deploy goal, your Maven repository will
+// include a handful of archetypes meant to jump start development with the SmartGWT framework.
+// Most users will want to start new projects with either the
+// <b>archetype-smartgwt-quickstart</b> or <b>archetype-smartgwt-quickstart-unprotected</b>
+// archetypes.  To generate a new project based on the former:
 //
 // <ol>
 // <li><a href="https://maven.apache.org/install.html">Install Maven</a>, if necessary.</li>
 //
 // <li>Install SmartGWT, if necessary.
 // <pre>
-// mvn com.isomorphic:isc-maven-plugin:1.3.0:install \
-//    -Dproduct=SMARTGWT -Dlicense=EVAL -DbuildNumber=12.0p
+// mvn com.isomorphic:isc-maven-plugin:1.4.0-SNAPSHOT:install \
+//    -Dproduct=SMARTGWT -Dlicense=EVAL -DbuildNumber=12.1d
 // </pre>
 // </li>
 //
@@ -5167,29 +5207,131 @@ isc.defineClass("DataSource");
 // </li>
 // </ol>
 //
-// and refer to the README in the new 'myapplication' directory for further instructions around usage in Maven, Ant, and Eclipse environments.
+// and refer to the README in the new 'my-application' directory for further instructions
+// around usage in Maven, Ant, and Eclipse environments.
 // <p/>
-// To generate a project from any of the following archetypes, provide its artifactId to the above command's archetypeArtifactId parameter:
+// To generate a project from any of the following archetypes, provide its artifactId to the
+// above command's archetypeArtifactId parameter:
 // <p/>
 // <ul>
-//   <li><b>archetype-smartgwt-quickstart-unprotected</b>: The recommended approach for most applications, using data access / databinding with "sql" datasources</li>
-//   <li><b>archetype-smartgwt-quickstart</b>: Like archetype-smartgwt-quickstart-unprotected, but includes integration with Spring Security</li>
+//   <li><b>archetype-smartgwt-quickstart-unprotected</b>:
+//       The recommended approach for most applications, using data access / databinding with
+//       "sql" datasources
+//   </li>
+//   <li><b>archetype-smartgwt-quickstart-reify</b>:
+//       Like archetype-smartgwt-quickstart-unprotected, but includes integration with
+//       <a target="_blank" href="https://www.reify.com" >Reify</a>
+//   </li>
+//   <li><b>archetype-smartgwt-quickstart</b>:
+//       Like archetype-smartgwt-quickstart-unprotected, but includes integration with Spring
+//       Security
+//   </li>
 //   <p/>
-//   <li><b>archetype-smartgwt-example-builtinds</b>: Illustrates how a single databound component can be used (and re-used) with many datasources</li>
-//   <li><b>archetype-smartgwt-example-customds</b>: Illustrates setting up a DataSource accessing a servlet front controller (for example struts or Spring MVC controller) for the various DataSource operations</li>
-//   <li><b>archetype-smartgwt-example-dsdmi</b>: Illustrates setting up a DataSource that calls methods on your configured server bean in response to DataSource operations (fetch, add, update, remove)</li>
-//   <li><b>archetype-smartgwt-example-dshibernate</b>: Illustrates the use of "hibernate" datasources in 'beanless mode'</li>
-//   <li><b>archetype-smartgwt-example-dshibernatederived</b>: This example illustrates the use of "hibernate" datasources with 'autoDeriveSchema' to inherit fields from a Hibernate mapping or bean</li>
-//   <li><b>archetype-smartgwt-example-dsjpa</b>: Illustrates the use of JPA DataSources</li>
-//   <li><b>archetype-smartgwt-example-gae</b>: Illustrates an approach to running a SmartGWT application on the Google App Engine standard environment using SQL DataSources</li>
-//   <li><b>archetype-smartgwt-example-gaedatastore</b>: Illustrates an approach to running a SmartGWT application on the Google App Engine standard environment using Google Cloud Datastore as a _limited_ JPA DataSource</li>
-//   <li><b>archetype-smartgwt-example-gaejpa</b>: Illustrates an approach to running a SmartGWT application on the Google App Engine standard environment using JPA DataSources</li>
-//   <li><b>archetype-smartgwt-example-manualhibernate</b>: Illustrates setting up a DataSource that accesses your servlet controller, using Hibernate to process the requests manually via a Spring MVC Controller class (not recommended)</li>
-//   <li><b>archetype-smartgwt-example-restserver</b>: Illustrates use of the SmartClient RESTHandler servlet to easily provide data access to clients other than SmartClient / SmartGWT (mobile, Swing, native, etc).</li>
-//   <li><b>archetype-smartgwt-example-spring-hibernate3-dmi</b>: Illustrates a DataSource accessing a Spring bean using Direct Method Invocation (DMI), which then services the request manually via Hibernate.</li>
+//   <li><b>archetype-smartgwt-example-builtinds</b>:
+//       Illustrates how a single databound component can be used (and re-used) with many
+//       datasources
+//   </li>
+//   <li><b>archetype-smartgwt-example-customds</b>:
+//       Illustrates setting up a DataSource accessing a servlet front controller (for example
+//       Struts or Spring MVC controller) for the various DataSource operations
+//   </li>
+//   <li><b>archetype-smartgwt-example-dsdmi</b>:
+//       llustrates setting up a DataSource that calls methods on your configured server bean
+//       in response to DataSource operations (fetch, add, update, remove)
+//   </li>
+//   <li><b>archetype-smartgwt-example-dshibernate</b>:
+//       llustrates the use of "hibernate" datasources in 'beanless mode'
+//   </li>
+//   <li><b>archetype-smartgwt-example-dshibernatederived</b>:
+//       This example illustrates the use of "hibernate" datasources with 'autoDeriveSchema'
+//       to inherit fields from a Hibernate mapping or bean
+//   </li>
+//   <li><b>archetype-smartgwt-example-dsjpa</b>:
+//       llustrates the use of JPA DataSources
+//   </li>
+//   <li><b>archetype-smartgwt-example-gae</b>:
+//       llustrates an approach to running a SmartGWT application on the Google App Engine
+//       standard environment using SQL DataSources
+//   </li>
+//   <li><b>archetype-smartgwt-example-gaedatastore</b>:
+//       llustrates an approach to running a SmartGWT application on the Google App Engine
+//       standard environment using Google Cloud Datastore as a _limited_ JPA DataSource
+//   </li>
+//   <li><b>archetype-smartgwt-example-gaejpa</b>:
+//       llustrates an approach to running a SmartGWT application on the Google App Engine
+//       standard environment using JPA DataSources
+//   </li>
+//   <li><b>archetype-smartgwt-example-manualhibernate</b>:
+//       llustrates setting up a DataSource that accesses your servlet controller, using
+//       Hibernate to process the requests manually via a Spring MVC Controller class
+//       (not recommended)
+//   </li>
+//   <li><b>archetype-smartgwt-example-restserver</b>:
+//       llustrates use of the SmartClient +link{group:servletDetails,RESTHandler servlet} to
+//       easily provide data access to clients other than SmartClient / SmartGWT (mobile,
+//       Swing, native, etc).
+//   </li>
+//   <li><b>archetype-smartgwt-example-spring-hibernate3-dmi</b>:
+//       llustrates a DataSource accessing a Spring bean using Direct Method Invocation (DMI),
+//       which then services the request manually via Hibernate.
+//   </li>
 // </ul>
 //
 // </smartgwt>
+// <smartclient>
+// <p/>
+// Following execution of the plugin's install or deploy goal, your Maven repository will
+// include a handful of archetypes meant to jump start development with the SmartClient
+// framework.  Most users will want to start new projects with either the
+// <b>archetype-smartclient-quickstart</b> or
+// <b>archetype-smartclient-quickstart-unprotected</b> archetypes.  To generate a new project
+// based on the former:
+//
+// <ol>
+// <li><a href="https://maven.apache.org/install.html">Install Maven</a>, if necessary.</li>
+//
+// <li>Install SmartClient, if necessary.
+// <pre>
+// mvn com.isomorphic:isc-maven-plugin:1.4.0-SNAPSHOT:install \
+//    -Dproduct=SMARTCLIENT -Dlicense=EVAL -DbuildNumber=12.1d
+// </pre>
+// </li>
+//
+// <li>
+// Generate a project (using LATEST as below, or the version installed for you in step 2)
+// <pre>
+//  mvn archetype:generate \
+//    -DartifactId=my-application -Dmodule=MyApplication \
+//    -DgroupId=com.example -Dpackage=com.example.myapplication \
+//    -DarchetypeGroupId=com.isomorphic.archetype \
+//    -DarchetypeArtifactId=archetype-smartclient-quickstart \
+//    -DarchetypeVersion=LATEST -DinteractiveMode=false
+// </pre>
+// </li>
+// </ol>
+//
+// and refer to the README in the new 'my-application' directory for further instructions
+// around usage in Maven, Ant, and Eclipse environments.
+// <p/>
+// To generate a project from any of the following archetypes, provide its artifactId to the
+// above command's archetypeArtifactId parameter:
+// <p/>
+// <ul>
+//   <li><b>archetype-smartclient-quickstart-unprotected</b>:
+//       The recommended approach for most applications, using data access / databinding with
+//       "sql" datasources
+//   </li>
+//   <li><b>archetype-smartclient-quickstart-reify</b>:
+//       Like archetype-smartclient-quickstart-unprotected, but includes integration with
+//       <a target="_blank" href="https://www.reify.com" >Reify</a>
+//   </li>
+//   <li><b>archetype-smartclient-quickstart</b>:
+//       Like archetype-smartclient-quickstart-unprotected, but includes integration with
+//       Spring Security
+//   </li>
+// </ul>
+//
+// </smartclient>
 //
 // @treeLocation Concepts/Deploying SmartClient
 // @title Maven Support
@@ -5197,11 +5339,13 @@ isc.defineClass("DataSource");
 //<
 
 //> @groupDef javaModuleDependencies
-// +link{group:mavenSupport,Maven} users should generally refer to the POMs bundled with the SDK, and installed for them by the official
-// +externalLink{http://github.smartclient.com/isc-maven-plugin/,Isomorphic plugin for Maven}. For others,
-// the following is a short description of the functionality contained in each SmartClient server JAR,
-// and a link to the documentation listing its dependencies.  Please refer to that documentation for more detail on the dependency
-// graph, including version numbers, transitive dependencies, and licensing.
+// +link{group:mavenSupport,Maven} users should generally refer to the POMs bundled with the
+// SDK, and installed for them by the official
+// +externalLink{http://github.smartclient.com/isc-maven-plugin/,Isomorphic plugin for Maven}.
+// For others,  the following is a short description of the functionality contained in each
+// SmartClient server JAR, and a link to the documentation listing its dependencies.  Please
+// refer to that documentation for more detail on the dependency graph, including version
+// numbers, transitive dependencies, and licensing.
 // <P>
 // Note that if you are using GWT, GWT itself also has an Apache 2.0 license, however tools and
 // test environments that you may use during development have different license (such as
@@ -5225,97 +5369,160 @@ isc.defineClass("DataSource");
 //
 // <table width="100%" >
 //   <tr>
-//     <td class="jmd-module"><a target="_blank" href="./mavendoc/isomorphic-core-rpc.html">isomorphic_core_rpc</a></td>
+//     <td class="jmd-module">
+//       <a target="_blank" href="./mavendoc/isomorphic-core-rpc.html">isomorphic_core_rpc</a>
+//     </td>
 //     <td>
 //       This is the core SmartClient module.  It provides the RPC, DMI, and DataSource
-//   support. Please note that both commons-collections-3.x and commons-collections4-4.x are
-//   required and safe to include side by side in the CLASSPATH (different third party libs
-//   rely on one or the other).
+//       support. Please note that both commons-collections-3.x and commons-collections4-4.x
+//       are required and safe to include side by side in the CLASSPATH (different third party
+//       libs rely on one or the other).  The same is true of commons-lang and commons-lang3.
 //       <div class="jmd-optional">
-//       Optional Dependencies
+//         Optional Dependencies
 //       </div>
 //       <ul>
-//         <li><i>isomorphic_js_parser</i> - if you're using the built-in support for REST via the RESTHandler servlet with JSON payloads
-//         <li><i>xercesImpl</i> - if you're using JDK &lt; 1.5
-//         <li><i>mail</i> - if you plan to use the Mail messaging feature
-//         <li><i>javax.persistence</i> - if you plan to use the metadata-from-annotations feature.  Note that if you are using JPA, or a recent version of Hibernate, then you are probably already using this library.
-//         <li><i>poi </i> -if you plan to export datasets in Microsoft Excel 97 (xls) or 2007 (xlsx) formats.
-//         <li><i>poi-ooxml</i> - also needed if you plan to export data in Excel 2007 (xlsx) format
-//         <li><i>isomorphic_contentexport</i> - if you plan to export to PDF format
-//         <li><i>isomorphic_jpa</i> - if you plan to use BatchDS Generator (even if you are not using JPA, although the generated DataSources will not require JPA at runtime if you are not using JPA).
-//         <li><i>log4j</i> - if you plan to use log4j logging (used by default)
-//         <li><i>slf4j-log4j12</i> - if you plan to use slf4j with log4j (for example), or any other slf4j bridge library depending on which logging framework will be used.  See +link{group:serverLogging} for information on server-side logging and how to configure it.
-//         <li><i>groovy</i> -if you plan to use Groovy with the +link{group:serverScript} feature.  Note, we also recommend that you use Groovy as the evaluation engine if you intend to use Java as an inline scripting language.  See the "Server Scripting" documentation.
-//         <li><i>commons-digester and commons-beanutils</i> - if you plan to use Velocity Tools.
+//         <li><i>isomorphic_js_parser</i>
+//              - if you're using the built-in support for REST via the
+//                +link{group:servletDetails,RESTHandler servlet} servlet with JSON payloads
+//         <li><i>freemarker</i>
+//              - if you're using the +link{group:servletDetails,RESTHandler servlet} servlet
+//                to generate an +link{group:openapiSupport,OpenAPI specification}
+//         <li><i>xercesImpl</i>
+//              - if you're using JDK &lt; 1.5
+//         <li><i>mail</i>
+//              - if you plan to use the Mail messaging feature
+//         <li><i>javax.persistence</i>
+//              - if you plan to use the metadata-from-annotations feature.  Note that if you
+//                are using JPA, or a recent version of Hibernate, then you are probably
+//                already using this library.
+//         <li><i>poi </i>
+//              - if you plan to export datasets in Microsoft Excel 97 (xls) or 2007 (xlsx)
+//                formats.
+//         <li><i>poi-ooxml</i>
+//              - also needed if you plan to export data in Excel 2007 (xlsx) format
+//         <li><i>isomorphic_contentexport</i>
+//              - if you plan to export to PDF format
+//         <li><i>isomorphic_jpa</i>
+//              - if you plan to use BatchDS Generator (even if you are not using JPA,
+//                although the generated DataSources will not require JPA at runtime if you
+//                are not using JPA).
+//         <li><i>log4j</i>
+//              - if you plan to use log4j logging (used by default)
+//         <li><i>slf4j-log4j12</i>
+//              - if you plan to use slf4j with log4j (for example), or any other slf4j bridge
+//                library depending on which logging framework will be used.  See
+//                +link{group:serverLogging} for information on server-side logging and how to
+//                configure it.
+//         <li><i>groovy</i>
+//              - if you plan to use Groovy with the +link{group:serverScript} feature.
+//                Note, we also recommend that you use Groovy as the evaluation engine if you
+//                intend to use Java as an inline scripting language.
+//                See the "Server Scripting" documentation.
+//         <li><i>commons-digester and commons-beanutils</i>
+//              - if you plan to use Velocity Tools.
 //        </ul>
 //      </td>
 //   </tr>
 //   <tr>
-//     <td class="jmd-module"><a target="_blank" href="./mavendoc/isomorphic-contentexport.html">isomorphic_contentexport</a></td>
+//     <td class="jmd-module"><a target="_blank"
+//         href="./mavendoc/isomorphic-contentexport.html">isomorphic_contentexport</a>
+//     </td>
 //     <td>
 //       Provides support for PDF Export.
 //       <div class="jmd-optional">
 //       Optional Dependencies
 //       </div>
 //       <ul>
-//         <li><i>batik-anim, batik-awt-util, batik-bridge, batik-css, batik-dom, batik-ext, batik-gvt, batik-parser, batik-script, batik-svg-dom, batik-util, batik-xml</i> -
-//             <p/>
-//             These are all required to use +link{RPCManager.exportImage()}, or when using +link{RPCManager.exportContent()} to export a DrawPane or FacetChart only
-//             in IE8 or earlier, or if a DrawPane has a DrawImage which loads a cross-domain image.
-//             <p/>
-//             <b>NOTE:</b>
-//               Between iText 2.0.x and iText 2.1.x there is a binary (but not source) incompatibility that causes a server-side <code>NoSuchMethodError</code> when exporting, e.g., charts in Internet Explorer.
-//               This is a +externalLink{http://code.google.com/p/flying-saucer/issues/detail?id=126,known issue} with the Flying Saucer product that is fixed by using core-renderer-R8-isomorphic.jar and iText-2.1.7.jar in the
-//               lib-iTextAlternate/ directory instead of core-renderer.jar and iText-2.0.8.jar in the lib/ directory.
-//               To use iText 2.1.7 with the Server Framework, exclude lib/core-renderer.jar and lib/iText-2.0.x.jar from the application's classpath and instead add lib-iTextAlternate/core-renderer-R8-isomorphic.jar and lib-iTextAlternate/iText-2.1.7.jar.
+//       <li><i>batik-anim, batik-awt-util, batik-bridge, batik-css, batik-dom, batik-ext,
+//              batik-gvt, batik-parser, batik-script, batik-svg-dom, batik-util, batik-xml
+//           </i> -
+//           <p/>
+//           These are all required to use +link{RPCManager.exportImage()}, or when using
+//           +link{RPCManager.exportContent()} to export a DrawPane or FacetChart only
+//           in IE8 or earlier, or if a DrawPane has a DrawImage which loads a cross-domain
+//           image.
+//           <p/>
+//           <b>NOTE:</b>
+//           Between iText 2.0.x and iText 2.1.x there is a binary (but not source)
+//           incompatibility that causes a server-side <code>NoSuchMethodError</code>
+//           when exporting, e.g., charts in Internet Explorer. This is a
+//       +externalLink{http://code.google.com/p/flying-saucer/issues/detail?id=126,known issue}
+//           with the Flying Saucer product that is fixed by using
+//           core-renderer-R8-isomorphic.jar and iText-2.1.7.jar in the lib-iTextAlternate/
+//           directory instead of core-renderer.jar and iText-2.0.8.jar in the lib/ directory.
+//           To use iText 2.1.7 with the Server Framework, exclude lib/core-renderer.jar and
+//           lib/iText-2.0.x.jar from the application's classpath and instead add
+//           lib-iTextAlternate/core-renderer-R8-isomorphic.jar and
+//           lib-iTextAlternate/iText-2.1.7.jar.
 //       </ul>
 //     </td>
 // </tr>
 // <tr>
-//   <td class="jmd-module"><a target="_blank" href="./mavendoc/isomorphic-tools.html">isomorphic_tools</a></td>
+//   <td class="jmd-module">
+//      <a target="_blank" href="./mavendoc/isomorphic-tools.html">isomorphic_tools</a>
+//   </td>
 //   <td>
-//     Contains back-end logic for the "Admin Console" tool visible in the Developer Console, and also standalone from the SDK home page.
-//     Also contains the various data importers and exporters, and the server-side components of the BatchUploader.
+//     Contains back-end logic for the "Admin Console" tool visible in the Developer Console,
+//     and also standalone from the SDK home page.  Also contains the various data importers
+//     and exporters, and the server-side components of the BatchUploader.
 //   </td>
 // </tr>
 // <tr>
-//   <td class="jmd-module"><a target="_blank" href="./mavendoc/isomorphic-cdi.html">isomorphic_cdi</a></td>
+//   <td class="jmd-module">
+//     <a target="_blank" href="./mavendoc/isomorphic-cdi.html">isomorphic_cdi</a>
+//   </td>
 //   <td>
-//     Support for +link{group:dmiOverview,DMI} dispatches to Spring beans (via +link{serverObject.lookupStyle} : "cdi").
+//     Support for +link{group:dmiOverview,DMI} dispatches to Spring beans
+//     (via +link{serverObject.lookupStyle} : "cdi").
 //   </td>
 // </tr>
 // <tr>
-//   <td class="jmd-module"><a target="_blank" href="./mavendoc/isomorphic-spring.html">isomorphic_spring</a></td>
+//   <td class="jmd-module">
+//     <a target="_blank" href="./mavendoc/isomorphic-spring.html">isomorphic_spring</a>
+//   </td>
 //   <td>
-//     Support for +link{group:dmiOverview,DMI} dispatches to Spring beans (via +link{serverObject.lookupStyle} : "spring").
+//     Support for +link{group:dmiOverview,DMI} dispatches to Spring beans
+//     (via +link{serverObject.lookupStyle} : "spring").
 //   </td>
 // </tr>
 // <tr>
-//   <td class="jmd-module"><a target="_blank" href="./mavendoc/isomorphic-messaging.html">isomorphic_realtime_messaging</a></td>
+//   <td class="jmd-module"><a target="_blank" href="./mavendoc/isomorphic-messaging.html">
+//     isomorphic_realtime_messaging</a>
+//   </td>
 //   <td>
-//     Server support required for the SmartClient Realtime Messaging Module.  Install this if you're using this 'push' technology.  For more information, see +link{group:messaging,Messaging}.
+//     Server support required for the SmartClient Realtime Messaging Module.  Install this
+//     if you're using this 'push' technology.  For more information, see
+//     +link{group:messaging,Messaging}.
 //   </td>
 // </tr>
 // <tr>
-//   <td class="jmd-module"><a target="_blank" href="./mavendoc/isomorphic-hibernate.html">isomorphic_hibernate</a></td>
+//   <td class="jmd-module">
+//     <a target="_blank" href="./mavendoc/isomorphic-hibernate.html">isomorphic_hibernate</a>
+//   </td>
 //   <td>
-//     Contains support for Hibernate DataSources as described here: +link{group:hibernateIntegration}.
+//     Contains support for Hibernate DataSources as described here:
+//     +link{group:hibernateIntegration}.
 //   </td>
 // </tr>
 // <tr>
-//   <td class="jmd-module"><a target="_blank" href="./mavendoc/isomorphic-jpa.html">isomorphic_jpa</a></td>
+//   <td class="jmd-module">
+//     <a target="_blank" href="./mavendoc/isomorphic-jpa.html">isomorphic_jpa</a>
+//   </td>
 //   <td>
 //     Contains support for JPA DataSources as described +link{group:jpaIntegration,here}
 //   </td>
 // </tr>
 // <tr>
-//   <td class="jmd-module"><a target="_blank" href="./mavendoc/isomorphic-sql.html">isomorphic_sql</a></td>
+//   <td class="jmd-module">
+//     <a target="_blank" href="./mavendoc/isomorphic-sql.html">isomorphic_sql</a></td>
 //   <td>
 //     The SmartClient SQLDataSource.
 //   </td>
 // </tr>
 // <tr>
-//   <td class="jmd-module"><a target="_blank" href="./mavendoc/isomorphic-autotest.html">isomorphic_autotest</a></td>
+//   <td class="jmd-module">
+//     <a target="_blank" href="./mavendoc/isomorphic-autotest.html">isomorphic_autotest</a>
+//   </td>
 //   <td>
 //     Support for +link{group:automatedTesting,automated testing and Continuous Integration}
 //     <div class="jmd-optional">
@@ -5323,42 +5530,63 @@ isc.defineClass("DataSource");
 //     </div>
 //     <ul>
 //       <li><i>jna</i> - if testing with IE on Windows environments
-//       <li><i>servlet-api</i> - needed only if you intend to run TestRunner from a standalone process (ie, from a normal Java program, not a webapp).
-//         <p/>
-//         However, it should <u>not</u> be deployed to a servlet container such as Tomcat or Jetty.
-//         The best case is that the file will be unused and a source of confusion for anybody looking at the webapp's library usage;
-//         the worst case is that it will conflict with the container's own implementation of the Servlets API.
+//       <li><i>servlet-api</i> - needed only if you intend to run TestRunner from a standalone
+//            process (ie, from a normal Java program, not a webapp).
+//            <p/>
+//            However, it should <u>not</u> be deployed to a servlet container such as Tomcat
+//            or Jetty.  The best case is that the file will be unused and a source of
+//            confusion for anybody looking at the webapp's library usage; the worst case is
+//            that it will conflict with the container's own implementation of the Servlet API.
 //     </ul>
 //   </td>
 // </tr>
 // <tr>
-//   <td class="jmd-module"><a target="_blank" href="./mavendoc/isomorphic-js-parser.html">isomorphic_js_parser</a></td>
+//   <td class="jmd-module">
+//     <a target="_blank" href="./mavendoc/isomorphic-js-parser.html">isomorphic_js_parser</a>
+//   </td>
 //   <td>
-//     A parser capable of reading a JSON byte stream and creating an in-memory Java object structure to match.  Used by any mechanism that relies on JSON-style configuration.
-//     Examples include FileAssembly definitions in JSON format, any use of the rulesFile with a URIRegexFilter (Java Servlet) or subclass.
+//     A parser capable of reading a JSON byte stream and creating an in-memory Java object
+//     structure to match.  Used by any mechanism that relies on JSON-style configuration.
+//     Examples include FileAssembly definitions in JSON format, any use of the rulesFile with
+//     a URIRegexFilter (Java Servlet) or subclass.
 //   </td>
 // </tr>
 // <tr>
-//   <td class="jmd-module"><a target="_blank" href="./mavendoc/isomorphic-compression.html">isomorphic_compression</a></td>
+//   <td class="jmd-module"><a target="_blank" href="./mavendoc/isomorphic-compression.html">
+//     isomorphic_compression</a>
+//   </td>
 //   <td>
-//     This is a part of the Network Performance Module.  The isomorphic_compression module is required for dynamic and static compression of various assets delivered to the browser.
+//     This is a part of the Network Performance Module.  The isomorphic_compression module is
+//     required for dynamic and static compression of various assets delivered to the browser.
 //     For more information, see: +link{group:compression}.
 //   </td>
 // </tr>
 // <tr>
-//   <td class="jmd-module"><a target="_blank" href="./mavendoc/isomorphic-assembly.html">isomorphic_assembly</a></td>
+//   <td class="jmd-module"><a target="_blank" href="./mavendoc/isomorphic-assembly.html">
+//     isomorphic_assembly</a>
+//   </td>
 //   <td>
-//     This is part of the Network Performance Module.  The isomorphic_assembly module is required for file assembly and stripping.  For more information, see: +link{group:fileAssembly}.
+//     This is part of the Network Performance Module.  The isomorphic_assembly module is
+//     required for file assembly and stripping.  For more information, see:
+//     +link{group:fileAssembly}.
 //   </td>
 // </tr>
 // <tr>
-//   <td class="jmd-module"><a target="_blank" href="./mavendoc/isomorphic-struts.html">isomorphic_struts</a></td>
+//   <td class="jmd-module"><a target="_blank" href="./mavendoc/isomorphic-struts.html">
+//     isomorphic_struts</a>
+//   </td>
 //   <td>
-//     Contains the ValidationAction and ValidationFailureAction classes that implement RPC-based validation of DynamicForms using the Struts ValidatorPlugIn.
-//     If you're not using Struts or if you don't need this particular feature of SmartClient, you do not need this module or its dependencies (also see the important note  below).
-//     An example of this style of validation is available here:  +externalLink{/examples/struts/forms/welcome.do} - read the info on this page, and follow  the "Dynamic Form (With RPC-based Validation)" Link for the actual example.
+//     Contains the ValidationAction and ValidationFailureAction classes that implement
+//     RPC-based validation of DynamicForms using the Struts ValidatorPlugIn.
+//     If you're not using Struts or if you don't need this particular feature of SmartClient,
+//     you do not need this module or its dependencies (also see the important note  below).
+//     An example of this style of validation is available here:
+//     +externalLink{/examples/struts/forms/welcome.do} - read the info on this page, and
+//     follow  the "Dynamic Form (With RPC-based Validation)" Link for the actual example.
 //     <br><br>
-//     <b>NOTE:</b> This support is for Struts 1.0 only, and is only intended to be used in certain edge cases of incremental migration to SmartClient.  You should only use it if directed to do so by Isomorphic Support.
+//     <b>NOTE:</b> This support is for Struts 1.0 only, and is only intended to be used in
+//      certain edge cases of incremental migration to SmartClient.  You should only use it if
+//      directed to do so by Isomorphic Support.
 //   </td>
 // </tr>
 // </table>
@@ -5368,6 +5596,150 @@ isc.defineClass("DataSource");
 // @visibility external
 //<
 
+//> @groupDef npmjs
+// SmartClient client-side resources - the JavaScript runtime, skins, and schema - can be
+// installed and updated via +externalLink{https://www.npmjs.com,npmjs}.  Select the
+// appropriate package based on your licensing:<ul>
+// <li> +externalLink{https://www.npmjs.com/package/smartclient-lgpl,      smartclient-lgpl}
+// <li> +externalLink{https://www.npmjs.com/package/smartclient-eval,      smartclient-eval}
+// <li> +externalLink{https://www.npmjs.com/package/smartclient-pro,       smartclient-pro}
+// <li> +externalLink{https://www.npmjs.com/package/smartclient-power,     smartclient-power}
+// <li> +externalLink{https://www.npmjs.com/package/smartclient-enterprise,smartclient-enterprise}
+// </ul>
+// To install one these packages, use:
+// <pre>
+//   npm install &lt;package name&gt; [flags]</pre>
+// where the flags are as follows:<p>
+// <table border=1 class="normal">
+// <tr>
+// <td><b>location</b></td><td>string</td>
+// <td>A path specifying where to install the SmartClient runtime(s).  Default is to place the
+// runtime root directory (isomorphic) in the parent of the <code>node_modules</code> directory
+// containing the package.</td>
+// </tr><tr>
+// <td><b>branch</b></td><td>number</td>
+// <td>Desired branch (e.g. 11.1).  Default is the latest release.</td>
+// </tr><tr>
+// <td><b>date</b></td><td>string in the format YYYY-MM-DD | 'latest'</td>
+// <td>Desired date.  Default is 'latest'.</td>
+// </tr><tr>
+// <td><b>runtime</b></td><td>'release' | 'debug' | 'both'</td>
+// <td>Desired runtime(s) to install.  Default is 'both'.</td>
+// </tr><tr>
+// <td><b>skins</b></td><td>boolean</td>
+// <td>Whether to install all skins or not.  Default is to only install Tahoe.</td>
+// </tr><tr>
+// <td><b>username</b></td><td>string</td>
+// <td>The username for your +externalLink{https://www.smartclient.com,SmartClient account}.
+// Required for the +externalLink{https://www.npmjs.com/package/smartclient-pro,Pro},
+// +externalLink{https://www.npmjs.com/package/smartclient-power,Power}, and
+// +externalLink{https://www.npmjs.com/package/smartclient-enterprise,Enterprise} packages,
+// and available subject to your licensing.</td>
+// </tr><tr>
+// <td><b>password</b></td><td>string</td>
+// <td>The password for your +externalLink{https://www.smartclient.com,SmartClient account}.
+// Required for the +externalLink{https://www.npmjs.com/package/smartclient-pro,Pro},
+// +externalLink{https://www.npmjs.com/package/smartclient-power,Power}, and
+// +externalLink{https://www.npmjs.com/package/smartclient-enterprise,Enterprise} packages,
+// and available subject to your licensing.</td>
+// </tr><tr>
+// <td><b>analytics</b></td><td>boolean</td>
+// <td>Whether to install the optional +link{group:loadingOptionalModules,Analytics Module}.
+// Only available for the +externalLink{https://www.npmjs.com/package/smartclient-power,Power},
+// and +externalLink{https://www.npmjs.com/package/smartclient-enterprise,Enterprise} packages,
+// subject to your licensing.</td>
+// </tr><tr>
+// <td><b>rtm</b></td><td>boolean</td>
+// <td>Whether to install the optional
+// +link{group:loadingOptionalModules,RealtimeMessaging Module}.  Only available for the
+// for the +externalLink{https://www.npmjs.com/package/smartclient-power,Power}, and
+// +externalLink{https://www.npmjs.com/package/smartclient-enterprise,Enterprise} packages,
+// subject to your licensing.</td>
+// </tr><tr>
+// <td><b>yes</b></td><td>boolean</td>
+// <td>Assume answer 'yes' to prompts with default.  This allows the install or update process
+// to complete without interaction, to enable complete automation.</td>
+// </tr></table><p>
+// After installation, command-line configuration is persisted, so command-line arguments only
+// need to be supplied when updating if the desired configuration has changed. If a username and
+// password aren't supplied via the above options, you will be prompted to enter them by the
+// update script. A password typed in response to the script won't be persisted to your
+// configuration, so you may choose to always enter it interactively for security.
+// <h2>Updating</h2>
+// Since 'npm update' no longer runs a package's update script, which we need to download and
+// install the runtime(s) from our website, you must instead run the following from the
+// directory of your installed SmartClient package (e.g. smartclient-eval):
+// <pre>
+//      npm run update [flags]</pre>
+// The supported flags are the same as during installation.
+// <P>
+// <h2>Examples</h2>
+// New install, selecting a specific branch and date:
+// <pre>
+//   npm install smartclient-eval --branch=11.1 --date=2018-12-30</pre>
+// Update to latest nighlty build (run from package directory):
+// <pre>
+//   npm run update --date=latest</pre>
+// Update to SmartClient 12.0 branch, installing all skins:
+// <pre>
+//   npm run update --branch=12.0 --skins</pre>
+//
+// @treeLocation Concepts/Deploying SmartClient
+// @see group:iscInstall
+// @title NPMJS Support
+// @visibility external
+//<
+
+//> @groupDef openapiSupport
+//
+// When you expose your API using the +link{group:servletDetails,RESTHandler servlet}, the
+// SmartClient server can also generate
+// standardized documentation of your API in the form of an
+// +externalLink{https://github.com/OAI/OpenAPI-Specification,OpenAPI specification}.
+//
+// <h4>Usage</h4>
+// Configure the RESTHandler endpoint as usual (refer to server javadoc for details), and
+// submit a GET request there for the
+// <code>openapi.yaml</code> resource.  For example, if your servlet is configured to respond
+// to requests at /restapi
+//
+// <pre lang="xml">
+//   &lt;servlet-mapping&gt;
+//       &lt;servlet-name&gt;RESTHandler&lt;/servlet-name&gt;
+//       &lt;url-pattern&gt;/restapi/&lt;/url-pattern&gt;
+//   &lt;/servlet-mapping&gt;
+// </pre>
+//
+// then a GET request to <code>/restapi/openapi.yaml</code> will yield the automatically
+// generated documentation, based on your application's DataSource (ds.xml) configurations.
+// A complete specification will normally require at least some content that cannot be derived,
+// so most users will at minimum want to replace default values for things like application
+// title, description, and version number attributes.
+//
+// <h4>Customization</h4>
+// A handful of +externalLink{https://freemarker.apache.org/,Freemarker} templates are bundled
+// with the server runtime, and can be found in the <code>com.isomorphic.openapi</code> package
+// of the isomorphic-core-rpc module.  Any of these templates may be overridden by placing a
+// copy in a location known to the RESTHandler servlet (again, refer to server javadoc).
+// <P>
+// More advanced customizations may need to override the openapi template, or in a very few
+// cases the datasource template itself, but most common use cases should be handled out of
+// the box.  The simplest forms of customization, such as those alluded to above, involve
+// providing largely static content to the following templates:
+//
+// <ul>
+//  <li>info (_info.yaml)</li>
+//  <li>servers (_servers.yaml)</li>
+//  <li>tags (_tags.ftl)</li>
+// </ul>
+//
+// As always, the <smartgwt>SmartGWT</smartgwt><smartclient>SmartClient</smartclient> forums
+// are an appropriate place to seek guidance in unusual circumstances.
+//
+// @title OpenAPI Specification (OAS) Support
+// @treeLocation Concepts
+// @visibility external
+//<
 
 //> @groupDef iscServer
 //
@@ -6649,16 +7021,12 @@ isc.defineClass("DataSource");
 // (this is not documented by Apache, but negative values are treated as the denominator in
 // determining a fraction of the pool size, so -2 means check half the connections, -3 means
 // check a third, etc)</td></tr>
-// <tr><td><code>sql.pool.maxConnLifetimeMillis</code></td><td>The maximum lifetime of a
-// connection.  After this time has expired, the connection will be discarded the next time it
-// is validated, borrowed or returned to the pool.  A value of zero or less means connections
-// have an infinite lifetime.  Defaults to -1</td></tr>
 // </table>
 // <p>
 // In addition to the <code>sql.pool</code> configuration subtree, you can specify per-database
 // configuration by adding the +link{dataSource.dbName,dbName} to the property, like so:<pre>
 //     sql.mydatabase.pool.enabled: true
-//     sql.mydatabase.pool.maxConnLifetimeMillis: 86400000
+//     sql.mydatabase.pool.numTestsPerEvictionRun: 10
 //     # etc...
 // </pre>
 // There is also a configuration property outside the <code>sql.pool</code> and
@@ -7011,10 +7379,10 @@ isc.defineClass("DataSource");
 // <tr><td></td><td><i>Firebird 2.5.x</i></td><td></td></tr>
 // <tr><td></td><td><i>Informix 11.5+, 12.1</i></td><td></td></tr>
 // <tr><td></td><td><i>MS SQL Server 2000, 2005, 2008, 2008 R2, 2012, 2014, 2016, 2017</i></td><td></td></tr>
-// <tr><td></td><td><i>MySQL 3.2.x, 4.0.x, 4.1.x, 5.0.x, 5.1.x, 5.5.x, 5.6.x, 5.7.x</i></td><td></td></tr>
+// <tr><td></td><td><i>MySQL 3.2.x, 4.0.x, 4.1.x, 5.0.x, 5.1.x, 5.5.x, 5.6.x, 5.7.x, 8.x</i></td><td></td></tr>
 // <tr><td></td><td><i>MariaDB 5.x, 10.x</i></td><td></td></tr>
 // <tr><td></td><td><i>Oracle 8.0.5, 8i, 9i, 10g, 11g, 12c, 18c</i></td><td></td></tr>
-// <tr><td></td><td><i>PostgreSQL 7.x, 8.x, 9.x, 10.x</i></td><td></td></tr>
+// <tr><td></td><td><i>PostgreSQL 7.x, 8.x, 9.x, 10.x, 11.x</i></td><td></td></tr>
 // </table>
 // <p>We also support a generic SQL92 database connection which works for basic CRUD operations
 // with any database product that supports standard SQL92 syntax and data types, plus a couple
@@ -8533,7 +8901,10 @@ isc.DataSource.addClassMethods({
     // logged and the callback is fired immediately.
     // <P>
     // To force reloading of DataSources that have already been loaded,
-    // pass <code>true</code> for the forceReload parameter.
+    // pass <code>true</code> for the forceReload parameter. Note that if a DataSource has been
+    // created locally with the specified ID, even if this is a +link{MockDataSource}, the
+    // <code>forceReload</code> parameter will be required to force the "real" dataSource
+    // to be loaded.
     //
     // @param dsID (String | Array of String) DataSource ID or Array of DataSource IDs
     // @param callback (Function) Callback to fire after DataSource loading completes
@@ -8859,6 +9230,13 @@ isc.DataSource.addClassMethods({
     // @visibility external
     //<
     requiredFileMessage: "'${uploadedFileName}' was empty, but empty files are not allowed.",
+
+    //> @classAttr DataSource.requiredCriterionMessage (HTMLString : "Operation requires criteria for the following field(s): [${requiredCriterion}]" : IRW)
+    // A message returned by a <code>DataSource</code> when an operation requires criteria, but none was provided.
+    // @group i18nMessages
+    // @visibility external
+    //<
+    requiredCriterionMessage: "Operation requires criteria for the following field(s): [${requiredCriterion}]",
 
 
     getPathValue : function (record, fieldPath, field, reason) {
@@ -11144,6 +11522,7 @@ firstGeneratedSequenceValue: 0,
     // <li>Microsoft SQL Server</li>
     // <li>MySQL (you must use InnoDB tables; the default MyISAM storage engine does not
     // support transactions)</li>
+    // <li>MariaDB</li>
     // <li>Oracle</li>
     // <li>PostgreSQL</li>
     // </ul>
@@ -12552,6 +12931,7 @@ firstGeneratedSequenceValue: 0,
 // <tr><td>Informix</td><td>255 / 32739</td><td>LVARCHAR / TEXT ** </td></tr>
 // <tr><td> Microsoft SQL Server </td><td>8000</td><td>TEXT</td></tr>
 // <tr><td>MySQL</td><td> 255 / 65535 / 16M </td><td> TEXT / MEDIUMTEXT / LONGTEXT *** </td></tr>
+// <tr><td>MariaDB</td><td> 255 / 65535 / 16M </td><td> TEXT / MEDIUMTEXT / LONGTEXT *** </td></tr>
 // <tr><td>Oracle</td><td>4000</td><td>CLOB</td></tr>
 // <tr><td>PostgreSQL</td><td>4000</td><td>TEXT</td></tr>
 // </table><br>
@@ -13881,8 +14261,8 @@ firstGeneratedSequenceValue: 0,
 // replicate the client-side filtering behavior for multiple:true fields, where possible.
 // The following operators are supported with the same behavior as client-side filtering:
 // <ul>
-// <li> all String-oriented operators including +link{group:patternOperators,pattern operators},
-//  but not regexp/iRegexp
+// <li> all String-oriented operators including +link{group:patternOperators,pattern operators}
+// <li> regexp / iRegexp (built-in SQL only, JPA and Hibernate do not support these)
 // <li> isBlank / notBlank
 // <li> isNull / notNull
 // <li> inSet / notInSet
@@ -14046,6 +14426,32 @@ firstGeneratedSequenceValue: 0,
 // on field name).
 //
 // @serverDS allowed
+// @visibility batchUploader
+//<
+
+//> @attr dataSourceField.batchUploadOperationId (String : null : IR)
+// Used to look up key values for fields with +link{dataSourceField.importStrategy,importStrategy.display}
+// while importing data using +link{BatchUploader} or <code>DataImport</code> server-side API.
+// <p>
+// Normally key values are looked up performing "fetch" operation on related data source, but
+// setting <code>batchUploadOperationId</code> allows to control which operation will be performed.
+// This can be useful to avoid unnecessary load when importing big data sets, if default "fetch"
+// operation is too heavy.
+// <p>
+// By default the look up is not case sensitive but this can be controlled through the
+// +link{attr:dataSourceField.batchUploadCaseSensitive,batchUploadCaseSensitive} attribute.
+//
+// @serverDS only
+// @visibility batchUploader
+//<
+
+//> @attr dataSourceField.batchUploadCaseSensitive (Boolean : false : IR)
+// Applies to the "fetch" operation that is used to look up key values for fields with
+// +link{dataSourceField.importStrategy,importStrategy.display} while importing data using
+// +link{BatchUploader} or <code>DataImport</code> server-side API. Controls whether look up
+// for key values is case sensitive or not. Default value is "false".
+//
+// @serverDS only
 // @visibility batchUploader
 //<
 
@@ -15032,6 +15438,7 @@ firstGeneratedSequenceValue: 0,
 // details of these APIs.  The actual data transformation is carried out by the
 // server-side API <code>DataSource.transformImportValue()</code>; this method can
 // be overridden to carry out any other transformation you may require.
+// @see dataSourceField.batchUploadOperationId
 // @serverDS only
 // @visibility external
 //<
@@ -15147,6 +15554,7 @@ firstGeneratedSequenceValue: 0,
 // <li>Oracle 10g</li>
 // <li>Microsoft SQL Server 2008</li>
 // <li>MySQL 5.6</li>
+// <li>MariaDB 5.3</li>
 // <li>PostgreSQL 9.1</li>
 // <li>HSQLDB 2.2</li>
 // <li>DB2 for Unix/Linux 9.7</li>
@@ -15861,8 +16269,8 @@ firstGeneratedSequenceValue: 0,
 // <tr><td>mm     </td><td>Minute in hour with leading zero if required          </td><td>"00" to "59"</td></tr>
 // <tr><td>s      </td><td>Second in minute                                      </td><td>"0"  to "59"</td></tr>
 // <tr><td>ss     </td><td>Second in minute with leading zero if required        </td><td>"00" to "59"</td></tr>
-// <tr><td>S      </td><td>Millisecond in minute                                 </td><td>"0"  to "999"</td></tr>
-// <tr><td>SSS    </td><td>Millisecond in minute with leading zero(s) if required</td><td>"000" to "999"</td></tr>
+// <tr><td>S      </td><td>Millisecond in second                                 </td><td>"0"  to "999"</td></tr>
+// <tr><td>SSS    </td><td>Millisecond in second with leading zero(s) if required</td><td>"000" to "999"</td></tr>
 // <tr><td>a      </td><td>The AM/PM designator (+link{Time.AMIndicator})        </td><td>" am" or " pm"</td></tr>
 // </table>
 // <p>
@@ -16558,6 +16966,28 @@ isc.DataSource.addMethods({
         var existingDS = isc.DS.get(this.ID);
         if (existingDS && existingDS.builtinSchema) return existingDS;
 
+
+
+        // If a new DataSource is overwriting a "mock" dataSource, log at the info
+        // level rather than the warning level
+        var suppressIDRegistration = false;
+        if (isc.MockDataSource && isc.isA.MockDataSource(existingDS)) {
+            this.logInfo("Replacing MockDataSource " + this.ID + " with new DataSource");
+            existingDS.destroy();
+
+        // If a mock datasource is created with the ID of an existing dataSource, we
+        // want to hang onto the existing DS -- the ID (in global scope, or if
+        // passed to DataSource.get()) should return the previously created DS.
+
+        } else if (existingDS && (isc.MockDataSource && isc.isA.MockDataSource(this))) {
+            suppressIDRegistration = true;
+            this.logInfo("MockDataSource created with ID:" + this.ID +
+                " collides with ID of existing DataSource. " +
+                " The existing Datasource will be retained and the MockDataSource " +
+                "will not be available by ID."
+            );
+        }
+
         // make the DataSource a global variable if set to do so, and it doesn't belong to a
         // particular namespace
         // NOTE: when becoming global, only clobber other DataSources, never a Class or any
@@ -16566,9 +16996,13 @@ isc.DataSource.addMethods({
         // because the DataSource classObject and subclasses will return true when
         // isA.DataSource() is applied to them.
         var existingValue = window[this.ID];
-        if (this.addGlobalId && this.addGlobalId != isc._false &&
+
+        if (!suppressIDRegistration && this.addGlobalId && this.addGlobalId != isc._false &&
             (!existingValue ||
-                (!isc.isA.ClassObject(existingValue) && isc.isA.DataSource(existingValue))))
+                (!isc.isA.ClassObject(existingValue) &&
+                 isc.isA.DataSource(existingValue))
+            )
+           )
         {
             isc.ClassFactory.addGlobalID(this);
         }
@@ -16638,22 +17072,9 @@ isc.DataSource.addMethods({
         if (this.dataSourceType == isc.DataSource.VIEW) this.initViewSources();
 
         // register globally
-        isc.DataSource.registerDataSource(this);
+        if (!suppressIDRegistration) isc.DataSource.registerDataSource(this);
 
-        if (this.realtimeUpdates) {
-            if (isc.Messaging) {
-                if (!isc.Messaging.getSubscribedChannels().contains("ISC_DataSourceDataChanged")) {
-                    this.logWarn("registering for realtime datasource updates");
-                    isc.Messaging.subscribe("ISC_DataSourceDataChanged", isc.DataSource.onRealtimeUpdate);
-                }
-            } else {
-                if (isc.hasOptionalModule("RealtimeMessaging")) {
-                    this.logWarn("realtimeUpdates require RealtimeMessaging");
-                } else {
-                    this.logWarn("Please load the RealtimeMessaging module to use realtimeUpdates");
-                }
-            }
-        }
+        if (this.realtimeUpdates) this.setRealtimeUpdates(this.realtimeUpdates);
     },
 
     _prettyField : function (field) {
@@ -16722,6 +17143,24 @@ isc.DataSource.addMethods({
         return resultTreeClass.create(params, {_autoCreated: true});
     },
 
+    //> @method DataSource.dataChanged()
+    // Notification method fired when a DataSource operation such as an
+    // +link{DataSource.addData(),add}, +link{DataSource.removeData(),remove} or
+    // +link{DataSource.updateData(),update} modifies the underlying data for a DataSource.
+    // <P>
+    // This method is used by +link{ResultSet}s to keep the user-visible data up to date as
+    // changes are made.
+    // <smartclient>
+    // <P>
+    // Note: rather than overriding this method, we recommend using
+    // +link{isc.Class.observe(),observation} to be notified when it is fired.
+    // </smartclient>
+    //
+    // @param dsResponse (DSResponse) response from the operation that modified the underlying
+    //   data set
+    // @param dsRequest (DSRequest) request that initiated the data change
+    // @visibility external
+    //<
     // Observable dataChanged methods.
     // ResultSets associated with this dataSource will observe these methods and use them
     // to handle cache-sync
@@ -17522,20 +17961,29 @@ isc.DataSource.addMethods({
     // implicitly show only the subset of records created by the current user.  See
     // +link{dataBoundComponent.implicitCriteria} and +link{resultSet.implicitCriteria} for
     // more on these localized options.
+    // <P>
+    // Note that, while <code>implicitCriteria</code> can be declared in a server DataSource
+    // file using +link{group:componentXML, Component XML}, it is an entirely client-side
+    // feature, added by client-side components.  So it does not affect server-side requests,
+    // and will not be added to client-side requests that don't come from a SmartClient UI
+    // (eg RestHandler).
+    // @serverDS allowed
     // @visibility external
     //<
 
     _getCombinedImplicitCriteria : function (request) {
         // combine any implicitCriteria specified on the DBC and the RS
         var rs = request.resultSet || request.resultTree,
-            implicitCriteria = request.dbcImplicitCriteria
+            implicitCriteria = isc.DataSource.copyCriteria(request.dbcImplicitCriteria)
         ;
         if (!implicitCriteria && rs && rs.getImplicitCriteria) {
             implicitCriteria = rs.getImplicitCriteria();
         }
         if (this.implicitCriteria) {
             // combine the implicitCriteria from DBC/RS with that from the DS
-            implicitCriteria = isc.DS.combineCriteria(implicitCriteria, this.implicitCriteria);
+            implicitCriteria = isc.DS.combineCriteria(implicitCriteria,
+                isc.DataSource.copyCriteria(this.implicitCriteria)
+            );
         }
         if (implicitCriteria) implicitCriteria = isc.DS.compressNestedCriteria(implicitCriteria);
         return implicitCriteria;
@@ -19112,6 +19560,18 @@ rawData=rpcResponse.results;
             spoofData = flags && flags.spoofData,
             indent = indent || "";
 
+        if (!flags.ignoreConstructor) {
+            var dataClassName;
+            if (value != null && (value._constructor || isc.isAn.Instance(value))) {
+                var dataClassName = isc.isAn.Instance(value) ? value.Class :
+                                    isc.DS.getNearestSchema(value._constructor);
+                if (isc.isAn.Object(dataClassName)) {
+                    dataClassName = dataClassName.type
+                }
+                if (!dataClassName && value._constructor) dataClassName = value._constructor;
+            }
+        }
+
         if (spoofData) value = this.getSpoofedData(field);
 
         if (this.logIsDebugEnabled("xmlSerialize")) {
@@ -19185,7 +19645,7 @@ rawData=rpcResponse.results;
             flags.parentSchemaNamespace = this.schemaNamespace;
             //if (field && field.xsElementRef) this.logWarn("looking up *element* only: " + fieldType);
 
-            var ds = this.getFieldDataSource(field, field && field.xsElementRef ? "element" : null);
+            var ds = (dataClassName ? this.getSchema(dataClassName) : this.getFieldDataSource(field, field && field.xsElementRef ? "element" : null));
             //this.logWarn("complexType field: " + fieldName +
             //             " with schema: " + ds +
             //             " has value: " + this.echo(value));
@@ -20077,7 +20537,9 @@ rawData=rpcResponse.results;
                                  + dsResponse.relatedUpdates[i].dataSource +
                                  ". This dataSource appears not to be present - ignoring related update.");
                 } else {
-                    ds.updateCaches(dsResponse.relatedUpdates[i], null);
+                    var relatedResponse = isc.addProperties({}, dsResponse.relatedUpdates[i]);
+                    relatedResponse.clientContext = dsResponse.clientContext
+                    ds.updateCaches(relatedResponse, null);
                 }
             }
         }
@@ -20714,6 +21176,18 @@ rawData=rpcResponse.results;
     exportData : function (criteria, requestProperties, callback, component) {
         var operationType = "fetch";
 
+        // catch clientOnly DS case - needs special handling
+        if (this.clientOnly) {
+
+            if (this.fromServer) {
+
+                this.logWarn("Translating exportData() call to exportClientData()");
+                return this.exportClientData(this.getCacheData(), requestProperties, callback);
+            }
+
+            operationType = "export";
+        }
+
         if (!requestProperties) requestProperties = {};
 
         requestProperties = isc.DataSource.dupRequest(requestProperties);
@@ -20839,7 +21313,10 @@ rawData=rpcResponse.results;
 
         if (this.implicitCriteria) {
             // apply DS-level implicitCriteria to the export fetch
-            criteria = isc.DS.combineCriteria(this.implicitCriteria, criteria);
+            criteria = isc.DS.combineCriteria(
+                isc.DataSource.copyCriteria(this.implicitCriteria),
+                criteria
+            );
         }
 
         if (requestProperties.downloadToNewWindow) {
@@ -21353,6 +21830,14 @@ rawData=rpcResponse.results;
     // @visibility external
     //<
 
+    //> @attr dataSource.streamLogging (boolean : false : IRW)
+    // Whether +link{getFile(),load} and +link{saveFile(),save} operations for this
+    // <code>DataSource</code> should be forwarded to the +link{ClickStream} module, where
+    // they'll be captured by all streams configured for "file events."
+    // @see ClickStream.captureDSFileEvents
+    //<
+
+
     //> @method dataSource.getFile()
     //
     // Gets the contents of a file stored in this DataSource.
@@ -21379,6 +21864,9 @@ rawData=rpcResponse.results;
 
         this.performDSOperation(
             "getFile", fileSpec, function (response, data, request) {
+                if (this.streamLogging) {
+                    isc.ClickStream.addDSFileEvent(this, response, isc.ClickStream.FILE_LOAD);
+                }
                 // If file not found, or other error, return null
                 if (response.status >= 0 && isc.isAn.Array(data) && data.length > 0) {
                     data = data[0].fileContents;
@@ -21430,6 +21918,25 @@ rawData=rpcResponse.results;
         });
     },
 
+
+    uniqueName : function (fileSpec, callback) {
+        if (isc.isA.String(fileSpec)) {
+            this.logWarn("Invalid fileSpec for uniqueName operation");
+            return;
+        }
+
+        this.performDSOperation("uniqueName", fileSpec, function (response, data, request) {
+            if (response.status >= 0) {
+                data = (isc.isAn.Array(data) && data.length > 0 ? data = data[0] : data);
+            } else {
+                data = null;
+            }
+            this.fireCallback(callback, "dsResponse,data,dsRequest", [response, data, request]);
+        }, {
+            willHandleError: true
+        });
+    },
+
     //> @method dataSource.listFiles()
     //
     // Get a list of files from the DataSource.  Note, if
@@ -21460,15 +21967,18 @@ rawData=rpcResponse.results;
     // @requiresModules SCServer
     // @visibility external
     //<
-    listFiles : function (criteria, callback) {
+    listFiles : function (criteria, callback, requestProperties) {
         if (!criteria) criteria = {};
 
-        this.performDSOperation("listFiles", criteria, function (response, data, request) {
-            if (response.status < 0) data = null;
-            this.fireCallback(callback, "dsResponse,data,dsRequest", [response, data, request]);
-        }, {
-            willHandleError: true
-        });
+        this.performDSOperation(
+            "listFiles", criteria, function (response, data, request) {
+                if (response.status < 0) data = null;
+                this.fireCallback(callback, "dsResponse,data,dsRequest", [response, data, request]);
+            },
+            isc.addProperties({
+                willHandleError: true
+            }, requestProperties)
+        );
     },
 
     //> @method dataSource.saveFile()
@@ -21505,6 +22015,9 @@ rawData=rpcResponse.results;
 
         this.performDSOperation(
             "saveFile", values, function (response, data, request) {
+                if (this.streamLogging) {
+                    isc.ClickStream.addDSFileEvent(this, response, isc.ClickStream.FILE_SAVE);
+                }
                 if (response.status < 0) data = null;
                 if (isc.isAn.Array(data)) data = data[0];
                 this.fireCallback(callback, "dsResponse,data,dsRequest", [response, data, request]);
@@ -21784,6 +22297,16 @@ rawData=rpcResponse.results;
         }, {
             willHandleError: true
         });
+    },
+
+    // helper to return the file version from a DataSource fileSpec
+    _getFileSpecFileVersion : function (fileSpec) {
+        if (!fileSpec) return;
+
+        if (isc.isA.String(fileSpec)) fileSpec = isc.DataSource.makeFileSpec(fileSpec);
+
+        return fileSpec[this.fileVersionField || this.fileLastModifiedField ||
+                        "fileLastModified"];
     },
 
     // -----------
@@ -22980,7 +23503,8 @@ rawData=rpcResponse.results;
 //> @attr dsResponse.startRow (number : null : R)
 // Starting row of returned server results, when using paged result fetching
 // <p>
-// Note that startRow and endRow are zero-based - the first record is row zero.
+// Note that startRow and endRow are zero-based, inclusive at the beginning and exclusive at
+// the end (like substring), so startRow: 0, endRow: 2 is a response containing two records.
 //
 // @group paging
 // @visibility external
@@ -22989,7 +23513,8 @@ rawData=rpcResponse.results;
 //> @attr dsResponse.endRow (number : null : R)
 // End row of returned server results, when using paged result fetching
 // <p>
-// Note that startRow and endRow are zero-based - the first record is row zero.
+// Note that startRow and endRow are zero-based, inclusive at the beginning and exclusive at
+// the end (like substring), so startRow: 0, endRow: 2 is a response containing two records.
 //
 // @group paging
 // @visibility external
@@ -23489,6 +24014,19 @@ rawData=rpcResponse.results;
 // @visibility external
 //<
 
+
+
+//> @attr dsRequest.linkDataFetchOperation (String : null : IR)
+// For a databound +link{Tree.isMultiLinkTree(),multi-link tree}, this is the
+// <code>operationId</code> to use for the separate fetch on the +link{ResultTree.linkDataSource}
+// that will be generated if +link{type:LinkDataFetchMode} is "separate".  This property
+// overrides the +link{ResultTree.linkDataFetchOperation,linkDataFetchOperation} property on
+// +link{class:ResultTree}, for this fetch only.
+// <p>
+// Ignored if this DSRequest is not a fetch against a multi-link tree.
+// @group multiLinkTree
+// @visibility external
+//<
 
 //> @attr dsRequest.dataProtocol (DSProtocol : null : [IRW])
 // +link{dataSource.dataProtocol,DataProtocol} for this particular request.
@@ -24699,6 +25237,16 @@ rawData=rpcResponse.results;
 // @visibility xmlBinding
 //<
 
+//> @attr operationBinding.requiredCriterion (String : null : IR)
+// A comma-separated list of field names that must be present in criteria / advancedCriteria provided by the caller.
+// Failure to provide any one of these will yield a +link{RPCResponse.STATUS_CRITERIA_REQUIRED_ERROR} from the server.
+//
+// @group clientDataIntegration
+// @serverDS allowed
+// @visibility xmlBinding
+// @example requiredCriterion
+//<
+
 //> @attr operationBinding.serverMethod (String : null : IR)
 //
 // The name of the method to invoke on the +link{ServerObject} for this operationBinding.
@@ -25130,7 +25678,7 @@ rawData=rpcResponse.results;
 // This is analogous to the result of a SQL query like:
 // <pre>
 //    SELECT
-//        max(order.orderData)
+//        max(order.orderDate)
 //        order.customerName
 //    FROM
 //        order
@@ -26512,8 +27060,8 @@ rawData=rpcResponse.results;
 
 //> @attr operationBinding.customValueFields (String | Array : null : [IR])
 // Indicates that the listed fields should be included in the default
-// +link{selectClause,selectClause} generated for this operationBinding, even if they are marked
-// +link{dataSourceField.customSQL,customSQL}="true".
+// +link{selectClause,selectClause} and +link{valuesClause,valuesClause} generated for this
+// operationBinding, even if they are marked +link{dataSourceField.customSQL,customSQL}="true".
 // <P>
 // You can specify this property as a comma-separated list (eg, "foo, bar, baz") or by just
 // repeating the &lt;customValueFields&gt; tag multiple times with one field each.
@@ -26773,6 +27321,9 @@ rawData=rpcResponse.results;
 // operations.  Therefore, the recommended pattern is to use a
 // +link{dataSource.performCustomOperation,custom operation} from the client to invoke a DMI on
 // the server which performs the multi-update operation via a second, server-side DSRequest.
+// <p>
+// In any case, it's normally a good idea to set +link{OperationBinding.requiredCriterion, requiredCriterion}
+// on the multi-update operation to ensure that the alternative criteria is present as expected.
 //
 // @see OperationBinding.providesMissingKeys
 // @see DataSource.defaultMultiUpdatePolicy
@@ -27139,6 +27690,19 @@ rawData=rpcResponse.results;
 // case, all the standard +link{group:velocitySupport,Velocity context variables} provided by
 // SmartClient Server are available to you.
 // <p>
+// Note, <code>dsRequestModifier</code> values are evaluated during +link{class:DSRequest}
+// setup, before the request's <code>execute()</code> method is called.  This means that
+// variables added to the Velocity context by calling <code>addToTemplateContext()</code>
+// from a +link{group:dmiOverview,DMI} method or
+// +link{dataSource.serverConstructor,custom DataSource implementation} will not be available.
+// In this case, you can either<ul>
+// <li>Apply the variable values directly to the <code>DSRequest</code>'s criteria and values
+// from your Java code.  See the server-side Javadoc for <code>DSRequest</code></li>
+// <li>Add your template variables to the <code>DSRequest</code>'s template context before
+// <code>dsRequestModifier</code> evaluation takes place, in a custom override of
+// +link{group:serverDataIntegration,the IDACall servlet}</li>
+// </ul>
+// <h3>masterId and responseData</h3>
 // There is also one additional Velocity context variable available in this specific case:
 // <b>$masterId</b>. If there is a +link{dataSourceField.foreignKey,foreignKey} from the
 // DataSource for the current operation to another DataSource for which an add or update
@@ -27622,9 +28186,10 @@ rawData=rpcResponse.results;
 // provide neither of these, your email will have no body; if you provide both, SmartClient will
 // ignore the file and just use the content directly provided.
 // <p>
-// <b>Mail server configuration</b><br>
-// The mail server to use for sending emails is configured in the +link{group:server_properties,server.properties}
-// file.  The following values can be provided:<p>
+// <b>Mail server configuration in server.properties</b><br>
+// <p>
+// Static mail server to use for sending emails can be configured in the
+// +link{group:server_properties,server.properties} file.  The following values can be provided:<p>
 // <code>mail.system.mail.smtp.host</code>: The name of the SMTP server to use; defaults
 // to "localhost"<br>
 // <code>mail.system.mail.smtp.port</code>: What port is the MTA listening on; defaults to 25<br>
@@ -27639,6 +28204,20 @@ rawData=rpcResponse.results;
 // SMTP providers require that you issue a STARTTLS command before authenticating; you can
 // achieve this by adding the following line to +link{group:server_properties,server.properties}:<p>
 // <code>mail.system.mail.smtp.starttls.enable: true</code>
+// <p>
+// <b>Mail server configuration in OperationBinding</b><br>
+// <p>
+// Dynamic mail server can be configured in +link{DataSource.operationBindings} under
+// +link{operationBinding.mail,&lt;mail&gt;} tag. This allows to alter mail server settings for different
+// operations and depending on data using +link{group:velocity,Velocity templates}. Same values
+// can be provided as in <code>server.properties</code> omitting "mail.system.mail.smtp" prefix,
+// i.e. "host", "port", "auth", "user" and "password".
+// <p>
+// Just like in <code>server.properties</code> any other properties can be provided and will be
+// passed through to the underlying Javamail <code>Session</code> object. Note that property
+// names must omit "mail.smtp" prefix, for example:<p>
+// <code>&lt;starttls.enable&gt;true&lt;/starttls.enable&gt;</code>
+//
 //
 // @treeLocation Client Reference/Data Binding/DataSource
 // @visibility external
@@ -27793,6 +28372,55 @@ rawData=rpcResponse.results;
 // @serverDS only
 // @visibility external
 //<
+
+//> @attr mail.host (VelocityExpression : null : IR)
+// Host of the SMTP server that will send the email.  Like all other <code>String</code>
+// properties of <code>Mail</code>, you can use Velocity substitution variables in this property.
+//
+// @group mail
+// @serverDS only
+// @visibility external
+//<
+
+//> @attr mail.port (VelocityExpression : null : IR)
+// Port of the SMTP server that will send the email.  Like all other <code>String</code>
+// properties of <code>Mail</code>, you can use Velocity substitution variables in this property.
+//
+// @group mail
+// @serverDS only
+// @visibility external
+//<
+
+//> @attr mail.auth (VelocityExpression : null : IR)
+// Defines whether authentication is required by SMTP server that will send the email. Like
+// all other <code>String</code> properties of <code>Mail</code>, you can use Velocity substitution
+// variables in this property.
+//
+// @group mail
+// @serverDS only
+// @visibility external
+//<
+
+//> @attr mail.user (VelocityExpression : null : IR)
+// User if authentication is required by SMTP server that will send the email. Like
+// all other <code>String</code> properties of <code>Mail</code>, you can use Velocity substitution
+// variables in this property.
+//
+// @group mail
+// @serverDS only
+// @visibility external
+//<
+
+//> @attr mail.password (VelocityExpression : null : IR)
+// Password if authentication is required by SMTP server that will send the email. Like
+// all other <code>String</code> properties of <code>Mail</code>, you can use Velocity substitution
+// variables in this property.
+//
+// @group mail
+// @serverDS only
+// @visibility external
+//<
+
 
 
 
@@ -28698,7 +29326,9 @@ rawData=rpcResponse.results;
     //              idField : [fieldName],
     //              childrenProperty: [fieldName],
     //              parentDS : [dataSource name]}
-    // XXX multi-field relations are not currently supported
+    //
+    // If multiple and parentDS are specified, the additional properties "parentidFields" and
+    // "idFields" will be included, to support multiple foreign key fields from that parentDS.
     //
     // If parentDS is not passed in it will be autodected from either the first foreignKey found on
     // this DS or the one specified via foreignKeyFieldName (second arg).
@@ -28708,12 +29338,19 @@ rawData=rpcResponse.results;
     // Note that a valid hierarchical dataSource should have either a foreignKey or
     // childrenProperty field (or both) specified as otherwise we won't be able to link
     // records as parents/children.
-    getTreeRelationship : function (parentDS, foreignKeyFieldName) {
+    getTreeRelationship : function (parentDS, foreignKeyFieldName, multiple) {
 
         // make sure we have DS instance
         if (isc.isA.String(parentDS)) parentDS = this.getSchema(parentDS);
 
 
+
+        // find multiple foreign key fields if requested
+        var foreignNames, targetNames;
+        if (multiple && parentDS) {
+            foreignNames = [];
+            targetNames = [];
+        }
 
         // if the name of the foreignKey wasn't passed in, autodetect it by looking for the first
         // field on this ds with a foreignKey pointing at the appropriate dataSource.
@@ -28727,8 +29364,10 @@ rawData=rpcResponse.results;
                     if (!parentDS ||
                         (parentDS.getID() == isc.DataSource.getForeignDSName(currentField, this)))
                     {
-                        foreignKeyFieldName = fieldName;
-                        break;
+                        if (!foreignKeyFieldName) foreignKeyFieldName = fieldName;
+                        // if we're not returning all the foreign key fields, bail out
+                        if (foreignNames) foreignNames.add(fieldName);
+                        else              break;
                     }
                 }
             }
@@ -28737,10 +29376,14 @@ rawData=rpcResponse.results;
         var targetField;
         // if there was no foreignKey property specified on any of the fields, find the first
         // exact field name match between the two datasources.
-        if ( foreignKeyFieldName == null && parentDS) {
-            foreignKeyFieldName = targetField = isc.getKeys(this.fields).intersect(isc.getKeys(parentDS.fields))[0];
-            this.logInfo("no foreign key declaration, guessing tree relationship " +
-                         "is on field name: " + foreignKeyFieldName + " which occurs in both DataSources");
+        if (foreignKeyFieldName == null && parentDS) {
+            foreignKeyFieldName = targetField =
+                isc.getKeys(this.fields).intersect(isc.getKeys(parentDS.fields))[0];
+            if (targetField) {
+                this.logInfo("no foreign key declaration, guessing tree relationship is on " +
+                    "field name: " + foreignKeyFieldName + " which occurs in both DataSources");
+                if (foreignNames) foreignNames[0] = targetNames[0] = targetField;
+            }
         }
 
         var field;
@@ -28764,15 +29407,32 @@ rawData=rpcResponse.results;
             }
         }
 
-        if (!targetField) targetField = field ? isc.DataSource.getForeignFieldName(field) : null;
+        if (!targetField) {
+            targetField = field ? isc.DataSource.getForeignFieldName(field) : null;
+            // map each foreign key field from foreignNames through getForeignFieldName()
+            if (foreignNames) for (var i = 0; i < foreignNames.length; i++) {
+                var field = fields[foreignNames[i]];
+                targetNames.add(field ? isc.DataSource.getForeignFieldName(field) : null);
+            }
+        }
 
         if (targetField == null) {
             // target field not specified; assume primary key.  Get the primary key of the
             // parent dataSource, limiting to one field
             var idField = parentDS.getPrimaryKeyFieldNames();
+
+
+            if (foreignNames) {
+                if (isc.isAn.Array(idField)) { // composite primary key
+                    if (idField.length == foreignNames.length) targetNames = idField.duplicate();
+                } else { // simple primary key
+                    if (foreignNames.length == 1) targetNames[0] = idField;
+                }
+            }
+
             if (isc.isAn.Array(idField)) {
                 //>DEBUG
-                if (idField.length > 1) {
+                if (idField.length > 1 && !foreignNames) {
                     this.logWarn("getTreeRelationship: dataSource '" + parentDS.ID +
                                  "' has multi-field primary key, which is not " +
                                  "supported for tree viewing.  Using field '" +
@@ -28831,6 +29491,14 @@ rawData=rpcResponse.results;
             relationship.idField = targetField;
         }
         if (childrenProperty) relationship.childrenProperty = childrenProperty;
+
+        // install all foreign key fields into the relationship, if requested
+        if (foreignNames) {
+            relationship.parentIdFields = foreignNames;
+            relationship.idFields = targetNames;
+
+
+        }
 
         // If both foreignKey field name and childrenProperty are null there's no way we can
         // serve up children meaningfully:
@@ -29636,6 +30304,13 @@ rawData=rpcResponse.results;
                     }
                 }
                 break;
+
+            case "export": // see exportData()
+                response.data = "Client-only DataSources do not support server-based export " +
+                                "(exportData()).  Use exportClientData() instead.";
+                response.status = -1;
+                break;
+
             case "validate":
             default:
                 break;
@@ -30105,6 +30780,13 @@ rawData=rpcResponse.results;
                 // Exception - if a dataPath is specified that leads to a nested field,
                 // allow filtering to proceed (we'll use the dataPath to extract the value from the
                 // record directly).
+                if (field == null && requestProperties
+                                  && requestProperties.allowFilterOnLinkFields
+                                  && requestProperties.linkDataSource)
+                {
+
+                    field = requestProperties.linkDataSource.getField(fieldName);
+                }
                 if (this.dropUnknownCriteria && !field) {
                     continue;
                 }
@@ -30378,6 +31060,7 @@ rawData=rpcResponse.results;
     // @see criteriaPolicy
     // @visibility external
     //<
+
     compareCriteria : function (newCriteria, oldCriteria, requestProperties, policy) {
         //>DEBUG
         if (this.logIsInfoEnabled()) {
@@ -30686,6 +31369,7 @@ rawData=rpcResponse.results;
             // consider null to be less than "1".  Work around this anomalous behavior.
             if (v1 == null && v2 != null) return 1;
             if (v1 != null && v2 == null) return -1;
+
             // NOTE: The special return value 2 means that we've been asked to compare two values
             // that are not equal but also are not sensibly "greater than" or "less than"
             // one another - for example "Blink" and 182.
@@ -31070,7 +31754,10 @@ rawData=rpcResponse.results;
 // @value "iEquals" exactly equal to, if case is disregarded
 // @value "iNotEqual" not equal to, if case is disregarded
 // @value "greaterThan" Greater than
-// @value "lessThan" Less than
+// @value "lessThan" Less than.  Note that <code>null</code> is treated
+//        as equivalent to an arbitrarily small value, so null field values will
+//        always be returned by <code>lessThan</code> / <code>lessOrEqual</code>
+//        filter operations by default.
 // @value "greaterOrEqual" Greater than or equal to
 // @value "lessOrEqual" Less than or equal to
 // @value "contains" Contains as sub-string (match case)
@@ -31383,10 +32070,6 @@ isc.DataSource.addClassMethods({
 
     onRealtimeUpdate : function (dataChangedRecord) {
         //!OBFUSCATEOK
-        // FIXME: resolve serialization issue on JMS - the record here should really be an object literal
-        if (isc.isA.String(dataChangedRecord)) {
-            dataChangedRecord = eval("var foo = "+dataChangedRecord+";foo;");
-        }
         var ds = isc.DS.get(dataChangedRecord.dataSourceName);
         if (!ds) return; // not a datasource we have loaded
 
@@ -31711,7 +32394,7 @@ isc.DataSource.addClassMethods({
         return aCriteria;
     },
 
-    getCriteriaOperator : function (value, textMatchStyle, defaultOperator) {
+    getCriteriaOperator : function (value, textMatchStyle, defaultOperator, strict) {
         var operator;
         if (isc.isA.Number(value) || isc.isA.Date(value) || isc.isA.Boolean(value)) {
             operator = "equals";
@@ -31724,9 +32407,10 @@ isc.DataSource.addClassMethods({
         } else if (textMatchStyle == "substring") {
             operator = "iContains";
         } else {
-            operator = defaultOperator || "iContains";
+            if (defaultOperator) return defaultOperator;
+            operator = "iContains";
         }
-        return operator;
+        return strict ? null : operator;
     },
 
     // When converting from a simple criteria to an AdvancedCriteria, how should we handle
@@ -31819,13 +32503,17 @@ isc.DataSource.addClassMethods({
         var advCrit1, advCrit2;
 
         // if either criteria is currently simple, upgrade it to advanced
-        if (subCriteria || criteria1._constructor == "AdvancedCriteria") {
+        if (subCriteria || criteria1._constructor == "AdvancedCriteria" ||
+            (criteria1.fieldName &&
+                criteria1.operator && isc.DS._operators[criteria1.operator])) {
             advCrit1 = criteria1;
         } else {
             advCrit1 = isc.DataSource.convertCriteria(criteria1, textMatchStyle);
         }
 
-        if (subCriteria || criteria2._constructor == "AdvancedCriteria") {
+        if (subCriteria || criteria2._constructor == "AdvancedCriteria" ||
+            (criteria2.fieldName &&
+                criteria2.operator && isc.DS._operators[criteria2.operator])) {
             advCrit2 = criteria2;
         } else {
             advCrit2 = isc.DataSource.convertCriteria(criteria2, textMatchStyle);
@@ -31959,6 +32647,7 @@ isc.DataSource.addClassMethods({
         if (isSubCrit && isc.DS.canFlattenCriteria(criteria)) {
             criteria = isc.DS.flattenCriteria(criteria);
         }
+
         var critArray = criteria.criteria;
         if (critArray) {
             critArray.removeEmpty();
@@ -32728,12 +33417,30 @@ isc.DataSource.addClassMethods({
 
 isc.DataSource.addMethods({
 
+    setRealtimeUpdates : function (realtimeUpdates) {
+        this.logDebug("Setting realtimeUpdates: "+realtimeUpdates);
+        this.realtimeUpdates = realtimeUpdates;
+        if (!realtimeUpdates) return;
+
+        if (isc.Messaging) {
+            if (!isc.Messaging.getSubscribedChannels().contains("ISC_DataSourceDataChanged")) {
+                this.logInfo("registering for realtime datasource updates");
+                isc.Messaging.subscribe("ISC_DataSourceDataChanged", isc.DataSource.onRealtimeUpdate);
+            }
+        } else {
+            if (isc.hasOptionalModule("RealtimeMessaging")) {
+                this.logWarn("realtimeUpdates require RealtimeMessaging");
+            } else {
+                this.logWarn("Please load the RealtimeMessaging module to use realtimeUpdates");
+            }
+        }
+    },
     onRealtimeUpdate : function (dataChangedRecord) {
         //!OBFUSCATEOK
         //this.logWarn("instance level realtimeUpdate: " + isc.echoFull(dataChangedRecord));
+        if (!this.realtimeUpdates) return;
 
-        // deserialize data - it's encoded in a string
-        var data = eval("var x = "+dataChangedRecord.data+";x;");
+        var data = dataChangedRecord.data;
 
         var dsResponse = {
             dataSource: this,
@@ -33024,12 +33731,15 @@ isc.DataSource.addMethods({
     // @group advancedFilter
     // @visibility external
     //<
-    getFieldDefaultOperator : function (field) {
+
+    getFieldDefaultOperator : function (field, strict) {
         if (isc.isA.String(field)) field = this.getField(field);
         if (!field) return null;
 
         // return dataSourceField.defaultOperator if it's set
         if (field && field.defaultOperator) return field.defaultOperator;
+        else if (strict)                    return null;
+
         // otherwise, return the default from the associated SimpleType
         var baseFieldType = isc.SimpleType.getType(field.type);
         var type = field.type || "text";
@@ -33335,7 +34045,6 @@ isc.DataSource.addMethods({
     //<
     evaluateCriterion : function (record, criterion) {
 
-
         if (criterion.requiresServer == true) return true;
 
         var op = this.getSearchOperator(criterion.operator);
@@ -33390,6 +34099,14 @@ isc.DataSource.addMethods({
                 if (field == null) {
                     ds = this.getDataSourceForDataPath(criterion.fieldName);
                     field = this.getFieldForDataPath(criterion.fieldName);
+                    if (field == null && this._evaluationContext
+                                      && this._evaluationContext.allowFilterOnLinkFields
+                                      && this._evaluationContext.linkDataSource)
+                    {
+
+                        ds = this._evaluationContext.linkDataSource;
+                        field = ds.getField(criterion.fieldName);
+                    }
                     if (ds == null) {
                         ds = this;
                     }
@@ -33536,6 +34253,7 @@ isc.DataSource.addMethods({
             recursiveCall = true;
         }
 
+        this._evaluationContext = requestProperties;
         for (var idx = startPos; idx < endPos; idx++) {
 
             // The AdvancedCriteria system makes this very easy - just call evaluateCriterion
@@ -33545,7 +34263,10 @@ isc.DataSource.addMethods({
                 matches.add(data[idx]);
             }
         }
-        if (!recursiveCall) this._endApplyingCriteriaToList();
+        if (!recursiveCall) {
+            delete this._evaluationContext;
+            this._endApplyingCriteriaToList();
+        }
 
         return matches;
     },
@@ -33772,7 +34493,6 @@ isc._initBuiltInOperators = function () {
     var rangeCheck = function (fieldName, fieldValue, criterionValues, dataSource, isDateField, nullMeansNull) {
         var start = criterionValues.start || criterionValues.value;
         var end = criterionValues.end || criterionValues.value;
-
         if (dataSource._strictMode) {
             if (fieldValue == null || (this.lowerBounds && start == null) ||
                 (this.upperBounds && end == null)) {
@@ -33847,6 +34567,7 @@ isc._initBuiltInOperators = function () {
         // >, >=, lower bounds check on between, betweenInclusive
         if (this.lowerBounds && lowerBoundsCheck) {
             if (dataSource.compareValues(start, fieldValue, fieldName, ignoreCase) <= (this.inclusive ? -1 : 0)) {
+
                 return false;
             }
         }
@@ -35362,7 +36083,9 @@ isc._initBuiltInOperators = function () {
         closingSymbol: ")",
         valueSeparator: "|",
         processValue : function (value, ds) {
-            return value.split(this.valueSeparator);
+            //isc.logWarn("inSet.processValue(" + isc.echo(value) + ")");
+            if (value == null) return null;
+            return ("" + value).split(this.valueSeparator);
         }
     },
     {
@@ -35376,7 +36099,9 @@ isc._initBuiltInOperators = function () {
         closingSymbol: ")",
         valueSeparator: "|",
         processValue : function (value, ds) {
-            return value.split(this.valueSeparator);
+            //isc.logWarn("notInSet.processValue(" + isc.echo(value) + ")");
+            if (value == null) return null;
+            return ("" + value).split(this.valueSeparator);
         }
     },
     {
@@ -35479,8 +36204,8 @@ isc._initBuiltInOperators = function () {
     },
     {
         ID: "startsWithField",
-        titleProperty: "iStartsWithTitleField",
-        textTitleProperty: "startsWithTitleField",
+        titleProperty: "iStartsWithFieldTitle",
+        textTitleProperty: "startsWithFieldTitle",
         startsWith: true,
         hidden:true,
         valueType: "fieldName",
@@ -35490,8 +36215,8 @@ isc._initBuiltInOperators = function () {
     },
     {
         ID: "endsWithField",
-        titleProperty: "iEndsWithTitleField",
-        textTitleProperty: "endsWithTitleField",
+        titleProperty: "iEndsWithFieldTitle",
+        textTitleProperty: "endsWithFieldTitle",
         endsWith: true,
         hidden:true,
         valueType: "fieldName",
@@ -35511,7 +36236,7 @@ isc._initBuiltInOperators = function () {
     },
     {
         ID: "iStartsWithField",
-        titleProperty: "iStartsWithTitleField",
+        titleProperty: "iStartsWithFieldTitle",
         startsWith: true,
         hidden:true,
         caseInsensitive:true,
@@ -35522,7 +36247,7 @@ isc._initBuiltInOperators = function () {
     },
     {
         ID: "iEndsWithField",
-        titleProperty: "iEndsWithTitleField",
+        titleProperty: "iEndsWithFieldTitle",
         endsWith: true,
         hidden:true,
         caseInsensitive:true,
@@ -35544,8 +36269,8 @@ isc._initBuiltInOperators = function () {
     },
     {
         ID: "notStartsWithField",
-        titleProperty: "iNotStartsWithTitleField",
-        textTitleProperty: "notStartsWithTitleField",
+        titleProperty: "iNotStartsWithFieldTitle",
+        textTitleProperty: "notStartsWithFieldTitle",
         startsWith: true,
         hidden:true,
         negate: true,
@@ -35556,8 +36281,8 @@ isc._initBuiltInOperators = function () {
     },
     {
         ID: "notEndsWithField",
-        titleProperty: "iNotEndsWithTitleField",
-        textTitleProperty: "notEndsWithTitleField",
+        titleProperty: "iNotEndsWithFieldTitle",
+        textTitleProperty: "notEndsWithFieldTitle",
         endsWith: true,
         hidden:true,
         negate: true,
@@ -35579,7 +36304,7 @@ isc._initBuiltInOperators = function () {
     },
     {
         ID: "iNotStartsWithField",
-        titleProperty: "iNotStartsWithTitleField",
+        titleProperty: "iNotStartsWithFieldTitle",
         startsWith: true,
         hidden:true,
         caseInsensitive:true,
@@ -35591,7 +36316,7 @@ isc._initBuiltInOperators = function () {
     },
     {
         ID: "iNotEndsWithField",
-        titleProperty: "iNotEndsWithTitleField",
+        titleProperty: "iNotEndsWithFieldTitle",
         endsWith: true,
         hidden:true,
         caseInsensitive:true,
@@ -35634,50 +36359,60 @@ isc._initBuiltInOperators = function () {
     }
 
     // Create default typeOperators
-    isc.DataSource.setTypeOperators(null, ["equals", "notEqual", "lessThan", "greaterThan",
-                                           "lessOrEqual", "greaterOrEqual", "between",
-                                           "betweenInclusive", "isBlank", "notBlank",
+    isc.DataSource.setTypeOperators(null, ["equals", "notEqual",
+                                           "equalsField", "notEqualField",
+                                           "isBlank", "notBlank",
+                                           "between", "betweenInclusive",
                                            // excluded by design so as not to confuse user with
                                            // both isBlank/notBlank and isNull/notNull
                                            "isNull", "notNull",
-                                           "equalsField", "notEqualField",
-                                           "greaterThanField", "lessThanField",
-                                           "greaterOrEqualField", "lessOrEqualField",
                                            "and", "or", "not"]);
 
     // these are in addition to the base operators
     isc.DataSource.setTypeOperators("text", ["regexp", "iregexp", "contains", "startsWith",
-                                               "endsWith", "iEquals", "iNotEqual",
-                                               "iBetween", "iBetweenInclusive",
-                                               "iContains", "iStartsWith", "iEndsWith",
-                                               "notContains", "notStartsWith", "notEndsWith",
-                                               "iNotContains", "iNotStartsWith", "iNotEndsWith",
-                                               "containsField", "startsWithField", "endsWithField",
-                                               "iEqualsField", "iNotEqualField",
-                                               "iContainsField", "iStartsWithField", "iEndsWithField",
-                                               "notContainsField", "notStartsWithField", "notEndsWithField",
-                                               "iNotContainsField", "iNotStartsWithField", "iNotEndsWithField",
-                                               "matchesPattern", "iMatchesPattern", "containsPattern", "iContainsPattern",
-                                               "inSet", "notInSet", "iStartsWithPattern"]);
-    isc.DataSource.setTypeOperators("integer", ["inSet", "notInSet"]);
-    /*
-                                               "iBetween","iBetweenInclusive","iEqualsField", "iNotEqualField",
-                                               "containsField", "startsWithField", "endsWithField",
-                                               "iContainsField", "iStartsWithField", "iEndsWithField",
-                                               "notContainsField", "notStartsWithField", "notEndsWithField",
-                                               "iNotContainsField", "iNotStartsWithField", "iNotEndsWithField",
-                                               "inSet", "notInSet"]);
-*/
-    isc.DataSource.setTypeOperators("float", ["inSet", "notInSet"]);
-/*
-    isc.DataSource.setTypeOperators("float", ["iBetween","iBetweenInclusive","iEqualsField", "iNotEqualField",
-                                               "containsField", "startsWithField", "endsWithField",
-                                               "iContainsField", "iStartsWithField", "iEndsWithField",
-                                               "notContainsField", "notStartsWithField", "notEndsWithField",
-                                               "iNotContainsField", "iNotStartsWithField", "iNotEndsWithField",
-                                               "inSet", "notInSet"]);
-*/
-//    isc.DataSource.setTypeOperators("date", ["iBetween","iBetweenInclusive"]);
+                                            "endsWith", "iEquals", "iNotEqual",
+                                            "lessThan", "greaterThan",
+                                            "lessOrEqual", "greaterOrEqual",
+                                            "iBetween", "iBetweenInclusive",
+                                            "iContains", "iStartsWith", "iEndsWith",
+                                            "notContains", "notStartsWith", "notEndsWith",
+                                            "iNotContains", "iNotStartsWith", "iNotEndsWith",
+                                            "containsField", "startsWithField", "endsWithField",
+                                            "greaterThanField", "lessThanField",
+                                            "greaterOrEqualField", "lessOrEqualField",
+                                            "iEqualsField", "iNotEqualField",
+                                            "iContainsField", "iStartsWithField", "iEndsWithField",
+                                            "notContainsField", "notStartsWithField", "notEndsWithField",
+                                            "iNotContainsField", "iNotStartsWithField", "iNotEndsWithField",
+                                            "matchesPattern", "iMatchesPattern", "containsPattern", "iContainsPattern",
+                                            "inSet", "notInSet", "iStartsWithPattern"]);
+    isc.DataSource.setTypeOperators("integer", ["lessThan", "greaterThan",
+                                            "lessOrEqual", "greaterOrEqual",
+                                            "iBetween", "iBetweenInclusive",
+                                            "greaterThanField", "lessThanField",
+                                            "greaterOrEqualField", "lessOrEqualField",
+                                            "inSet", "notInSet"]);
+
+
+    isc.DataSource.setTypeOperators("float", ["lessThan", "greaterThan",
+                                            "lessOrEqual", "greaterOrEqual",
+                                            "iBetween", "iBetweenInclusive",
+                                            "greaterThanField", "lessThanField",
+                                            "greaterOrEqualField", "lessOrEqualField",
+                                            "inSet", "notInSet"]);
+
+    //isc.DataSource.setTypeOperators("boolean", ["equals", "notEqual"]);
+
+    isc.DataSource.setTypeOperators("date", ["lessThan", "greaterThan",
+                                            "lessOrEqual", "greaterOrEqual",
+                                            "iBetween", "iBetweenInclusive",
+                                            "greaterThanField", "lessThanField",
+                                            "greaterOrEqualField", "lessOrEqualField"]);
+    isc.DataSource.setTypeOperators("time", ["lessThan", "greaterThan",
+                                            "lessOrEqual", "greaterOrEqual",
+                                            "iBetween", "iBetweenInclusive",
+                                            "greaterThanField", "lessThanField",
+                                            "greaterOrEqualField", "lessOrEqualField"]);
 };
 
 isc._initBuiltInOperators();
@@ -39941,6 +40676,22 @@ isc.LoadScreenCallback.addProperties({
 // @visibility external
 //<
 
+//> @attr RPCRequest.useStrictJSON (Boolean : null : IRWA)
+//
+// If set true, tells the server to use strict JSON format when serializing the response data.
+// If set false, tells the server to use a more permissive encoding that is still valid JS, but
+// is not technically valid JSON.  The default value of null tells the server to use the
+// default global setting (see below).
+// <p>
+// To enable this globally for all responses you can set <code>RPCManager.useStrictJSON</code>
+// in +link{group:server_properties,server.properties}.  If the global flag is not set either
+// way in <code>server.properties</code>, it defaults to false.
+//
+// @see dsRequest.useStrictJSON
+//
+// @visibility external
+//<
+
 //> @attr RPCRequest.downloadResult (Boolean : false : IRWA)
 //
 // If enabled, causes the RPCRequest to download the requested resource as a file, either
@@ -40438,6 +41189,13 @@ errorCodes : {
     //<
     STATUS_MAX_POST_SIZE_EXCEEDED: -12,
 
+    //> @classAttr rpcResponse.STATUS_CRITERIA_REQUIRED_ERROR (int : -13 : R)
+    // Indicates that an operation binding configured to require +link{OperationBinding.requiredCriterion} has received none.
+    // @group statusCodes, constant
+    // @visibility external
+    //<
+    STATUS_CRITERIA_REQUIRED_ERROR: -13,
+
     //> @classAttr rpcResponse.STATUS_FILE_REQUIRED_ERROR (int : -15 : R)
     // Indicates that an empty file was uploaded for a required 'binary' field.
     // @see classAttr:STATUS_MAX_FILE_SIZE_EXCEEDED
@@ -40805,6 +41563,14 @@ isc.RPCManager.addClassProperties({
     // @visibility external
     //<
     screenLoaderURL:"[ISOMORPHIC]/screenLoader",
+
+    //> @classAttr RPCManager.projectLoaderURL (URL : RPCManager.projectLoaderURL : RW)
+    //
+    // The projectLoaderURL specifies the URL where ProjectLoaderServlet is installed.
+    //
+    // @visibility external
+    //<
+    projectLoaderURL:"[ISOMORPHIC]/projectLoader",
 
     //> @classAttr RPCManager.ALL_GLOBALS (String : "-ALL_GLOBALS" : R)
     //
@@ -41444,6 +42210,21 @@ isLocalURL : function (url) {
             this.startQueue();
         }
 
+
+        var form = request.submitForm;
+        if (form && form._hasUpload && form._hasUpload()) {
+            var transaction = this.currentTransaction;
+            if (transaction && transaction._uploadRequest) {
+                this.logWarn(
+                    "Only one upload can be added to a transaction, and the current " +
+                    "transaction already has one.  The current transaction will be sent " +
+                    "immediately and then a new one started for the new request."
+                );
+                this.sendQueue();
+                this.startQueue();
+            }
+        }
+
         // can queue
         return true;
     },
@@ -41558,12 +42339,27 @@ isLocalURL : function (url) {
         }
 
         transaction.transport = request.transport;
-        transaction.useStrictJSON = request.useStrictJSON;
+        transaction.useStrictJSON = transaction.useStrictJSON || request.useStrictJSON;
+        if (transaction.useStrictJSON != null) {
+            transaction.requestData.useStrictJSON = transaction.useStrictJSON;
+            if (transaction.useStrictJSON) {
+                transaction.jsonReviver = request.jsonReviver || (isc.DataSource ?
+                                            isc.DataSource.iscServer_strictJSONReviver : null);
+            }
+        }
 
         // if any request in a transaction specifies ignoreReloginMarkers, then it applies to
         // the whole transaction since relogin marker processing happens on the whole
         // transaction response.
         if (request.ignoreReloginMarkers) transaction.ignoreReloginMarkers = true;
+
+
+        var form = request.submitForm;
+        if (form && form._hasUpload && form._hasUpload()) {
+
+            transaction._uploadRequest = request;
+        }
+
 
         transaction.operations.add(request);
 
@@ -41662,6 +42458,14 @@ isLocalURL : function (url) {
     // request specifies a different actionURL or transport than that of the requests currently
     // on the queue, it will be sent to the server separately, ahead of the queue, and a
     // warning will be logged to the Developer Console.
+    // <p>
+    // Due to browser security restrictions, at most one request with a +link{upload, file
+    // upload} can be sent in a queue.  If you attempt to add another, the existing queue
+    // will be sent immediately, logging a warning, and queueing restarted for the new request.
+    // <p>
+    // Note that whenever requests are not sent in a single queue, order is not guaranteed, and
+    // the callback provided to +link{sendQueue()} at the end of your transaction may fire
+    // before requests not sent in the final queue have completed.
     // <p>
     // <b>Implementing your own Queuing</b>
     // <p>
@@ -42572,6 +43376,16 @@ isLocalURL : function (url) {
         // for flags such as "directSubmit" that affect the entire transaction, use the first
         // request
         var request = transaction.operations[0];
+
+
+        if (transaction._uploadRequest) {
+            request = transaction._uploadRequest;
+            if (this.logIsInfoEnabled() && request != transaction.operations[0]) {
+                this.logInfo(
+                    "Using the upload request as the definitive request in the current " +
+                    "transaction since for file upload, the request's form must be submitted");
+            }
+        }
 
 
         if (((!isc.Page.isLoaded() && request.transport != "xmlHttpRequest")|| this.delayingTransactions) && !request._returnStreamFileURL) {
@@ -43515,7 +44329,10 @@ isLocalURL : function (url) {
 
 
 
-            jsonReviverFunction = transaction.operations[0].jsonReviver;
+            jsonReviverFunction = transaction.operations[0].jsonReviver || transaction.jsonReviver;
+        } else if (transaction.useStrictJSON != null) {
+            useStrictJSON = transaction.useStrictJSON;
+            jsonReviverFunction = transaction.jsonReviver;
         }
 
         if (isc.Log.logIsInfoEnabled("RpcTabTiming")) {
@@ -43619,6 +44436,9 @@ isLocalURL : function (url) {
         // set up a flag noting that we're firing transaction callbacks
 
         transaction._handlingResponse = true;
+
+        // make transaction number available to each callback
+        this._currentReplyTXNum = transaction.transactionNum;
 
         // pair up the requests with their results.
         for (var i = 0, j = 0; i < requests.length; i++) {
@@ -43748,6 +44568,7 @@ isLocalURL : function (url) {
 
         delete transaction.abortCallbacks;
         delete transaction._handlingResponse;
+        delete this._currentReplyTXNum;
 
         // if this was an offline transaction, we're in playback mode - playback the next one
         if (transaction.offline) this.playbackNextOfflineTransaction();
@@ -43996,10 +44817,11 @@ isLocalURL : function (url) {
     // @group operations
     // @visibility external
     //<
+
     _$setRPCRequestWillHandleErrorExtraText: "\nSet rpcRequest.willHandleError:true on your " +
             "request to handle this error yourself, or add a custom handleError to RPCManager " +
             "to change system-wide default error reporting",
-    runDefaultErrorHandling : function (response, request) {
+    runDefaultErrorHandling : function (response, request, errorFormatter) {
         var context = (response.context ? response.context : {}),
             message;
         if (isc.isA.String(response.data)) {
@@ -44030,45 +44852,59 @@ isLocalURL : function (url) {
             }
             var opName = response.operationId || response.operationType,
                 data = request.data,
-                message = "",
+                message,
                 extraText = "";
 
-            // provide RPCDMI details if any
-            if (data && data.is_ISC_RPC_DMI) {
-                if (data.appID == "isc_builtin") {
-                    message = "Builtin RPC: " + data.methodName + ": ";
-                } else {
-                    message = "RPCDMI: appId: '" + data.appID +
-                               "', className: '" + data.className +
-                              "', methodName: '" + data.methodName + "': ";
-                }
-            }
+            // Call custom formatter if provided
+            if (errorFormatter) message = errorFormatter(codeName, response, request);
 
-            if (codeName == "MAX_FILE_SIZE_EXCEEDED") {
-                message += isc.DataSource.maxFileSizeExceededMessage.evalDynamicString(this, {
-                        maxFileSize: response.maxFileSize,
-                        uploadedFileName: String(response.uploadedFileName).asHTML(),
-                        uploadedFileSize: response.uploadedFileSize
-                    });
-                extraText = this._$setRPCRequestWillHandleErrorExtraText;
-
-            } else if (codeName == "FILE_REQUIRED_ERROR") {
-                message += isc.DataSource.requiredFileMessage.evalDynamicString(this, {
-                    uploadedFileName: String(response.uploadedFileName).asHTML()
-                });
-                extraText = this._$setRPCRequestWillHandleErrorExtraText;
-
-            } else if (codeName == "VALIDATION_ERROR") {
-                message += "Server returned validation errors: " + String(isc.echoFull(response.errors)).asHTML();
-                extraText = this._$setRPCRequestWillHandleErrorExtraText;
-
+            if (message != null) {
+                isc.warn(message);
             } else {
-                message += "Server returned " + codeName + " with no error message" +
-                    (opName ? " performing operation '" + opName + "'." : ".");
+                message = "";
+
+                // provide RPCDMI details if any
+                if (data && data.is_ISC_RPC_DMI) {
+                    if (data.appID == "isc_builtin") {
+                        message = "Builtin RPC: " + data.methodName + ": ";
+                    } else {
+                        message = "RPCDMI: appId: '" + data.appID +
+                                   "', className: '" + data.className +
+                                  "', methodName: '" + data.methodName + "': ";
+                    }
+                }
+
+                if (codeName == "MAX_FILE_SIZE_EXCEEDED") {
+                    message += isc.DataSource.maxFileSizeExceededMessage.evalDynamicString(this, {
+                            maxFileSize: response.maxFileSize,
+                            uploadedFileName: String(response.uploadedFileName).asHTML(),
+                            uploadedFileSize: response.uploadedFileSize
+                        });
+                    extraText = this._$setRPCRequestWillHandleErrorExtraText;
+
+                } else if (codeName == "FILE_REQUIRED_ERROR") {
+                    message += isc.DataSource.requiredFileMessage.evalDynamicString(this, {
+                        uploadedFileName: String(response.uploadedFileName).asHTML()
+                    });
+                    extraText = this._$setRPCRequestWillHandleErrorExtraText;
+
+                } else if (codeName == "CRITERIA_REQUIRED_ERROR") {
+                    message += isc.DataSource.requiredCriterionMessage.evalDynamicString(this, {
+                        requiredCriterion: String(response.missingCriterion).asHTML()
+                    });
+                    extraText = this._$setRPCRequestWillHandleErrorExtraText;
+
+                } else if (codeName == "VALIDATION_ERROR") {
+                    message += "Server returned validation errors: " + String(isc.echoFull(response.errors));
+                    extraText = this._$setRPCRequestWillHandleErrorExtraText;
+
+                } else {
+                    message += "Server returned " + codeName + " with no error message" +
+                        (opName ? " performing operation '" + opName + "'." : ".");
+                }
+
+                this.reportError(message, response.stacktrace);
             }
-
-            this.reportError(message, response.stacktrace);
-
         }
         // log regardless
         this.logWarn(message + (extraText?extraText:"") + " - response: " + this.echo(response));
@@ -44478,6 +45314,12 @@ isLocalURL : function (url) {
     // server" code snippet in reloginSuccess.html
     handleLoginSuccess : function (transactionNum) {
         var transaction = this.getTransaction(transactionNum);
+
+        // add the relogin event for those ClickStreams that want it
+        if (isc.ClickStream.streams) {
+            isc.ClickStream.addLoginEvent(transaction, isc.ClickStream.RELOGIN);
+        }
+
         // transaction may be null if the user popped a visible iframe that targets
         // loginSuccess and is using that as the UI for the user instead of e.g. a SmartClient
         // form that makes login RPCs
@@ -44764,10 +45606,16 @@ isLocalURL : function (url) {
     // @param [locale] (String) The name of a locale to use for resolving i18n tags in the
     //        component XML of the screen
     // @param [requestProperties] (RPCRequest Properties) optional properties for the request
+    // @param [missingDSIsNotFatal] (Boolean) If true, server logic does not crash out if it cannot
+    //        load a DataSource specified in the screen definition.  Instead, a stub DataSource is
+    //        returned, which consists of nothing except the ID and an <code>unableToLoad</code>
+    //        flag, which client-side code can use to determine that the DataSource could not be
+    //        loaded on the server.  Optional, defaults to false (ie, a missing DataSource
+    //        causes a crash by default)
     //
     // @visibility external
     //<
-    loadScreen : function (screenName, callback, globals, locale, requestProperties) {
+    loadScreen : function (screenName, callback, globals, locale, requestProperties, missingDSIsNotFatal) {
         if (!screenName) {
             this.logWarn("No screen names passed in.");
             this.fireCallback(callback, "data", [null]);
@@ -44788,6 +45636,9 @@ isLocalURL : function (url) {
         if (requestProperties) isc.addProperties(request, requestProperties);
         if (request.params == null) request.params = {};
         request.params.screenName = screenName.join(",");
+        if (missingDSIsNotFatal) {
+            request.params.missingDSIsNotFatal = "true"
+        }
         if (locale) {
             isc.addProperties(request.params, {locale: locale});
         }
@@ -44807,27 +45658,152 @@ isLocalURL : function (url) {
         this.sendRequest(request);
     },
 
+    //> @object LoadProjectSettings
+    // LoadProjectSettings is the bundle of settings that can be passed to loadProject() as
+    // the "settings" argument, including optional http parameters for the request to
+    // +link{group:servletDetails,ProjectLoaderServlet}.
+    // <P>
+    // There is no need to instatiate an LoadProjectSettings instance.  Just pass a normal
+    // JavaScript object with the desired properties.
+    //
+    // @visibility external
+    //<
+
+    //> @attr loadProjectSettings.currentScreenName (String : null : IRW)
+    // The name of the screen within the project to draw after loading.
+    // A null value means to use the currentScreenName as specified in the project file.
+    //
+    // @visibility external
+    //<
+
+    //> @attr loadProjectSettings.screenNames (String : null : IRW)
+    // A comma-separated string containing the names of screens within the project that should be loaded.
+    // A null value causes all screens to be loaded.
+    //
+    // @visibility external
+    //<
+
+    //> @attr loadProjectSettings.drawFirstScreen (boolean : true : IRW)
+    // Determines whether the +link{loadProjectSettings.currentScreenName} screen is drawn after all screens have been loaded.
+    //
+    // @visibility external
+    //<
+
+    //> @attr loadProjectSettings.locale (String : null : IRW)
+    // The name of a locale to use for resolving i18n tags in the component XML of the screen.
+    // The default value of null omits locale loading, which effectively means the framework default "en" locale is used.
+    //
+    // @visibility external
+    //<
+
+    //> @attr loadProjectSettings.ownerId (String : null : IRW)
+    // Use this attribute to specify a project owner.
+    // Only applicable if project source supports owner identification.
+    //
+    // @visibility external
+    //<
+
+    //> @classMethod RPCManager.loadProject()
+    // Loads a project using the +link{group:servletDetails,ProjectLoaderServlet}, reachable at
+    // +link{rpcManager.projectLoaderURL}, and fires the given callback after screens have been
+    // +link{rpcManager.cacheScreens, cached}.
+    //
+    // @param projectName (String) name of the project to load
+    // @param callback    (Function) callback for notification of completion of project loaded and screen caching.
+    // @param settings    (LoadProjectSettings) Settings applicable to the loadProject operation.
+    //
+    // @visibility external
+    //<
+    // an array of object literals
+    _cachedScreens: [],
+    loadProject : function (projectName, callback, settings) {
+        if (!projectName) {
+            this.logWarn("No project name passed in.");
+            this.fireCallback(callback, "data", [null]);
+            return;
+        }
+        if (!settings) {
+            settings = {};
+        }
+        var request = {
+            "params": {
+                "projectName": projectName
+            },
+            "actionURL": this.projectLoaderURL,
+            "useSimpleHttp": true,
+            "evalResult": true
+        };
+        isc.addProperties(request.params, settings);
+
+        // A callback in cacheSCreens will fire dataChanged when screens are cached, set up a dummy object to observe that call
+        var that = this;
+        var listener = isc.DMI.create();
+        listener.onScreensCached = function() {
+            listener.ignore(that._cachedScreens, "dataChanged");
+            listener.fireCallback(callback);
+        }
+        listener.observe(this._cachedScreens, "dataChanged", "observer.onScreensCached()");
+
+        this.sendRequest(request);
+    },
+
+    //> @object CreateScreenSettings
+    // Controls what class and instance substitutions, if any, are applied during a call to
+    // +link{RPCManager.createScreen()}.  Classes and instances can be mapped (constructed as)
+    // other classes, and existing widget instances can be returned for new ones.
+    // @see createScreenSettings.classSubstitutions
+    // @see createScreenSettings.componentSubstitutions
+    // @visibility external
+    //<
+
+    //> @attr createScreenSettings.classSubstitutions (Map : null : IR)
+    // Maps class names of widgets in the screen to new class names, so that if a widget would
+    // normally be constructed as an instance of a class, and that class is in the map, it's
+    // instead constructed as an instance of the new class.
+    // @see RPCManager.createScreen
+    // @visibility external
+    //<
+
+    //> @attr createScreenSettings.componentSubstitutions (Map : null : IR)
+    // Defines the map of new widget +link{class.getID(),ids} to existing class instances, or
+    // to new instances that will be of a different class.  A substituted class instance is
+    // returned immediately from +link{class.create()} without modification.  Otherwise, the
+    // constructor for the new instance is run, but targeting the substituted class rather than
+    // the original.
+    // <P>
+    // Note that where we return an existing instance, not even its +link{canvas.ID} will be
+    // changed.  An alternative is programmtic replacement using +link{Layout.replaceMember()}.
+    // @see RPCManager.createScreen
+    // @visibility external
+    //<
+
     //> @classMethod RPCManager.createScreen()
     // Creates a screen previously cached by a call to +link{cacheScreens()}.
     // <p>
-    // As with +link{loadScreen()}, the default behavior is to prevent any global widget IDs from
-    // being established, the returned Canvas will be the outermost component of the screen,
-    // and that Canvas will provide access to other widgets in the screen via +link{canvas.getByLocalId(),getByLocalId()}
+    // As with +link{loadScreen()}, the default behavior is to prevent any global widget IDs
+    // from being established, the returned Canvas will be the outermost component of the
+    // screen, and that Canvas will provide access to other widgets in the screen via
+    // +link{canvas.getByLocalId(),getByLocalId()}
     // <p>
-    // Alternatively, as with +link{loadScreen()}, a list of IDs that should be allowed to become
-    // globals can be passed, allowing those widgets to be retrieved via a call to
+    // Alternatively, as with +link{loadScreen()}, a list of IDs that should be allowed to
+    // become globals can be passed, allowing those widgets to be retrieved via a call to
     // +link{Canvas.getById()} after the screen has been created.
     // <p>
-    // If you do not pass <code>globals</code> and avoid depending on global IDs within the screen
-    // definition itself (for example, by embedding JavaScript event handlers in the screen definition
-    // that use global IDs), you can create the same screen multiple times.
+    // If you do not pass <code>globals</code> and avoid depending on global IDs within the
+    // screen definition itself (for example, by embedding JavaScript event handlers in the
+    // screen definition that use global IDs), you can create the same screen multiple times.
     // <p>
     // Creating a screen may or may not cause it to draw, depending on current global autoDraw
     // setting (+link{staticMethod:isc.setAutoDraw()}) and any <code>autoDraw</code> settings
     // in the screen itself.
+    // <p>
+    // Instead of <code>globals</code>, you may instead pass a +link{CreateScreenSettings,
+    // substitution configuration} to change what classes are used to construct widgets, or
+    // subsitute existing widgets for those to be constructed, by widget ID.
     //
     // @param screenName (String) name of the screen to create
-    // @param [globals] (Array of String) widgets to allow to take their global IDs
+    // @param [globals] (Array of String | CreateScreenSettings) widgets to allow to take their
+    //                                                      global IDs, or a widget remap config
     // @return (Canvas) last top-level widget in the screen definition
     //
     // @visibility external
@@ -44838,19 +45814,29 @@ isLocalURL : function (url) {
             return null;
         }
 
+
+        var screenSettings;
+        if (isc.isAn.Object(globals)) {
+            screenSettings = globals, globals = null;
+        }
+
         if (!globals) globals = [];
 
         if (!isc.isAn.Array(globals)) globals = [globals];
 
         var _this = this;
-        var data = _this._cachedScreens[screenName];
+        var data = _this._cachedScreens.find("name", screenName);
 
-        if (!data) { return null;}
+        if (!data) {
+            this.logWarn("Asked to create screen '" + screenName +
+                         "', but it's not cached - did you call cacheScreen() firstt?");
+            return null;
+        }
 
-        return this._makeScreen(null, data, null, null, globals);
+        return this._makeScreen(null, data.source, null, null, globals, screenSettings);
     },
 
-    _makeScreen : function(rpcResponse, data, rpcRequest, callback, globals) {
+    _makeScreen : function(rpcResponse, source, rpcRequest, callback, globals, screenSettings) {
         if (!rpcRequest) { rpcRequest = {} };
 
         var origAutoDraw = isc.Canvas.getInstanceProperty("autoDraw"),
@@ -44864,8 +45850,11 @@ isLocalURL : function (url) {
         // allow ComponentXML loading to be detected
         isc._loadingComponentXML = true;
 
+        // make any screenSettings easily accessible from Class.create()
+        if (screenSettings) isc._createScreenSettings = screenSettings;
+
         if (globals.length == 1 && globals[0] == _this.ALL_GLOBALS) {
-            result = isc.Class.globalEvalWithCapture(data, function (globals, error) {
+            result = isc.Class.globalEvalWithCapture(source, function (globals, error) {
 
                 if (error != null) isc.Log._reportJSError(error, null, null, null,
                                                           "Error when executing loaded screen");
@@ -44883,7 +45872,7 @@ isLocalURL : function (url) {
             }, null, false);
 
         } else {
-            result = isc.Class.globalEvalAndRestore(data, globals,
+            result = isc.Class.globalEvalAndRestore(source, globals,
                          function (globals, error, suppressedGlobals) {
 
                 if (error != null) isc.Log._reportJSError(error, null, null, null,
@@ -44915,6 +45904,9 @@ isLocalURL : function (url) {
             }, null, false, true);
 
         }
+
+        // done with screenSettings
+        delete isc._createScreenSettings;
 
         // allow ComponentXML loading to be detected
         delete isc._loadingComponentXML;
@@ -44985,23 +45977,36 @@ isLocalURL : function (url) {
             isc.Class.globalEvalWithCapture(data, function (globals, error) {
                 if (error != null) isc.Log._reportJSError(error, null, null, null,
                                                   "Error when executing cache screen");
-                if (!_this._cachedScreens) {
-                    _this._cachedScreens = {};
-                }
-
                 var json = isc.Class.evaluate(data);
                 for (var i=0;i<json.length;i++) {
-                    if (_this._cachedScreens[json[i].screenName]) {
-                        _this.logWarn("Screen " + json[i].screenName + " is already cached. Replacing.");
+                    var screenName = json[i].screenName;
+                    var cached = _this._cachedScreens.find("name", screenName);
+                    if (cached) {
+                        _this.logWarn("Screen " + screenName + " is already cached. Replacing.");
+                        _this._cachedScreens.remove(cached);
                     }
-                    _this._cachedScreens[json[i].screenName] = json[i].source;
+                    _this._cachedScreens.add({name: json[i].screenName, source: json[i].source});
                 }
+                _this._cachedScreens.dataChanged();
 
                 _this.fireCallback(callback, "data,rpcResponse", [json, rpcResponse]);
             }, null, false);
         };
 
         this.sendRequest(request);
+    },
+
+    //> @classMethod RPCManager.isScreenCached()
+    //
+    // Returns true if a screen with the given name has already been cached by a call to
+    // +link{cacheScreens} (or +link{loadProject}), false otherwise.
+    //
+    // @param screenName (String) name of the screen
+    //
+    // @visibility external
+    //<
+    isScreenCached: function(screenName) {
+        return this._cachedScreens.find("name", screenName) != null;
     },
 
     // Count (globally and per-DBC) outstanding RPCRequests
@@ -47770,9 +48775,11 @@ if (isc.Browser.seleniumPresent) {
 // <b>Modifying ResultSets</b>
 // <P>
 // Records cannot be directly added or removed from a ResultSet via +link{List}
-// APIs such as +link{List.removeAt(),removeAt()}, since this would break the consistency of
-// server and client row numbering needed for data paging, and also
-// create some issues with automatic cache synchronization.
+// APIs such as +link{List.removeAt(),removeAt()}, unless it always filters locally, since
+// this would break the consistency of server and client row numbering needed for data paging,
+// and also create some issues with automatic cache synchronization.  Set
+// +link{resultSet.modifiable,modifiable} to enable the +link{List} modification APIs on a
+// +link{resultSet.fetchMode,fetchMode}:"local" ResultSet.
 // <P>
 // Use +link{dataSource.addData()}/+link{DataSource.removeData(),removeData()} to add/remove
 // rows from the +link{DataSource}, and the ResultSet will reflect the changes automatically.
@@ -47926,14 +48933,154 @@ _prepareSparseData : function (data) {
 
 isc.ResultSet.addProperties({
 
-    addAt : function() {
-        isc.logWarn('ResultSets are readonly. This operation (addAt) will be ignored.');
+    // Modification APis - only a fetchData:"local" RS can be modifiable
+    // ----------------------------------------------------------------------------------------
+
+    _canModify : function (warn) {
+        return this.modifiable && this.fetchMode == "local" && this.getDataSource() &&
+            this.shouldUseClientFiltering() && this.allRows != null && this.localData != null;
     },
-    set : function() {
-        isc.logWarn('ResultSets are readonly. This operation (set) will be ignored.');
+
+    _warnModify : function (methodName) {
+        isc.logWarn(methodName + "(): ResultSets are not modifiable unless filtering data " +
+                    "locally due to fetchMode:'local' - not modified");
     },
-    removeAt : function() {
-        isc.logWarn('ResultSets are readonly. This operation (removeAt) will be ignored.');
+
+    addAt : function(obj, pos) {
+        if (!this._canModify()) return this._warnModify("addAt");
+
+        if (obj == null) {
+            this.logWarn("addAt(): you must spply a valid record");
+            return;
+        }
+        // by default adds at start
+        if (pos == null) pos = 0;
+
+        if (!isc.isA.Number(pos) || pos < 0) {
+            this.logWarn("addAt(): Invalid position " + pos);
+            return;
+        }
+
+
+
+        var ds = this.getDataSource(),
+            cacheIndex = ds.findByKeys(obj, allRows);
+        if (cacheIndex >= 0) {
+            this.logWarn("addAt(): cannot add " + isc.echo(obj) + " as the ResultSet already " +
+                         "contains another record with the same primary key values");
+            return;
+        }
+
+        // find the record at pos in localData in allRows and add obj before it
+        var localData = this.localData,
+            allRows = this.allRows;
+        if (allRows != localData) {
+            var posRecord = localData[pos];
+            cacheIndex = ds.findByKeys(posRecord, allRows);
+
+            allRows.addAt(obj, cacheIndex);
+        }
+
+        var criteria = this.allRowsCriteria,
+            iCrit = this.getImplicitCriteria();
+        if (iCrit) criteria = isc.DS.combineCriteria(criteria, iCrit);
+
+        // if the new obj passes the filter, add it to localData and notify of "add"
+        var matchesFilter = this.applyFilter([obj], criteria, this.context).length > 0;
+        if (matchesFilter) {
+            localData.addAt(obj, pos);
+            this.dataChanged("add", obj, pos);
+        }
+
+        // if we're sorted, we've got to resort localData
+        if (this.canSortOnClient()) this._doSort();
+
+        return obj;
+    },
+
+    set : function(pos, obj) {
+        if (!this._canModify()) return this._warnModify("set");
+
+        if (obj == null) {
+            this.logWarn("set(): you must spply a valid record");
+            return;
+        }
+
+        if (!isc.isA.Number(pos) || pos < 0) {
+            this.logWarn("set(): Invalid position " + pos);
+            return;
+        }
+
+
+        // find the record at pos in localData in allRows and replace it with obj
+        var ds = this.getDataSource(),
+            localData = this.localData,
+            oldRecord = localData[pos],
+            allRows = this.allRows;
+        if (allRows != localData) {
+            var cacheIndex = ds.findByKeys(oldRecord, allRows);
+
+            allRows.set(cacheIndex, obj);
+        }
+
+        var criteria = this.allRowsCriteria,
+            iCrit = this.getImplicitCriteria();
+        if (iCrit) criteria = isc.DS.combineCriteria(criteria, iCrit);
+
+        // determine whether this is an "update" or "replace", and whether obj passes filter
+        var operation = ds.findByKeys(obj, localData) == pos ? "update" : "replace",
+            matchesFilter = this.applyFilter([obj], criteria, this.context).length > 0;
+        if (!matchesFilter && this.shouldNeverDropUpdatedRows() && operation == "update") {
+            matchesFilter = true;
+        }
+
+        // if obj passes the filter, replace record at pos in localData; otherwise remove it
+        if (matchesFilter) {
+            localData.set(pos, obj);
+        } else {
+            localData.removeAt(pos);
+        }
+
+        // notify of "replace" or "update" operation, passing obj if it passes the filter
+        this.dataChanged(operation, matchesFilter ? obj : null, pos);
+
+        // if we're sorted, we've got to resort localData
+        if (this.canSortOnClient()) this._doSort();
+
+        return oldRecord;
+    },
+
+    removeAt : function (pos) {
+        if (!this._canModify()) return this._warnModify("removeAt");
+
+        if (!isc.isA.Number(pos) || pos < 0) {
+            this.logWarn("removeAt(): Invalid position " + pos);
+            return;
+        }
+
+
+        var localData = this.localData,
+            record = localData[pos];
+        if (record == null) {
+            this.logWarn("removeAt(): No valid record at position " + pos + " to remove");
+            return;
+        }
+
+        // find the record at pos in localData in allRows and remove it
+        var allRows = this.allRows;
+        if (allRows != localData) {
+            var cacheIndex = this.getDataSource().findByKeys(record, allRows);
+
+            allRows.removeAt(cacheIndex);
+        }
+
+        // if pos is valid, remove record from localData and
+        localData.removeAt(pos);
+
+        // notify of "remove" operation
+        this.dataChanged("remove", record, pos);
+
+        return record;
     },
 
     //localData : null, // the cache of rows
@@ -47971,6 +49118,26 @@ isc.ResultSet.addProperties({
     // @visibility external
     //<
     //fetchMode : "paged",
+
+    //> @attr resultSet.modifiable (boolean : false : IRW)
+    // When true, allows the ResultSet to be modified by list APIs +link{list.addAt()},
+    // +link{list.set()}, and +link{list.removeAt()}.  Only applies to
+    // +link{resultSet.fetchMode,fetchMode}:"local" ResultSets, since in all other cases, such
+    // modifications would break the consistency of server and client row numbering needed for
+    // data paging, and also create some issues with automatic cache synchronization.  See the
+    // "Modifying ResultSets" subtopic in the +link{ResultSet,ResultSet Overview} for the
+    // alternative approach of updating the +link{DataSource}.
+    // <P>
+    // One known case where modification can be useful is when an array has been passed to
+    // +link{listGrid.setData()} for a ListGrid with +link{listGrid.filterLocalData}:true.  If
+    // the data is filtered using the +link{listGrid.showFilterEditor,filterEditor}, then a new
+    // local ResultSet will be created as +link{listGrid.data,data} to reflect the filtering.
+    // @group cacheSync
+    // @see dataSource.addData()
+    // @see dataSource.removeData()
+    // @see dataSource.updateCaches()
+    // @visibility external
+    //<
 
     //> @attr resultSet.initialData (Array of Record : null : IA)
     // Initial set of data for the ResultSet.
@@ -48100,9 +49267,10 @@ isc.ResultSet.addProperties({
 
     getImplicitCriteria : function () {
         if (!this.implicitCriteria && !this.dbcImplicitCriteria) return null;
-        return isc.DS.compressNestedCriteria(
-            isc.DS.combineCriteria(this.dbcImplicitCriteria, this.implicitCriteria)
-        );
+        return isc.DS.compressNestedCriteria(isc.DS.combineCriteria(
+            isc.DataSource.copyCriteria(this.dbcImplicitCriteria),
+            isc.DataSource.copyCriteria(this.implicitCriteria)
+        ));
     },
 
     //> @attr resultSet.criteria (Criteria : null : IRW)
@@ -48456,6 +49624,7 @@ destroy : function () {
     isc.ClassFactory.dereferenceGlobalID(this);
 
     this.Super("destroy", arguments);
+    this.destroyed = true;
 },
 
 // This method is used by GridRenderer.
@@ -49253,7 +50422,7 @@ fillRangeLoading : function (arr, length) {
 
 getCombinedCriteria : function () {
     return isc.DS.compressNestedCriteria(
-        isc.DS.combineCriteria(this.getImplicitCriteria(), this.criteria)
+        isc.DS.combineCriteria(this.getImplicitCriteria(), isc.DataSource.copyCriteria(this.criteria))
     );
 },
 
@@ -49760,8 +50929,8 @@ setCriteria : function (newCriteria) {
     // calling the internal version of this method means we'll get back 'null' if the
     // criteria are unchanged, allowing us to skip the call to filterLocalData();
     if (newCriteria == null) newCriteria = {};
-    var requiresFetch = this._willFetchData(newCriteria);
-
+    var requiresFetch = this._willFetchData(newCriteria, null,
+                                            !this.reapplyUnchangedLocalFilter);
     if (requiresFetch == null) {
 
         // Catch the case where we were seeded with this.allRows on init but haven't yet
@@ -49949,7 +51118,7 @@ willFetchData : function (newCriteria, textMatchStyle) {
 // rather than true/false. Called directly by setCriteria() where we care about whether
 // new criteria would actually require a local filter, as well as whether we should drop
 // cache
-_willFetchData : function (newCriteria, textMatchStyle) {
+_willFetchData : function (newCriteria, textMatchStyle, strictCriteriaCompare) {
     // if we have *no* local data we know we have to hit the server
     // regardless of the new criteria (we've never fetched and weren't seeded with this.allRows)
     if (this.localData == null && this.allRows == null) {
@@ -50008,6 +51177,26 @@ _willFetchData : function (newCriteria, textMatchStyle) {
         var fetchContext = isc.addProperties({},this.context);
         if (textMatchStyle != null) fetchContext.textMatchStyle = textMatchStyle;
         var criteriaResult = this.compareCriteria(newCriteria, cacheDataCriteria, fetchContext);
+
+
+        if (isFilteringLocally && result == 0 && criteriaResult >= 0) {
+            // If we're already viewing a subset of a larger cache we tested against that larger
+            // cache, compare the current criteria against the criteria passed in as well to see
+            // if the criteria are actually unchanged as far as the visible data is concerned.
+
+            if (ds.isAdvancedCriteria(newCriteria) && !ds.isAdvancedCriteria(oldCriteria)) {
+                oldCriteria = isc.DataSource.convertCriteria(oldCriteria, textMatchStyle);
+            }
+            // newCriteria is narrower/equal to "all rows" criteria - compare to oldCriteria
+            if (this.compareCriteria(newCriteria, oldCriteria) == 0) {
+                // if new/old criteria are equal, return null by setting result to "equals"
+                if (criteriaResult == 1 && strictCriteriaCompare) criteriaResult = 0;
+            } else {
+                // if new/old criteria differ, force result to "not equals" (narrower)
+                if (criteriaResult == 0) criteriaResult = 1;
+            }
+        }
+
         // If the criteria changed, respect whether they are more or less strict
         // Otherwise use the result based on whether the text match style changed (becoming more
         // or less strict).
@@ -50016,20 +51205,8 @@ _willFetchData : function (newCriteria, textMatchStyle) {
 
     if (result == 0) {
         // criteria match
-
-        // If we're already viewing a subset of a larger cache we tested against that larger
-        // cache -- compare the current criteria against the criteria passed in as well to see
-        // if the criteria are actually unchanged as far as the visible data is concerned
-
-        if (isFilteringLocally) {
-            if (ds.isAdvancedCriteria(newCriteria) && !ds.isAdvancedCriteria(oldCriteria)) {
-                oldCriteria = isc.DataSource.convertCriteria(oldCriteria, textMatchStyle);
-            }
-            if (this.compareCriteria(newCriteria, oldCriteria) != 0) {
-                return false;
-            }
-        }
         return null;
+
     } else {
         // If the criteria have changed at all, we know we'll have to hit the server if
         // we don't have a complete cache based on our current criteria.
@@ -50070,6 +51247,19 @@ _willFetchData : function (newCriteria, textMatchStyle) {
     }
 },
 
+//> @attr resultSet.reapplyUnchangedLocalFilter (boolean : null : IRWA)
+// To avoid needless work, the ResultSet by default doesn't refilter the data when methods such
+// as +link{listGrid.fetchData()} or +link{listGrid.filterData()} are called with unchanged
+// criteria.  However, this property can be set true for backward compatibility to force
+// refiltering if we're +link{filterLocalData(),filtering locally} and the criteria haven't
+// changed. but are narrower than the criteria used to fetch the current cache.
+// <P>
+// Going forward, we may deprecate this property, so you should move to approach that
+// doesn't require such notification in the case of unchanged criteria.
+//
+// @see willFetchData()
+// @visibility external
+//<
 
 // Sorting
 // --------------------------------------------------------------------------------------------
@@ -52315,6 +53505,13 @@ isc.ResultSet.registerStringMethods({
     // When <code>dataArrived()</code> fires, an immediate call to <code>getRange()</code> with
     // the <code>startRow</code> and <code>endRow</code> passed as arguments will return a List
     // with no +link{resultSet.getLoadingMarker(),loading markers}.
+    // <P>
+    // Note that <code>dataArrived()</code> won't fire in the case of the owning component
+    // filtering with unchanged criteria (for example using +link{listGrid.fetchData()} or
+    // +link{listGrid.filterData()}).  To support backward compatibility, the property
+    // +link{reapplyUnchangedLocalFilter} can be set to force <code>dataArrived()</code> to
+    // be called if the ResultSet is +link{filterLocalData(),filtering locally} and the criteria
+    // haven't changed but are narrower than the criteria used to fetch the current cache.
     //
     // @param startRow  (int)   starting index of rows that have just loaded
     // @param endRow    (int)   ending index of rows that have just loaded, non-inclusive
@@ -52358,6 +53555,13 @@ isc.ResultSet.registerStringMethods({
     // In this case observing code should assume the dataset has been partly or wholly reordered,
     // and may have no records in common with the dataset as it existed before
     // <code>dataChanged()</code> fired.
+    // <P>
+    // Note that <code>dataChanged()</code> won't fire in the case of the owning component
+    // filtering with unchanged criteria (for example using +link{listGrid.fetchData()} or
+    // +link{listGrid.filterData()}).  To support backward compatibility, the property
+    // +link{reapplyUnchangedLocalFilter} can be set to force <code>dataChanged()</code> to
+    // be called if the ResultSet is +link{filterLocalData(),filtering locally} and the criteria
+    // haven't changed but are narrower than the criteria used to fetch the current cache.
     //
     // @param [operationType] (DSOperationType) type of operation that took place if a fetch or
     //                                          a single row update, otherwise, null
@@ -53116,11 +54320,11 @@ isc.ResultTree.addProperties({
 
     getImplicitCriteria : function () {
         if (!this.implicitCriteria && !this.dbcImplicitCriteria) return null;
-        return isc.DS.compressNestedCriteria(
-            isc.DS.combineCriteria(this.dbcImplicitCriteria, this.implicitCriteria)
-        );
-    }
-
+        return isc.DS.compressNestedCriteria(isc.DS.combineCriteria(
+            isc.DataSource.copyCriteria(this.dbcImplicitCriteria),
+            isc.DataSource.copyCriteria(this.implicitCriteria)
+        ));
+    },
 
     //> @attr   resultTree.disableCacheSync (Boolean : false : IRA)
     // By default when the data of this ResultTree's dataSource is modified, the ResultTree will
@@ -53129,6 +54333,232 @@ isc.ResultTree.addProperties({
     // @group cacheSync
     // @visibility external
     //<
+
+    // Multilink
+    // ----------------------------------------------------------------------------------------
+
+    //> @attr resultTree.linkDataSource (DataSource | ID : null : IR)
+    // This property allows you to specify the dataSource to be used for fetching link information
+    // in a databound <i>multilink</i> tree.  A multilink tree is one where the same node is
+    // allowed to appear in multiple places in the tree, and it is achieved by providing the node
+    // data and the link data separately.  Nodes are provided via the normal
+    // +link{resultTree.dataSource,dataSource}; <code>linkDataSource</code> is only used for
+    // fetching and updating link information.
+    // <p>
+    // The <code>linkDataSource</code> is an ordinary +link{class:DataSource} that you implement
+    // just like any other.  However, for correct operation as a <code>linkDataSource</code>, it
+    // must have the following:<ul>
+    // <li>A +link{dataSourceField.primaryKey,primaryKey field}.  Like any dataSource, a
+    // <code>linkDataSource</code> is not fully functional without a <code>primaryKey</code> field</li>
+    // <li>A field named the same as the +link{tree.parentIdField}</li>
+    // <li>A field named the same as the +link{tree.idField}</li>
+    // <li>Optionally, a field named the same as the +link{tree.linkPositionField}</li>
+    // <li>Fields for other values you may wish to store with the link, if any</li>
+    // </ul>
+    // <h3>Providing node data and link data</h3>
+    // Consider a structure for the components of a bicycle, greatly simplified:<pre>
+    //         Frame
+    //        /    \
+    //     Wheel   Wheel
+    //    /  \     /  \
+    //  Hub Tire  Hub Tire
+    // </pre>
+    // Here, the two wheels are the same assembly, so really it should look like this:<pre>
+    //       Frame
+    //        | |
+    //       Wheel
+    //       /   \
+    //     Hub  Tire
+    // </pre>
+    // Normal SmartClient trees cannot model this arrangement accurately because this is not
+    // really a tree, it is a graph; trees do not contain multiple paths to a given node.  The
+    // only way to handle this arrangement of nodes in a formal tree would be to make two copies
+    // of the "Wheel" node, at which point they are no longer the same thing. Either way, in a
+    // +link{class:TreeGrid}, we would have to visualise it like this:<pre>
+    //   Frame
+    //      Wheel
+    //         Hub
+    //         Tire
+    //      Wheel
+    //         Hub
+    //         Tire
+    // </pre>
+    // But if we use copies so that the the two wheels are no longer the same thing, changing
+    // one of them will no longer change the other, which is a fundamental problem because in
+    // this scenario, the two wheels really are the same thing.  Now, changing the name of the
+    // "Hub" in one "Wheel" would not change it in the other; adding a "Spokes" node to the
+    // second item would not also add it to the first.  Drag-reordering child nodes in one
+    // "Wheel" would not re-order them in the other.  All of these things are incorrect, because
+    // the two wheels are the same thing.
+    // <p>
+    // Multilink trees provide a way to handle this arrangement without physical copying of the
+    // duplicate nodes, preserving the sameness of them and thus fixing all the problems
+    // described above.
+    // <p>
+    // The node data for the above tree, simplified, would be a flat list something like this:<pre>
+    //   [
+    //      { id: 1, description: "Frame" },
+    //      { id: 2, description: "Wheel" },
+    //      { id: 3, description: "Hub" },
+    //      { id: 4, description: "Tire" }
+    //   ]
+    // </pre>
+    // The link data would look like this:<pre>
+    //   [
+    //      { linkId: 1, parentId: 1, id: 2, position: 1 },
+    //      { linkId: 2, parentId: 2, id: 3, position: 1 },
+    //      { linkId: 3, parentId: 2, id: 4, position: 2 },
+    //      { linkId: 4, parentId: 1, id: 2, position: 2 }
+    //   ]
+    // </pre>
+    // Or, if you were using +link{ResultTree.linkDataFetchMode} "single", you would combine
+    // the node and link data into a single dataset like this:<pre>
+    //   [
+    //      { id: 1, position: 0, description: "Frame" },
+    //      { parentId: 1, id: 2, position: 1, description: "Wheel", linkId: 1 },
+    //      { parentId: 2, id: 3, position: 1, description: "Hub", linkId: 2 },
+    //      { parentId: 2, id: 4, position: 2, description: "Tire", linkId: 3 },
+    //      { parentId: 1, id: 2, position: 2, description: "Wheel", linkId: 4 }
+    //   ]</pre>
+    //
+    // <p>
+    // <b>NOTE:</b> It is also possible to create an unbound multilink tree - see +link{tree.linkData}.
+    // @visibility external
+    //<
+
+
+
+    //> @type LinkDataFetchMode
+    //
+    // @value "separate" In this mode, link data is fetched from the
+    // +link{resultTree.linkDataSource} and nodes are separately fetched from the
+    // +link{resultTree.dataSource}.  The two fetches are sent together in a
+    // +link{RPCManager.startQueue,queue}, with the link data fetch first and the separate
+    // node fetch second.  This makes it possible for your server-side code to use the results
+    // of the link data fetch to constrain the node fetch (ie, only fetch node information
+    // for nodes that appear in a link)
+    //
+    // @value "single" In this mode, nodes and link data are fetched together from the main
+    // +link{resultTree.dataSource}, and any duplicated node IDs are handled by creating multiple
+    // links to a single node.  In this mode, the +link{resultTree.linkDataSource} is only used
+    // for update operations.
+    // <p>
+    // Note that the end result of a "single" fetch is exactly the same as fetching link data
+    // and nodes separately using "separate" mode; "separate" mode is also conceptually clearer
+    // since it emphasises the fact that nodes and link data are separate things.  We provide
+    // "single" mode because, in some cases, it may be more efficient to fetch the two types of
+    // data together in a single database fetch, using +link{dataSourceField.includeFrom} or
+    // some other kind of join technique on the server.
+    //
+    // @visibility external
+    //<
+
+    //>    @attr resultTree.linkDataFetchMode (LinkDataFetchMode : "separate" : IR)
+    // The fetch mode for this tree's link data; ignored if this is not a
+    // +link{tree.isMultiLinkTree(),multi-link tree}
+    // @group multiLinkTree
+    // @visibility external
+    //<
+    linkDataFetchMode: "separate",
+
+    //>    @attr resultTree.sendNullParentInLinkDataCriteria (Boolean : true : IR)
+    // For +link{tree.isMultiLinkTree(),multi-link tree}s only, should we send up the
+    // +link{tree.parentIdField,parentId} in fetch criteria if the criteria value is null?  If
+    // false, we remove the <code>parentId</code> from the criteria when
+    // +link{resultTree.linkDataSource,fetching link data}, <b>if</b> the criteria value is
+    // null (as it will be by default when fetching the direct child nodes of the tree's root).
+    // <p>
+    // Ignored for non-multiLink trees.
+    // @group multiLinkTree
+    // @visibility external
+    //<
+    sendNullParentInLinkDataCriteria: true,
+
+    //>    @attr resultTree.linkDataFetchOperation (String : null : IRW)
+    // The +link{DSRequest.operationId,operationId} this <code>ResultTree</code> should use
+    // when performing fetch operations on its +link{ResultTree.linkDataSource}.  Has no effect
+    // if this is not a +link{tree.isMultiLinkTree(),multi-link tree}
+    // <p>
+    // Note, this value can be overridden by +link{DSRequest.linkDataFetchOperation} when
+    // calling <code>fetchData()</code> on the component (e.g. +link{TreeGrid.fetchData(),
+    // TreeGrid.fetchData}) directly from application code.
+    // @group multiLinkTree
+    // @visibility external
+    //<
+
+    //>    @attr resultTree.linkDataAddOperation (String : null : IRW)
+    // The +link{DSRequest.operationId,operationId} this <code>ResultTree</code> should use
+    // when performing add operations on its +link{ResultTree.linkDataSource}.  Has no effect
+    // if this is not a +link{tree.isMultiLinkTree(),multi-link tree}.
+    // <p>
+    // Note, this property wll be used by internal update operations when you drag-move or
+    // drag-reparent nodes in a multi-link tree.  Do not use it when adding records from
+    // application code by directly calling <code>addData()</code> on the
+    // +link{ResultTree.linkDataSource,linkDataSource}; instead just use the regular
+    // <code>operationId</code> property in your add request.  Also note, because this
+    // property is intended to allow your code to influence the operationId used by internal
+    // methods, and those methods never directly update link data (moved and re-parented links
+    // are always removed and then re-added), there is no corresponding
+    // <code>linkDataUpdateOperation</code> property.
+    // @group multiLinkTree
+    // @visibility external
+    //<
+
+    //>    @attr resultTree.linkDataRemoveOperation (String : null : IRW)
+    // The +link{DSRequest.operationId,operationId} this <code>ResultTree</code> should use
+    // when performing remove operations on its +link{ResultTree.linkDataSource}.  Has no effect
+    // if this is not a +link{tree.isMultiLinkTree(),multi-link tree}.
+    // <p>
+    // See +link{ResultTree.linkDataAddOperation} for more information on how this property is
+    // intended to be used.
+    // @group multiLinkTree
+    // @visibility external
+    //<
+
+    //>    @attr resultTree.autoUpdateSiblingNodesOnDrag (Boolean : (see below) : IR)
+    // For +link{tree.isMultiLinkTree(),multi-link trees}, indicates that we should automatically
+    // update the +link{tree.linkPositionField,position} values of old and new sibling records
+    // after a drag reparent or reposition-within-parent operation.  For example, say you have a
+    // tree like this (where the number in parentheses indicates the node's
+    // +link{tree.linkPositionField,position} value):<pre>
+    //      A
+    //        - B (1)
+    //        - C (2)
+    //        - D (3)
+    //      E
+    //        - F (1)
+    //        - G (2)</pre>
+    // and you drag node C out and drop it between nodes F and G.  This drag operation will spawn
+    // two update operations to the server: a "remove" to delete node C from parent A, and an "add"
+    // to re-add it under parent E.  With <code>autoUpdateSiblingNodesOnDrag</code> in force, we
+    // also automatically issue two "update" operations to the server - one to change the position
+    // on node D to 2, and another to change the position on node G to 3.  The end result of this
+    // is that node position values are kept correct.
+    // <p>
+    // Please note the following:<ul>
+    // <li>As noted above, these automatic updates are persistent - we send a queue of actual
+    // update requests to the server.  This is convenient, but it may not be terribly efficient,
+    // particularly if you have just dropped a node at the head of a list of several hundred
+    // siblings.  This is why we do not default this setting to true</li>
+    // <li>The automatic updates work by applying an integer delta value to the existing position
+    // value.  So in the above example, we would compute a delta of negative 1 for node D and
+    // positive 1 for node G.  The upshot of this is that <code>autoUpdateSiblingNodesOnDrag</code>
+    // only works well if your position values are consecutive integers
+    // @group multiLinkTree
+    // @visibility external
+    //<
+
+
+    //>    @attr resultTree.firstPositionValue (Integer : 1 : IRW)
+    // If +link{resultTree.autoUpdateSiblingNodesOnDrag} is in force, this is the value we will
+    // use to auto-update the position of a node when we cannot derive that value from the
+    // existing value of a neighbor.  This happens when a node is dropped into the very first
+    // position below a parent (including the special case of the parent being previously empty)
+    // @group multiLinkTree
+    // @visibility external
+    //<
+    firstPositionValue: 1
+
 
     // Filtering
     // ----------------------------------------------------------------------------------------
@@ -53320,6 +54750,14 @@ init : function (a,b,c,d,e,f) {
     var dataSource = isc.DataSource.getDataSource(this.dataSource);
     this.observe(dataSource, "dataChanged", "observer.dataSourceDataChanged(dsRequest,dsResponse);");
 
+    if (this.isMultiLinkTree()) {
+        // observe dataChanged on our linkDataSource
+        var linkDataSource = isc.DataSource.getDataSource(this.linkDataSource);
+        if (linkDataSource) {
+            this.observe(linkDataSource, "dataChanged", "observer.linkDataSourceDataChanged(dsRequest,dsResponse);");
+        }
+    }
+
     // whether to invalidate our cache when an update occurs on one of our datasources.
     // Default is update the current cache in place.
     this.dropCacheOnUpdate = this.operation.dropCacheOnUpdate;
@@ -53354,10 +54792,12 @@ setupProperties : function () {
 _knownProperties : isc.Tree.getPrototype()._knownProperties.concat([
     "fetchMode", "dataSource", "loadDataOnDemand", "childCountProperty", "defaultIsFolder",
     "discardParentlessNodes", "defaultNewNodesToRoot", "updateCacheFromRequest",
-    "disableCacheSync", "keepParentsOnFilter", "serverFilterFields", "canReturnOpenFolders"]),
+    "disableCacheSync", "keepParentsOnFilter", "serverFilterFields", "canReturnOpenFolders",
+    "linkDataSource" ]),
 
 
 duplicate : function (includeData, includeLoadState, ignoreDataChanged) {
+
     var serverFilterFields = this.serverFilterFields;
     if (isc.isAn.Array(serverFilterFields)) {
         serverFilterFields = serverFilterFields.duplicate();
@@ -53370,20 +54810,31 @@ duplicate : function (includeData, includeLoadState, ignoreDataChanged) {
 
     newResultTreeConfig.autoOpenRoot = false;
 
-    var newResultTree = isc.ResultTree.create(newResultTreeConfig),
-        root               = this.getRoot(),
-        rootIsOpen         = this.isOpen(root),
-        rootIsFolder       = this.isFolder(root),
-        rootCachedLength   = root[this._cachedLengthProperty],
-        rootRecursionCount = root[this._recursionCountProperty],
-        rootAllCached      = root[this._visibleDescendantsCachedProperty],
-        newRoot = this.getCleanNodeData(root, false, false, includeLoadState);
+    var newResultTree = isc.ResultTree.create(newResultTreeConfig);
 
     // just clear observer here rather than adding property above to skip in init()
     if (ignoreDataChanged) {
         var dataSource = isc.DataSource.getDataSource(this.dataSource);
         if (dataSource) newResultTree.ignore(dataSource, "dataChanged");
+        if (this.isMultiLinkTree()) {
+            var linkDataSource = isc.DataSource.getDataSource(this.linkDataSource);
+            if (linkDataSource) newResultTree.ignore(linkDataSource, "dataChanged");
+        }
     }
+
+    // Multi-link trees do not allow partially-loaded nodes, so we only need to do what the
+    // unbound Tree's duplicate() function does
+    if (this.isMultiLinkTree()) {
+        return this.Super("duplicate", [includeData, includeLoadState, newResultTree], arguments);
+    }
+
+    var root               = this.getRoot(),
+        rootIsOpen         = this.isOpen(root, this.pathDelim),
+        rootIsFolder       = this.isFolder(root),
+        rootCachedLength   = root[this._cachedLengthProperty],
+        rootRecursionCount = root[this._recursionCountProperty],
+        rootAllCached      = root[this._visibleDescendantsCachedProperty],
+        newRoot = this.getCleanNodeData(root, false, false, includeLoadState);
 
 
     newRoot[newResultTree.openProperty]                      = rootIsOpen;
@@ -53418,36 +54869,45 @@ _getCleanNodeData : function (newTree, nodeList, includeLoadState) {
                 newNode = null;
             if (oldNode != null) {
 
-                var isOpen = this.isOpen(oldNode),
-                    isFolder = this.isFolder(oldNode),
-                    cachedLength = oldNode[cachedLengthProperty],
-                    recursionCount = oldNode[recursionCountProperty],
-                    allCached = oldNode[allCachedProperty];
+                if (!this.isMultiLinkTree()) {
+                    var isOpen = this.isOpen(oldNode),
+                        isFolder = this.isFolder(oldNode),
+                        cachedLength = oldNode[cachedLengthProperty],
+                        recursionCount = oldNode[recursionCountProperty],
+                        allCached = oldNode[allCachedProperty];
+                }
 
                 newNode = this.getCleanNodeData(oldNode, false, false, includeLoadState);
 
-                newNode[newOpenProperty] = isOpen;
-                newNode[newIsFolderProperty] = isFolder;
-                newNode[newCachedLengthProperty] = cachedLength;
-                newNode[newRecursionCountProperty] = recursionCount;
-                newNode[newAllCachedProperty] = allCached;
+                if (!this.isMultiLinkTree()) {
+                    newNode[newOpenProperty] = isOpen;
+                    newNode[newIsFolderProperty] = isFolder;
+                    newNode[newCachedLengthProperty] = cachedLength;
+                    newNode[newRecursionCountProperty] = recursionCount;
+                    newNode[newAllCachedProperty] = allCached;
+                }
             }
             newNodeList[i] = newNode;
         }
         return newNodeList;
     } else {
-        var isOpen = this.isOpen(nodeList),
-            isFolder = this.isFolder(nodeList),
-            cachedLength = nodeList[cachedLengthProperty],
-            recursionCount = nodeList[recursionCountProperty],
-            allCached = nodeList[allCachedProperty],
-            newNode = this.getCleanNodeData(nodeList, false, false, includeLoadState);
+        if (!this.isMultiLinkTree()) {
+            var isOpen = this.isOpen(nodeList),
+                isFolder = this.isFolder(nodeList),
+                cachedLength = nodeList[cachedLengthProperty],
+                recursionCount = nodeList[recursionCountProperty],
+                allCached = nodeList[allCachedProperty];
+        }
+        var newNode = this.getCleanNodeData(nodeList, false, false, includeLoadState);
 
-        newNode[newOpenProperty] = isOpen;
-        newNode[newIsFolderProperty] = isFolder;
-        newNode[newCachedLengthProperty] = cachedLength;
-        newNode[newRecursionCountProperty] = recursionCount;
-        newNode[newAllCachedProperty] = allCached;
+        if (!this.isMultiLinkTree()) {
+            newNode[newOpenProperty] = isOpen;
+            newNode[newIsFolderProperty] = isFolder;
+            newNode[newCachedLengthProperty] = cachedLength;
+            newNode[newRecursionCountProperty] = recursionCount;
+            newNode[newAllCachedProperty] = allCached;
+        }
+
         return newNode;
     }
 },
@@ -53510,6 +54970,10 @@ destroy : function () {
 
     var dataSource = isc.DataSource.getDataSource(this.dataSource);
     if (dataSource) this.ignore(dataSource, "dataChanged");
+    if (this.isMultiLinkTree()) {
+        var linkDataSource = isc.DataSource.getDataSource(this.linkDataSource);
+        if (linkDataSource) this.ignore(linkDataSource, "dataChanged");
+    }
     this.Super("destroy", arguments);
 },
 
@@ -53904,6 +55368,12 @@ _getLoadChildrenRequestPropsFromContext : function (childDS, parentDS, parentNod
 // called repeatedly you'd end up with duplicates in the children array.
 _loadChildren : function (parentNode, start, end, callback) {
 
+    var nodeLocator;
+    if (this.isANodeLocator(parentNode)) {
+        nodeLocator = parentNode;
+        parentNode = parentNode.node;
+    }
+
     var relationship = this._getRelationship(parentNode, true),
         childDS = relationship.childDS,
         parentDS = relationship.parentDS;
@@ -53923,6 +55393,7 @@ _loadChildren : function (parentNode, start, end, callback) {
     // also set up the callback to fire on return.
 
     var internalClientContext = {
+        parentNodeLocator: nodeLocator,
         parentNode: parentNode,
         relationship: relationship,
         childrenReplyCallback: callback
@@ -54013,14 +55484,62 @@ _loadChildren : function (parentNode, start, end, callback) {
         progressiveLoadingProperties = { progressiveLoading: false };
     }
 
+    if (this.isMultiLinkTree() && this.linkDataFetchMode == "separate") {
+        var linkDS = isc.DataSource.get(this.linkDataSource);
+        if (!linkDS) {
+            this.logWarn("MultiLink tree specifies linkDataFetchMode:separate, but does not " +
+                         "provide a valid linkDataSource.  This is not valid, please see the " +
+                         "documentation for 'linkDataFetchMode'");
+            return;
+        }
+        var linkCriteria = isc.addProperties({}, criteria);
+        if (linkCriteria[this.parentIdField] === null && !this.sendNullParentInLinkDataCriteria) {
+            delete linkCriteria[this.parentIdField];
+        }
+        var linkRequestProperties = this._getLoadChildrenRequestPropsFromContext(
+                                    linkDS, linkDS, parentNode, internalClientContext);
+
+
+        var linkOpId = linkRequestProperties.linkDataFetchOperation ||
+                       this.linkDataFetchOperation;
+        linkRequestProperties.operation = isc.DataSource.makeDefaultOperation(linkDS,"fetch",
+                                                linkOpId);
+        linkRequestProperties.operationId = linkOpId;
+        linkRequestProperties._fetchingAllLinks = (linkCriteria[this.parentIdField] == null);
+        var wasAlreadyQueuing = isc.RPCManager.startQueue();
+        linkDS.fetchData(linkCriteria, { caller: this, methodName: "loadLinkDataReply" },
+            isc.addProperties(linkRequestProperties, progressiveLoadingProperties));
+
+        if (!this.sendLinkDataFieldsInNodeCriteria) {
+            criteria = isc.addProperties({}, criteria);
+            delete criteria[this.idField];
+            delete criteria[this.parentIdField];
+            delete criteria[this.linkPositionField];
+        }
+    }
+
     // kick off the operation to fetch children
     childDS.fetchData(criteria, { caller: this, methodName: "loadChildrenReply" },
         isc.addProperties(requestProperties, progressiveLoadingProperties));
+
+    if (this.isMultiLinkTree() && this.linkDataFetchMode == "separate") {
+        if (!wasAlreadyQueuing) {
+            isc.RPCManager.sendQueue();
+        }
+    }
 },
 currentFetch:0,
 
-_addChildren : function (parent, newChildren, dsResponse, relationship, request, localFiltering)
+_addChildren : function (parent, newChildren, dsResponse, relationship, request,
+                            localFiltering, fetchingAllLinks)
 {
+
+    var parentNodeLocator;
+    if (this.isANodeLocator(parent)) {
+        parentNodeLocator = parent;
+        parent = parent.node;
+    }
+
     if (!isc.isA.Array(newChildren) || newChildren.length == 0) {
         // no new nodes, mark parent as loaded
         if (dsResponse.status == isc.RPCResponse.STATUS_OFFLINE) {
@@ -54041,6 +55560,10 @@ _addChildren : function (parent, newChildren, dsResponse, relationship, request,
             }
             newChildren = [];
         }
+    }
+
+    if (this.isMultiLinkTree() && this.linkDataFetchMode == "single") {
+        this._extractLinkData(newChildren);
     }
 
 
@@ -54115,12 +55638,54 @@ _addChildren : function (parent, newChildren, dsResponse, relationship, request,
             var suppressDataChanged = localFiltering;
             this._linkNodes(newChildren, relationship.idField,   relationship.parentIdField,
                                          relationship.rootValue, relationship.isFolderProperty,
-                            parent, suppressDataChanged);
+                                         parentNodeLocator || parent, suppressDataChanged, null,
+                                         !fetchingAllLinks);
         }
     }
 
     // clear current operationType
     delete this._lastOperation;
+},
+
+loadLinkDataReply : function(dsResponse, data, dsRequest) {
+    // Discard the response if invalidateCache was called while we were fetching
+    var context = dsResponse.internalClientContext,
+        fetchCount = context.fetchCount;
+    if (this.invalidatedFetchCount != null && fetchCount <= this.invalidatedFetchCount) {
+        return;
+    }
+
+    if (!this.linkData) this.linkData = [];
+
+    if (!data || data.length == 0) {
+        this.logDebug("Multi-link tree: fetch on the linkDataSource returned a null or empty " +
+                 "response (this may be perfectly valid, since we may have just tried to " +
+                 "fetch the children of a node whose folderness was unknown - we have now " +
+                 "discovered that it is actually a leaf)");
+    } else {
+        this.linkData.addAll(data);
+    }
+},
+
+_extractLinkData : function(data) {
+    if (!this.linkData) this.linkData = [];
+    var idField = this.linkIdField != null ? this.linkIdField : this.idField,
+        pidField = this.linkParentIdField != null ? this.linkParentIdField : this.parentIdField,
+        posField = this.linkPositionField;
+        for (var i = 0; i < data.length; i++) {
+            var linkRecord = {};
+            linkRecord[idField] = data[i][idField];
+            linkRecord[pidField] = data[i][pidField];
+            linkRecord[posField] = data[i][posField];
+        if (linkRecord[idField] == null) {
+            this.logWarn("Multi-link tree with linkDataFetchMode:single must embed link information " +
+                        "in the data records.  This means that both '" + idField + "' and '" +
+                        pidField + "' must be provided in every data record, but this record " +
+                        "does not meet that requirement: " + isc.echo(data[i]));
+            continue;
+        }
+        this.linkData.add(linkRecord);
+    }
 },
 
 loadChildrenReply : function (dsResponse, data, request) {
@@ -54142,13 +55707,31 @@ loadChildrenReply : function (dsResponse, data, request) {
     }
 
 
-    var ancestor = parentNode,
-        greatAncestor;
-    while ((greatAncestor = this.getParent(ancestor)) != null) {
-        ancestor = greatAncestor;
-    }
-    if (ancestor !== this.getRoot()) {
-        return;
+    if (!this.isMultiLinkTree()) {
+        var ancestor = parentNode,
+            greatAncestor;
+        while ((greatAncestor = this.getParent(ancestor)) != null) {
+            ancestor = greatAncestor;
+        }
+        if (ancestor !== this.getRoot()) {
+            return;
+        }
+    } else {
+        if (context.parentNode) {
+            context.parentNode = this._getNodeFromIndex(context.parentNode)
+            if (!context.parentNodeLocator) {
+                context.parentNodeLocator = this.createNodeLocator(context.parentNode, null, null, context.parentPath);
+            }
+        }
+        var ancestor = context.parentNodeLocator,
+            greatAncestor;
+        while ((greatAncestor = this.getParent(ancestor)) != null) {
+            var parentPath = this._deriveParentPath(ancestor.path);
+            ancestor = this.createNodeLocator(greatAncestor, null, null, parentPath);
+        }
+        if (ancestor.node !== this.getRoot()) {
+            return;
+        }
     }
 
     // Are we filtering data locally?
@@ -54183,7 +55766,9 @@ loadChildrenReply : function (dsResponse, data, request) {
     }
 
     // add newNodes to tree, handling the various tree modes and allowed newNodes data formats
-    tree._addChildren(parentNode, newNodes, dsResponse, relationship, request, localFiltering);
+    tree._addChildren(context.parentNodeLocator || parentNode, newNodes, dsResponse,
+                                    relationship, request, localFiltering,
+                                    request._fetchingAllLinks);
 
     // If filtering locally, do it now.
     if (localFiltering) {
@@ -54193,6 +55778,18 @@ loadChildrenReply : function (dsResponse, data, request) {
     }
     // Reopen any nodes after cache is filled
     if (this._openStateForLoad) {
+        // NOTE: filterLocalData() has relinked the tree, so the nodes are now different
+        // objects than the nodes we stored in the _openStateForLoad variable.  For multiLink
+        // trees, this is significant because it means that node lookups in the index
+        // will fail.  So refresh the cached openState from the current nodeIndex
+        var openState = this._openStateForLoad;
+        if (this.isMultiLinkTree()) {
+            for (var i = 0; i < openState.length; i++) {
+                openState[i].node = this._getNodeFromIndex(openState[i].node);
+
+                this.setLoadState(openState[i].node, isc.Tree.LOADED)
+            }
+        }
         this._setOpenState(this._openStateForLoad, true);
         delete this._openStateForLoad;
     }
@@ -54261,10 +55858,16 @@ getDataSource : function () {
     return isc.DataSource.getDataSource(this.dataSource);
 },
 
+getLinkDataSource : function () {
+    if (!this.isMultiLinkTree()) return null;
+    return this.linkDataSource ? isc.DataSource.getDataSource(this.linkDataSource) : null;
+},
+
 //> @method resultTree.invalidateCache() [A]
 // Manually invalidate this ResultTree's cache.
 // <P>
-// Generally a ResultTree will observe and incorporate updates to the DataSource that provides its
+// Generally a ResultTree will <smartclient>observe</smartclient><smartgwt>detect</smartgwt>
+// and incorporate updates to the DataSource that provides its
 // records, but when this is not possible, <code>invalidateCache()</code> allows manual cache
 // invalidation.
 // <P>
@@ -54285,6 +55888,10 @@ invalidateCache : function () {
 
     this._autoName = 0;
 
+    if (this.isMultiLinkTree()) {
+        this.data = [];
+    }
+
     // Reset root to refetch all our data.
     this.setRoot(this.makeRoot(), true);
 
@@ -54296,16 +55903,20 @@ invalidateCache : function () {
 
 dataSourceDataChanged : function (dsRequest, dsResponse) {
 
-    // respsect the flag to suppress cache sync altogether
+    // respect the flag to suppress cache sync altogether
     if (this.disableCacheSync) return;
 
     var updateData = isc.DataSource.getUpdatedData(dsRequest, dsResponse,
                                                    this.updateCacheFromRequest, true);
-
-    this.handleUpdate(dsRequest.operationType, updateData, dsResponse.invalidateCache);
+    var context = {};
+    if (this.isMultiLinkTree()) {
+        context.nodeLocator = dsRequest.nodeLocator;
+        context.position = dsRequest.position;
+    }
+    this.handleUpdate(dsRequest.operationType, updateData, dsResponse.invalidateCache, context);
 },
 
-handleUpdate : function (operationType, updateData, forceCacheInvalidation) {
+handleUpdate : function (operationType, updateData, forceCacheInvalidation, context) {
     if (isc._traceMarkers) arguments.__this = this;
 
     var dropCacheOnUpdate = (
@@ -54324,14 +55935,14 @@ handleUpdate : function (operationType, updateData, forceCacheInvalidation) {
     // update our cached tree directly  Note our cache is filtered, so we may just discard the
     // update if the new row doesn't pass the filter
 
-    this.updateCache(operationType, updateData);
+    this.updateCache(operationType, updateData, context);
     this.dataChanged(operationType);
 },
 
 
 // updateCache() - catch-all method fired when the dataSource dataChanged method fires.
 // Integrates (or removes) the modified nodes into our local tree of data.
-updateCache : function (operationType, updateData) {
+updateCache : function (operationType, updateData, context) {
     if (updateData == null) return;
 
 
@@ -54349,14 +55960,14 @@ updateCache : function (operationType, updateData) {
 
     switch (operationType) {
     case "remove":
-        this.removeCacheData(updateData);
+        this.removeCacheData(updateData, context);
         break;
     case "add":
-        this.addCacheData(updateData);
+        this.addCacheData(updateData, context);
         break;
     case "replace":
     case "update":
-        this.updateCacheData(updateData);
+        this.updateCacheData(updateData, context);
         break;
     }
 
@@ -54512,7 +56123,7 @@ _addNodeToCache : function (tree, node, idField) {
     return addNode;
 },
 
-updateCacheData : function (updateData) {
+updateCacheData : function (updateData, context) {
     if (!isc.isAn.Array(updateData)) updateData = [updateData];
     //>DEBUG
     var debugTotals = {
@@ -54555,7 +56166,7 @@ updateCacheData : function (updateData) {
         }
 
 
-        if (checkParent &&
+        if (!this.isMultiLinkTree() && checkParent &&
             updateRow[this.idField] == updateRow[this.parentIdField])
         {
             this.logWarn(
@@ -54568,10 +56179,10 @@ updateCacheData : function (updateData) {
 
         // Update cache of the entire tree (all nodes)
         if (this.completeTree) {
-            this._updateNodeInCache(this.completeTree, updateRow, true);
+            this._updateNodeInCache(this.completeTree, updateRow, true, null, null, context);
         }
         // Update the visible tree
-        this._updateNodeInCache(this, updateRow, matchesFilter, criteria, mismatchingParents
+        this._updateNodeInCache(this, updateRow, matchesFilter, criteria, mismatchingParents, context
         //>DEBUG
         , debugTotals
         //<DEBUG
@@ -54610,7 +56221,7 @@ updateCacheData : function (updateData) {
 },
 
 _updateNodeInCache : function (tree, updateRow, matchesFilter, criteria, mismatchingParents,
-                               debugTotals)
+                               context, debugTotals)
 {
 
     var ds = this.getDataSource(),
@@ -54644,7 +56255,9 @@ _updateNodeInCache : function (tree, updateRow, matchesFilter, criteria, mismatc
         prevSiblings = paged && this.getChildren(this.getParent(node));
     if (matchesFilter || mismatchingParents) {
         // the change may have reparented a node.
-        if (updateRow[this.parentIdField] != node[this.parentIdField]) {
+        // But not if this is a multiLink tree - change of parent affects linkData, not core
+        // node data
+        if (!this.isMultiLinkTree() && updateRow[this.parentIdField] != node[this.parentIdField]) {
 
             var newParentNode = tree.find(this.idField, updateRow[this.parentIdField]);
             if (newParentNode == null &&
@@ -54757,6 +56370,557 @@ _removeNodesFromCache : function (tree, updateData, idField, criteria) {
     } else {
         tree._removeList(nodes);
     }
+},
+
+// Multi-link cache sync
+linkDataSourceDataChanged : function (dsRequest, dsResponse) {
+
+    // respect the flag to suppress cache sync altogether
+    if (this.disableCacheSync) return;
+
+    // respect the request-level flag to suppress cache sync for this particular request
+    if (dsRequest.disableCacheSync) return;
+
+    var updateData = isc.DataSource.getUpdatedData(dsRequest, dsResponse,
+                                                   this.updateCacheFromRequest, true);
+    var context = {};
+    if (this.isMultiLinkTree()) {
+        if (dsRequest.clientContext && dsRequest.clientContext.sourceTree) {
+            context.sourceTree = dsRequest.clientContext.sourceTree;
+        }
+        if (dsRequest.clientContext && dsRequest.clientContext.nodeLocator) {
+            context.nodeLocator = dsRequest.clientContext.nodeLocator;
+        }
+        if (dsRequest.clientContext && dsRequest.clientContext.newParent) {
+            context.newParent = dsRequest.clientContext.newParent;
+        }
+        if (dsRequest.clientContext && dsRequest.clientContext.hasOwnProperty("position")) {
+            context.position = dsRequest.clientContext.position;
+        }
+        if (dsRequest.clientContext && dsRequest.clientContext.hasOwnProperty("isDragMove")) {
+            context.isDragMove = dsRequest.clientContext.isDragMove;
+        }
+        if (dsRequest.clientContext && dsRequest.clientContext.newParentNodeLocator) {
+            context.newParentNodeLocator = dsRequest.clientContext.newParentNodeLocator;
+        }
+        if (dsRequest.clientContext && dsRequest.clientContext.hasOwnProperty("sourceRootValue")) {
+            context.sourceRootValue = dsRequest.clientContext.sourceRootValue;
+        }
+    }
+    this.handleUpdateLinks(dsRequest.operationType, updateData, dsResponse.invalidateCache, context);
+},
+
+handleUpdateLinks : function (operationType, updateData, forceCacheInvalidation, context) {
+    if (isc._traceMarkers) arguments.__this = this;
+
+    // WRWRWR - is this necessary for linkData?
+/*    var dropCacheOnUpdate = (
+            this.dropCacheOnUpdate || forceCacheInvalidation ||
+
+            (this.isPaged() && this.keepParentsOnFilter));
+    if (dropCacheOnUpdate) {
+
+
+        this.invalidateCache();
+
+
+        if (!this.getDataSource().canQueueRequests) this.dataChanged();
+        return;
+    } */
+
+    this.updateLinksInCache(operationType, updateData, context);
+    this.linkDataChanged(operationType);
+},
+
+
+updateLinksInCache : function (operationType, updateData, context) {
+    if (updateData == null) return;
+    operationType = isc.DS._getStandardOperationType(operationType);
+
+    if (!isc.isAn.Array(updateData)) updateData = [updateData];
+
+    //>DEBUG
+    if (this.logIsInfoEnabled()) {
+        this.logInfo("Updating links in cache: operationType '" + operationType + "', " +
+                     updateData.length + " rows update data" +
+                     (this.logIsDebugEnabled() ?
+                      ":\n" + this.echoAll(updateData) : ""));
+    } //<DEBUG
+
+    switch (operationType) {
+    case "remove":
+        // If the remove operation is part of a compound drag-move (remove and then re-add), we
+        // need to use the Tree.moveList() operation to ensure that child nodes are handled
+        // correctly and node open-state is properly re-applied.  So skip the remove in this
+        // case.
+        // HOWEVER, if we are syncing a tree other than the tree in which the drag took place,
+        // we only want to do this if:
+        // - The parent/child relationship exists in this tree (ie, the one we're syncing)
+        // - The new parent node also exists in this tree
+        // With that combination, we have a move to perform in this tree as well as the original
+        // tree.  If the "old" parent/child relationship does not exist, we just need to add the
+        // child to the new parent (the remove will no-op).  Ifthe new parent does not exist,
+        // we just need to remove the child from its old location
+        var fullRemove = true;
+        if (context.isDragMove) {
+            if (context.sourceTree == this) {
+                // The drag took place within this tree - we definitely want to move
+                fullRemove = false;
+            } else {
+                if (!this._isParentLinkInIndex(context.nodeLocator)) {
+                    // Nothing to remove, so we can no-op
+                    fullRemove = false;
+                } else if (this._getNodeFromIndex(context.newParentNodeLocator)) {
+                    // Both old and new parents are in the tree - we need to do a move, so don't
+                    // remove the node from its old position
+                    fullRemove = false;
+                }
+            }
+        }
+        if (fullRemove) {
+            this.removeLinksFromCacheData(updateData, context);
+        } else {
+            // If we didn't run through the full remove logic, we still always  want to remove
+            // the link from the local linkData, because that needs to be a faithful copy of
+            // what is on the server
+            for (var i = 0; i < updateData.length; i++) {
+                var linkIndex = this.linkData.findByKeys(updateData[i], this.linkDataSource);
+                if (linkIndex >= 0) {
+                    var link = this.linkData.splice(linkIndex, 1)[0];
+                }
+            }
+        }
+        break;
+    case "add":
+        this.addLinksToCacheData(updateData, context);
+        break;
+    case "replace":
+    case "update":
+        for (var i = 0; i < updateData.length; i++) {
+            var updateRecord = updateData[i];
+            var linkIndex = this.linkData.findByKeys(updateData[i], this.linkDataSource);
+            var linkRecord = this.linkData[linkIndex];
+            if (!linkRecord) {
+                this.logWarn("Detected 'update' operation in linkDataSource cache sync, but the " +
+                            "link ID " +  updateData[this.linkIdField] + " does not exist in the " +
+                            "current link data.  Ignoring.");
+            } else if (linkRecord[this.idField] != updateRecord[this.idField] ||
+                    linkRecord[this.parentIdField] != updateRecord[this.parentIdField])
+            {
+                this.logWarn("Detected 'update' operation in linkDataSource cache sync that changes " +
+                            "either the child ID or the parent ID.  These kind of updates are " +
+                            "not supported - instead, it should be a remove followed by an add");
+            } else if (this.allowDuplicateChildren &&
+                    linkRecord[this.linkPositionField] != updateRecord[this.linkPositionField])
+            {
+                this.logWarn("Detected 'update' operation in linkDataSource cache sync that changes " +
+                            "the child's position within its parent.  These kind of updates are " +
+                            "not supported where allowDuplicateChildren is true - instead, it " +
+                            "should be a remove followed by an add");
+            } else {
+                // As long as we are not trying to use update to structurally alter the tree, it's OK
+                this.updateLinksInCacheData([updateRecord], context);
+            }
+        }
+        break;
+    }
+
+},
+
+removeLinksFromCacheData : function (updateData, context) {
+    if (!isc.isAn.Array(updateData)) updateData = [updateData];
+
+    var criteria = (this._localCriteria || this.criteria),
+        haveCriteria = this.haveCriteria(criteria);
+
+    if (this.completeTree) {
+        this._removeLinksFromCache(this.completeTree, updateData, null, context);
+    }
+    // Update the visible tree
+    this._removeLinksFromCache(this, updateData,
+                this.keepParentsOnFilter && haveCriteria ? criteria : null, context);
+},
+
+_removeLinksFromCache : function (tree, updateData, criteria, context) {
+
+
+    if (updateData.length == 0) return;
+
+    // Build list of nodes to be removed
+    var paged = this.isPaged(),
+        links = [];
+    if (context.nodeLocator) {
+        this._assert(updateData.length == 1);
+    }
+    for (var i = 0; i < updateData.length; i++) {
+        // This is a remove, so we only have the primaryKey
+        var linkIndex = tree.linkData.findByKeys(updateData[i], tree.linkDataSource);
+        if (linkIndex < 0) {
+            // This is a mainstream case - we might be syncing a tree with the same linkDataSource
+            // but a different set of nodes because it has a different rootValue
+            //this.logWarn("Trying to remove link record with linkDataSource primaryKey " +
+            //                isc.echoLeaf(updateData[i]) + " but no such link record was " +
+            //                "found in local linkData.  Ignoring this link remove request.")
+            continue;
+        }
+        var link = tree.linkData.splice(linkIndex, 1)[0];
+        var nodeLocator;
+        if (context.nodeLocator) {
+            nodeLocator = isc.addProperties({}, context.nodeLocator);
+        } else {
+            var indexEntry = tree._getNodeIndexEntry(link[tree.idField]);
+            for (var path in indexEntry.paths) {
+                break;
+            }
+            nodeLocator = tree.createNodeLocator(
+                indexEntry.node,
+                null,
+                null,
+                path
+            )
+        }
+        nodeLocator.node = tree._getNodeFromIndex(nodeLocator.node[tree.idField]);
+        if (context.hasOwnProperty("sourceRootValue")) {
+            if (!tree._adjustPathForRootDifferences(nodeLocator, context.sourceRootValue)) {
+                // This nodeLocator could not be adjusted so it applies to this tree.  Seems like
+                // this would only happen in the same circumstances that would cause the above
+                // search for linkIndex to fail
+                continue;
+            }
+        }
+
+        if (!tree._isParentLinkInIndex(nodeLocator)) {
+            tree.logWarn("Cache sync: couldn't find deleted link:" + this.echo(updateData[i]));
+        } else if (!(paged && isc.isA.ResultSet(tree.getChildren(tree._getNodeFromIndex(link[tree.parentIdField]))))) {
+            links.add(nodeLocator);
+        }
+    }
+
+    // remove links
+
+    var criteria;
+    if (criteria) {
+        var ds = tree.getLinkDataSource();
+
+        for (var i = 0; i < links.length; i++) {
+            var link = links[i],
+                parentNode = tree._getNodeFromIndex(link.parentId);
+            // remove node
+            tree._remove(link);
+            // if parent has no remaining children and mismatches filter, queue for removal
+            if (parentNode) {
+                var children = parentNode[tree.childrenProperty];
+                if ((children == null || children.isEmpty()) &&
+                    !ds._hasMatches([parentNode], criteria, tree.context))
+                {
+                    links.add(parentNode);
+                }
+            }
+        }
+    } else {
+        tree._removeList(links);
+    }
+},
+
+addLinksToCacheData : function (updateData, context) {
+    if (!isc.isAn.Array(updateData)) updateData = [updateData];
+
+    var criteria = (this._localCriteria || this.criteria),
+        haveCriteria = this.haveCriteria(criteria);
+
+    var pk = this.getDataSource().getPrimaryKeyFieldNames()[0],
+        idField = this.idField || pk;
+    if (this.completeTree) {
+        this._addLinksToCache(this.completeTree, updateData, idField, null, context);
+    }
+    // Update the visible tree
+    this._addLinksToCache(this, updateData, idField,
+                this.keepParentsOnFilter && haveCriteria ? criteria : null, context);
+},
+
+_addLinksToCache : function (tree, updateData, idField, criteria, context) {
+
+
+    // Build list of nodes to be added
+
+    //>DEBUG
+    this._assert(!context.isDragMove || updateData.length == 1);
+    //<DEBUG
+    var paged = tree.isPaged(),
+        links = [];
+    if (context.isDragMove && context.sourceTree == this) {
+        // We're drag-moving, which is implemented as a delete followed by an add.  However, in
+        // a multi-link tree we don't want to actually delete the link because that would remove
+        // the entry from the nodeIndex, which would mean we lose the node's open state.  So in
+        // that case we avoid syncing the delete, which means we should not look for a duplicate
+        // here - it will always be there.
+        links.add(updateData[0]);
+    } else if (context.isDragMove &&
+               context.nodeLocator.parentId == context.newParentNodeLocator.node[this.idField])
+    {
+        // This is a move within the same parent, so it isn't a duplicate
+        links.add(updateData[0]);
+    } else {
+        for (var i = 0; i < updateData.length; i++) {
+            var link = updateData[i];
+            var nodeLocator = tree.createNodeLocator(
+                        link[tree.idField],
+                        link[tree.parentIdField],
+                        link[tree.linkPositionField],
+                        "");
+
+            // nodeLocator could be null here if the node is not yet part of this tree
+            if (nodeLocator != null && tree._isParentLinkInIndex(nodeLocator)) {
+                this.logWarn("Cache sync: trying to add duplicate link:" + this.echo(updateData[i]));
+            } else if (!(paged && isc.isA.ResultSet(tree.getChildren(tree._getNodeFromIndex(link[tree.parentIdField]))))) {
+                links.add(link);
+            }
+        }
+    }
+
+    if (links.length == 0) return;
+
+    if (context.isDragMove) {
+        // This is the drag of a single record - even if we dragged a bunch of records, they
+        // will have been sent for server update in a queue of discrete dsRequests
+        //>DEBUG
+        this._assert(links.length == 1 && context.nodeLocator && context.newParentNodeLocator);
+        //<DEBUG
+        var link = links[0];
+        tree._currentLinkRecord = link;
+        // Replace the nodes in the child and parent nodeLocators with the same nodes from this
+        // tree's nodeIndex - if we are syncing from one tree to another, these will be
+        // different objects.  But copy the nodeLocators first, otherwise they will be changed
+        // in place and any path changes we make further down this method will be treated as if
+        // they were the paths on the original nodeLocator.
+        var newParentNodeLocator = isc.addProperties({}, context.newParentNodeLocator);
+        if (newParentNodeLocator.node[tree.idField] == tree.rootValue) {
+            newParentNodeLocator.node = tree.getRoot();
+            //newParentNodeLocator.path = tree.pathDelim;
+        } else {
+            // Parent was a normal node, just look it up in our nodeIndex
+            newParentNodeLocator.node = tree._getNodeFromIndex(newParentNodeLocator.node[tree.idField]);
+        }
+
+        if (newParentNodeLocator.node == null) {
+            // The parent being dragged into is not present in this tree - nothing to do
+            return;
+        }
+
+        if (!this._adjustPathForRootDifferences(newParentNodeLocator, context.sourceRootValue)) {
+            return;
+        }
+
+        // We know about the parentNode, but we may be dropping a node onto that parent that we
+        // don't currently know about.  If that's the case, we will need to fetch it
+        var nodeLocator = isc.addProperties({}, context.nodeLocator);
+        nodeLocator.node = tree._getNodeFromIndex(nodeLocator.node[tree.idField]);
+
+        if (nodeLocator.node != null) {
+            this._assert(this._adjustPathForRootDifferences(nodeLocator, context.sourceRootValue));
+            // The matching remove operation does not remove nodes from the actual tree for a
+            // dragMove operation, but it does remove the link record from the linkData (because
+            // that link record genuinely no longer exists - we don't update link records when
+            // a dragMove takes place, we delete the existing link and then create a new one).
+            // So here, we are adding the newly created link that replaces the one we removed
+            tree.linkData.add(link);
+            tree.moveList([nodeLocator], newParentNodeLocator, context.position);
+            delete tree._currentLinkRecord;
+            return;
+        } else {
+            // The child being dragged in is not currently present in this tree, so drop
+            // through to the plain add code (we don't need to move it, just hook it up)
+        }
+    }  // <<< context.isDragMove
+    // Adding new link(s)
+    var newParentNodeLocator ;
+    if (!context.newParentNodeLocator) {
+        // This means that we weren't ultimately called by internal code - we probably got here
+        // from an application-code call to addData() on the link dataSource
+        // Since we are adding a child, it needs to be added everywhere that parent exists; the
+        // linking code will do this automatically, so all we need is a locator for one
+        // occurence of the parent node (any occurence will do)
+        var parentIndexEntry = this._getNodeIndexEntry(links[0][this.parentIdField]);
+        if (parentIndexEntry == null) {
+            // The parent being dragged into is not present in this tree - nothing to do
+            return;
+        }
+        for (var path in parentIndexEntry.paths) {
+            break;
+        }
+        newParentNodeLocator = this.createNodeLocator(
+            parentIndexEntry.node,
+            null,
+            null,
+            path
+        )
+    } else {
+        if (!this._adjustPathForRootDifferences(context.newParentNodeLocator, context.sourceRootValue)) {
+            return;
+        }
+        newParentNodeLocator = context.newParentNodeLocator;
+    }
+    tree.linkData.addAll(links);
+    var nodes = [], missingNodes = [];
+    for (var i = 0; i < links.length; i++) {
+        var node = tree._getNodeFromIndex(links[i][tree.idField]);
+        if (node == null) {
+            missingNodes.add(links[i]);
+        } else {
+            nodes.add(node);
+        }
+    }
+    if (nodes.length > 0) {
+        if (newParentNodeLocator.node[tree.idField] == tree.rootValue) {
+            nodes.add(tree.getRoot());
+        } else {
+            nodes.add(tree._getNodeFromIndex(newParentNodeLocator.node[tree.idField]));
+        }
+        tree._multiLinkNodes(nodes, tree.idField, tree.parentIdField, tree.linkPositionField,
+                                tree.rootValue, tree.isFolderProperty, newParentNodeLocator,
+                                false, links, true);
+    }
+
+    if (missingNodes.length > 0) {
+        var wasQueueing = isc.RPCManager.startQueue();
+        for (var i = 0; i < missingNodes.length; i++) {
+            this._fetchMissingNode(tree, missingNodes[i], newParentNodeLocator);
+        }
+        if (!wasQueueing) isc.RPCManager.sendQueue();
+    }
+
+},
+
+updateLinksInCacheData : function (updateData, context) {
+    if (!isc.isAn.Array(updateData)) updateData = [updateData];
+
+    var criteria = (this._localCriteria || this.criteria),
+        haveCriteria = this.haveCriteria(criteria);
+
+    if (this.completeTree) {
+        this._updateLinksInCache(this.completeTree, updateData, null, context);
+    }
+    // Update the visible tree
+    this._updateLinksInCache(this, updateData,
+                this.keepParentsOnFilter && haveCriteria ? criteria : null, context);
+},
+
+_updateLinksInCache : function (tree, updateData, criteria, context) {
+    for (var i = 0; i < updateData.length; i++) {
+        // ASSERT: this will always succeed, we confirm the record's existence earlier in the flow
+        var index = tree.linkData.findByKeys(updateData[i], tree.linkDataSource);
+        var oldRecord = tree.linkData[index];
+        tree.linkData[index] = updateData[i];
+        // Strictly speaking, it shouldn't be necessary to update the indexes even if the position
+        // has changed.  We should ignore the value of position in the indexes unless
+        // allowDuplicateChildren is true, and we cannot get to this point if that flag is true
+        // (this is enforced earlier in the flow).  However, it's simple enough to update the
+        // indexes and avoids potential confusion
+        var positionEntry = tree._getPositionEntryFromIndex(oldRecord[tree.idField],
+                                                            oldRecord[tree.parentIdField]);
+        if (positionEntry && positionEntry.position == oldRecord[tree.linkPositionField]) {
+            positionEntry.position = updateData[i][tree.linkPositionField];
+        }
+        for (var j = 0; j < tree.recordNumberToNodeLocatorIndex.length; j++) {
+            var entry = tree.recordNumberToNodeLocatorIndex[j];
+            if (entry.node[tree.idField] == oldRecord[tree.idField] &&
+                    entry.parentId == oldRecord[tree.parentIdField])
+            {
+                entry.position = updateData[i][tree.linkPositionField];
+                // Can't stop here, there may be more matches - this is a multiLink tree after all!
+            }
+        }
+
+        var nodeLocator = tree.createNodeLocator(oldRecord[tree.idField],
+                                                 oldRecord[tree.parentIdField],
+                                                 oldRecord[tree.linkPositionField]);
+        tree._removeNodeFromLinkDataIndex(nodeLocator);
+        nodeLocator.position = updateData[i][tree.linkPositionField];
+        tree._addNodeToLinkDataIndex(nodeLocator, updateData[i]);
+    }
+},
+
+_fetchMissingNode : function(tree, missingNode, newParentNodeLocator) {
+    var ds = isc.DataSource.get(this.dataSource),
+        pks = ds && ds.getPrimaryKeyFields(),
+        criteria = pks && isc.firstKey(pks) != null && isc.applyMask(missingNode, pks);
+    this._assert(criteria != null);
+    ds.fetchData(criteria, function(dsResponse, data, dsRequest) {
+        if (data && data.length > 0) {
+            var nodes = [data[0]];
+            if (newParentNodeLocator.node[tree.idField] == tree.rootValue) {
+                nodes.add(tree.getRoot());
+            } else {
+                nodes.add(tree._getNodeFromIndex(newParentNodeLocator.node[tree.idField]));
+            }
+            tree._multiLinkNodes(nodes, tree.idField, tree.parentIdField, tree.linkPositionField,
+                        tree.rootValue, tree.isFolderProperty, newParentNodeLocator,
+                        false, [missingNode], true);
+        } else {
+            // What can we do?  The child node ought to be there, but it aint...
+        }
+    })
+},
+
+_adjustPathForRootDifferences : function(nodeLocator, originalRootValue) {
+    if (this.rootValue == originalRootValue) return true;
+    // If we are syncing from a different tree with a different rootValue, the path on
+    // the nodeLocator is going to be incorrect
+    var path = nodeLocator.path;
+    if (this.rootValue) {
+        path = this._trimPathToNewRoot(path, this.rootValue);
+    } else {
+        path = this._findMatchingPath(nodeLocator.node[this.idField], path, originalRootValue);
+    }
+    if (path == null) {
+        return false;
+    }
+    nodeLocator.path = path;
+    return true;
+},
+
+_trimPathToNewRoot : function(path, newRoot) {
+    // Trims off the front part of the path - used when syncing from Tree A to Tree B where
+    // Tree B is rooted at some sub-branch of Tree A
+    var nodes = path.split(this.pathDelim);
+    var index = nodes.indexOf(newRoot);
+    if (index == -1) {
+        // The new root doesn't appear in the existing path at all - Tree B is not a subtree of
+        // Tree A, at least along this path, it's just a different tree
+        return null;
+    }
+    var newPath = this.pathDelim;
+    var elem = 0;
+    var offset = this.allowDuplicateChildren ? 2 : 1;
+    for (var i = index+offset; i < nodes.length; i++) {
+        if (elem++ > 0) newPath += this.pathDelim;
+        newPath += nodes[i];
+    }
+    return newPath;
+},
+
+_findMatchingPath : function(nodeId, path, originalRootValue) {
+    if (originalRootValue) {
+        // The parent node is the parent node - its children are always the same, regardless of
+        // the particular occurence.  So here, we only need to know the root node ID.  However,
+        // if allowDuplicateChildren is true, the path parsing routines expect node IDs to
+        // be qualified with position.  So if the app dev has not set the rootValue of the tree
+        // to a qualified value like "theNodeId/0", qualify it.  Note, this is only done for
+        // parsing purposes - the value of the position qualifier we add is of no significance
+        if (this.allowDuplicateChildren && originalRootValue.indexOf(this.pathDelim) == -1) {
+            originalRootValue = originalRootValue + this.pathDelim + "not-important";
+        }
+        path = originalRootValue + (path == this.pathDelim ? "" : path);
+    }
+    var indexEntry = this._getNodeIndexEntry(nodeId);
+    if (indexEntry && indexEntry.paths) {
+        for (var key in indexEntry.paths) {
+            if (this.parentChildPositionMatch(key, path)) {
+                return key;
+            }
+        }
+    }
+    return null;
 },
 
 // get the title for this node
@@ -54940,7 +57104,11 @@ getRange : function (start, end, dontFetch) {
             ++end;
         }
         var progressiveLoading = this._getProgressiveLoading();
-        this._getRange(root, root, [root], 0, start, end, true, progressiveLoading, false, info);
+        var rootNodeLocator;
+        if (this.isMultiLinkTree()) {
+            rootNodeLocator = this.createNodeLocator(root, null, null, "/");
+        }
+        this._getRange(root, rootNodeLocator || root, [root], 0, start, end, true, progressiveLoading, false, info);
 
     }
     return info.range;
@@ -54981,6 +57149,12 @@ _getRange : function (root, node, children, i, start, end, recursionTopLevel, pr
         needQueue = info.needQueue,
         dontFetch = info.dontFetch;
 
+    var nodeLocator;
+    if (this.isANodeLocator(node)) {
+        nodeLocator = node;
+        node = node.node;
+    }
+
 
 
     var defaultChildLength = (this.openDisplayNodeType == isc.Tree.FOLDERS_AND_LEAVES ? 1 : 0);
@@ -55013,8 +57187,12 @@ _getRange : function (root, node, children, i, start, end, recursionTopLevel, pr
 
             var child = children.getCachedRow(p);
 
+            var childNodeLocator;
+            if (this.isMultiLinkTree()) {
+                childNodeLocator = this.getNodeLocator(j);
+            }
             var cachedFlag = child != null &&
-                (!this.isOpen(child) || child[allCachedProperty] ||
+                (!this.isOpen(childNodeLocator || child) || child[allCachedProperty] ||
                  this.hideLoadingNodes && this.isLoading(child));
 
             if (child == null) {
@@ -55074,8 +57252,8 @@ _getRange : function (root, node, children, i, start, end, recursionTopLevel, pr
                         childLength = child[cachedLengthProperty];
                         visibleChild = true;
                     } else {
-                        childLength = this._getNodeLengthToParent(child, node);
-                        visibleChild = this._isNodeVisibleToParent(child, node);
+                        childLength = this._getNodeLengthToParent(child, nodeLocator || node);
+                        visibleChild = this._isNodeVisibleToParent(child, nodeLocator || node);
                     }
                     var descendantsLength = childLength - (visibleChild ? 1 : 0);
                     if (j >= start && visibleChild && !rangeLoading) {
@@ -55088,7 +57266,7 @@ _getRange : function (root, node, children, i, start, end, recursionTopLevel, pr
                         var grandchildren = this.getChildren(child, null, null, null, null,
                                                              null, null, null, false);
                         this._getRange(
-                            root, child, grandchildren,
+                            root, childNodeLocator || child, grandchildren,
                             k, start, end, false,
                             // Only allow progressive loading mode to be utilized for
                             // loading the last node of the tree or its siblings.
@@ -55147,12 +57325,12 @@ _getRange : function (root, node, children, i, start, end, recursionTopLevel, pr
             if (childrenResultSet) {
                 children._fetchAllRemoteData();
             } else {
-                this._loadChildren(node, 0, this.resultSize, null);
+                this._loadChildren(nodeLocator || node, 0, this.resultSize, null);
             }
         } else if (childrenResultSet) {
             children.getRange(0, end - j);
         } else {
-            this._loadChildren(node, 0, end - j, null);
+            this._loadChildren(nodeLocator || node, 0, end - j, null);
         }
 
         // Restore the original progressiveLoading setting.
@@ -55618,19 +57796,19 @@ _setVisibleDescendantsCached : function (node, newAllCached, parent, recalc) {
 },
 
 
-__add : function (node, parent, position) {
+__add : function (node, parent, position, linkRecord, path) {
     if (this.isPaged() && !this.keepParentsOnFilter) {
         var validRows = this.getDataSource().applyFilter([node], this.criteria, this.context);
         if (validRows.length == 0) {
             return;
         }
     }
-    return this.invokeSuper(isc.ResultTree, "__add", node, parent, position);
+    return this.invokeSuper(isc.ResultTree, "__add", node, parent, position, linkRecord, path);
 },
 
 
-_preAdd : function (node, parent, removeCollisions, info) {
-    var ret = this.invokeSuper(isc.ResultTree, "_preAdd", node, parent, removeCollisions, info);
+_preAdd : function (node, parent, position, removeCollisions, info) {
+    var ret = this.invokeSuper(isc.ResultTree, "_preAdd", node, parent, position, removeCollisions, info);
     if (this.isPaged()) {
         var loadState = this.getLoadState(node),
             newAllCached = (
@@ -55702,14 +57880,14 @@ _cleanResultSetChildren : function (node, cleanNonDescendants) {
 },
 
 
-changeDataVisibility : function (node, newState, callback) {
+changeDataVisibility : function (node, newState, callback, path) {
 //!DONTOBFUSCATE  (obfuscation breaks the inline function definitions)
 
     if (this.isPaged()) {
 
 
         var parent = this.getParent(node),
-            state = node[this.openProperty],
+            state = this.isOpen(node),
             changed = (!this.isLeaf(node) && (state ^ newState)),
             closedToOpen = (changed && !state && newState),
             openToClosed = (changed && !closedToOpen),
@@ -55726,7 +57904,7 @@ changeDataVisibility : function (node, newState, callback) {
         }
         return ret;
     } else {
-        return this.invokeSuper(isc.ResultTree, "changeDataVisibility", node, newState, callback);
+        return this.invokeSuper(isc.ResultTree, "changeDataVisibility", node, newState, callback, path);
     }
 },
 
@@ -55797,7 +57975,7 @@ _childrenDataAdd : function (children, parent, addedChildren, addedLength, index
                 if (collision) {
                     collisions.add(collision);
                 }
-                this._preAdd(addedChild, parent, false, info);
+                this._preAdd(addedChild, parent, index, false, info);
             } else {
                 var info = infoStack.pop();
                 this._postAdd(addedChild, parent, index, info);
@@ -56044,7 +58222,7 @@ _childrenDataSplice : function (children, parent, removedChildren, removedLength
                     if (collision && !(removedNodes && removedChildren.contains(collision))) {
                         collisions.add(collision);
                     }
-                    this._preAdd(child, parent, false, info);
+                    this._preAdd(child, parent, index, false, info);
                 } else {
                     this._preRemove(child, parent, info);
                 }
@@ -56216,6 +58394,7 @@ setDefaultLoadState : function (newDefaultLoadState) {
 // @param newCriteria (Criteria) the filter criteria
 // @visibility external
 //<
+
 // An overview on tree caching:
 // We have 2 kinds of cache
 // - the cache of results that matches the current criteria: this.data
@@ -56230,11 +58409,19 @@ setDefaultLoadState : function (newDefaultLoadState) {
 //     On the first fetch we fill this local cache with the results returned from the server.
 //     On subsequent changes to filter criteria, we will perform a new server fetch
 //     and update the local cache.
-setCriteria : function (newCriteria) {
+setCriteria : function (newCriteria, checkFilterChanged) {
     var oldCriteria = this.criteria || {},
         oldCriteriaIsEmpty = !this.haveCriteria(oldCriteria),
         oldServerCriteria = this._serverCriteria || {},
-        ds = this.getDataSource();
+        ds = this.getDataSource(),
+        filterChanged
+    ;
+
+    // if requested, store whether filter criteria have changed in return value
+    if (checkFilterChanged) filterChanged = this._willFetchData(newCriteria, true);
+
+    // cache the current textMatchStyle as we do in resultSet.setCriteria()
+    this._textMatchStyle = this.context && this.context.textMatchStyle || null;
 
     // clone the criteria passed in - avoids potential issues where a criteria object is passed in
     // and then modified outside the RS
@@ -56318,6 +58505,15 @@ setCriteria : function (newCriteria) {
                 this.filterLocalData();
                 // Local filter of existing client side data. No need to check for
                 // server-specified open-state.
+                // NOTE: filterLocalData() has relinked the tree, so the nodes are now different
+                // objects than the nodes we stored in the openState variable.  For multiLink
+                // trees, this is significant because it means that node lookups in the index
+                // will fail.  So refresh the cached openState from the current nodeIndex
+                if (this.isMultiLinkTree()) {
+                    for (var i = 0; i < openState.length; i++) {
+                        openState[i].node = this._getNodeFromIndex(openState[i].node);
+                    }
+                }
                 this._setOpenState(openState);
 
                 if (this.dataArrived != null) {
@@ -56326,6 +58522,8 @@ setCriteria : function (newCriteria) {
             }
         }
     }
+
+    return filterChanged;
 },
 
 //> @attr resultTree.criteria (Criteria : null : IRW)
@@ -56448,6 +58646,11 @@ compareCriteria : function (newCriteria, oldCriteria, requestProperties, policy)
 // @visibility external
 //<
 willFetchData : function (newCriteria) {
+    return this._willFetchData(newCriteria) == true;
+},
+
+
+_willFetchData : function (newCriteria, checkTextMatchStyle) {
     var undef;
     var oldCriteria = this.criteria || {},
         oldServerCriteria = this._serverCriteria || {},
@@ -56470,10 +58673,19 @@ willFetchData : function (newCriteria) {
         newCriteria = isc.DataSource.convertCriteria(newCriteria);
     }
 
-    var result = this.compareCriteria(newCriteria, oldCriteria);
+
+    var result = 0;
+    if (checkTextMatchStyle && !isc.isAn.emptyObject(oldCriteria)) {
+        var dsTextMatchStyle = ds.defaultTextMatchStyle,
+            oldTextMatchStyle = this._textMatchStyle                        || dsTextMatchStyle,
+            newTextMatchStyle = this.context && this.context.textMatchStyle || dsTextMatchStyle
+        ;
+        result = ds.compareTextMatchStyle(newTextMatchStyle, oldTextMatchStyle);
+    }
+    if (result == 0) result = this.compareCriteria(newCriteria, oldCriteria);
 
     // If we have no change in criteria we won't perform a fetch
-    if (result == 0) return false;
+    if (result == 0) return null;
 
     // If we are not filtering locally a fetch is required
 
@@ -56544,7 +58756,19 @@ _getOpenState : function(isCacheRestore) {
 setOpenState : function(openState) {
     openState = isc.Canvas.evalViewState(openState, "openState", false, this)
     if (!openState) return;
+    if (this.isMultiLinkTree()) {
+        // The nodeLocators in the openState have been serialized and then recreated, so the
+        // "node" members are not the same objects as the nodes in the nodeIndex.  This would
+        // cause all sorts of problems downstream, so reset them by ID
+        this._assignLocalNodesToNodeLocators(openState);
+    }
     this._setOpenState(openState);
+},
+
+_assignLocalNodesToNodeLocators : function(locators) {
+    for (var i = 0; i < locators.length; i++) {
+        locators[i].node = this._getNodeFromIndex(locators[i].node);
+    }
 },
 
 _setOpenState : function(openState, retainServerState) {
@@ -56557,6 +58781,13 @@ _setOpenState : function(openState, retainServerState) {
 
 
 _addNodeToOpenState : function (tree, node, openState, isCacheRestore) {
+    if (tree.isMultiLinkTree()) {
+        //>DEBUG
+        this._assert(node == tree.root);
+        //<DEBUG
+        var nodeLocator = tree.createNodeLocator(node, null, null, this.pathDelim);
+        return this._addNodeToMultiLinkOpenState(tree, nodeLocator, openState, isCacheRestore);
+    }
     if (!tree.isOpen(node) || !tree.isLoaded(node)) return false;
     if (isCacheRestore) {
         // explicit call to getName() will set up the "autoAssignedName" flag if this
@@ -56580,6 +58811,39 @@ _addNodeToOpenState : function (tree, node, openState, isCacheRestore) {
         }
     }
     openState[openState.length] = tree.getPath(node);
+    return true;
+},
+
+_addNodeToMultiLinkOpenState : function(tree, nodeLocator, openState, isCacheRestore, path) {
+
+    var node = nodeLocator.node;
+    if (!tree.isOpen(nodeLocator) || !tree.isLoaded(node)) return false;
+    if (isCacheRestore) {
+        // explicit call to getName() will set up the "autoAssignedName" flag if this
+        // method has never been called before
+        tree.getName(node);
+        if (this.autoPreserveOpenState == "never" ||
+            (this.autoPreserveOpenState == "whenUnique" &&  node._autoAssignedName))
+        {
+            return false;
+        }
+    }
+
+    var children = tree.getFolders(node),
+        hasOpenChildren = false;
+    if (children != null) {
+        for (var i = 0; i < children.length; i++) {
+            var childNodeLocator = this.createNodeLocator(
+                children[i],
+                node[this.idField],
+                i,
+                this._constructChildPath(nodeLocator.path, children[i])
+            );
+            hasOpenChildren = this._addNodeToMultiLinkOpenState(tree, childNodeLocator, openState, isCacheRestore)
+                              || hasOpenChildren;
+        }
+    }
+    openState[openState.length] = nodeLocator;
     return true;
 }
 
@@ -56666,7 +58930,7 @@ isc.Canvas.addMethods({
         context.operation = operation || this.operation;
 
         if (this.implicitCriteria) {
-            context.dbcImplicitCriteria = isc.shallowClone(this.implicitCriteria);
+            context.dbcImplicitCriteria = this.getImplicitCriteria();
         }
 
         // If we picked up the operation from component.fetchOperation et al,
@@ -57878,7 +60142,12 @@ if (isc.DynamicForm) {
         // These overrides moved here from EditorActionMethods because there is a base class
         // implementation that will not be overridden by an interface impl
         selectionComponentSelectionChanged : function (selectionComponent, record, state) {
-            if (!state) record = {};  // So the form is cleared when selections are cleared
+            // If we're deselecting a record, if one is still selected, use it, otherwise
+            // clear the record PK's
+            if (!state) {
+                record = selectionComponent.getSelectedRecord();
+                if (record == null) record = {};
+            }
             this._selectionComponentRecordPKs = selectionComponent.getPrimaryKeys(record);
             this.clearErrors(true);
             if (this.valuesManager && this.valuesManager.synchronizeMember) {
@@ -58257,6 +60526,20 @@ isc.DetailViewer.addMethods({
 // there is no reason to use the mock data format, as the mock data is not especially readable
 // when written as a String literal.  The mock data format <i>can</i> be a slightly more
 // compact and readable as compared to declaring +link{DataSource.cacheData} in XML.
+// <p>
+// Note: If a MockDataSource has +link{DataSource.addGlobalId,addGlobalId}
+// set to true, it will be made available in global scope.
+// <P>
+// Unlike other DataSources, if a MockDataSource is created with an ID that is already in use
+// by another DataSource, the existing DataSource will not be <code>destroy()</code>'d
+// and the new MockDataSource will not be available by ID.<br>
+// Similarly, if a MockDataSource exists and a new DataSource is created with the same ID
+// the MockDataSource will be <coee>destroy()</code>'d automatically without logging a
+// warning to the developer console.<br>
+// This means if application code changes to replace a MockDataSource with a "real"
+// dataSource it will function as expected, without warnings, even if the MockDataSource
+// creation code was not removed, regardless of the order in which
+// the MockDataSource and "real" dataSource are created.
 //
 // @inheritsFrom DataSource
 // @treeLocation Client Reference/Data Binding
@@ -58495,25 +60778,68 @@ isc.MockDataSource.addClassProperties({
             lastIndent = indent;
         }
         return dataTree;
+    },
+
+    _treeNodePrefixes: [ "f", "F", ">", "v", "[x]", "[+]", "[-]", "[ ]", "-", "_" ],
+    detectMockDataType : function (mockData) {
+        var nodeArray = mockData.split("\n"),
+            prefixes = isc.MockDataSource._treeNodePrefixes
+        ;
+        for (var i = 0; i < nodeArray.length; i++) {
+            var record = nodeArray[i].replace(/^\s+/gm,""),
+                hasTreePrefix = false
+            ;
+            if (record.length == 0) continue;
+            for (var j = 0; j < prefixes.length; j++) {
+                var prefix = prefixes[j];
+                if (record.startsWith(prefix + " ")) {
+                    hasTreePrefix = true;
+                    break;
+                }
+            }
+            if (!hasTreePrefix) return "grid";
+        }
+        return "tree";
     }
 })
 
 isc.MockDataSource.addProperties({
     //> @attr mockDataSource.mockData (String | Array of Record : "md" : IR)
     // Data intended for a +link{ListGrid} or +link{TreeGrid}, expressed in a simple text
-    // format popularized by mockup tools such as +externalLink{http://balsamiq.com} and now
+    // format popularized by mockup tools such as +externalLink{http://balsamiq.com,balsamiq} and now
     // commonly supported in a variety of mockup tools.
     // <p>
     // Balsamiq publishes documentation of the grid format
-    // +externalLink{http://support.balsamiq.com/customer/portal/articles/110188-working-with-data-grids-tables,here},
+    // +externalLink{https://docs.balsamiq.com/cloud/editing-controls/#the-data-grid-table-control,here},
     // with a simple example of using tree-specific formatting
-    // +externalLink{https://support.mybalsamiq.com/projects/uilibrary/Tree%20Pane,here}.
+    // +externalLink{https://docs.balsamiq.com/cloud/editing-controls/#the-tree-pane,here}.
+    // <p>
+    // MockData can also be provided as XML, CSV or JSON text by setting +link{mockDataFormat} to
+    // the correct format.
     // <p>
     // An alternative format of data consisting of an array of +link{object:Record,Records} can
     // also be provided. In this case the records are converted to "grid" +link{type:MockDataType,format}.
     // @visibility external
     //<
     mockData: "md",
+
+    //> @type MockDataFormat
+    // Specifies the format of the mock data.
+    //
+    // @value "mock"              Mock data in "balsamiq" format
+    // @value "csv"               Mock data in CSV format
+    // @value "xml"               Mock data in XML format
+    // @value "json"              Mock data in JSON format
+    //
+    // @visibility external
+    //<
+
+    //> @attr mockDataSource.mockDataFormat (MockDataFormat : "mock" : IR)
+    // Format of data provided in +link{mockData}. See +link{MockDataFormat}.
+    //
+    // @visibility external
+    //<
+    mockDataFormat: "mock",
 
     //> @type MockDataType
     // Whether the mock data is for a flat grid-like dataset or for a tree.  If "grid" is
@@ -58527,12 +60853,14 @@ isc.MockDataSource.addProperties({
     // @visibility external
     //<
 
-    //> @attr mockDataSource.mockDataType (MockDataType : "grid" : IR)
-    // Whether +link{mockData} is in the "grid" or "tree" format.  See +link{MockDataType}.
+    //> @attr mockDataSource.mockDataType (MockDataType : null : IR)
+    // When +link{mockDataSource.mockDataFormat} is "mock", whether +link{mockData}
+    // is in the "grid" or "tree" format. See +link{MockDataType}.
+    // <p>
+    // If not specified, the type will be detected from the data.
     //
     // @visibility external
     //<
-    mockDataType: "grid",
 
     //> @type FieldNamingConvention
     // Field naming convention for fields derived from +link{mockDataSource.mockData}.
@@ -58564,18 +60892,61 @@ isc.MockDataSource.addProperties({
 
     clientOnly: true,
 
+    //> @attr mockDataSource.fromServer (Boolean : false : [IR])
+    // Was this MockDataSource saved to and loaded from the server by +link{group:visualBuilder,
+    // VisualBuilder}?  Even though MockDataSources are +link{clientOnly}, when created in
+    // VisualBuilder through the editor they are saved on the server, and we want to provide
+    // special handling for certain operations on them as if they were server-based DataSources.
+    //<
+
     // Override init to setup cacheData and fields using mockData
     init : function () {
+        // Save any explicitly defined fields for later reference
+        this._explicitFields = this.fields;
+
         if (!this.cacheData) this.cacheData = [];
         if (!this.fields) this.fields = [];
-        if (this.mockData && isc.isAn.Array(this.mockData) && this.mockData.length > 0) {
+
+        var mockData = this.mockData,
+            mockDataType = this.mockDataType
+        ;
+
+        if (mockData && isc.isA.String(mockData) && this.mockDataFormat != "mock") {
+            // mockData provided as XML, CSV or JSON text. Convert data to
+            // Array of Record.
+            var parser = isc.FileParser.create({ hasHeaderLine: true });
+            if (this.mockDataFormat == "xml") {
+                // Process XML data into JSON.
+                var xmlData = isc.xml.parseXML(mockData);
+                if (!xmlData) {
+                    this.logWarn("XML data in mockData could not be parsed");
+                    return;
+                }
+                var elements = isc.xml.selectNodes(xmlData, "/"),
+                    jsElements = isc.xml.toJS(elements)
+                ;
+                if (jsElements.length == 1) {
+                    var encoder = isc.JSONEncoder.create({ dateFormat: "dateConstructor", prettyPrint: false });
+                    var json = encoder.encode(jsElements[0]);
+
+                    // XML data is now pre-processed into JSON
+                    mockData = parser.parseJsonData(json);
+                }
+            } else if (this.mockDataFormat == "csv") {
+                mockData = parser.parseCsvData(mockData);
+            } else if (this.mockDataFormat == "json") {
+                mockData = parser.parseJsonData(mockData);
+            } else {
+                this.logWarn("Invalid mockDataFormat '" + this.mockDataFormat + "'");
+                return;
+            }
+        }
+
+        if (mockData && isc.isAn.Array(mockData) && mockData.length > 0) {
             // mockData provided as Array of Record. Convert data to
             // mockData format.
 
-            // Save original records
-            this._origMockData = this.mockData;
-
-            var md = this.mockData,
+            var md = mockData,
                 records = []
             ;
 
@@ -58612,11 +60983,22 @@ isc.MockDataSource.addProperties({
                 records.push(record.join());
             });
 
-            this.mockData = records.join('\n');
+            mockData = records.join('\n');
+
+            // mockData as Array of Record is always for grid
+            mockDataType = "grid";
+        } else if (mockData && isc.isAn.Array(mockData) && mockData.length == 0) {
+            // No data - nothing to show
+            mockData = null;
         }
 
-        if (this.mockDataType == "grid") {
-            var rawMockLines = this.mockData.split("\n");
+        if (mockData && !mockDataType) {
+            // Determine the mockDataType from the mockData
+            mockDataType = isc.MockDataSource.detectMockDataType(mockData);
+        }
+
+        if (mockData && mockDataType == "grid") {
+            var rawMockLines = mockData.split("\n");
             var fieldParameters = this.getFieldParameters(rawMockLines);
 
             this.rawHeaderLine = rawMockLines[0];
@@ -58627,27 +61009,53 @@ isc.MockDataSource.addProperties({
             var records = this.getDataRecords(rawMockLines, fields, fieldParameters);
 
             // If SchemaGuesser is not loaded skip field type detection
-            if (isc.SchemaGuesser && this.detectFieldTypes) {
+            if (records && records.length > 0 && isc.SchemaGuesser && this.detectFieldTypes) {
                 var guesser = isc.SchemaGuesser.create(this.guesserProperties);
                 guesser.fields = fields;
 
                 fields = guesser.extractFieldsFrom(records);
                 records = guesser.convertData(records);
             }
-            if (!this.fields || this.fields.length == 0) this.fields = fields;
+            if (fields.length > 0) {
+                // Add a PK field so that live changes can be reflected in associated DBCs
+                fields.addAt({ name: "internalId", type: "sequence", primaryKey: true, hidden: true }, 0);
+
+                // Inserts will automatically generate the next sequence number based on
+                // the existing values of the field. For the current records, though, initial
+                // initial sequence values must be created.
+                if (records) {
+                    for (var i = 0; i < records.length; i++) {
+                        records[i].internalId = i+1;
+                    }
+                }
+            }
+            if (!this.fields || this.fields.length == 0 || isc.isAn.emptyObject(this.fields)) {
+                this.fields = fields;
+            }
             if (!this.cacheData || this.cacheData.length == 0) this.cacheData = records;
-        } else if (this.mockDataType == "tree") {
-            if (!this.fields || this.fields.length == 0) {
+        } else if (mockDataType == "tree") {
+            if (!this.fields || this.fields.length == 0 || isc.isAn.emptyObject(this.fields)) {
                 this.fields = [{
                     name: "name",
                     type: "text"
                 }];
             }
-            if (!this.cacheData || this.cacheData.length == 0) {
-                this.cacheData = isc.MockDataSource.parseTree(this.mockData);
+            if (mockData && (!this.cacheData || this.cacheData.length == 0)) {
+                this.cacheData = isc.MockDataSource.parseTree(mockData);
             }
         }
+
+        this._mockDataType = mockDataType;
+
         return this.Super("init", arguments);
+    },
+
+    hasExplicitFields : function () {
+        return (this._explicitFields != null &&
+            (!isc.isAn.Array(this._explicitFields) && isc.isAn.Object(this._explicitFields)
+                ? isc.getKeys(this._explicitFields).length > 0
+                : this._explicitFields.length > 0)
+        );
     },
 
     // Apply settings to grid paletteNode
@@ -58656,7 +61064,7 @@ isc.MockDataSource.addProperties({
         if (!control) control = {};
 
         control.autoFetchData = true;
-        if (this.mockDataType == "tree") {
+        if (this._mockDataType == "tree") {
             control.dataProperties = {openProperty: "isOpen"};
             return control;
         }
@@ -58680,7 +61088,8 @@ isc.MockDataSource.addProperties({
             control.fields.add({
                 name: fields[i].name,
                 type: fields[i].type,
-                title: fields[i].title
+                title: fields[i].title,
+                hidden: fields[i].hidden
             });
         }
 
@@ -58768,9 +61177,17 @@ isc.MockDataSource.addProperties({
                 name: actualName,
                 title: text
             };
-            if (field.title.length <= 3) {
-                field.align = "center";
-            }
+            // The following code was added to fix an issue in 1.15:
+            //   BMMLImport fixes:
+            //     1. fix for hscrollbars in grids and test for it
+            //     2. fix for \r character in imported xml files
+            // It's not clear how this change "fixed" the issue. Additionally, the "align"
+            // property is not a DataSourceField documented property and causes different
+            // results depending on the target DBC (ex ListGrid vs DynamicForm).
+            //
+            // if (field.title.length <= 3) {
+            //     field.align = "center";
+            // }
             if (sortDirection) field.sortDirection = sortDirection;
             if (fieldParameters && fieldParameters[j]) {
                 field.width = fieldParameters[j];
@@ -58789,6 +61206,7 @@ isc.MockDataSource.addProperties({
             }
             headerArray.add(field);
         }
+
         return headerArray;
     },
 
@@ -58825,6 +61243,1301 @@ isc.MockDataSource.addProperties({
         return rowArray;
     }
 });
+
+
+
+
+
+// ----------------------------------------------------------------------------------------
+
+//> @class SchemaGuesser
+// Class for deriving field types from a list of objects (records). These records are
+// commonly imported from a CSV file as fields of string values. The field values are
+// scanned to smartly determine the corresponding types and a resulting set of
+// DataSourceFields are returned.
+//
+// @treeLocation Client Reference/Data Binding
+// @visibility schemaGuesser
+//<
+isc.defineClass("SchemaGuesser");
+
+isc.SchemaGuesser.addClassProperties({
+
+    //> @type SchemaGuessDetailReason
+    // Reason why a field type was chosen that is more general than the values
+    // may indicate.
+    //
+    // @value tooFewExamples
+    // There were not enough values provided from which to confidently determine the
+    // field type. Minimum value count can be configured with +link{schemaGuesser.minExampleCount}.
+    // @value tooManySpecialValues
+    // A field type appears to be correct because there are more valid values than there
+    // are invalid values but the invalid values cannot be reduced to a single special
+    // value to be used as +link{DataSourceField.emptyDisplayValue}.
+    //
+    // @visibility schemaGuesser
+    //<
+    TOO_FEW_EXAMPLES:"tooFewExamples",
+    TOO_MANY_SPECIAL_VALUES:"tooManySpecialValues"
+});
+
+isc.SchemaGuesser.addProperties({
+
+    //> @attr schemaGuesser.fields (Array of DataSourceField : null : IRW)
+    // Optional list of +link{class:DataSourceField,DataSourceFields} to be used for
+    // type specification instead of deriving the details.
+    //
+    // @visibility schemaGuesser
+    //<
+
+    //> @attr schemaGuesser.derivedFields (Array of DataSourceField : null : R)
+    // List of +link{class:DataSourceField,DataSourceFields} as derived from the source data.
+    //
+    // @visibility schemaGuesser
+    //<
+
+    //> @attr schemaGuesser.parseDetails (Array of SchemaGuessDetail : null : R)
+    // Details on fields whose type was ambiguous.
+    //
+    // @visibility schemaGuesser
+    //<
+
+    //> @attr schemaGuesser.minExampleCount (int : 10 : IRW)
+    // Minimum matching examples before a specialized type can be confirmed.
+    //
+    // @visibility schemaGuesser
+    //<
+    minExampleCount: 10,
+
+    //> @attr schemaGuesser.minDateYear (int : 1970 : IRW)
+    // Minimum year to match when examining a set of values that could also be
+    // matched as a float (i.e. using decimal point as separator).
+    //
+    // @visibility schemaGuesser
+    //<
+    minDateYear: 1970,
+
+    //> @attr schemaGuesser.centuryThreshold (Integer : 25 : IRW)
+    // For date formats that support a 2 digit year, if parsed year is 2 digits and less than this
+    // number, assume year to be 20xx rather than 19xx.
+    // @visibility schemaGuesser
+    //<
+    centuryThreshold: 25,
+
+    //> @attr schemaGuesser.treatEmptyValueAsBooleanFalse (Boolean : true : IRW)
+    // When detecting a boolean field, should empty or null values be treated as false?
+    //
+    // @visibility schemaGuesser
+    //<
+    treatEmptyValueAsBooleanFalse: true,
+
+    //> @attr schemaGuesser.valueEquivalences (Array of Equivalence : [...] : IRW)
+    // List of equivalence values used when determining emptyDisplayValue. Each object
+    // contains <code>value</code> and <code>equivalent</code> attributes for the mapping.
+    // Only one pair of mapped values needs to be entered into the list as processing
+    // will map either direction.
+    // <p>
+    // Default value:
+    // <pre>
+    //   NA: N/A
+    // </pre>
+    //
+    // @visibility schemaGuesser
+    //<
+    valueEquivalences: [
+        { value: "NA", equivalent: "N/A" }
+    ],
+
+    //> @attr schemaGuesser.booleanTrueValues (Array of String : [...] : IRW)
+    // List of values that are to be interpreted as a boolean <code>true</code> value.
+    // Values are always matched as lower case.
+    // <p>
+    // Default value:
+    // <pre>
+    //   [ "t", "true", "yes", "[x]", "1" ]
+    // </pre>
+    //
+    // @visibility schemaGuesser
+    //<
+    booleanTrueValues:  ["t", "true", "yes", "[x]", "1" ],
+
+    //> @attr schemaGuesser.booleanFalseValues (Array of String : [...] : IRW)
+    // List of values that are to be interpreted as a boolean <code>false</code> value.
+    // Values are always matched as lower case.
+    // <p>
+    // Default value:
+    // <pre>
+    //   [ "f", "false", "no", "[ ]", "0" ]
+    // </pre>
+    //
+    // @visibility schemaGuesser
+    //<
+    booleanFalseValues: ["f", "false", "no", "[]", "[ ]", "0" ]
+
+    //> @attr schemaGuesser.decimalSymbol (String : null : IR)
+    // The decimal symbol to use when parsing numbers. Defaults from +link{numberUtil.decimalSymbol}.
+    // @visibility schemaGuesser
+    //<
+
+    //> @attr schemaGuesser.groupingSymbol (String : null : IR)
+    // The grouping symbol, or thousands separator, to use when parsing numbers.
+    // Defaults from +link{numberUtil.groupingSymbol}.
+    // @visibility schemaGuesser
+    //<
+
+    // ---------------------------------------------------------------------------------------
+    //> @object SchemaGuessDetail
+    // Details on +link{class:SchemaGuesser} parse exceptions.
+    //
+    // @treeLocation Client Reference/Data Binding/SchemaGuesser
+    // @visibility schemaGuesser
+    //<
+
+    //> @attr schemaGuessDetail.fieldName (String : null : R)
+    // Field name for detail.
+    //
+    // @visibility schemaGuesser
+    //<
+
+    //> @attr schemaGuessDetail.detectedAs (String : null : R)
+    // +link{type:FieldType} as detected.
+    //
+    // @visibility schemaGuesser
+    //<
+
+    //> @attr schemaGuessDetail.couldBe (String : null : R)
+    // +link{type:FieldType} that the field could be if not for
+    // +link{reason}.
+    //
+    // @visibility schemaGuesser
+    //<
+
+    //> @attr schemaGuessDetail.reason (SchemaGuessDetailReason : null : R)
+    // Reason why field was not detected as the more specific +link{couldBe}.
+    //
+    // @visibility schemaGuesser
+    //<
+
+    //> @attr schemaGuessDetail.message (String : null : R)
+    // A user-friendly message describing the +link{reason}.
+    //
+    // @visibility schemaGuesser
+    //<
+
+    // ---------------------------------------------------------------------------------------
+    //> @object Equivalence
+    // Definition of string equivalence for special values.
+    //
+    // @treeLocation Client Reference/Data Binding/SchemaGuesser
+    // @visibility schemaGuesser
+    //<
+
+    //> @attr equivalence.value (String : null : IR)
+    // Value that is considered equivalent to +link{equivalent}.
+    // @visibility schemaGuesser
+    //<
+
+    //> @attr equivalence.equivalent (String : null : IR)
+    // Equivalent value to +link{value}
+    // @visibility schemaGuesser
+    //<
+});
+
+isc.SchemaGuesser.addMethods({
+
+    init : function () {
+        this.Super("init", arguments);
+
+        // Type processes
+        this._typeProcessMethods = {
+            "boolean":        { fieldType: "boolean",  canConvert: this.isBoolean,        convert: this.toBoolean },
+            "time":           { fieldType: "time",     canConvert: this.isTime,           convert: this.toTime },
+            "dateTimeYMD":    { fieldType: "datetime", canConvert: this.isDateTimeYMD,    convert: this.toDateTimeYMD },
+            "dateTimeMDY":    { fieldType: "datetime", canConvert: this.isDateTimeMDY,    convert: this.toDateTimeMDY },
+            "dateTimeDMY":    { fieldType: "datetime", canConvert: this.isDateTimeDMY,    convert: this.toDateTimeDMY },
+            "dateTimeSchema": { fieldType: "datetime", canConvert: this.isDateTimeSchema, convert: this.toDateTimeSchema },
+            "dateYM":         { fieldType: "date",     canConvert: this.isDateYM,         convert: this.toDateYM },
+            "dateMY":         { fieldType: "date",     canConvert: this.isDateMY,         convert: this.toDateMY },
+            "dateYMD":        { fieldType: "date",     canConvert: this.isDateYMD,        convert: this.toDateYMD },
+            "dateMDY":        { fieldType: "date",     canConvert: this.isDateMDY,        convert: this.toDateMDY },
+            "dateDMY":        { fieldType: "date",     canConvert: this.isDateDMY,        convert: this.toDateDMY },
+            "integer":        { fieldType: "integer",  canConvert: this.isInteger,        convert: this.toInteger },
+            "float":          { fieldType: "float",    canConvert: this.isFloat,          convert: this.toFloat }
+            // text fields have no need for detection or conversion
+        };
+
+    },
+
+    //> @method schemaGuesser.extractFieldsFrom
+    // Extract +link{class:DataSourceField,fields} from records.
+    //
+    // @param data (Array of Record) The records to process
+    // @return (Array of DataSourceField) extracted fields
+    // @visibility schemaGuesser
+    //<
+    extractFieldsFrom : function (data) {
+        if (data && !isc.isAn.Array(data)) data = [data];
+        if (!data || data.length == 0) {
+            this.logWarn("Missing or empty data - Cannot extract field types");
+            return null;
+        }
+
+        this.resetState();
+
+        this.recordCount = data.length;
+        this.classifyValues(data);
+        this.extractEmptyDisplayValues(data);
+        this.deriveTypes();
+
+        this.derivedFields = this.createFields();
+
+        return this.derivedFields;
+    },
+
+    //> @method schemaGuesser.convertData
+    // Convert record values to match derived field types. +link{extractFieldsFrom} must
+    // have been called previously.
+    //
+    // @param data (Array of Record) The records to process
+    // @return (Array of Record) converted records
+    // @visibility schemaGuesser
+    //<
+    convertData : function (data) {
+        if (!this._fieldState) {
+            this.logWarn("extractFieldsFrom must be called before parsed data can be fetched");
+            return null;
+        }
+
+        if (!data || (data && isc.isAn.Array(data) && data.length == 0)) return data;
+
+        return this.convertValues(data);
+    },
+
+    resetState : function () {
+        // Clear result properties
+        this.derivedFields = [];
+        this.parsedFields = [];
+        this.parsedData = [];
+        this.parseDetails = [];
+
+        // Clear internal state
+        this._fieldState = {};
+    },
+
+    classifyValues : function (data) {
+
+        for (var i = 0; i < data.length; i++) {
+            var record = data[i];
+
+            for (var fieldName in record) {
+                var fieldState = this._fieldState[fieldName];
+                if (!fieldState) {
+                    fieldState = this._fieldState[fieldName] = this.createFieldState(fieldName);
+                }
+
+                // If field type is already specified, skip detection
+                if (fieldState.detectedAs) {
+                    continue;
+                }
+
+                // All values are assumed to be strings
+                var value = record[fieldName];
+
+                // Ignore nested objects
+                if (isc.isAn.Object(value)) {
+                    continue;
+                }
+
+                // Count and skip empty values
+                if (value == null || (isc.isA.String(value) && !isc.isA.nonemptyString(value))) {
+                    fieldState.emptyValueCount++;
+                    continue;
+                }
+                if (!isc.isA.String(value)) {
+                    value = ""+value;
+                }
+
+                for (var typeName in this._typeProcessMethods) {
+
+                    var type = this._typeProcessMethods[typeName];
+                    if (this.fireCallback(type.canConvert, "value", [value])) {
+                        fieldState[typeName].valueCount++;
+                    } else {
+                        if (!fieldState[typeName].badValues.contains(value)) {
+                            fieldState[typeName].badValues.add(value);
+                        }
+                    }
+                }
+            }
+        }
+    },
+
+    extractEmptyDisplayValues : function (data) {
+
+        for (var fieldName in this._fieldState) {
+            var fieldState = this._fieldState[fieldName];
+
+            if (!fieldState.detectedAs) {
+                for (var typeName in this._typeProcessMethods) {
+                    var type = this._typeProcessMethods[typeName],
+                        badValues = fieldState[typeName].badValues,
+                        emptyDisplayValue = null,
+                        nullValues = []
+                    ;
+
+                    // An emptyDisplayValue cannot be applied if there are empty values (i.e. "" or null)
+                    // unless those are being mapped to false for a boolean field
+                    if (typeName != "boolean" && fieldState.emptyValueCount > 0) {
+                        continue;
+                    }
+
+                    if (badValues.length > 0) {
+                        // Normalize the values to a single case and keep up with
+                        // variants found.
+                        var specialValue = { lowerValue: null, variants: [] };
+
+                        for (var i = 0; i < badValues.length; i++) {
+                            var badValue = badValues[i],
+                                lowerBadValue = badValue.toLowerCase(),
+                                equivalences = this.getValueEquivalences(badValue)
+                            ;
+                            if (specialValue.lowerValue) {
+                                var haveEquivalent = false;
+                                for (var j = 0; j < equivalences.length; j++) {
+                                    var checkValue = equivalences[j],
+                                        lowerCheckValue = checkValue.toLowerCase()
+                                    ;
+
+                                    if (specialValue.lowerValue && specialValue.lowerValue == lowerCheckValue) {
+                                        haveEquivalent = true;
+                                        break;
+                                    }
+                                }
+
+                                if (!haveEquivalent && specialValue.lowerValue != lowerBadValue) {
+                                    // More than one unique value - no emptyDisplayValue possible
+                                    specialValue = null;
+                                    break;
+                                }
+                            }
+
+                            if (!specialValue.lowerValue) specialValue.lowerValue = lowerBadValue;
+                            if (!specialValue.variants.contains(badValue)) specialValue.variants.add(badValue);
+                        }
+                        if (specialValue) {
+                            var highestCount = -1;
+                            for (var j = 0; j < specialValue.variants.length; j++) {
+
+                                var value = specialValue.variants[j],
+                                    matches = data.findAll(fieldName, value),
+                                    count = (matches ? matches.length : 0)
+                                ;
+                                if (count > highestCount) {
+                                    highestCount = count;
+                                    emptyDisplayValue = value;
+                                }
+
+                                // Remove special value from badValues
+                                badValues.remove(value);
+
+                                // Save value to be translated to null on input
+                                nullValues.add(value);
+                            }
+                        }
+                    }
+                    if (emptyDisplayValue && typeName == "boolean") {
+                        var otherValues = [];
+                        data.map(function(record) {
+                            var value = record[fieldName];
+                            if (value == null || otherValues.length > 2) return;
+                            var lowerValue = value.toLowerCase();
+                            if (!otherValues.contains(lowerValue) && !nullValues.contains(value)) otherValues.add(lowerValue);
+                        });
+                        if (otherValues.length == 1) {
+                            emptyDisplayValue = null;
+                            fieldState[typeName].badValues.addList(nullValues);
+                        }
+                    }
+                    if (emptyDisplayValue) {
+                        fieldState[typeName].emptyDisplayValue = emptyDisplayValue;
+                        fieldState[typeName].nullValues = nullValues;
+                    }
+                }
+            }
+        }
+    },
+
+    deriveTypes : function () {
+        for (var fieldName in this._fieldState) {
+            var fieldState = this._fieldState[fieldName];
+
+            if (!fieldState.detectedAs) {
+                var specificTypeDetail = this.chooseType(fieldState),
+                    broadTypeDetail = null
+                ;
+
+                if (specificTypeDetail.type) {
+                    // Find a broad type that has no bad values. This type will be
+                    // the fallback type if an exception is found.
+                    // No danger of infinite loop because worst case leads to "text"
+                    // field which has no typeProcessName and ends the search.
+                    var skipTypes = [specificTypeDetail.typeProcessName],
+                        lastFieldType = specificTypeDetail.type
+                    ;
+                    while (!broadTypeDetail) {
+                        var typeDetail = this.chooseType(fieldState, skipTypes);
+                        if (!typeDetail.typeProcessName || fieldState[typeDetail.typeProcessName].badValues == 0) {
+                            broadTypeDetail = typeDetail;
+                        }
+                        skipTypes.add(typeDetail.typeProcessName);
+                        lastFieldType = typeDetail.type;
+                    }
+                }
+
+                var detectedTypeDetail = specificTypeDetail,
+                    couldBeTypeDetail = null,
+                    detail = null
+                ;
+
+                // A detected boolean field with badValues and no emptyDisplayValue
+                // shouldn't be reported as a "couldBe" type below because the values are
+                // clearly not really boolean.
+                if (detectedTypeDetail.typeProcessName == "boolean") {
+                    if (fieldState[detectedTypeDetail.typeProcessName].emptyDisplayValue == null &&
+                        fieldState[detectedTypeDetail.typeProcessName].badValues.length > 0)
+                    {
+                        detectedTypeDetail = broadTypeDetail;
+                    }
+                }
+
+                if (broadTypeDetail && this.recordCount < this.minExampleCount) {
+                    couldBeTypeDetail = detectedTypeDetail;
+                    detectedTypeDetail = broadTypeDetail;
+                    fieldState.reason = isc.SchemaGuesser.TOO_FEW_EXAMPLES;
+                    detail = {
+                            message: "Field '" + fieldName + "' was detected as " +
+                            detectedTypeDetail.type + " despite having only " +
+                            couldBeTypeDetail.type + " values because only " +
+                            this.recordCount + " records were provided."
+                    };
+                    if (couldBeTypeDetail.type == "boolean") {
+                        detail.message += " To force detection as boolean use 'F' and 'T' values.";
+                    }
+                } else if (broadTypeDetail && detectedTypeDetail.typeProcessName && fieldState[detectedTypeDetail.typeProcessName].badValues.length > 0) {
+                    couldBeTypeDetail = detectedTypeDetail;
+                    detectedTypeDetail = broadTypeDetail;
+                    fieldState.reason = isc.SchemaGuesser.TOO_MANY_SPECIAL_VALUES;
+                    detail = {
+                            message: "Field '" + fieldName + "' was detected as " +
+                            detectedTypeDetail.type + " despite having many " +
+                            couldBeTypeDetail.type + " values because it had more than one special value." +
+                            " If data is modified so that only one special value is used, field will be detected as type " + couldBeTypeDetail.type,
+                            specialValues: fieldState[couldBeTypeDetail.typeProcessName].badValues
+                    };
+                }
+
+                if (couldBeTypeDetail || detail) {
+                    if (!detail) detail = {};
+
+                    detail.fieldName = fieldName;
+                    detail.detectedAs = detectedTypeDetail.type;
+                    detail.couldBe = couldBeTypeDetail.type;
+                    detail.reason = fieldState.reason;
+
+                    if (detail.detectedAs != detail.couldBe) {
+                        this.parseDetails.add(detail);
+                    }
+                }
+
+                if (detectedTypeDetail.addEmptyDisplayValue && detectedTypeDetail.typeProcessName && fieldState[detectedTypeDetail.typeProcessName]) {
+                    var state = fieldState[detectedTypeDetail.typeProcessName];
+                    if (state.emptyDisplayValue) fieldState.emptyDisplayValue = state.emptyDisplayValue;
+                    if (state.nullValues) fieldState.nullValues = state.nullValues;
+                }
+
+                fieldState.detectedAs = detectedTypeDetail.type;
+                if (couldBeTypeDetail) fieldState.couldBe = couldBeTypeDetail.type;
+
+                fieldState.typeProcessName = detectedTypeDetail.typeProcessName;
+            }
+        }
+    },
+
+    chooseType : function (fieldState, skipTypes) {
+        if (!skipTypes) skipTypes = [];
+        var emptyValueCount = fieldState.emptyValueCount;
+
+        var typeDetail = {
+            addEmptyDisplayValue: null
+        };
+
+        // The order of detection is important. When determining the fallback type,
+        // types will skipped until a type is found without bad values.
+        if (!skipTypes.contains("boolean") &&
+                fieldState.boolean.valueCount > 0 && fieldState.boolean.valueCount > emptyValueCount &&
+                ((this.treatEmptyValueAsBooleanFalse ? 0 : emptyValueCount) + fieldState.boolean.badValues.length <= 1))
+        {
+            typeDetail.typeProcessName = "boolean";
+            typeDetail.addEmptyDisplayValue = (emptyValueCount == 0 || this.treatEmptyValueAsBooleanFalse);
+        } else if (!skipTypes.contains("time") &&
+                fieldState.time.valueCount > 0 && fieldState.time.valueCount + emptyValueCount > fieldState.time.badValues.length)
+        {
+            typeDetail.typeProcessName = "time";
+        } else if (!skipTypes.contains("dateTimeYMD") &&
+                fieldState.dateTimeYMD.valueCount > 0 && fieldState.dateTimeYMD.valueCount + emptyValueCount > fieldState.dateTimeYMD.badValues.length)
+        {
+            typeDetail.typeProcessName = "dateTimeYMD";
+        } else if (!skipTypes.contains("dateTimeMDY") &&
+                fieldState.dateTimeMDY.valueCount > 0 && fieldState.dateTimeMDY.valueCount + emptyValueCount > fieldState.dateTimeMDY.badValues.length)
+        {
+            typeDetail.typeProcessName = "dateTimeMDY";
+        } else if (!skipTypes.contains("dateTimeDMY") &&
+                fieldState.dateTimeDMY.valueCount > 0 && fieldState.dateTimeDMY.valueCount + emptyValueCount > fieldState.dateTimeDMY.badValues.length)
+        {
+            typeDetail.typeProcessName = "dateTimeDMY";
+        } else if (!skipTypes.contains("dateTimeSchema") &&
+                fieldState.dateTimeSchema.valueCount > 0 && fieldState.dateTimeSchema.valueCount + emptyValueCount > fieldState.dateTimeSchema.badValues.length)
+        {
+            typeDetail.typeProcessName = "dateTimeSchema";
+        } else if (!skipTypes.contains("dateYM") &&
+                fieldState.dateYM.valueCount > 0 && fieldState.dateYM.valueCount + emptyValueCount > fieldState.dateYM.badValues.length)
+        {
+            typeDetail.typeProcessName = "dateYM";
+        } else if (!skipTypes.contains("dateMY") &&
+                fieldState.dateMY.valueCount > 0 && fieldState.dateMY.valueCount + emptyValueCount > fieldState.dateMY.badValues.length)
+        {
+            typeDetail.typeProcessName = "dateMY";
+        } else if (!skipTypes.contains("dateYMD") &&
+                fieldState.dateYMD.valueCount > 0 && fieldState.dateYMD.valueCount + emptyValueCount > fieldState.dateYMD.badValues.length)
+        {
+            typeDetail.typeProcessName = "dateYMD";
+        } else if (!skipTypes.contains("dateMDY") &&
+                fieldState.dateMDY.valueCount > 0 && fieldState.dateMDY.valueCount + emptyValueCount > fieldState.dateMDY.badValues.length)
+        {
+            typeDetail.typeProcessName = "dateMDY";
+        } else if (!skipTypes.contains("dateDMY") &&
+                fieldState.dateDMY.valueCount > 0 && fieldState.dateDMY.valueCount + emptyValueCount > fieldState.dateDMY.badValues.length)
+        {
+            typeDetail.typeProcessName = "dateDMY";
+        } else if (!skipTypes.contains("integer") &&
+                fieldState.integer.valueCount > 0 && fieldState.integer.valueCount + emptyValueCount > fieldState.integer.badValues.length &&
+                fieldState.integer.valueCount >= fieldState.float.valueCount)
+        {
+            typeDetail.typeProcessName = "integer";
+        } else if (!skipTypes.contains("float") &&
+                fieldState.float.valueCount > 0 && fieldState.float.valueCount + emptyValueCount > fieldState.float.badValues.length)
+        {
+            typeDetail.typeProcessName = "float";
+        } else {
+            typeDetail.type = "text";
+            typeDetail.addEmptyDisplayValue = false;
+        }
+
+        if (typeDetail.typeProcessName) {
+            typeDetail.type = fieldState[typeDetail.typeProcessName].fieldType;
+            if (typeDetail.addEmptyDisplayValue == null) {
+                typeDetail.addEmptyDisplayValue = (emptyValueCount == 0);
+            }
+        }
+
+        return typeDetail;
+    },
+
+    createFields : function () {
+        var fields = [];
+
+        for (var fieldName in this._fieldState) {
+            var fieldState = this._fieldState[fieldName];
+
+            var type = fieldState.detectedAs || "text",
+                field = isc.addProperties({}, fieldState.fieldTemplate, {
+                    name: fieldName,
+                    type: type
+                })
+            ;
+            if (fieldState.emptyDisplayValue) field.emptyDisplayValue = fieldState.emptyDisplayValue;
+
+            fields.add(field);
+        }
+
+        if (this.fields) {
+            for (var i = 0; i < this.fields.length; i++) {
+                var field = this.fields[i];
+                if (field.name) {
+                    if (!fields.containsProperty("name", field.name)) {
+                        fields.add(isc.addProperties({}, field));
+                    }
+                }
+            }
+        }
+
+        return fields;
+    },
+
+    convertValues : function (data) {
+        var fields = this.derivedFields,
+            parsedData = [],
+            failures = {}
+        ;
+        for (var i = 0; i < data.length; i++) {
+            var record = data[i],
+                newRecord = {}
+            ;
+
+            for (var fieldName in this._fieldState) {
+                var fieldState = this._fieldState[fieldName],
+                    type = fieldState.detectedAs || "text",
+                    typeIsSpecified = (fieldState.detectedAs && fieldState.fieldTemplate && fieldState.fieldTemplate.type == fieldState.detectedAs),
+                    origValue = record[fieldName],
+                    value = origValue,
+                    convert = (fieldState.typeProcessName && this._typeProcessMethods[fieldState.typeProcessName].convert
+                            ? this._typeProcessMethods[fieldState.typeProcessName].convert : this.toText)
+                ;
+
+                // Ignore nested objects
+                if (isc.isAn.Object(value)) {
+                    continue;
+                }
+
+                if (fieldState.nullValues) {
+                    for (var j = 0; j < fieldState.nullValues.length; j++) {
+                        if (value == fieldState.nullValues[j]) {
+                            value = null;
+                            break;
+                        }
+                    }
+                }
+                newRecord[fieldName] = (value != null || origValue == null ? this.fireCallback(convert, "value", [origValue == null ? origValue : ""+origValue]) : null);
+                if (typeIsSpecified && (value != null || origValue == null) && newRecord[fieldName] == null) {
+                    failures[fieldName] = (failures[fieldName] || 0) + 1;
+                }
+            }
+            parsedData.push(newRecord);
+        }
+
+        for (var key in failures) {
+            var failureCount = failures[key];
+            if (failureCount > 10 || failureCount == data.length) {
+                var detail = {
+                    fieldName: key,
+                    message: "Conversion of values to '" + this._fieldState[key].fieldTemplate.type + "' failed for " + failureCount + " of " + data.length + " records."
+                };
+                this.parseDetails.add(detail);
+            }
+        }
+
+        return parsedData;
+    },
+
+    createFieldState : function (fieldName) {
+        var fieldState = {};
+        if (this.fields) {
+            var field = this.fields.find("name", fieldName);
+            if (field) {
+                fieldState.fieldTemplate = field;
+                if (field.type) {
+                    fieldState.detectedAs = field.type;
+                }
+            }
+        }
+
+        fieldState.emptyValueCount = 0;
+
+        for (var typeName in this._typeProcessMethods) {
+            var type = this._typeProcessMethods[typeName];
+            fieldState[typeName] = {
+                fieldType: type.fieldType,
+                valueCount: 0,
+                badValues: []
+            };
+            if (fieldState.detectedAs && !fieldState.typeProcessName && fieldState.detectedAs == type.fieldType) {
+                fieldState.typeProcessName = typeName;
+            }
+        }
+
+        return fieldState;
+    },
+
+    getValueEquivalences : function (value) {
+        var matches = [value];
+        for (var i = 0; i < this.valueEquivalences.length; i++) {
+            var equivalences = this.valueEquivalences[i];
+            if (value.toLowerCase() == equivalences.value.toLowerCase()) {
+                matches.add(equivalences.equivalent);
+            } else if (value.toLowerCase() == equivalences.equivalent.toLowerCase()) {
+                matches.add(equivalences.value);
+            }
+        }
+        return matches;
+    },
+
+
+    // The following type checks can be overridden
+    isBoolean : function (value) {
+        return this.booleanTrueValues.contains(value.toLowerCase()) || this.booleanFalseValues.contains(value.toLowerCase());
+    },
+
+    isFloat : function (value) {
+        var decimalSymbol = this.decimalSymbol || isc.NumberUtil.decimalSymbol;
+        var groupingSymbol = this.groupingSymbol || isc.NumberUtil.groupingSymbol;
+        if (!this._isFloatRegexp ||
+                this._isFloatDecimalSymbol != this.decimalSymbol ||
+                this._isFloatGroupingSymbol != this.groupingSymbol)
+        {
+            this._isFloatRegexp = new RegExp("^\\s*([+-]?(((\\d+(\\" + decimalSymbol + ")?)|(\\d*\\" + decimalSymbol + "\\d+)|(\\d+(?:[\\" + groupingSymbol + "]\\d{3})*\\" + decimalSymbol + "\\d+))([eE][+-]?\\d+)?))\\s*$");
+            this._isFloatDecimalSymbol = this.decimalSymbol;
+            this._isFloatGroupingSymbol = this.groupingSymbol;
+        }
+
+        return this._isFloatRegexp.test(value);
+    },
+
+    isInteger : function (value) {
+        var groupingSymbol = this.groupingSymbol || isc.NumberUtil.groupingSymbol;
+        if (!this._isIntegerRegexp ||
+                this._isIntegerGroupingSymbol != this.groupingSymbol)
+        {
+            this._isIntegerRegexp = new RegExp("^\\s*([+-]?((\\d+(?:[\\" + groupingSymbol + "]\\d{3})*)))\\s*$");
+            this._isIntegerGroupingSymbol = this.groupingSymbol;
+        }
+
+        return this._isIntegerRegexp.test(value);
+    },
+
+    isDateYM : function (value) {
+        var regexp = new RegExp("^\\s*(\\d{1,4})([\\.-/])(\\d{1,2})\\s*$");
+        var match = regexp.exec(value);
+        if (match) {
+            var year = parseInt(match[1], 10),
+                separator = match[2],
+                month = parseInt(match[3], 10)
+            ;
+            if (month >= 1 && month <= 12 && (separator != "." || year >= this.minDateYear)) {
+                return true;
+            }
+        }
+        return false;
+    },
+
+    isDateMY : function (value) {
+        var regexp = new RegExp("^\\s*(\\d{1,2})([\\.-/])(\\d{1,4})\\s*$");
+        var match = regexp.exec(value);
+        if (match) {
+            var month = parseInt(match[1], 10),
+                separator = match[2],
+                year = parseInt(match[3], 10)
+            ;
+            if ((separator != "." || year >= this.minDateYear) && month >= 1 && month <= 12) {
+                return true;
+            }
+        }
+        return false;
+    },
+
+    isDateYMD : function (value) {
+        var date = isc.Date.parseInput(value, "YMD", this.centuryThreshold, true, false);
+        return (date != null);
+    },
+
+    isDateMDY : function (value) {
+        var date = isc.Date.parseInput(value, "MDY", this.centuryThreshold, true, false);
+        return (date != null);
+    },
+
+    isDateDMY : function (value) {
+        var date = isc.Date.parseInput(value, "DMY", this.centuryThreshold, true, false);
+        return (date != null);
+    },
+
+    isDateTimeYMD : function (value) {
+        if (!isc.DateUtil.isDatetimeString(value, "YMD")) return false;
+
+        var date = isc.Date.parseInput(value, "YMD", null, true, false);
+        return (date != null);
+    },
+
+    isDateTimeMDY : function (value) {
+        if (!isc.DateUtil.isDatetimeString(value, "MDY")) return false;
+
+        var date = isc.Date.parseInput(value, "MDY", null, true, false);
+        return (date != null);
+    },
+
+    isDateTimeDMY : function (value) {
+        if (!isc.DateUtil.isDatetimeString(value, "DMY")) return false;
+
+        var date = isc.Date.parseInput(value, "DMY", null, true, false);
+        return (date != null);
+    },
+
+    isDateTimeSchema : function (value) {
+        // parseSchemaDate is happy with a date of YYYY-MM-DD with no time.
+        // That case is handled by isDate so it must be excluded here.
+        var match = value.match(/(\d{4})[\/-](\d{2})[\/-](\d{2})([T ](\d{2}):(\d{2})(:(\d{2}))?)?(\.(\d+))?([+-]\d\d?:\d{2}|Z)?/);
+        if (match == null || !match[4]) return false;
+
+        var date = isc.DateUtil.parseSchemaDate(value);
+        return (date != null);
+    },
+
+    isTime : function (value) {
+        // Exclude all-digit values from being a time
+        var all_digits = /^\d+$/;
+        if (all_digits.test(value)) return false;
+
+        // Cannot use Time.parseInput because it assumes the value is supposed
+        // to be a time and makes every effort to massage the string into a time.
+
+        var valid = false;
+
+        if (!isc.SchemaGuesser._timeExpressions) {
+            isc.SchemaGuesser._timeExpressions = isc.Time._timeExpressions.duplicate();
+            isc.SchemaGuesser._timeExpressions.addList([
+                /^\s*(\d?\d)\.(\d?\d)\.(\d?\d)?\s*([AaPp][Mm]?)?\s*([+-]\d{2}:\d{2}|Z)?\s*$/,
+                /^\s*(\d?\d)\.(\d?\d)(\s*)([AaPp][Mm]?)?\s*([+-]\d{2}:\d{2}|Z)?\s*$/
+            ]);
+        }
+
+        // iterate through the time expressions, trying to find a match
+        for (var i = 0; i < isc.SchemaGuesser._timeExpressions.length; i++) {
+
+            var match = isc.SchemaGuesser._timeExpressions[i].exec(value);
+            if (match) break;
+        }
+        if (match) {
+            valid = true;
+            // get the hours, minutes and seconds from the match
+            // NOTE: this results in 24:00 going to 23:00 rather than 23:59...
+            var hours = match[1] ? parseInt(match[1], 10) : null,
+                minutes = match[2] ? parseInt(match[2], 10) : 0,
+                seconds = match[3] ? parseInt(match[3], 10) : 0,
+                ampm = match[4]
+            ;
+
+            if (ampm) {
+                if (!this._pmStrings) this._pmStrings = {p:true, P:true, pm:true, PM:true, Pm:true, pM:true};
+                if (!this._amStrings) this._amStrings = {a:true, A:true, am:true, AM:true, Am:true, aM:true};
+                if (this._pmStrings[ampm] == true) {
+                    if (hours == null) hours = 12;
+                    else if (hours < 12) hours += 12;
+                } else if (this._amStrings[ampm] == true) {
+                    if (hours == null) hours = 0;
+                    else if (hours > 12) hours -= 12;
+                } else {
+                    // Invalid am/pm indicator
+                    valid = false;
+                }
+            }
+            if (valid && hours == null) {
+                valid = false;
+            } else if (valid) {
+                if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+                    valid = false;
+                }
+            }
+        }
+
+        return valid;
+    },
+
+    toText : function (value) {
+        return value;
+    },
+
+    toBoolean : function (value) {
+        if (this.treatEmptyValueAsBooleanFalse && (value == null || !isc.isA.nonemptyString(value))) {
+            return false;
+        }
+        var result = this.booleanTrueValues.contains(value.toLowerCase());
+        if (!result) {
+            if (!this.booleanFalseValues.contains(value.toLowerCase())) {
+                result = null;
+            }
+        }
+        return result;
+    },
+
+    toFloat : function (value) {
+        var result = isc.NumberUtil.parseLocaleFloat(value, this.decimalSymbol || isc.NumberUtil.decimalSymbol, this.groupingSymbol || isc.NumberUtil.groupingSymbol);
+        return (isNaN(result) ? null : result);
+    },
+
+    toInteger : function (value) {
+        var result = isc.NumberUtil.parseLocaleInt(value, this.groupingSymbol || isc.NumberUtil.groupingSymbol);
+        return (isNaN(result) ? null : result);
+    },
+
+    toDateYM : function (value) {
+        var regexp = new RegExp("^\\s*(\\d{1,4})([\\.-/])(\\d{1,2})\\s*$");
+        var match = regexp.exec(value);
+        if (!match) return null;
+
+        var year = parseInt(match[1], 10),
+            separator = match[2],
+            month = parseInt(match[3], 10),
+            date = null
+        ;
+        if (month >= 1 && month <= 12 && (separator != "." || year >= this.minDateYear)) {
+            date = isc.Date.create(year, month-1, 1);
+        }
+        return date;
+    },
+
+    toDateMY : function (value) {
+        var regexp = new RegExp("^\\s*(\\d{1,2})([\\.-/])(\\d{1,4})\\s*$");
+        var match = regexp.exec(value);
+        if (!match) return null;
+
+        var month = parseInt(match[1], 10),
+            separator = match[2],
+            year = parseInt(match[3], 10),
+            date = null
+        ;
+        if (month >= 1 && month <= 12 && (separator != "." || year >= this.minDateYear)) {
+            date = isc.Date.create(year, month-1, 1);
+        }
+        return date;
+    },
+
+    toDateYMD : function (value) {
+        return isc.Date.parseInput(value, "YMD", this.centuryThreshold, true, false);
+    },
+
+    toDateMDY : function (value) {
+        return isc.Date.parseInput(value, "MDY", this.centuryThreshold, true, false);
+    },
+
+    toDateDMY : function (value) {
+        return isc.Date.parseInput(value, "DMY", this.centuryThreshold, true, false);
+    },
+
+    toDateTimeYMD : function (value) {
+        return isc.Date.parseInput(value, "YMD", this.centuryThreshold, true);
+    },
+
+    toDateTimeMDY : function (value) {
+        return isc.Date.parseInput(value, "MDY", this.centuryThreshold, true);
+    },
+
+    toDateTimeDMY : function (value) {
+        return isc.Date.parseInput(value, "DMY", this.centuryThreshold, true);
+    },
+
+    toDateTimeSchema : function (value) {
+        var match = value.match(/(\d{4})[\/-](\d{2})[\/-](\d{2})([T ](\d{2}):(\d{2})(:(\d{2}))?)?(\.(\d+))?([+-]\d\d?:\d{2}|Z)?/);
+        if (!match) return false;
+
+        return isc.DateUtil.parseSchemaDate(value);
+    },
+
+    toTime : function (value) {
+        value = value.replace(/\./g, ":");
+        return isc.Time.parseInput(value, true);
+    }
+})
+
+
+isc.defineClass("FileParser");
+
+isc.FileParser.addProperties({
+
+    //> @attr fileParser.hasHeaderLine (boolean : false : IRW)
+    // Does the first line of the data have the field names?
+    //
+    // @visibility fileParser
+    //<
+    hasHeaderLine: false,
+
+    //> @attr fileParser.ignoreEmptyRecords (boolean : true : IRW)
+    // Should parsed record with no data be ignored?
+    //
+    // @visibility fileParser
+    //<
+    ignoreEmptyRecords: true,
+
+    //> @attr fileParser.separatorChar (String : "," : IRW)
+    // Field separator character.
+    //
+    // @visibility fileParser
+    //<
+    separatorChar: ",",
+
+    //> @attr fileParser.quoteChar (String : "\"" : IRW)
+    // Quote character to wrap field values that include
+    // the +link{separatorChar,separator}.
+    //
+    // @visibility fileParser
+    //<
+    quoteChar: "\"",
+
+    //> @attr fileParser.allowQuotedValues (boolean : true : IRW)
+    // Are quoted values allowed in the data?
+    //
+    // @visibility fileParser
+    //<
+    allowQuotedValues: true,
+
+    //> @attr fileParser.fieldNames (Array of String : null : IRW)
+    // Field names for the input file. If provided, only matching
+    // data columns will be included in the parsed records.
+    //
+    // @visibility fileParser
+    //<
+    parseCsvLine : function (line) {
+        if (!this.allowQuotedValues) {
+            return line.split(this.separatorChar);
+        }
+
+        var insideQuote = false,
+            entries = [],
+            entry = []
+        ;
+
+        line.split('').forEach(function(c) {
+            if (c === this.quoteChar) {
+                insideQuote = !insideQuote;
+            } else {
+                if (c == this.separatorChar && !insideQuote) {
+                    entries.push(entry.join(''));
+                    entry = [];
+                } else {
+                    entry.push(c);
+                }
+            }
+        }, this);
+        if (entry.length > 0) entries.push(entry.join(''));
+        return (entries.length > 0 ? entries : null);
+    },
+
+    //> @method fileParser.parseCsvData
+    // Parse data into +link{Record,records}.
+    //
+    // @param data (String | Array of String) The data to process
+    // @return (Array of Record) converted records
+    // @visibility fileParser
+    //<
+    parseCsvData : function (data) {
+        if (!isc.isAn.Array(data)) {
+            if (data.contains("\r\n")) {
+                this.lineSeparator = "\r\n";
+                data = data.split("\r\n");
+            } else if (data.contains("\r")) {
+                this.lineSeparator = "\r";
+                data = data.split("\r");
+            } else if (data.contains("\n")) {
+                this.lineSeparator = "\n";
+                data = data.split("\n");
+            } else {
+                this.lineSeparator = "\n";
+                data = [data];
+            }
+        }
+
+        // When filtering empty records create filtered view of data
+        var filteredCsvData = this.filteredCsvData = [];
+
+        // Identify the first data row ignoring empty records if so configured
+        var firstDataRow,
+            firstDataRowIndex = 0
+        ;
+        while (!firstDataRow) {
+            if (firstDataRowIndex >= data.length) {
+                // No data was ever found
+                return [];
+            }
+            firstDataRow = this.parseCsvLine(data[firstDataRowIndex]);
+
+            if (this.ignoreEmptyRecords && this.isEmptyRecord(firstDataRow)) {
+                firstDataRowIndex++;
+                firstDataRow = null;
+            }
+        }
+        filteredCsvData.push(data[firstDataRowIndex]);
+
+        var fieldNames = this.fieldNames;
+        this.derivedFieldNames = null;
+        var ignoreFields;
+
+        if (!fieldNames) {
+            fieldNames = firstDataRow;
+
+            if (this.hasHeaderLine) {
+                // See if there are any fields that have no field name.
+                // Those fields must be ignored in data records.
+                for (var i = 0; i < fieldNames.length; i++) {
+                    if (fieldNames[i] == null || fieldNames[i] == "") {
+                        if (!ignoreFields) ignoreFields = [];
+                        ignoreFields.push(i);
+                    }
+                }
+                if (ignoreFields) {
+                    // Sort field indices into reverse order for easy removal from record
+                    ignoreFields.sort(function (a,b) { return a < b; });
+
+                    // Remove ignored fields from field names
+                    for (var i = 0; i < ignoreFields.length; i++) {
+                        fieldNames.splice(i, 1);
+                    }
+                }
+                this.derivedFieldNames = fieldNames;
+            }
+
+            // If no header line is expected, derive field names after data is parsed
+            // so empty columns can be ignored and then removed from final records.
+        }
+
+        // Remove empty leading records and header row from data to parse
+        if (firstDataRowIndex > 0 || this.hasHeaderLine) {
+            data = data.slice(firstDataRowIndex + (this.hasHeaderLine ? 1 : 0));
+        }
+
+        // Parse each remaining line in the data.
+        // When there is no header line we also need to determine which fields have no
+        // data at all so they can be discarded.
+        var lines = [],
+            nonEmptyFields = {},
+            nonEmptyFieldsSize = 0,
+            maxFieldIndex = 0;
+        ;
+        data.forEach(function (line) {
+            var result = this.parseCsvLine(line);
+            if (result && (!this.ignoreEmptyRecords || !this.isEmptyRecord(result))) {
+                if (ignoreFields) {
+                    for (var i = 0; i < ignoreFields.length; i++) {
+                        result.splice(i, 1);
+                    }
+                }
+                if (!this.hasHeaderLine && result.length != nonEmptyFieldsSize) {
+                    for (var i = 0; i < result.length; i++) {
+                        if (!nonEmptyFields[i] && result[i] != null && result[i] != "") {
+                            nonEmptyFields[i] = true;
+                            nonEmptyFieldsSize++;
+                            if (i > maxFieldIndex) maxFieldIndex = i;
+                        }
+                    }
+                }
+                lines.push(result);
+                if (!this.isEmptyRecord(result)) filteredCsvData.push(line);
+            }
+        }, this);
+
+        // If there is no header line then we need to assign field names for non-empty fields
+        if (!this.hasHeaderLine) {
+            fieldNames = [];
+            var fieldNamesMap = [],
+                fieldIndex = 0
+            ;
+            for (var i = 0; i <= maxFieldIndex; i++) {
+                if (nonEmptyFields[i]) {
+                    fieldNames[fieldIndex] = "field" + (fieldIndex+1);
+                    fieldNamesMap[i] = fieldNames[fieldIndex];
+                    fieldIndex++;
+                }
+            }
+            this.derivedFieldNames = fieldNames;
+
+            // Use fieldNames map to record field values so that empty fields are dropped
+            fieldNames = fieldNamesMap;
+        }
+
+        var records = lines.map(function (fieldValues) {
+            var record = {};
+            fieldNames.forEach(function(fieldName, i) {
+                record[fieldName] = fieldValues[i];
+            });
+            return record;
+        });
+
+        return records;
+    },
+
+    isEmptyRecord : function (record) {
+        for (var i = 0; i < record.length; i++) {
+            if (record[i] != null && record[i] != "") return false;
+        }
+        return true;
+    },
+
+    //> @method fileParser.parseJsonData
+    // Parse data into +link{Record,records}.
+    //
+    // @param data (String) The data to process
+    // @return (Array of Record) converted records
+    // @visibility fileParser
+    //<
+    parseJsonData : function (data) {
+        this.filteredCsvData = null;
+
+        var records = isc.JSON.decode(data);
+        if (isc.isAn.Object(records)) {
+            var keys = isc.getKeys(records);
+            if (keys.length == 1 && isc.isAn.Array(records[keys[0]])) {
+                records = records[keys[0]];
+            }
+        }
+        if (!isc.isAn.Array(records)) {
+            this.logWarn("Invalid data - unable to extract an array of records");
+            return [];
+        }
+
+        // Extract field names from the records.
+        // Since XML and JSON formats can leave empty
+        // fields out of records all of the records
+        // must be inspected to determine the full
+        // list of field names in use.
+        var fieldNames = [];
+
+        records.forEach(function (record) {
+            var keys = isc.getKeys(record);
+
+            for (var i = 0; i < keys.length; i++) {
+                var fieldName = keys[i];
+                if (!fieldNames.contains(fieldName)) fieldNames.add(fieldName);
+            }
+        });
+        this.fieldNames = fieldNames;
+
+        return records;
+    },
+
+    //> @method fileParser.getFieldNames
+    // Returns the field names as either provided in +link{fieldNames}
+    // or derived from the data that are used in the parsed records.
+    //
+    // @return (Array of String) field names
+    // @visibility fileParser
+    //<
+    getFieldNames : function () {
+        return this.fieldNames || this.derivedFieldNames;
+    },
+
+    //> @method fileParser.getFields
+    // Returns the list of +link{DataSourceField,fields}.
+    //
+    // @return (Array of DataSourceField) fields
+    // @visibility fileParser
+    //<
+    getFields : function () {
+        var fieldNames = this.getFieldNames(),
+            fields = []
+        ;
+        fieldNames.forEach(function(fieldName) {
+            fields.add({ name: fieldName });
+        });
+        return fields;
+    },
+
+    //> @method fileParser.getFilteredCsvData
+    // Returns the filtered CSV data after any empty records have been removed.
+    //
+    // @return (String) CSV Data
+    // @visibility fileParser
+    //<
+    getFilteredCsvData : function () {
+        return (this.filteredCsvData ? this.filteredCsvData.join(this.lineSeparator) : null);
+    }
+});
+
 
 
 // =======================================================================================
@@ -62366,6 +66079,60 @@ isc.RulesEngine.addProperties({
                     rule.logCategory || "rulesEngine");
             }
 
+            // Pull list of targetContexts from locator to be used later when applying the
+            // rule if applicable and for updating filter values with non-stable ID DBC values
+            var targetContexts = [];
+
+            // rules can apply to a field (specified as someDS.someFieldName) or to
+            // a (relative) locator which will return a SC object -- a component, a
+            // FormItem or a SectionStackSection
+
+            // If a locator is used, we need to find the relevant object and call the
+            // appropriate API on it.
+            // Note that many rule types don't apply to anything other than FormItems
+
+            if (locator != null) {
+                // support for multiple locators
+
+                if (isc.isA.String(locator)) locator = locator.split(/,(?![^\[]*\])/);
+                for (var j = 0; j < locator.length; j++) {
+                    var currentLocator = locator[j],
+                        isRelativeLocator = isc.AutoTest.isRelativeLocator(currentLocator),
+                        targetContext = null
+                    ;
+                    if (isRelativeLocator) {
+                        if (this.baseComponent == null) {
+                            this.logWarn("RulesEngine has no specified baseComponent. Unable to" +
+                                    " process rule with specified relative locator:" + currentLocator);
+                            continue;
+                        }
+                        targetContext = isc.AutoTest.getRelativeObjectContext(this.baseComponent, currentLocator, rule.internalRule);
+                    } else {
+                        targetContext = isc.AutoTest.getObjectContext(currentLocator, rule.internalRule);
+                    }
+
+                    if (targetContext == null || targetContext.object == null) {
+                        // While destroying a hierarchy of components rules might be fired as
+                        // components are removed from the ruleScope. If the rules target another
+                        // component in the hierarchy a locator will not be valid anymore because
+                        // of the locatorMatching=restrictSuffix. Logging the bad locator is not
+                        // desired in this case so another attempt is made to use the locator without
+                        // the locatorMatching restriction. If a component is found and is being
+                        // destroyed, don't log the locator failure.
+                        currentLocator = currentLocator.replace(/,locatorMatching=restrictSuffix/, "");
+                        targetContext = isc.AutoTest.getObjectContext(currentLocator, rule.internalRule);
+                        if (!targetContext || !targetContext.object || !targetContext.object.destroying) {
+                            this.logWarn("RulesEngine unable to resolve locator specified on rule. " +
+                                    (this.baseComponent ? "\nBase Component: " + this.baseComponent : "") +
+                                    "\nLocator in question:\n" + currentLocator + " - " + isc.AutoTest.getLogFailureText() + this.getStackTrace());
+                        }
+                        continue;
+                    }
+
+                    targetContexts.add(targetContext);
+                }
+            }
+
             // If rule.applyWhen is specified we can test this against the full set of values,
             // before spinning through individual targets, running the 'performAction' et al.
             if (rule.applyWhen) {
@@ -62381,6 +66148,38 @@ isc.RulesEngine.addProperties({
                 criteria = isc.DataSource.validateCriteria(criteria, this, ruleScope,
                                                     this.resolveFieldOrPropertyType);
 
+                // For each of the targetContexts from the locator(s) update the values with
+                // non-stable ID DBC values. Hold onto the added property IDs so they can be
+                // removed when filtering is complete
+                var tempValues = [];
+                for (var j = 0; j < targetContexts.length; j++) {
+                    var targetContext = targetContexts[j];
+
+                    // A ListGrid EditRowForm field locator resolves the container too nicely to the
+                    // grid body instead of the embedded form. For the context of rules the form is
+                    // the desired container.
+                    var container = targetContext.container;
+                    if (isc.isA.GridBody(container) && container.grid._editRowForm) {
+                        container = container.grid._editRowForm;
+                    }
+
+                    // For a component without a DS and no stable ID, create a copy of the ruleContext
+                    // and add the DBC values using the actual ID. The rule will have been
+                    // created to use its actual ID so this design allows access to its values as
+                    // well as the rest of the ruleContext.
+                    var hasStableID = container &&
+                            ((container.hasStableLocalID && container.hasStableLocalID()) ||
+                                container.grid ||
+                                (container.editNode != null))
+                    ;
+                    if (container && !hasStableID && container.getValues) {
+
+                        var ID = container.getLocalId();
+                        values[ID] = { values: container.getValues() };
+                        tempValues.add(ID);
+                    }
+                }
+
                 var matchingRows = isc.DataSource.applyFilter([values], criteria);
                 if (matchingRows.length == 0) {
                     shouldApply = false;
@@ -62388,76 +66187,39 @@ isc.RulesEngine.addProperties({
                 if ((rule.logCategory && this.logIsDebugEnabled(rule.logCategory)) ||
                         (!rule.logCategory && this.logIsDebugEnabled("rulesEngine")))
                 {
-                    this.logDebug("Specified rule.applyWhen: " + isc.echoFull(criteria) +
-                            ". Rule Context: " + isc.echoFull(ruleContext),
+                    this.logDebug("Specified rule.applyWhen [" + shouldApply + "]: " +
+                            isc.echoFull(criteria) + ". Values: " + isc.echoFull(values),
                             rule.logCategory || "rulesEngine");
+                }
+
+                if (tempValues.length > 0) {
+                    // Remove temporary DBC field values
+                    for (var j = 0; j < tempValues.length; j++) {
+                        delete values[tempValues[j]];
+                    }
                 }
             }
 
-            // rules can apply to a field (specified as someDS.someFieldName) or to
-            // a (relative) locator which will return a SC object -- a component, a
-            // FormItem or a SectionStackSection
+            for (var j = 0; j < targetContexts.length; j++) {
+                var targetContext = targetContexts[j];
 
-            // If a locator is used, we need to find the relevant object and call the
-            // appropriate API on it.
-            // Note that many rule types don't apply to anything other than FormItems
+                // Only "rules" have locators (validators do not).
+                // The distinction is that the validator has no "condition" and so no need
+                // to call "processValidator()" - just call performAction.
+                // However - first verify the targetObject type is supported by the
+                // validator.
 
-            if (locator != null) {
-                // support for multiple locators
-
-                if (isc.isA.String(locator)) locator = locator.split(/,(?![^\[]*\])/);
-
-                for (var j = 0; j < locator.length; j++) {
-                  var currentLocator = locator[j],
-                      isRelativeLocator = isc.AutoTest.isRelativeLocator(currentLocator),
-                      targetContext = null
-                  ;
-                  if (isRelativeLocator) {
-                      if (this.baseComponent == null) {
-                          this.logWarn("RulesEngine has no specified baseComponent. Unable to" +
-                                  " process rule with specified relative locator:" + currentLocator);
-                          continue;
-                      }
-                      targetContext = isc.AutoTest.getRelativeObjectContext(this.baseComponent, currentLocator);
-                  } else {
-                      targetContext = isc.AutoTest.getObjectContext(currentLocator);
-                  }
-
-                  if (targetContext == null || targetContext.object == null) {
-                      // While destroying a hierarchy of components rules might be fired as
-                      // components are removed from the ruleScope. If the rules target another
-                      // component in the hierarchy a locator will not be valid anymore because
-                      // of the locatorMatching=restrictSuffix. Logging the bad locator is not
-                      // desired in this case so another attempt is made to use the locator without
-                      // the locatorMatching restriction. If a component is found and is being
-                      // destroyed, don't log the locator failure.
-                      currentLocator = currentLocator.replace(/,locatorMatching=restrictSuffix/, "");
-                      targetContext = isc.AutoTest.getObjectContext(currentLocator, rule.internalRule);
-                      if (!targetContext || !targetContext.object || !targetContext.object.destroying) {
-                          this.logWarn("RulesEngine unable to resolve locator specified on rule. " +
-                                  (this.baseComponent ? "\nBase Component: " + this.baseComponent : "") +
-                                  "\nLocator in question:\n" + currentLocator + " - " + isc.AutoTest.getLogFailureText() + this.getStackTrace());
-                      }
-                      continue;
-                  }
-
-
-                  // Only "rules" have locators (validators do not).
-                  // The distinction is that the validator has no "condition" and so no need
-                  // to call "processValidator()" - just call performAction.
-                  // However - first verify the targetObject type is supported by the
-                  // validator.
-
-                  // A ListGrid EditRowForm field locator resolves the container too nicely to the
-                  // grid body instead of the embedded form. For the context of rules the form is
-                  // the desired container.
-                  var container = targetContext.container;
-                  if (isc.isA.GridBody(container) && container.grid._editRowForm) container = container.grid._editRowForm;
-
-
-                  isc.Validator.performAction(shouldApply ? true : null,
-                      targetContext.object, rule, values, container, targetContext.objectType);
+                // A ListGrid EditRowForm field locator resolves the container too nicely to the
+                // grid body instead of the embedded form. For the context of rules the form is
+                // the desired container.
+                var container = targetContext.container;
+                if (isc.isA.GridBody(container) && container.grid._editRowForm) {
+                    container = container.grid._editRowForm;
                 }
+
+
+                isc.Validator.performAction(shouldApply ? true : null,
+                    targetContext.object, rule, values, container, targetContext.objectType);
             }
 
             // Support fieldName being a single fieldName, an array of fieldName strings, or
@@ -63228,13 +66990,22 @@ isc.Class.addMethods({
     // Builder) via EditContext.setNodeProperties().  Note that this is overridden by
     // DrawItem to avoid warnings for attempts to set unsupported properties.
     setEditableProperties : function (properties) {
-        var undef;
+        var idField = isc.DS.getAutoIdField(this),
+            autoIdField = isc.DS.getToolAutoIdField(this),
+            undef;
         if (!this.editModeOriginalValues) this.editModeOriginalValues = {};
         for (var key in properties) {
             if (this.editModeOriginalValues[key] === undef) {
                 this.logInfo("Field " + key + " - value is going to live values",
                         "editModeOriginalValues");
-                this.setProperty(key, properties[key]);
+                // When setting the "autoID" field for an object, the corresponding "ID"
+                // field should be updated instead. This matches the behavior during
+                // object creation.
+                if (idField && autoIdField && key == autoIdField) {
+                    this.setProperty(idField, properties[key]);
+                } else {
+                    this.setProperty(key, properties[key]);
+                }
             } else {
                 this.logInfo("Field " + key + " - value is going to original values",
                         "editModeOriginalValues");
@@ -63328,13 +67099,8 @@ isc.Class.addMethods({
     },
 
     // Override if you have a class that needs to be notified when editor properties have
-    // potentially changed
-    editablePropertiesUpdated : function (properties, notBottom) {
-        if (!notBottom && this.editContext && this.editContext.editNodeUpdated) {
-            this.editContext.editNodeUpdated(this.editNode, this.editContext, isc.getKeys(properties));
-        }
-
-    }
+    // potentially changed. This method is not called if the live object is not updated.
+    editablePropertiesUpdated : function (properties) { }
 
 });
 
@@ -63448,23 +67214,47 @@ isc.DataSource.addClassMethods({
         return isc.Class.getArrayItem(id, value, idProperty);
     },
 
-    // AutoId: field that should have some kind of automatically assigned ID to make the object
-    // referenceable in a builder environment
+    // AutoId: field that can have some kind of automatically or manually assigned ID to
+    // make the object referenceable in a builder environment
+    // ToolAutoId: field that should have some kind of automatically assigned ID to
+    // make the object referenceable in a builder environment. The presence of this field
+    // signals VB that the value can be changed at any time.
     // ---------------------------------------------------------------------------------------
     getAutoIdField : function (object) {
         var schema = this.getNearestSchema(object);
         return schema ? schema.getAutoIdField() : "ID";
     },
 
-    getAutoId : function (object) {
-        var fieldName = this.getAutoIdField(object);
-        return fieldName ? object[fieldName] : null;
+    getToolAutoIdField : function (object) {
+        var schema = this.getNearestSchema(object);
+        return schema ? schema.getToolAutoIdField() : "autoID";
+    },
+
+    getUsedAutoIdField : function (object) {
+        var idName = this.getAutoIdField(object),
+            autoIdName = this.getToolAutoIdField(object)
+        ;
+        return (autoIdName && object[autoIdName] != null
+                ? autoIdName
+                : (idName && object[idName] != null ? idName : null));
+    },
+
+    getAutoId : function (object, paletteNode) {
+        var idName = this.getAutoIdField(paletteNode || object),
+            autoIdName = this.getToolAutoIdField(paletteNode || object)
+        ;
+        return (autoIdName ? object[autoIdName] : null) || (idName ? object[idName] : null);
     }
 });
 
 isc.DataSource.addMethods({
     getAutoIdField : function () {
         return this.getInheritedProperty("autoIdField") || "ID";
+    },
+
+    getToolAutoIdField : function () {
+        var idField = this.getAutoIdField();
+        return "auto" + idField.substring(0,1).toUpperCase() + idField.substring(1);
     },
 
     // In the Visual Builder, whether a component should be create()d before being added to
@@ -63522,7 +67312,7 @@ isc.Progressbar.addProperties({
 
 if (isc.MenuButton) {
     isc.MenuButton.addProperties({
-        //> @attr menuButton.editProxyConstructor (SCClassName : "MenuEditEditProxy" : IR)
+        //> @attr menuButton.editProxyConstructor (SCClassName : "MenuEditProxy" : IR)
         // @include canvas.editProxyConstructor
         // @visibility external
         //<
@@ -63533,6 +67323,16 @@ if (isc.MenuButton) {
 if (isc.MenuBar) {
     isc.MenuBar.addProperties({
         //> @attr menuBar.editProxyConstructor (SCClassName : "MenuEditProxy" : IR)
+        // @include canvas.editProxyConstructor
+        // @visibility external
+        //<
+        editProxyConstructor: "MenuEditProxy"
+    });
+}
+
+if (isc.Menu) {
+    isc.Menu.addProperties({
+        //> @attr menu.editProxyConstructor (SCClassName : "MenuEditProxy" : IR)
         // @include canvas.editProxyConstructor
         // @visibility external
         //<
@@ -63573,6 +67373,25 @@ if (isc.Layout)  {
     });
 }
 
+if (isc.LayoutResizeBar)  {
+    isc.LayoutResizeBar.addProperties({
+        //> @attr layoutResizeBar.editProxyConstructor (SCClassName : "LayoutResizeBarEditProxy" : IR)
+        // @include canvas.editProxyConstructor
+        // @visibility external
+        //<
+        editProxyConstructor: "LayoutResizeBarEditProxy"
+    });
+}
+if (isc.LayoutResizeSnapbar)  {
+    isc.LayoutResizeSnapbar.addProperties({
+        //> @attr layoutResizeSnapbar.editProxyConstructor (SCClassName : "LayoutResizeBarEditProxy" : IR)
+        // @include canvas.editProxyConstructor
+        // @visibility internal
+        //<
+        editProxyConstructor: "LayoutResizeBarEditProxy"
+    });
+}
+
 if (isc.SplitPane) {
     isc.SplitPane.addProperties({
         //> @attr splitPane.editProxyConstructor (SCClassName : "SplitPaneEditProxy" : IR)
@@ -63605,6 +67424,26 @@ if (isc.Window) {
     });
 }
 
+if (isc.ModalWindow) {
+    isc.ModalWindow.addProperties({
+        //> @attr modalWindow.editProxyConstructor (SCClassName : "WindowEditProxy" : IR)
+        // @include canvas.editProxyConstructor
+        // @visibility external
+        //<
+        editProxyConstructor:"WindowEditProxy"
+    });
+}
+
+if (isc.InlineWindow) {
+    isc.InlineWindow.addProperties({
+        //> @attr inlineWindow.editProxyConstructor (SCClassName : "WindowEditProxy" : IR)
+        // @include canvas.editProxyConstructor
+        // @visibility external
+        //<
+        editProxyConstructor:"WindowEditProxy"
+    });
+}
+
 if (isc.DetailViewer) {
     isc.DetailViewer.addProperties({
         //> @attr detailViewer.editProxyConstructor (SCClassName : "DetailViewerEditProxy" : IR)
@@ -63612,6 +67451,16 @@ if (isc.DetailViewer) {
         // @visibility external
         //<
         editProxyConstructor:"DetailViewerEditProxy"
+    });
+}
+
+if (isc.Header)  {
+    isc.Header.addProperties({
+        //> @attr header.editProxyConstructor (SCClassName : "HeaderEditProxy" : IR)
+        // @include canvas.editProxyConstructor
+        // @visibility external
+        //<
+        editProxyConstructor:"HeaderEditProxy"
     });
 }
 
@@ -63951,17 +67800,23 @@ if (isc.DynamicForm) {
         editProxyConstructor:"FormEditProxy",
 
         setEditorType : function (item, editorType) {
-            if (!item.editContext) return;
+            if (!item.editContext || item.type == editorType) return;
 
-            var tree = item.editContext.getEditNodeTree(),
+            var editContext = item.editContext,
+                tree = editContext.getEditNodeTree(),
                 parent = tree.getParent(item.editNode),
                 index = tree.getChildren(parent).indexOf(item.editNode),
-                ctx = item.editContext,
-                paletteNode = { type: editorType, defaults: item.editNode.defaults },
-                editNode = ctx.makeEditNode(paletteNode);
+                paletteNode = editContext.makePaletteNode(item.editNode)
+            ;
 
-            ctx.removeNode(item.editNode);
-            ctx.addNode(editNode, parent, index);
+            // Change editNode type to match editorType. editorType is already part of
+            // the defaults because of the change.
+            paletteNode.type = editorType;
+
+            var editNode = editContext.makeEditNode(paletteNode);
+
+            editContext.removeNode(item.editNode);
+            editContext.addNode(editNode, parent, index);
         }
 
     });
@@ -64009,6 +67864,22 @@ if (isc.DynamicForm) {
             if (this.form) this.form.setEditorType(this, editorType);
         }
 
+    });
+
+    isc.FileItem.addProperties({
+        //> @attr fileItem.editProxyConstructor (SCClassName : "FileItemEditProxy" : IR)
+        // @include canvas.editProxyConstructor
+        // @visibility external
+        //<
+        editProxyConstructor:"FileItemEditProxy"
+    });
+
+    isc.UploadItem.addProperties({
+        //> @attr uploadItem.editProxyConstructor (SCClassName : "FileItemEditProxy" : IR)
+        // @include canvas.editProxyConstructor
+        // @visibility external
+        //<
+        editProxyConstructor:"FileItemEditProxy"
     });
 
     isc.TextItem.addProperties({
@@ -64068,11 +67939,11 @@ if (isc.DynamicForm) {
     });
 
     isc.RadioGroupItem.addProperties({
-        //> @attr radioGroupItem.editProxyConstructor (SCClassName : "SelectItemEditProxy" : IR)
+        //> @attr radioGroupItem.editProxyConstructor (SCClassName : "RadioGroupItemEditProxy" : IR)
         // @include canvas.editProxyConstructor
         // @visibility external
         //<
-        editProxyConstructor:"SelectItemEditProxy"
+        editProxyConstructor:"RadioGroupItemEditProxy"
     });
 
     isc.CheckboxItem.addProperties({
@@ -64092,6 +67963,16 @@ if (isc.DynamicForm) {
         editProxyConstructor:"DateItemEditProxy"
     });
     }
+
+    if (isc.HeaderItem) {
+        isc.HeaderItem.addProperties({
+            //> @attr headerItem.editProxyConstructor (SCClassName : "TextItemEditProxy" : IR)
+            // @include canvas.editProxyConstructor
+            // @visibility external
+            //<
+            editProxyConstructor:"TextItemEditProxy"
+        });
+    }
 }
 
 // Edit Mode impl for SectionStack
@@ -64102,6 +67983,13 @@ isc.SectionStack.addMethods({
     // @visibility external
     //<
     editProxyConstructor:"SectionStackEditProxy"
+});
+isc.SectionHeader.addMethods({
+    //> @attr sectionHeader.editProxyConstructor (SCClassName : "SectionStackSectionEditProxy" : IR)
+    // @include canvas.editProxyConstructor
+    // @visibility external
+    //<
+    editProxyConstructor:"SectionStackSectionEditProxy"
 });
 
 
@@ -64330,7 +68218,35 @@ isc.ServiceOperation.addMethods({
 
 if (isc.ValuesManager != null) {
     isc.ValuesManager.addMethods({
-        editProxyConstructor:"EditProxy"
+        editProxyConstructor:"ValuesManagerEditProxy",
+
+        // Note: this impl contains code duplicated from EditProxy.setEditMode
+        // because ValuesManager does not extend Canvas.
+        setEditMode : function(editingOn, editContext, editNode) {
+            if (editingOn == null) editingOn = true;
+            if (this.editingOn == editingOn) return;
+            this.editingOn = editingOn;
+
+            if (this.editingOn) {
+                // If an EditTree (or similar) component is passed which contains
+                // an EditContext rather than being one, grab the actual EditContext.
+                if (editContext && !isc.isAn.EditContext(editContext) && editContext.getEditContext) {
+                    editContext = editContext.getEditContext();
+                }
+                this.editContext = editContext;
+            }
+
+            this.editNode = editNode;
+            if (this.editingOn && !this.editProxy) {
+
+                var defaults = isc.Canvas._getEditProxyPassThruProperties(this.editContext);
+                if (this.editNode && this.editNode.editProxyProperties) isc.addProperties(defaults, this.editNode.editProxyProperties);
+                this.editProxy = this.createAutoChild("editProxy", defaults);
+            }
+
+            // Allow edit proxy to perform custom operations on edit mode change
+            if (this.editProxy) this.editProxy.setEditMode(editingOn);
+        }
     });
 }
 
@@ -64463,10 +68379,31 @@ isc.EditContext.addClassProperties({
     //<
     editNodePasteOffset:5,
     // PaletteNode attributes that can be extracted from an EditNode
-    _paletteNodeAttributes: ["canDuplicate","icon","idPrefix","title","type"]
+    _paletteNodeAttributes: ["canDuplicate","icon","idPrefix","idName","title","type"],
+
+    // The following paletteNode behavior properties are applied to the editNode in
+    // makeEditNode() if not null.
+    _paletteNodeBehaviors: [
+        "addToChild",
+        "alwaysAllowRootDrop",
+        "autoAddChild",
+        "canDragInPreview",
+        "canReparent",
+        "insertContainer",
+        "modalVisibility"
+    ]
 });
 
 isc.EditContext.addClassMethods({
+
+    copyPaletteNodeBehaviors : function (targetNode, sourceNode) {
+        for (var i = 0; i < isc.EditContext._paletteNodeBehaviors.length; i++) {
+            var behavior = isc.EditContext._paletteNodeBehaviors[i];
+            if (sourceNode[behavior] != null) {
+                targetNode[behavior] = sourceNode[behavior];
+            }
+        }
+    },
 
     // Title Editing (for various components: buttons, tabs, etc)
     // ---------------------------------------------------------------------------------------
@@ -64490,9 +68427,7 @@ isc.EditContext.addClassMethods({
                             if (keyName == "Enter") item.blurItem();
                         },
                         blur : function (form, item) {
-                            form.saveOrDiscardValue();
-                            form.hide();
-                            if (!form.discardUpdate && completionCallback) completionCallback(item.getValue());
+                            form.dismissEditor();
                         }
                     }
             );
@@ -64529,6 +68464,19 @@ isc.EditContext.addClassMethods({
                 dismissEditor : function () {
                     this.saveOrDiscardValue();
                     this.hide();
+
+                    // When title editor is dismissed, place focus into the targetComponent
+                    // if appropriate.
+                    var widget = this.targetComponent;
+                    if (widget._eventMask) {
+                        widget._eventMask.focus();
+                    } else if (isc.isA.Canvas(widget)) {
+                        widget.focus();
+                    } else if (isc.isA.FormItem(widget)) {
+                        widget.form.focus();
+                        if (widget._canFocus && widget._canFocus()) widget.focusInItem();
+                    }
+
                     if (!this.discardUpdate && completionCallback) completionCallback(this.getValue("title"));
                 }
             });
@@ -64611,7 +68559,7 @@ isc.EditContext.addClassMethods({
         // or ServiceOperation.  We also support the idea of a visual proxy for a non-widget
         // object - for example, ListGridFields are represented visually by the corresponding
         // button in the ListGrid header.
-        if (!isc.isA.Canvas(object) && !isc.isA.FormItem(object) && !object._visualProxy) {
+        if (!isc.isA.Canvas(object) && !isc.isA.FormItem(object) && !isc.isA.ValuesManager(object) && !object._visualProxy) {
             return;
         }
         // Or a Menu (ie, a context menu which has no visibility until an appropriate object
@@ -64626,10 +68574,11 @@ isc.EditContext.addClassMethods({
             object = object._visualProxy;
         }
 
+
         // If attempting to select the canvas of a canvasItem, highlight the canvasItem itself
-        if (isc.isA.Canvas(object) && object.canvasItem) {
-            object = object.canvasItem;
-        }
+        // if (isc.isA.Canvas(object) && object.canvasItem) {
+        //     object = object.canvasItem;
+        // }
 
         var editContext = underlyingObject ? underlyingObject.editContext : object.editContext;
         if (!editContext) return;
@@ -64672,13 +68621,24 @@ isc.EditContext.addClassMethods({
         }
 
         // Give the newly-selected object the focus if possible, so that, eg, copy/paste
-        // shortcut keystrokes go to it
-        if (object._eventMask) {
-            object._eventMask.focus();
-        } else if (isc.isA.Canvas(object)) {
-            object.focus();
-        } else if (isc.isA.FormItem(object)) {
-            object.form.focus();
+        // shortcut keystrokes go to it.
+        // Don't move focus if the titleEditor is showing on the newly-selected object.
+        if (!this.titleEditor ||
+            !this.titleEditor.isVisible() ||
+            this.titleEditor.targetComponent != object)
+        {
+            if (object._eventMask) {
+                object._eventMask.focus();
+            } else if (isc.isA.Canvas(object)) {
+                object.focus();
+            } else if (isc.isA.FormItem(object)) {
+                if (!object.form.isFocused()) {
+                    object.form.focus();
+                }
+                if (object._canFocus && object._canFocus()) {
+                    object.focusInItem();
+                }
+            }
         }
     },
 
@@ -65083,6 +69043,95 @@ isc.EditContext.addProperties({
         return null;
     },
 
+    // Finds a palette node in the defaultPalette or other palettes provided.
+    // Returns first matching node at the deepest level.
+    findPaletteNodeAtDepth : function (fieldName, value) {
+        var palettes = [this.getDefaultPalette()];
+        if (this.extraPalettes) {
+            if (!isc.isAn.Array(this.extraPalettes)) palettes.add(this.extraPalettes);
+            else palettes.addList(this.extraPalettes);
+        }
+        var paletteNode = this._findPaletteNodeAtDepthInPalettes(palettes, fieldName, value);
+        return paletteNode;
+    },
+
+    _findPaletteNodeAtDepthInPalettes : function (palettes, fieldName, value) {
+        for (var i = 0; i < palettes.length; i++) {
+            var palette = palettes[i].data,
+                matches = {}
+            ;
+            // Some palettes are just an array of palette nodes. For those find the first match
+            if (isc.isAn.Array(palette)) {
+                node = palette.findIndex(fieldName, value);
+                if (node) matches[0] = node;
+            } else {
+                var index = palette.findNodeIndex(fieldName, value);
+                do {
+                    if (index >= 0) {
+                        var node = palette.getAllNodes()[index],
+                            level = palette.getLevel(node)
+                        ;
+                        if (!matches[level]) matches[level] = node;
+                    }
+                    index = palette.findNextNodeIndex(index+1, fieldName, value);
+                } while (index >= 0);
+            }
+
+            if (!isc.isAn.emptyObject(matches)) {
+                var choice = isc.getKeys(matches).map(function(value) { return parseInt(value); }).max();
+                return matches[choice];
+            }
+        }
+    },
+
+    getEditNodeIDDescription : function (node, suppressExtraDescription) {
+        if (!node) return "";
+
+        // Get extra node description from the node's EditProxy or from the parent
+        var extraDescription = "";
+
+        if (!suppressExtraDescription) {
+            // Allow node EditProxy to give extra description to this node
+            if (node.liveObject && node.liveObject.editProxy) {
+                var editProxy = node.liveObject.editProxy;
+                if (editProxy.getNodeDescription) {
+                    var description = editProxy.getNodeDescription(node);
+                    if (description && description.length > 0) {
+                        extraDescription = " [" + description + "]";
+                    }
+                }
+            }
+
+            // Allow parent node EditProxy to give extra description to this node
+            // like which pane of a SplitPane (i.e. Detail Pane).
+            if (extraDescription.length == 0) {
+                var data = this.getEditNodeTree(),
+                    parent = data.getParent(node)
+                ;
+                if (parent && parent.liveObject && parent.liveObject.editProxy) {
+                    var editProxy = parent.liveObject.editProxy;
+                    if (editProxy.getChildNodeDescription) {
+                        var description = editProxy.getChildNodeDescription(node);
+                        if (description && description.length > 0) {
+                            extraDescription = " " + description;
+                        }
+                    }
+                }
+            }
+        }
+
+        return String(node.ID || node.type).asHTML() + extraDescription;
+    },
+
+    getTitleForType : function (type) {
+
+        var paletteNode = this.findPaletteNodeAtDepth("type", type),
+            title = (paletteNode ? paletteNode.title || type : type)
+        ;
+        // Remove any explicit bold markup around title
+        return title.replace(/<(\/)?b>/g, "");
+    },
+
     //> @method editContext.addNode()
     // Add a new +link{EditNode} to the EditContext, under the specified parent. If the parentNode
     // is not provided it will be determined from +link{editContext.defaultParent}.
@@ -65108,8 +69157,9 @@ isc.EditContext.addProperties({
     // @return newNode (EditNode) node added
     // @visibility external
     //<
-    addNode : function (newNode, parentNode, index, parentProperty, skipParentComponentAdd, forceSingularFieldReplace) {
-        //var iscClass = isc.ClassFactory.getClass(newNode.type);
+    addNode : function (newNode, parentNode, index, parentProperty, skipParentComponentAdd, forceSingularFieldReplace, skipNodeAddedNotification) {
+        this.recordAction("addNode", arguments);
+
         var iscClass = isc.DataSource.getNearestSchemaClass(newNode.type);
         if (iscClass && (iscClass.isA(isc.DataSource) || newNode.deferCreation)) {
             // If we're adding a datasource that must be loaded, then defer the addNode
@@ -65127,10 +69177,19 @@ isc.EditContext.addProperties({
                         newNode = self.makeEditNode(newNode);
                     }
 
-                    self.addNode(newNode, parentNode, index, parentProperty, skipParentComponentAdd);
+                    self.addNode(newNode, parentNode, index, parentProperty, skipParentComponentAdd, forceSingularFieldReplace, skipNodeAddedNotification);
                     if (!isLoading && loadingNodeTree) delete isc._loadingNodeTree;
                 });
                 return;
+            }
+            // If server is unable to load the DS a simple placeholder DS is provided with
+            // the unableToLoad property set. Mark the DS as client-only so fetches will
+            // not fail a server query.
+            if (newNode.liveObject && newNode.liveObject.unableToLoad && !newNode.liveObject.reportedUnableToLoad) {
+                newNode.liveObject.setClientOnly(true);
+                newNode.liveObject.reportedUnableToLoad = true;
+                if (!this.loadingErrors) this.loadingErrors = [];
+                this.loadingErrors.add("Unable to load DataSource " + newNode.ID);
             }
         }
 
@@ -65166,8 +69225,10 @@ isc.EditContext.addProperties({
             return;
         }
 
-        // for a singular field (eg listGrid.dataSource), remove the old node first
-        if (!field.multiple) {
+        // for a singular field (eg listGrid.dataSource), remove the old node first.
+        // however, for certain singular fields don't remove existing editNode or destroy the
+        // existing component (ex. ValuesManager).
+        if (!field.multiple && field.destroyOnReplace != "false") {
 
             var existingChild = isc.DS.getChildObject(liveParent, newNode.type, null, parentProperty);
             if (existingChild && !newNode.generatedType && (existingChild != newNode.liveObject || forceSingularFieldReplace)) {
@@ -65176,7 +69237,9 @@ isc.EditContext.addProperties({
                     this.logWarn("destroying existing child: " + this.echoLeaf(existingChild) +
                                  " in singular field: " + fieldName);
                     data.remove(existingChildNode);
-                    if (isc.isA.Class(existingChild) && !isc.isA.DataSource(existingChild)) existingChild.destroy();
+                    if (isc.isA.Class(existingChild) && !isc.isA.DataSource(existingChild)) {
+                        existingChild.destroy();
+                    }
                 }
             }
         }
@@ -65196,7 +69259,9 @@ isc.EditContext.addProperties({
         // Optimization for add/remove cycles: check for methods like "reorderMember" first.
         // Note this doesn't remove the complexity discussed above because a generated
         // component might be moved between two parents.
-        var childObject;
+        var childObject,
+            hadExistingLiveObject
+        ;
         if (newNode.generatedType) {
             // copy to avoid property scribbling that is currently done by TabSets and
             // SectionStacks at least
@@ -65205,6 +69270,7 @@ isc.EditContext.addProperties({
             newNode.liveObject = childObject;
         } else {
             childObject = newNode.liveObject;
+            hadExistingLiveObject = (childObject != null);
         }
 
         // Let the liveObject know about the editContext and editNode. We used
@@ -65215,9 +69281,25 @@ isc.EditContext.addProperties({
         childObject.editNode = newNode;
 
         if (!skipParentComponentAdd) {
-            var children = data.getChildren(parentNode),
-                liveIndex = index
-            ;
+            var children = data.getChildren(parentNode);
+
+            // For nodes added to the top-level we want to sort non-visible components
+            // (ex. ValuesManager, etc.) to the top and visible components to the bottom.
+            if (index == null && !parentProperty && parentNode == this.getRootEditNode()) {
+                var visibleChild = isc.isA.Canvas(childObject);
+                if (visibleChild) {
+                    index = children.length;
+                } else {
+                    for (var i = 0; i < children.length; i++) {
+                        if (isc.isA.Canvas(children[i].liveObject)) {
+                            index = i;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            var liveIndex = index;
             if (liveIndex != null && parentProperty) {
                 // Nodes that have different parents (non-default) are intermingled in node
                 // tree. For example Window.headerControls and footerControls are shown as
@@ -65256,7 +69338,7 @@ isc.EditContext.addProperties({
         if (!newNode.liveObject || newNode.generatedType) {
             var foundLiveObject = isc.DS.getChildObject(liveParent, newNode.type,
                     isc.DS.getAutoId(newNode.defaults), parentProperty,
-                    isc.DS.getAutoIdField(newNode.defaults));
+                    isc.DS.getUsedAutoIdField(newNode.defaults));
             if (foundLiveObject != null) {
 
                 if (foundLiveObject._constructor == null) foundLiveObject._constructor = newNode._constructor;
@@ -65290,7 +69372,7 @@ isc.EditContext.addProperties({
 
         // Call hook in case the EditContext wants to do further processing ... useful to avoid
         // problem with calling Super with an interface method
-        this._nodeAdded(newNode, parentNode, data.getRoot());
+        this._nodeAdded(newNode, parentNode, data.getRoot(), skipNodeAddedNotification);
 
         // Call hook in case the live object wants to know about being added
         if (newNode.liveObject.addedToEditContext) newNode.liveObject.addedToEditContext(this, newNode, parentNode, index);
@@ -65303,6 +69385,21 @@ isc.EditContext.addProperties({
             this._selectionLiveObject = newNode.liveObject;
         }
 
+        // A paletteNode can reference a paletteNode as autoAddChild to have it automatically
+        // added as a child with the new node. Don't do this if moving an existing component.
+        if (!isc._loadingNodeTree && !hadExistingLiveObject && newNode.autoAddChild) {
+            var paletteNodes = newNode.autoAddChild;
+            if (!isc.isAn.Array(paletteNodes)) paletteNodes = [paletteNodes];
+            for (var i = 0; i < paletteNodes.length; i++) {
+                var paletteNode = paletteNodes[i];
+                if (paletteNode.ref) {
+                    // new child comes from a reference to another paletteNode
+                    paletteNode = this.findPaletteNode("refID", paletteNode.ref);
+                }
+                var editNode = this.makeEditNode(paletteNode);
+                this.addNode(editNode, newNode);
+            }
+        }
         return newNode;
     },
 
@@ -65363,14 +69460,16 @@ isc.EditContext.addProperties({
     // Empty function in case someone wants to observe.
     nodeAdded : function (newNode, parentNode, rootNode) {},
 
-    _nodeAdded : function (newNode, parentNode, rootNode) {
+    _nodeAdded : function (newNode, parentNode, rootNode, skipNodeAddedNotification) {
         if (newNode.useEditMask != null) {
             this.setEditProxyProperties(newNode, { useEditMask: newNode.useEditMask });
         }
 
         // Allow class user to hook the process before any automatic
         // changes are made
-        if (this.nodeAdded) this.nodeAdded(newNode, parentNode, rootNode);
+        if (this.nodeAdded && !skipNodeAddedNotification) {
+            this.nodeAdded(newNode, parentNode, rootNode);
+        }
 
         // When parentNode is in editMode, set this new node into editMode
 
@@ -65379,6 +69478,46 @@ isc.EditContext.addProperties({
                         parentNode && this.isNodeEditingOn(parentNode)))
         {
             this.enableEditing(newNode);
+        }
+    },
+
+    //> @method editContext.nodeRemoved()
+    // Notification fired when an +link{EditNode} has been removed from the EditContext
+    //
+    // @param removedNode (EditNode) node that was removed
+    // @param parentNode (EditNode) parent node of the node that was removed
+    // @param rootNode (EditNode) root node of the edit context
+    // @visibility external
+    //<
+    // Empty function in case someone wants to observe.
+    nodeRemoved : function (removedNode, parentNode, rootNode) {},
+
+    _nodeRemoved : function (removedNode, parentNode, rootNode, skipNodeRemovedNotification) {
+        // Allow class user to hook the process before any automatic
+        // changes are made
+        if (this.nodeRemoved && !skipNodeRemovedNotification) {
+            this.nodeRemoved(removedNode, parentNode, rootNode);
+        }
+    },
+
+    //> @method editContext.nodeMoved()
+    // Notification fired when an +link{EditNode} has been moved to a new position in the
+    // component tree.
+    //
+    // @param oldNode (EditNode) node that was removed
+    // @param oldParentNode (EditNode) parent node of the node that was removed
+    // @param newNode (EditNode) node that was added
+    // @param newParentNode (EditNode) parent node of the node that was added
+    // @param rootNode (EditNode) root node of the edit context
+    // @visibility external
+    //<
+    // Empty function in case someone wants to observe.
+    nodeMoved : function (oldNode, oldParentNode, newNode, newParentNode, rootNode) {},
+
+    fireNodeMoved : function (oldNode, oldParentNode, newNode, newParentNode) {
+        if (this.nodeMoved) {
+            var rootNode = this.getEditNodeTree().getRoot();
+            this.nodeMoved(oldNode, oldParentNode, newNode, newParentNode, rootNode);
         }
     },
 
@@ -65413,9 +69552,9 @@ isc.EditContext.addProperties({
     // @see addFromPaletteNodes()
     // @visibility external
     //<
-    addFromPaletteNode : function (paletteNode, parentNode, targetIndex) {
+    addFromPaletteNode : function (paletteNode, parentNode, targetIndex, parentProperty, skipParentComponentAdd, forceSingularFieldReplace, skipNodeAddedNotification) {
 
-        var editNode = this.makeEditNode(paletteNode, parentNode),
+        var editNode = this.makeEditNode(paletteNode),
             type = editNode.type || editNode.className,
             //clazz = isc.ClassFactory.getClass(type)
             clazz = isc.DataSource.getNearestSchemaClass(type)
@@ -65432,7 +69571,8 @@ isc.EditContext.addProperties({
                 return this.getEditNodeTree().getParent(node);
             }
         }
-        return this.addNode(editNode, parentNode, targetIndex);
+        if (paletteNode.dropped) editNode.dropped = true;
+        return this.addNode(editNode, parentNode, targetIndex, parentProperty, skipParentComponentAdd, forceSingularFieldReplace, skipNodeAddedNotification);
     },
 
     //> @method editContext.makeEditNode()
@@ -65444,8 +69584,19 @@ isc.EditContext.addProperties({
     // @visibility external
     //<
     makeEditNode : function (paletteNode) {
-        var palette = this.getDefaultPalette();
-        return palette.makeEditNode(paletteNode);
+        var origAutoDraw = (paletteNode.defaults ? paletteNode.defaults.autoDraw : null),
+            palette = this.getDefaultPalette(),
+            editNode = palette.makeEditNode(paletteNode),
+            newAutoDraw = (editNode.defaults ? editNode.defaults.autoDraw : null)
+        ;
+        // If the new editNode is part of an initial context load and did not have a
+        // default autoDraw value but is now assigned autoDraw:false remove the new
+        // autoDraw default because this must be the main, top-level component.
+
+        if (this._initialLoad && origAutoDraw == null && newAutoDraw == false) {
+            delete editNode.defaults.autoDraw;
+        }
+        return editNode;
     },
 
     // alternative to just using node.liveObject
@@ -65535,20 +69686,21 @@ isc.EditContext.addProperties({
     },
     //<!BackCompat
 
-    // tests whether the targetNode can accept a newNode of type "type"
-    canAddToParent : function (targetNode, type) {
+    // tests whether the targetNode can accept a newNode of type "dragType"
+    canAddToTarget : function (targetNode, dragType, dragTarget, dragData, dropOnFolder) {
         var liveObject = targetNode.liveObject;
-        // Allow editProxy, if applicable, to reject potential addition
-        if (liveObject.editProxy && liveObject.editProxy.canAddToParent &&
-                !liveObject.editProxy.canAddToParent(type))
-        {
-            return false;
+
+        if (!isc.isA.Class(liveObject)) {
+            // Components like MenuItem
+            return (isc.DS.getObjectField(targetNode, dragType) != null);
         }
-        if (isc.isA.Class(liveObject)) {
-            return (liveObject.getObjectField(type) != null);
+
+        if (liveObject.editProxy) {
+            return liveObject.editProxy.canAddNode(dragType, dragTarget, dragData, dropOnFolder);
         }
-        // still required for MenuItems and ListGridFields, where the live object is not a Class
-        return (isc.DS.getObjectField(targetNode, type) != null);
+
+        // Components like a DataSource that have no editProxy
+        return (liveObject.getObjectField(dragType) != null);
     },
 
     //> @method EditContext.removeAll()
@@ -65562,6 +69714,9 @@ isc.EditContext.addProperties({
         for (var i = 0; i < rootChildren.length; i++) {
             this.removeNode(rootChildren[i]);
         }
+
+        // Action does not support undo and therefore nullifies any current undo entries
+        this.resetUndoLog();
     },
 
     //> @method EditContext.destroyAll()
@@ -65581,6 +69736,9 @@ isc.EditContext.addProperties({
 
         // defaultParent cannot be valid anymore
         this.defaultParent = null;
+
+        // Action does not support undo and therefore nullifies any current undo entries
+        this.resetUndoLog();
     },
 
     //> @method EditContext.removeNode()
@@ -65589,7 +69747,9 @@ isc.EditContext.addProperties({
     // @param editNode (EditNode) node to be removed
     // @visibility external
     //<
-    removeNode : function (editNode, skipLiveRemoval) {
+    removeNode : function (editNode, skipLiveRemoval, skipNodeRemovedNotification) {
+        this.recordAction("removeNode", arguments);
+
         var data = this.getEditNodeTree();
 
         // remove the corresponding component from the object model
@@ -65607,14 +69767,34 @@ isc.EditContext.addProperties({
         // Clear defaultParent if node is removed
         if (editNode == this.defaultParent) this.defaultParent = null;
 
-        if (skipLiveRemoval) return;
+        if (!skipLiveRemoval) {
+            if (liveParent && liveChild) {
+                //this.logWarn("removing with defaults: " + this.echo(editNode.defaults));
+                isc.DS.removeChildObject(liveParent, editNode.type, liveChild, (editNode.defaults ? editNode.defaults.parentProperty : null));
+            }
 
-        if (liveParent && liveChild) {
-
-            //this.logWarn("removing with defaults: " + this.echo(editNode.defaults));
-
-            isc.DS.removeChildObject(liveParent, editNode.type, liveChild, (editNode.defaults ? editNode.defaults.parentProperty : null));
+            // After a ValuesManager is removed, be sure that defaults no longer reference the
+            // VM. The component itself will have been cleared.
+            if (isc.isA.ValuesManager(liveChild)) {
+                var data = this.getEditNodeTree(),
+                    nodes = data.getAllNodes()
+                ;
+                for (var i = 0; i < nodes.length; i++) {
+                    var node = nodes[i];
+                    if (node.defaults && node.defaults.valuesManager == editNode.ID) {
+                        // Remove reference to VM so that component tree updates will see the
+                        // immediate indication that VM is no longer assigned. Otherwise, the
+                        // reference will not be removed until the VM is destroyed.
+                        node.liveObject.valuesManager = null;
+                        this.removeNodeProperties(node, "valuesManager");
+                    }
+                }
+            }
         }
+
+        // Call hook in case the EditContext wants to do further processing ... useful to avoid
+        // problem with calling Super with an interface method
+        this._nodeRemoved(editNode, parentNode, data.getRoot(), skipNodeRemovedNotification);
     },
 
     //>!BackCompat 2011.06.25
@@ -65625,11 +69805,14 @@ isc.EditContext.addProperties({
 
     // destroy an editNode in the tree, including it's liveObject
     destroyNode : function (editNode) {
+        this.recordAction("destroyNode", arguments);
+
         var liveObject = this.getLiveObject(editNode);
         this.removeNode(editNode);
         // if it has a destroy function, call it.  Otherwise we assume garbage collection will
         // work
         if (liveObject.destroy) liveObject.destroy();
+        editNode.liveObject = null;
     },
 
     //>!BackCompat 2011.06.25
@@ -65926,21 +70109,7 @@ isc.EditContext.addProperties({
         // if this node is a DataSource (or subclass of DataSource)
         var classObj = isc.ClassFactory.getClass(type);
 
-        // add autoDraw to non-hidden top-level components
-        if (topLevel) {
-            node = isc.addProperties({}, node, {defaults: defaults});
-            //this.logWarn("considering node: " + this.echo(topNode) +
-            //             " with defaults: " + this.echo(defaults));
-            if (classObj && classObj.isA("Canvas") && defaults &&
-                defaults.visibility != isc.Canvas.HIDDEN && defaults.autoDraw !== false)
-            {
-                defaults.autoDraw = true;
-            }
-        }
-
-        // Don't let the hasStableID() method in defaults play part in the serialization,
-        // but serialize builderAutoID if it's set on the node so it's restored on reload.
-        if (node.builderAutoID) defaults.builderAutoID = true;
+        // Don't let the hasStableID() method in defaults play part in the serialization.
         if (defaults.hasStableID) delete defaults.hasStableID;
 
         // parentProperty is set in defaults to indicate in which field the
@@ -65950,7 +70119,7 @@ isc.EditContext.addProperties({
         this.logInfo("node: " + this.echoLeaf(node) + " with type: " + type, "editing");
 
         if (classObj && classObj.isA("DataSource")) {
-            var isMockDataSource = (node.liveObject.getClassName() == "MockDataSource");
+            var isMockDataSource = (liveObject && liveObject.getClassName() == "MockDataSource");
             // check for this same DataSource already being saved out
             if (this.defaultsBlocks) {
                 var existingDS = this.defaultsBlocks.find("ID", defaults.ID) ||
@@ -65959,8 +70128,11 @@ isc.EditContext.addProperties({
             }
 
             // VB can force a MockDataSource to be saved separately from the project
-            // by setting referenceInProject on the DS editNode
-            if (!this.serverless && (!isMockDataSource || node.referenceInProject)) {
+            // by setting referenceInProject on the DS editNode. Additionally, if the
+            // MDS has fromServer="true" it should be referenced rather than embedded.
+            if (!this.serverless &&
+                (!isMockDataSource || node.referenceInProject != false || (liveObject ? liveObject.fromServer : null)))
+            {
                 // when serializing a DataSource, just output the loadID tag so that the
                 // server outputs the full definition during XML processing on JSP load
                 defaults = {
@@ -66004,7 +70176,7 @@ isc.EditContext.addProperties({
         // A DrawItem can have a fillGradient property. It can either be a reference to a
         // gradient defined in the DrawPane (String) or a Gradient object. During serialization
         // a reference must be serialized as ref="xxx".
-        if (isc.isA.DrawItem(liveObject) && defaults.fillGradient != null && isc.isA.String(defaults.fillGradient)) {
+        if (classObj && classObj.isA("DrawItem") && defaults.fillGradient != null && isc.isA.String(defaults.fillGradient)) {
             defaults.fillGradient = "ref:" + defaults.fillGradient;
         }
 
@@ -66075,7 +70247,7 @@ isc.EditContext.addProperties({
                     // to be stripped off later, so just don't add it).
                     childData = childData.ID;
                 } else {
-                    childData = "ref:" + childData.ID;
+                    childData = "ref:" + childData[isc.DS.getUsedAutoIdField(childData)];
                 }
                 this.getSerializeableTree(child);
             } else {
@@ -66287,7 +70459,7 @@ isc.EditContext.addProperties({
 
         isc.DMI.callBuiltin({
             methodName: "xmlToJS",
-            arguments: [xmlString],
+            arguments: [xmlString, true],
             callback: function (rpcResponse) {
                 self.getPaletteNodesFromJS(rpcResponse.data, callback);
             }
@@ -66430,11 +70602,20 @@ isc.EditContext.addProperties({
     // @see addFromPaletteNode()
     // @visibility external
     //<
-    addFromPaletteNodes : function (paletteNodes, parentNode) {
+    addFromPaletteNodes : function (paletteNodes, parentNode, index, skipNodeAddedNotification, isLoadingTree) {
         //this.logWarn("paletteNodes: " + this.echoFull(paletteNodes), "loadProject");
 
         var data = this.getEditNodeTree();
         if (!parentNode) parentNode = data.getRoot();
+
+        // If the editTree is empty then the initial components are being added so set a
+        // flag that can be used to determine different code paths in the process. In particular
+        // this flag allows existing nodes that have autoDraw:null to be left as-is during
+        // the load. Otherwise autoDraw:false is assigned to new canvas items.
+        var topLevelNodes = data.getChildren(data.getRoot());
+        if (!topLevelNodes || topLevelNodes.length == 0) {
+            this._initialLoad = true;
+        }
 
         // When we evalWithCapture(), create() makes palette nodes instead of actual
         // instances.  This is a necessity so that initialization data can be captured cleanly.
@@ -66482,8 +70663,11 @@ isc.EditContext.addProperties({
             var componentType = pNode.type || pNode.className;
             if (componentType) {
                 var paletteNode = this.findPaletteNode("type", componentType) || this.findPaletteNode("className", componentType);
-                if (paletteNode && (pNode.editProxyProperties || paletteNode.editProxyProperties)) {
-                    pNode.editProxyProperties = isc.addProperties({}, paletteNode.editProxyProperties, pNode.editProxyProperties);
+                if (paletteNode) {
+                    if (pNode.editProxyProperties || paletteNode.editProxyProperties) {
+                        pNode.editProxyProperties = isc.addProperties({}, paletteNode.editProxyProperties, pNode.editProxyProperties);
+                    }
+                    isc.EditContext.copyPaletteNodeBehaviors(pNode, paletteNode);
                 }
             }
             pNode.component = this.makeEditNode(pNode);
@@ -66493,6 +70677,20 @@ isc.EditContext.addProperties({
         for (var i = 0; i < this.componentsToCreate.length; i++) {
             pNode = this.componentsToCreate[i];
             if (!pNode.component) {
+                // captured components are not already matched up with the palette node from
+                // the palette and therefore do not have any helpful editProxyProperties that
+                // may be applied when first dropping the node. Look up the matching palette
+                // node and apply those editProxyProperties to this node.
+                var componentType = pNode.type || pNode.className;
+                if (componentType) {
+                    var paletteNode = this.findPaletteNode("type", componentType) || this.findPaletteNode("className", componentType);
+                    if (paletteNode) {
+                        if (pNode.editProxyProperties || paletteNode.editProxyProperties) {
+                            pNode.editProxyProperties = isc.addProperties({}, paletteNode.editProxyProperties, pNode.editProxyProperties);
+                        }
+                        isc.EditContext.copyPaletteNodeBehaviors(pNode, paletteNode);
+                    }
+                }
                 pNode.component = this.makeEditNode(pNode);
             }
         }
@@ -66514,7 +70712,11 @@ isc.EditContext.addProperties({
         // loading a node tree from disk, and should fall back to the ordinary setDataSource()
         // method - otherwise, we'll end up with duplicates in the projectComponents tree
         // Also, disables markDirty while true.
-        isc._loadingNodeTree = true;
+        if (isLoadingTree != false) {
+            isc._loadingNodeTree = true;
+            // Clear errors for loading. VB pulls list with getLoadingErrors()
+            delete this.loadingErrors;
+        }
 
         var nodesAddedToParentNode = [];
 
@@ -66530,7 +70732,7 @@ isc.EditContext.addProperties({
                 ;
 
                 if (parentPNode.name == "/") {
-                    var nodeAdded = this.addNode(pNode.component, parentNode);
+                    var nodeAdded = this.addNode(pNode.component, parentNode, null, null, null, null, skipNodeAddedNotification);
                     nodesAddedToParentNode.add(nodeAdded);
                     calls.remove(call);
                     newCallOrder.add(call);
@@ -66544,7 +70746,7 @@ isc.EditContext.addProperties({
                         // copy
                         childComponent = isc.addProperties({}, childComponent);
                     }
-                    var nodeAdded = this.addNode(childComponent, parentPNode.component, null, parentProperty);
+                    var nodeAdded = this.addNode(childComponent, parentPNode.component, index, parentProperty, null, null, skipNodeAddedNotification);
                     if (parentPNode.component == parentNode) {
                         nodesAddedToParentNode.add(nodeAdded);
                     }
@@ -66560,17 +70762,22 @@ isc.EditContext.addProperties({
                         // copy
                         childComponent = isc.addProperties({}, childComponent);
                     }
-                    var nodeAdded = this.addNode(childComponent, parentLiveObject.editNode, null, parentProperty);
+                    var nodeAdded = this.addNode(childComponent, parentLiveObject.editNode, index, parentProperty, null, null, skipNodeAddedNotification);
                     if (parentLiveObject.editNode == parentNode) {
                         nodesAddedToParentNode.add(nodeAdded);
                     }
                     calls.remove(call);
                     newCallOrder.add(call);
+
                 }
+                // index only applies to first component added
+                index = null;
             }
         }
 
-        delete isc._loadingNodeTree;
+        if (isLoadingTree != false) delete isc._loadingNodeTree;
+
+        if (this._initialLoad) delete this._initialLoad;
 
         // report the order of addComponent calls
         if (this.logIsDebugEnabled("loadProject")) {
@@ -66594,6 +70801,11 @@ isc.EditContext.addProperties({
         }
 
         return nodesAddedToParentNode;
+    },
+
+    // Allow VB to pull list of loading errors reported in a call to addFromPaletteNodes()
+    getLoadingErrors : function () {
+        return this.loadingErrors;
     },
 
     // create a paletteNode that will load the named DataSource dynamically
@@ -66622,6 +70834,10 @@ isc.EditContext.addProperties({
                 isc.DS.get(node.ID, function (dsID) {
                     isc.ClassFactory._setVBLoadingDataSources(null);
                     var ds = isc.DS.get(dsID);
+                    if (!ds) {
+                        // No DS found, don't fire loadData callback - node is just ignored
+                        return;
+                    }
                     node.liveObject = ds;
                     // minimal information for serializing the DataSource.  See
                     // getSerializeableTree()
@@ -66706,6 +70922,11 @@ isc.EditContext.addProperties({
                     );
                 }
 
+                if (propValue == null) {
+                    this.logInfo("null property: " + propName + " on component: " + this.echoLeaf(componentData));
+                    continue;
+                }
+
                 // found a component captured by evalWithCapture (called create())
                 if (paletteNodes.contains(propValue)) {
                     if (logEnabled) {
@@ -66718,10 +70939,6 @@ isc.EditContext.addProperties({
                     childComponents.add([propName, propValue]);
                     foundChildren = true;
                     continue;
-                }
-
-                if (propValue == null) {
-                    this.logInfo("null property: " + propName + " on component: " + this.echoLeaf(componentData));
                 }
 
                 // detect pseudo-objects (eg tabs):
@@ -66873,6 +71090,8 @@ isc.EditContext.addProperties({
     //<
 
     setNodeProperties : function (editNode, properties, skipLiveObjectUpdate) {
+        this.recordAction("setNodeProperties", arguments);
+
 
 
         if (this.logIsDebugEnabled("editing")) {
@@ -66882,18 +71101,10 @@ isc.EditContext.addProperties({
 
         if (!editNode.defaults) editNode.defaults = {};
 
-        // clear builderAutoID if automatic ID field is being set
         var schema = isc.DS.getSchema(editNode);
-        if (schema && properties[schema.getAutoIdField()]) {
-            editNode.builderAutoID = false;
-        }
 
         // update the initialization / serializeable data
         isc.addProperties(editNode.defaults, properties);
-
-        // update the component node with the new ID
-        var nodeID = (schema ? editNode.defaults[schema.getAutoIdField()] : null);
-        if (nodeID != null) editNode.ID = nodeID;
 
         // update the live object, unless we're skipping that
         var targetObject = editNode.liveObject;
@@ -66906,21 +71117,9 @@ isc.EditContext.addProperties({
                 parentSchema = parentComponent ? isc.DS.get(parentComponent.type) : null,
                 parentLiveObject = parentComponent ? parentComponent.liveObject : null,
                 parentFieldName = isc.DS.getObjectField(parentLiveObject, editNode.type),
-                parentField = parentFieldName ? parentSchema.getFields()[parentFieldName] : null,
-                parentClass = isc.DS.getNearestSchemaClass(parentSchema)
+                parentField = parentFieldName ? parentSchema.getFields()[parentFieldName] : null
             ;
-
-            if (isc.isA.DynamicForm(parentClass) && editNode.builderAutoID &&
-                properties.title && !properties.name)
-            {
-                var idsInUse = {}, childNodes = theTree.getChildren(parentComponent);
-                for (var i = 0; i < childNodes.length; i++) {
-                    if (childNodes[i] != editNode) idsInUse[childNodes[i].ID] = true;
-                }
-                var newName = isc.EditContext._getTextAsIdentifier(properties.title, idsInUse);
-                if (newName) editNode.defaults.name = properties.name = newName;
-            }
-            if ((properties.name != null ||
+            if ((properties.name != null || properties.autoName != null ||
                  (isc.isA.DynamicForm(parentLiveObject) && properties.type != null)) &&
                 parentField && parentField.rebuildOnChange &&
                 parentField.rebuildOnChange.toLowerCase() == "true")
@@ -66946,9 +71145,15 @@ isc.EditContext.addProperties({
 
 
                 // update the node with the new name (editNode always uses "ID")
-                if (properties.name != null && editNode.type != "DynamicProperty") {
-                    editNode.ID = properties.name;
-                    delete properties.name;
+                if ((properties.name != null || properties.autoName != null) &&
+                    editNode.type != "DynamicProperty")
+                {
+                    editNode.ID = properties.name || properties.autoName;
+                    if (properties.name) {
+                        delete properties.autoName;
+                        if (editNode.defaults) delete editNode.defaults.autoName;
+                    }
+                    // delete properties.name;
                 }
                 if (isc.isA.DynamicForm(parentLiveObject) && properties.type != null) {
 
@@ -66972,55 +71177,104 @@ isc.EditContext.addProperties({
 
                 // collect the newly created live object
                 targetObject = this.getLiveObject(editNode);
+
+                // after remove/add cycle the editNode.ID is up-to-date as is the
+                // tree structure. Ignore further changes to it.
+                schema = null;
+            }
+
+            // update the component node with the new ID
+            var nodeID = (schema ? isc.DS.getAutoId(editNode.defaults) : null);
+            if (nodeID != null && editNode.ID != nodeID) {
+                theTree.updateNodeIdInIndex(editNode.ID, nodeID);
+                editNode.ID = nodeID;
+            } else {
+                nodeID = null;      // Indicate that ID didn't change
             }
 
             // update the live object
-            if (targetObject.setEditableProperties) {
-                // instance of an SC class (or something else that implements a
-                // setEditableProperties API)
-                targetObject.setEditableProperties(properties);
-                if (targetObject.markForRedraw) targetObject.markForRedraw();
-                // NOTE: for FormItems, causes parent redraw
-                else if (targetObject.redraw) targetObject.redraw();
-            } else {
-                // for objects that never become ISC classes (MenuItems, ListGrid fields),
-                // call an overridable method on the parent if it exists
-                var parentNode = theTree.getParent(editNode),
-                    ancestorNode = parentNode;
-                if (parentNode != null) {
-                    var parentLiveObject = parentNode.liveObject;
-                    if (parentLiveObject != null && parentLiveObject.setChildEditableProperties)
-                    {
-                        parentLiveObject.setChildEditableProperties(targetObject, properties,
-                                                                    editNode, this);
-                    } else {
-                        var level = 1;
-                        while ((ancestorNode = theTree.getParent(ancestorNode)) != null) {
-                            var ancestorLiveObject = ancestorNode.liveObject;
-                            if (ancestorLiveObject != null &&
-                                ancestorLiveObject.setDescendantEditableProperties)
-                            {
-                                ancestorLiveObject.setDescendantEditableProperties(targetObject,
-                                                             properties, editNode, this, level);
-                                break;
-                            }
-                            ++level;
-                        }
-                    }
-                }
-
-                if (ancestorNode == null) {
-                    // fall back to just applying the properties
-                    isc.addProperties(targetObject, properties);
-                }
-            }
+            this.applyPropertiesToComponent(editNode, properties);
 
             if (this.markForRedraw) this.markForRedraw();
+
+            // Changing the ID on a component results in the DOM being cleared and the
+            // component redrawn. If an edit mask is being shown it will be destroyed.
+            // Scan through children of the changed node and re-show any edit masks.
+            if (nodeID) this._resetMaskedNodes(editNode);
 
             // Call dataChanged() to notify observers that the editNode within the edit node tree
             // has changed.
             theTree.dataChanged();
         } // skipLiveObjectUpdate
+
+        this.fireEditNodeUpdated(editNode, properties);
+    },
+
+    _resetMaskedNodes : function (parentNode) {
+        var theTree = this.getEditNodeTree(),
+            childNodes = theTree.getChildren(parentNode)
+        ;
+        if (!childNodes) return;
+        for (var i = 0; i < childNodes.length; i++) {
+            var childNode = childNodes[i];
+            var liveObject = childNode.liveObject,
+                editProxy = (liveObject && liveObject.editProxy ? liveObject.editProxy : null)
+            ;
+            if (editProxy && editProxy.useEditMask && parentNode.liveObject) {
+                editProxy.showEditMask(parentNode.liveObject);
+            }
+            if (theTree.hasChildren(childNode)) {
+                this._resetMaskedNodes(childNode);
+            }
+        }
+    },
+
+    applyPropertiesToComponent : function (editNode, properties) {
+        // update the live object
+        var targetObject = editNode.liveObject;
+        if (targetObject.setEditableProperties) {
+            // instance of an SC class (or something else that implements a
+            // setEditableProperties API)
+            targetObject.setEditableProperties(properties);
+            if (targetObject.markForRedraw) targetObject.markForRedraw();
+            // NOTE: for FormItems, causes parent redraw
+            else if (targetObject.redraw) targetObject.redraw();
+        } else {
+            // for objects that never become ISC classes (MenuItems, ListGrid fields),
+            // call an overridable method on the parent if it exists
+            var theTree = this.getEditNodeTree(),
+                parentNode = theTree.getParent(editNode),
+                ancestorNode = parentNode
+            ;
+            if (parentNode != null) {
+                var parentLiveObject = parentNode.liveObject;
+                if (parentLiveObject != null && parentLiveObject.setChildEditableProperties)
+                {
+                    parentLiveObject.setChildEditableProperties(targetObject, properties,
+                                                                editNode, this);
+                } else {
+                    var level = 1;
+                    while ((ancestorNode = theTree.getParent(ancestorNode)) != null) {
+                        var ancestorLiveObject = ancestorNode.liveObject;
+                        if (ancestorLiveObject != null &&
+                            ancestorLiveObject.setDescendantEditableProperties)
+                        {
+                            ancestorLiveObject.setDescendantEditableProperties(targetObject,
+                                                            properties, editNode, this, level);
+                            break;
+                        }
+                        ++level;
+                    }
+                }
+            }
+
+            if (ancestorNode == null) {
+                // fall back to just applying the properties
+                isc.addProperties(targetObject, properties);
+            }
+        }
+
+        if (this.markForRedraw) this.markForRedraw();
     },
 
     //> @method editContext.removeNodeProperties()
@@ -67034,11 +71288,16 @@ isc.EditContext.addProperties({
     // @visibility external
     //<
     removeNodeProperties : function (editNode, properties) {
+        this.recordAction("removeNodeProperties", arguments);
+
         if (!editNode.defaults) return;
         if (!isc.isAn.Array(properties)) properties = [properties];
+        var modifiedProperties = {};
         properties.map (function (property) {
             delete editNode.defaults[property];
+            modifiedProperties[property] = true;
         });
+        this.fireEditNodeUpdated(editNode, modifiedProperties);
     },
 
     //> @method editContext.setEditProxyProperties()
@@ -67116,6 +71375,10 @@ isc.EditContext.addProperties({
 
         for (var i = 0; i < isc.EditContext._paletteNodeAttributes.length; i++) {
             var attr = isc.EditContext._paletteNodeAttributes[i];
+            if (editNode[attr]) paletteNode[attr] = editNode[attr];
+        }
+        for (var i = 0; i < isc.EditContext._paletteNodeBehaviors.length; i++) {
+            var attr = isc.EditContext._paletteNodeBehaviors[i];
             if (editNode[attr]) paletteNode[attr] = editNode[attr];
         }
 
@@ -67271,7 +71534,7 @@ isc.EditContext.addProperties({
     wrapperDrawPaneDefaults: {
         _constructor: "DrawPane"
     },
-    addWithWrapper : function (childNode, parentNode, wrapDrawPane, parentProperty) {
+    addWithWrapper : function (childNode, parentNode, index, parentProperty, wrapDrawPane, skipNodeAddedNotification) {
         var wrapForm = !wrapDrawPane,
             wrapperDefaults = (wrapDrawPane ? this.wrapperDrawPaneDefaults : this.wrapperFormDefaults),
             editContextDefaults = isc.Canvas._getEditProxyPassThruProperties(this),
@@ -67280,11 +71543,13 @@ isc.EditContext.addProperties({
         if (childNode.editProxyProperties) isc.addProperties(editContextDefaults, childNode.editProxyProperties);
 
         var paletteNode = {
-                type: wrapperDefaults._constructor,
-                defaults : defaults,
-                editProxyProperties: editContextDefaults,
-                parentProperty: parentProperty
-            };
+            type: wrapperDefaults._constructor,
+            defaults : defaults,
+            editProxyProperties: editContextDefaults,
+            parentProperty: parentProperty
+        };
+
+        if (paletteNode.type == "DynamicForm") paletteNode.idName = "Form";
 
         // if this FormItem belongs to a DataSource, the wrapper form needs to use it too
         if (wrapForm && childNode.liveObject.schemaDataSource) {
@@ -67297,9 +71562,23 @@ isc.EditContext.addProperties({
         var wrapperNode = this.makeEditNode(paletteNode);
 
         // add the wrapper to the parent
-        this.addNode(wrapperNode, parentNode, null, parentProperty);
+        this.addNode(wrapperNode, parentNode, index, parentProperty, null, null, true);
+
         // add the child node to the wrapper
-        return this.addNode(childNode, wrapperNode);
+        var childNode = this.addNode(childNode, wrapperNode, null, null, null, null, skipNodeAddedNotification);
+
+        // Set wrapper form height to just enough for the child node.
+        // This prevents a layout container from assigning more space than necessary.
+        if (wrapForm) {
+            var cellPadding = wrapperNode.liveObject.cellPadding,
+                childHeight = childNode.liveObject.getHeight()
+            ;
+            if (childHeight > 0) {
+                this.setNodeProperties(wrapperNode, { height: (cellPadding*2)+childHeight});
+            }
+        }
+
+        return childNode;
     },
 
     // Selection Outline/DragHandle
@@ -67663,6 +71942,19 @@ isc.EditContext.addProperties({
         this.fireSelectedEditNodesUpdated();
     },
 
+    hideSelection : function () {
+        if (!this.selectedComponents || this.selectedComponents.length == 0) {
+            return;
+        }
+        var selected = this.selectedComponents;
+        for (var i = 0; i < selected.length; i++) {
+            var proxy = selected[i].editProxy;
+            if (proxy && proxy.showSelectedAppearance) {
+                proxy.showSelectedAppearance(false);
+            }
+        }
+    },
+
     // START INTERNAL SELECTION METHODS
 
     getSelectedComponents : function () {
@@ -67753,7 +72045,13 @@ isc.EditContext.addProperties({
         // Update individual component selections
         if (cleared && cleared.length > 0) {
             for (var i = 0; i < cleared.length; i++) {
-                var proxy = cleared[i].editProxy;
+                var proxy = cleared[i].editProxy,
+                    editNode = cleared[i].editNode
+                ;
+
+                // If unselecting modelVisibility:true component be sure it is hidden in preview
+                this._updateModalVisibility(editNode, false);
+
                 if (proxy && proxy.showSelectedAppearance) {
                     proxy.showSelectedAppearance(false);
                 }
@@ -67761,8 +72059,34 @@ isc.EditContext.addProperties({
         }
         if (selected && selected.length > 0) {
             for (var i = 0; i < selected.length; i++) {
-                var proxy = selected[i].editProxy;
+                var proxy = selected[i].editProxy,
+                    editNode = selected[i].editNode
+                ;
+                // If selecting modelVisibility:true component be sure it is visible in preview
+                this._updateModalVisibility(editNode, true);
+
                 if (proxy && proxy.showSelectedAppearance) {
+                    // Don't show drag handle for component explicitly marked to not do so
+                    if (editNode.canDragInPreview == false || editNode.canDragInPreview == "false") {
+                        showThumbsOrDragHandle = false;
+                    // Don't show drag handle if component cannot be reparented and the component
+                    // is not in a container with absolute positioning
+                    } else if (editNode.canReparent == false || editNode.canReparent == "false") {
+                        showThumbsOrDragHandle = false;
+                        if (this.persistCoordinates != false) {
+                            var parentNode = this.getEditNodeTree().getParent(editNode);
+                            if (parentNode) {
+                                var liveParent = parentNode.liveObject;
+                                if (liveParent && liveParent.editProxy) {
+                                    if ((this.persistCoordinates == null && liveParent.editProxy.persistCoordinates) ||
+                                            (this.persistCoordinates && liveParent.editProxy.persistCoordinates != false))
+                                    {
+                                        showThumbsOrDragHandle = true;
+                                    }
+                                }
+                            }
+                        }
+                    }
                     proxy.showSelectedAppearance(true, (this.showSelectedLabelOnSelect == false), showThumbsOrDragHandle);
                 }
             }
@@ -67775,6 +72099,27 @@ isc.EditContext.addProperties({
         }
 
         this.showGroupSelectionBox();
+    },
+
+    // If selection/unselecting modelVisibility:true component (or child) be sure the
+    // component is shown/hidden in preview
+    _updateModalVisibility : function (editNode, select) {
+        if (editNode.modalVisibility == true || editNode.modalVisibility == "true") {
+            if (select) editNode.liveObject.show();
+            else editNode.liveObject.hide();
+            return;
+        }
+        var parentNode = this.getParentNode(editNode),
+            rootNode = this.getRootEditNode()
+        ;
+        while (parentNode && parentNode != rootNode) {
+            if (parentNode.modalVisibility == true || parentNode.modalVisibility == "true") {
+                if (select) parentNode.liveObject.show();
+                else parentNode.liveObject.hide();
+                break;
+            }
+            parentNode = this.getParentNode(parentNode);
+        }
     },
 
     _getSelectionEditProxy : function () {
@@ -67859,6 +72204,16 @@ isc.EditContext.addProperties({
                 this.setNodeProperties(component, {
                     left: liveObject.getLeft(),
                     top: liveObject.getTop(),
+                    // Use percentage width or "*" if supplied
+                    width: liveObject._percent_width || userWidth || liveObject.getWidth(),
+                    height: liveObject._percent_height || userHeight || liveObject.getHeight()
+                }, true);
+            } else if (liveObject.editProxy.persistCoordinates == true) {
+                // This style is used for ModalWindows to save just the sizing
+                var userWidth = (liveObject._userWidth == "*" ? "*" : null),
+                    userHeight = (liveObject._userHeight == "*" ? "*" : null)
+                ;
+                this.setNodeProperties(component, {
                     // Use percentage width or "*" if supplied
                     width: liveObject._percent_width || userWidth || liveObject.getWidth(),
                     height: liveObject._percent_height || userHeight || liveObject.getHeight()
@@ -68133,7 +72488,7 @@ isc.EditContext.addProperties({
             this.creator._movingGroup = false;
             this.showOverSelection();
         }
-    }
+    },
 
     //> @attr editContext.enableInlineEdit (Boolean : null : IR)
     // Whether inline editing should be enabled for any components that are added and are placed into
@@ -68143,6 +72498,12 @@ isc.EditContext.addProperties({
     // @visibility external
     //<
 
+    fireEditNodeUpdated : function (editNode, modifiedProperties) {
+        if (!this.editNodeUpdated) return;
+        if (isc.isAn.Object(modifiedProperties)) modifiedProperties = isc.getKeys(modifiedProperties);
+        this.editNodeUpdated(editNode, this, modifiedProperties);
+    },
+
     //> @method editContext.editNodeUpdated()
     // Fires whenever editNode.defaults are modified by setNodeProperties() and/or editProxy
     // features
@@ -68151,8 +72512,893 @@ isc.EditContext.addProperties({
     // @param modifiedProperties (Array of String) properties that were modified
     // @visibility external
     //<
+
+    // Undo / Redo
+    // ---------------------------------------------------------------------------------------
+
+
+
+
+
+    //> @attr editContext.keepUndoLog  (Boolean : null : IR)
+    // Should an undo/redo log be maintained for editMode operations?
+    // @visibility editModeUndoRedo
+    //<
+
+    //> @attr editContext.maxUndoLogEntries  (int : 10 : IR)
+    // Maximum number of undo actions to be recorded. Oldest entry is dropped when exceeded.
+    // @visibility editModeUndoRedo
+    //<
+    maxUndoLogEntries: 10,
+
+    //> @method editContext.recordAction()
+    // Add an action to undo log.
+    // <P>
+    // Special handling is in place to avoid recording actions while performing a
+    // +link{undo} or +link{redo} operation.
+    //
+    // @param actionName (String) name of action (i.e. method) being recorded
+    // @param args (Array) recorded method arguments
+    // @return (Object) action as recorded. null if action cannot be recorded.
+    //<
+    recordAction : function (actionName, args) {
+        if (!this.keepUndoLog || isc._loadingNodeTree) return;
+        if (this.replaying) return;
+
+        // Create the new action instance even if replaying an action so that the
+        // undo/redo can be logged
+        var action = this.createAction(actionName, args);
+        if (!action) return;
+
+        if (!this._undoLog) this._undoLog = [];
+
+        // Enforce log limit
+        while (this._undoLog.length >= this.maxUndoLogEntries) this._undoLog.shift();
+
+        // save action onto undo stack. any redo actions are now invalid
+        this._undoLog.push(action);
+        this._redoLog = [];
+        this.fireChanged();
+
+        return action;
+    },
+
+    //> @method editContext.undo()
+    // Undo the last recorded action. Moves action to redo stack.
+    // @visibility editModeUndoRedo
+    //<
+    undo : function () {
+        if (!this.keepUndoLog) {
+            this.logWarn("Attempt to perform undo operation while undoLog is disabled");
+            return;
+        }
+        if (!this._undoLog) {
+            this.logInfo("UndoLog is empty", "editModeUndoLog");
+            return;
+        }
+
+        var action = this._undoLog.pop();
+        if (action) {
+            this.replaying = true;
+            if (this.reverseAction(action) != false) {
+                this._redoLog.add(action);
+            } else {
+                // once an action is reached that cannot be undone the remaining
+                // undo actions are invalid. The redo log is still valid.
+                this._undoLog = [];
+            }
+            delete this.replaying;
+            this.fireChanged();
+        } else {
+            this.logInfo("Nothing to undo", "editModeUndoLog");
+        }
+    },
+
+    undoTo : function (timestamp) {
+        if (!this.keepUndoLog) {
+            this.logWarn("Attempt to perform undoTo operation while undoLog is disabled");
+            return;
+        }
+        if (!this._undoLog) return;
+
+        do {
+            var lastAction = this._undoLog.last();
+            if (lastAction) this.undo();
+        } while (lastAction && lastAction.timestamp != timestamp);
+    },
+
+    //> @method editContext.redo()
+    // Execute the first action on the redo stack. Moves action to undo stack.
+    // @visibility editModeUndoRedo
+    //<
+    redo : function () {
+        if (!this.keepUndoLog) {
+            this.logWarn("Attempt to perform redo operation while undoLog is disabled");
+            return;
+        }
+        if (!this._redoLog) {
+            this.logInfo("RedoLog is empty", "editModeUndoLog");
+            return;
+        }
+
+        var action = this._redoLog.pop();
+        if (action) {
+            this.replaying = true;
+            if (this.performAction(action) != false) {
+                this._undoLog.add(action);
+            } else {
+                // once an action is reached that cannot be redone the remaining
+                // redo actions are invalid. The undo log is still valid.
+                this._redoLog = [];
+            }
+            delete this.replaying;
+            this.fireChanged();
+        } else {
+            this.logInfo("Nothing to redo", "editModeUndoLog");
+        }
+    },
+
+    redoTo : function (timestamp) {
+        if (!this.keepUndoLog) {
+            this.logWarn("Attempt to perform redoTo operation while undoLog is disabled");
+            return;
+        }
+        if (!this._redoLog) return;
+
+        do {
+            var lastAction = this._redoLog.last();
+            if (lastAction) this.redo();
+        } while (lastAction && lastAction.timestamp != timestamp);
+    },
+
+    //> @method editContext.resetUndoLog()
+    // Resets the undo and redo logs removing all saved actions.
+    // @visibility editModeUndoRedo
+    //<
+    resetUndoLog : function () {
+        if ((this._undoLog && this._undoLog.length > 0) || (this._redoLog && this._redoLog.length > 0)) {
+            this.logInfo("UndoLog reset", "editModeUndoLog");
+        }
+        this._undoLog = [];
+        this._redoLog = [];
+        if (this.keepUndoLog) this.fireChanged();
+    },
+
+    //> @method editContext.getUndoLogDescriptions()
+    // Returns list of descriptions for undo log entries. By providing
+    // <code>cutoffTimeStamp</code> only entries newer than the timestamp are returned.
+    //
+    // @param [cutoffTimestamp] (int) timestamp to limit results
+    // @return (Array) list of undo entries
+    // @visibility editModeUndoRedo
+    //<
+    getUndoLogDescriptions : function (cutoffTimestamp) {
+        var undoLog = this._undoLog,
+            descriptions = []
+        ;
+        if (undoLog) {
+            for (var i = 0; i < undoLog.length; i++) {
+                var action = undoLog[i];
+                if (cutoffTimestamp && action.timestamp < cutoffTimestamp) continue;
+                descriptions.add(action.description);
+            }
+        }
+        return descriptions;
+    },
+
+    //> @method editContext.getCombinedUndoLogDescriptions()
+    // Returns combined descriptions for undo log entries. By providing
+    // <code>cutoffTimeStamp</code> only entries newer than the timestamp are returned.
+    //
+    // @param [cutoffTimestamp] (int) timestamp to limit results
+    // @return (String) combined description of undo entries
+    // @visibility editModeUndoRedo
+    //<
+    getCombinedUndoLogDescriptions : function (cutoffTimestamp) {
+        var undoLog = this._undoLog,
+            actions = []
+        ;
+        if (!undoLog) return null;
+
+        // Build list of applicable action copies
+        for (var i = 0; i < undoLog.length; i++) {
+            var action = undoLog[i];
+            if (cutoffTimestamp && action.timestamp < cutoffTimestamp) continue;
+            actions.add(isc.shallowClone(action));
+        }
+
+        var lastAction,
+            actionsToRemove = []
+        ;
+        for (var i = 0; i < actions.length; i++) {
+            var action = actions[i];
+            if (action == null) continue;
+            if (lastAction &&
+                action.actionName == "addNode" &&
+                lastAction.actionName == "addNode" && lastAction.editNode.type == "Tab" &&
+                lastAction.editNode == action.parentNode)
+            {
+                // Tab pane added to tab
+                // Ignore this auto-added pane so back-to-back tab adds can be consolidated
+                actionsToRemove.add(action);
+            }
+            lastAction = action;
+        }
+        if (actionsToRemove.length > 0) actions.removeList(actionsToRemove);
+
+        do {
+            var modified = false,
+                lastAction = null
+            ;
+            for (var i = 0; i < actions.length; i++) {
+                var action = actions[i];
+                if (action == null) continue;
+
+                if (lastAction && lastAction.targetComponent == action.targetComponent &&
+                    lastAction.actionName == "removeNode" && action.actionName == "addNode" &&
+                    lastAction.parentNode == action.parentNode)
+                {
+                    // back-to-back removeNode/addNode for the same component: this is a reorder.
+                    var editNode = lastAction.editNode,
+                        idDesc = this.getEditNodeIDDescription(editNode),
+                        parentNode = lastAction.parentNode,
+                        parentIdDesc = this.getEditNodeIDDescription(parentNode)
+                    ;
+                    lastAction.description = "Reordered " + idDesc + " in " + parentIdDesc;
+
+                    actions[i] = null;
+                    modified = true;
+                } else if (lastAction &&
+                    action.actionName == "addNode" && isc.isA.DataSource(action.targetComponent) &&
+                    lastAction.actionName == "addNode" && isc.isA.DataBoundComponent(lastAction.targetComponent))
+                {
+                    // Added DBC and assigned DS
+                    var editNode = lastAction.editNode,
+                        type = editNode.type || editNode.className,
+                        typeDesc = this.getTitleForType(type),
+                        idDesc = this.getEditNodeIDDescription(editNode),
+                        parentNode = lastAction.parentNode,
+                        parentType = (parentNode ? parentNode.type || parentNode.className : null),
+                        parentTypeDesc = (parentNode ? this.getTitleForType(parentType) : null),
+                        parentIdDesc = this.getEditNodeIDDescription(parentNode),
+                        newEditNode = action.editNode,
+                        newIdDesc = this.getEditNodeIDDescription(newEditNode)
+                    ;
+                    lastAction.description = "Dropped " + typeDesc + " '" + idDesc + "' into " +
+                        parentTypeDesc + " '" + parentIdDesc + "' and bound to '" +
+                        newIdDesc + "' DataSource";
+
+                    actions[i] = null;
+                    modified = true;
+                } else if (lastAction &&
+                    action.actionName == "addNode" && !isc.isA.Class(action.targetComponent) &&
+                    lastAction.actionName == "addNode" && !isc.isA.Class(lastAction.targetComponent) &&
+                    lastAction.parentNode == action.parentNode)
+                {
+                    // Adding multiple fields (not real classes)
+                    // What about MenuItems?
+
+                    // There could be more than two back-to-back field additions. Pick up all
+                    // of them now.
+                    var fieldAdds = [];
+                    for (var j = i-1; j < actions.length; j++) {
+                        var nextAction = actions[j];
+                        if (nextAction != null) {
+                            if (nextAction.actionName == "addNode" &&
+                                !isc.isA.Class(nextAction.targetComponent) &&
+                                lastAction.parentNode == nextAction.parentNode)
+                            {
+                                fieldAdds.add(nextAction);
+                                if (nextAction != lastAction) actions[j] = null;
+                            } else {
+                                // no more sequential matches to check
+                                break;
+                            }
+                        }
+                    }
+
+                    var editNode = lastAction.editNode,
+                        type = editNode.type || editNode.className,
+                        typeDesc = this.getTitleForType(type),
+                        idDesc = this.getEditNodeIDDescription(editNode)
+                    ;
+
+                    var buffer = isc.SB.create();
+                    buffer.append("Added ", typeDesc, "s ");
+                    for (var j = 0; j < fieldAdds.length; j++) {
+                        var add = fieldAdds[j];
+                        if (buffer.getArray().length > 3) {
+                            if (j == fieldAdds.length-1) buffer.append(" and ");
+                            else buffer.append(", ");
+                        }
+                        var newEditNode = add.editNode,
+                            newIdDesc = this.getEditNodeIDDescription(newEditNode)
+                        ;
+                        buffer.append(newIdDesc);
+                    }
+                    var parentNode = lastAction.parentNode,
+                        parentType = (parentNode ? parentNode.type || parentNode.className : null),
+                        parentTypeDesc = (parentNode ? this.getTitleForType(parentType) : null),
+                        parentIdDesc = this.getEditNodeIDDescription(parentNode)
+                    ;
+                    buffer.append(" to ", parentTypeDesc, " '", parentIdDesc, "'");
+
+                    lastAction.description = buffer.toString();
+                    buffer.release();
+
+                    modified = true;
+                } else if (lastAction && lastAction.targetComponent == action.targetComponent &&
+                    lastAction.actionName == "setNodeProperties" && action.actionName == "setNodeProperties")
+                {
+                    // Setting node properties on the same component
+
+                    // There could be more than two back-to-back field changes. Pick up all
+                    // of them now.
+                    var propertyChanges = [];
+                    for (var j = i-1; j < actions.length; j++) {
+                        var nextAction = actions[j];
+                        if (nextAction != null) {
+                            if (nextAction.actionName == "setNodeProperties" &&
+                                nextAction.targetComponent == lastAction.targetComponent)
+                            {
+                                propertyChanges.add(nextAction);
+                                if (nextAction != lastAction) actions[j] = null;
+                            } else {
+                                // no more sequential matches to check
+                                break;
+                            }
+                        }
+                    }
+
+                    var editNode = lastAction.editNode,
+                        type = editNode.type || editNode.className,
+                        typeDesc = this.getTitleForType(type),
+                        idDesc = this.getEditNodeIDDescription(editNode),
+                        parentNode = lastAction.parentNode,
+                        parentType = (parentNode ? parentNode.type || parentNode.className : null),
+                        parentTypeDesc = (parentNode ? this.getTitleForType(parentType) : null),
+                        parentIdDesc = this.getEditNodeIDDescription(parentNode)
+                    ;
+
+                    // Each action could target multiple properties. Combine them so the full
+                    // number is known for documenting
+                    var properties = {};
+                    for (var j = 0; j < propertyChanges.length; j++) {
+                        var change = propertyChanges[j];
+                        isc.addProperties(properties, change.properties);
+                    }
+
+                    var keys = isc.getKeys(properties),
+                        buffer = isc.SB.create()
+                    ;
+                    buffer.append("Set ", (keys.length > 1 ? "properties" : "property"), " of ", typeDesc, " '", idDesc, "': ");
+
+                    for (var j = 0; j < keys.length; j++) {
+                        var key = keys[j],
+                            value = properties[key]
+                        ;
+                        if (buffer.getArray().length > 7) {
+                            if (j == keys.length-1) buffer.append(" and ");
+                            else buffer.append(", ");
+                        }
+                        buffer.append(key, " to '", value, "'");
+                    }
+
+                    lastAction.description = buffer.toString();
+                    buffer.release();
+
+                    modified = true;
+                }
+
+                lastAction = action;
+            }
+        } while (modified);
+
+        var buffer = isc.SB.create();
+        for (var i = 0; i < actions.length; i++) {
+            var action = actions[i];
+            if (action) {
+                if (buffer.getArray().length > 0) buffer.append("<br>");
+                buffer.append(action.description);
+            }
+        }
+        var description = buffer.toString();
+        buffer.release();
+        return description;
+    },
+
+    fireChanged : function () {
+        if (this.undoLogChanged) this.fireCallback("undoLogChanged");
+    },
+
+    createAction : function (actionName, args) {
+        var actionClass = this.getActionClass(actionName);
+        if (!actionClass) {
+            this.logWarn("Action " + actionName + " not supported in undo log");
+            return;
+        }
+
+        var argsArray = [];
+        for (var i = 0; i < args.length; i++) {
+            argsArray[i] = args[i];
+        }
+
+        var action = actionClass.create({ editContext: this });
+        var result = action.save(argsArray);
+        if (result == false) action = null;
+
+        return action;
+    },
+
+    performAction : function (action) {
+        if (!action.execute || action.execute() == false) {
+            this.logWarn("Action " + action.actionName + " cannot be redone");
+            // Explicit false return triggers clearing redo log because additional
+            // redo actions are no longer valid
+            return false;
+        }
+    },
+
+    reverseAction : function (action) {
+        if (!action.undo || action.undo() == false) {
+            this.logWarn("Action " + action.actionName + " cannot be undone");
+            // Explicit false return triggers clearing undo log because previous
+            // actions are no longer valid
+            return false;
+        }
+    },
+
+    getActionClass : function (actionName) {
+        return isc.EditContext.actionClasses[actionName];
+    }
 });
 
+isc.EditContext.registerStringMethods({
+    //> @method editContext.undoLogChanged()
+    // Notification method executed when undo log changes
+    // @visibility editModeUndoRedo
+    //<
+    undoLogChanged : ""
+});
+
+isc.ClassFactory.defineClass("EditModeAction").addProperties({
+
+    //> @attr editModeAction.timestamp  (int : null : IR)
+    // Timestamp assigned when action is created.
+    //<
+
+    //> @attr editModeAction.editContext  (EditContext : null : IR)
+    // EditContext holding this action.
+    //<
+
+    //> @attr editModeAction.description  (String : null : IR)
+    // Text description of this action.
+    //<
+
+    //> @attr editModeAction.editNode  (EditNode : null : IR)
+    // EditNode targeted by this action.
+    //<
+
+    //> @attr editModeAction.targetComponent  (Object : null : IR)
+    // Target component for this action.
+    //<
+
+    init : function () {
+        this.Super("init", arguments);
+        this.timestamp = isc.timeStamp();
+    }
+});
+
+isc.ClassFactory.defineClass("EditModeAddNodeAction", "EditModeAction").addProperties({
+    actionName: "addNode",
+
+    save : function (args) {
+        this.arguments = args;
+
+        // Extract arguments for easy reference
+        this.editNode = args[0];
+        this.parentNode = args[1];
+        this.index = args[2];
+        this.parentProperty = args[3];
+        this.skipParentComponentAdd = args[4];
+        this.forceSingularFieldReplace = args[5];
+        this.skipNodeAddedNotification = args[6];
+
+        this.targetComponent = this.editNode.liveObject;
+        this.description = this.getDescription();
+
+        this.logSave();
+    },
+
+    execute : function () {
+        this.logExecute();
+        this.editContext.fireCallback(this.actionName, null, this.arguments);
+    },
+
+    undo : function () {
+        this.logUndo();
+        this.editContext.removeNode(this.editNode, this.skipParentComponentAdd);
+    },
+
+    getDescription : function () {
+        var editContext = this.editContext,
+            rootNode = editContext.getRootEditNode(),
+            editNode = this.editNode,
+            type = editNode.type || editNode.className,
+            typeDesc = editContext.getTitleForType(type),
+            idDesc = editContext.getEditNodeIDDescription(editNode),
+            parentNode = this.parentNode,
+            parentType = (parentNode ? parentNode.type || parentNode.className : null),
+            parentTypeDesc = (parentNode ? editContext.getTitleForType(parentType) : null),
+            parentIdDesc = (parentNode ? editContext.getEditNodeIDDescription(parentNode) : null),
+            description = "Added " + typeDesc + " '" + idDesc + "'" +
+                (parentNode && parentNode != rootNode ? " to " + parentTypeDesc + " '" + parentIdDesc + "'" : " as global")
+        ;
+        return description;
+    },
+
+    logSave : function () {
+        if (this.logIsInfoEnabled("editModeUndoLog")) {
+            var actionDetail = this.getLogActionDetail();
+            this.logInfo(this.actionName + " action recorded in undoLog: " + actionDetail, "editModeUndoLog");
+        }
+    },
+
+    logExecute : function () {
+        if (this.logIsInfoEnabled("editModeUndoLog")) {
+            var actionDetail = this.getLogActionDetail();
+            this.logInfo("Redoing " + this.actionName + ": " + actionDetail, "editModeUndoLog");
+        }
+    },
+
+    logUndo : function () {
+        if (this.logIsInfoEnabled("editModeUndoLog")) {
+            var actionDetail = this.getLogActionDetail();
+            this.logInfo("Undoing " + this.actionName + ": " + actionDetail, "editModeUndoLog");
+        }
+    },
+
+    getLogActionDetail : function () {
+        var editContext = this.editContext,
+            rootNode = editContext.getRootEditNode(),
+            editNode = this.editNode,
+            type = editNode.type || editNode.className,
+            typeDesc = editContext.getTitleForType(type),
+            idDesc = editContext.getEditNodeIDDescription(editNode),
+            parentNode = this.parentNode,
+            parentType = (parentNode ? parentNode.type || parentNode.className : null),
+            parentTypeDesc = (parentNode ? editContext.getTitleForType(parentType) : null),
+            parentIdDesc = (parentNode ? editContext.getEditNodeIDDescription(parentNode) : null),
+            index = this.index,
+            description = typeDesc + " '" + idDesc + "' added" +
+                (parentNode && parentNode != rootNode
+                    ? " to " + parentTypeDesc + " '" + parentIdDesc + "'" + (index != null ? " @ " + index : "")
+                    : " as global")
+        ;
+        return description;
+    }
+});
+
+isc.ClassFactory.defineClass("EditModeRemoveNodeAction", "EditModeAction").addProperties({
+    actionName: "removeNode",
+
+    save : function (args) {
+        this.arguments = args;
+
+        // Extract arguments for easy reference
+        this.editNode = args[0];
+        this.skipLiveRemoval = args[1];
+
+        var editNode = this.editNode;
+
+        // destroyNode flags an editNode to skip recording the wrapped removeNode call.
+        // If this is the wrapped action ignore it.
+        if (editNode._skipRecordRemoveNode) {
+            delete editNode._skipRecordRemoveNode;
+            return false;
+        }
+
+        var editContext = this.editContext,
+            editTree = editContext.getEditNodeTree()
+        ;
+        this.parentNode = editContext.getParentNode(editNode);
+        this.index = editTree.getChildren(this.parentNode).findIndex(editNode);
+        this.targetComponent = editNode.liveObject;
+        this.description = this.getDescription();
+
+        this.logSave();
+    },
+
+    execute : function () {
+        this.logExecute();
+       this.editContext.fireCallback(this.actionName, null, this.arguments);
+    },
+
+    undo : function () {
+        this.logUndo();
+        var parentProperty = (this.editNode.defaults ? this.editNode.defaults.parentProperty : null);
+        this.editContext.addNode(this.editNode, this.parentNode, this.index, parentProperty, this.skipLiveRemoval, null, true);
+    },
+
+    logSave : function () {
+        var actionDetail = this.getLogActionDetail();
+        this.logInfo(this.actionName + " action recorded in undoLog: " + actionDetail, "editModeUndoLog");
+    },
+
+    logExecute : function () {
+        var actionDetail = this.getLogActionDetail();
+        this.logInfo("Redoing " + this.actionName + ": " + actionDetail, "editModeUndoLog");
+    },
+
+    logUndo : function () {
+        var actionDetail = this.getLogActionDetail();
+        this.logInfo("Undoing " + this.actionName + ": " + actionDetail, "editModeUndoLog");
+    },
+
+    getDescription : function () {
+        var editContext = this.editContext,
+            rootNode = editContext.getRootEditNode(),
+            editNode = this.editNode,
+            type = editNode.type || editNode.className,
+            typeDesc = editContext.getTitleForType(type),
+            idDesc = editContext.getEditNodeIDDescription(editNode),
+            parentNode = this.parentNode,
+            parentType = (parentNode ? parentNode.type || parentNode.className : null),
+            parentTypeDesc = (parentNode ? editContext.getTitleForType(parentType) : null),
+            parentIdDesc = (parentNode ? editContext.getEditNodeIDDescription(parentNode) : null),
+            description = "Removed " + typeDesc + " '" + idDesc + "'" +
+                (parentNode && parentNode != rootNode ? " from " + parentTypeDesc + " '" + parentIdDesc + "'" : " as global")
+        ;
+        return description;
+    },
+
+    getLogActionDetail : function () {
+        var editContext = this.editContext,
+            rootNode = editContext.getRootEditNode(),
+            editNode = this.editNode,
+            type = editNode.type || editNode.className,
+            typeDesc = editContext.getTitleForType(type),
+            idDesc = editContext.getEditNodeIDDescription(editNode),
+            parentNode = this.parentNode,
+            parentType = (parentNode ? parentNode.type || parentNode.className : null),
+            parentTypeDesc = (parentNode ? editContext.getTitleForType(parentType) : null),
+            parentIdDesc = (parentNode ? editContext.getEditNodeIDDescription(parentNode) : null),
+            description = typeDesc + " '" + idDesc + "' removed" +
+                (parentNode && parentNode != rootNode ? " from " + parentTypeDesc + " '" + parentIdDesc + "'" : " as global")
+        ;
+        return description;
+    }
+});
+
+isc.ClassFactory.defineClass("EditModeDestroyNodeAction", "EditModeRemoveNodeAction").addProperties({
+    actionName: "destroyNode",
+
+    save : function (args) {
+        this.Super("save", arguments);
+
+        this.paletteNode = this.editContext.makePaletteNode(this.editNode);
+
+        // A removeNode call is immediately made in destroyNode. That action should not
+        // be recorded since this action wraps it. Set a flag to ignore it.
+        this.editNode._skipRecordRemoveNode = true;
+    },
+
+    execute : function () {
+        this.logExecute();
+        // Use the original arguments as a template for the call
+        var args = isc.shallowClone(this.arguments);
+        args[0] = this.editNode;
+        this.editContext[this.actionName].apply(this.editContext, args);
+    },
+
+    undo : function () {
+        this.logUndo();
+        var editNode = this.editContext.makeEditNode(this.paletteNode),
+            parentProperty = (editNode.defaults ? editNode.defaults.parentProperty : null)
+        ;
+        // Save new editNode to be used for redo
+        this.editNode = this.editContext.addNode(editNode, this.parentNode, this.index, parentProperty, null, null, true);
+    }
+});
+
+isc.ClassFactory.defineClass("EditModeSetNodePropertiesAction", "EditModeAction").addProperties({
+    actionName: "setNodeProperties",
+
+    save : function (args) {
+        this.arguments = args;
+
+        // Extract arguments for easy reference
+        this.editNode = args[0];
+        this.properties = args[1];
+        this.skipLiveObjectUpdate = args[2];
+
+        var properties = this.properties,
+            oldValues = {}
+        ;
+        if (properties) {
+            var defaults = this.editNode.defaults,
+                undef
+            ;
+            if (defaults) {
+                for (var property in properties) {
+                    if (properties[property] != undef) oldValues[property] = defaults[property];
+                }
+            }
+        }
+        this.oldValues = oldValues;
+
+        this.targetComponent = this.editNode.liveObject;
+        this.description = this.getDescription();
+
+        this.logSave();
+    },
+
+    execute : function () {
+        this.logExecute();
+        this.editContext.fireCallback(this.actionName, null, this.arguments);
+    },
+
+    undo : function () {
+        this.logUndo();
+
+        // Scan through oldValues to split update into changes and removes -
+        // Values have to be removed by calling removeNodeProperties.
+        var editContext = this.editContext,
+            oldValues = this.oldValues,
+            updateProperties = {},
+            removeProperties = {},
+            undef
+        ;
+        for (var property in oldValues) {
+            if (oldValues[property] == undef) removeProperties[property] = null;
+            else updateProperties[property] = oldValues[property];
+        }
+        if (!isc.isA.emptyObject(updateProperties)) {
+            // Use the original arguments as a template for the call
+            var args = isc.shallowClone(this.arguments);
+            args[1] = updateProperties;
+            editContext[this.actionName].apply(editContext, args);
+        }
+        if (!isc.isA.emptyObject(removeProperties)) {
+            editContext.removeNodeProperties(this.editNode, isc.getKeys(removeProperties));
+            // removeNodeProperties does NOT update the component
+            if (!this.skipLiveObjectUpdate) {
+                // While setting the properties to null that didn't exist in oldValues
+                // is not always correct the hope is that a null value will restore
+                // the property back to the original default.
+                editContext.applyPropertiesToComponent(this.editNode, removeProperties);
+            }
+        }
+    },
+
+    getDescription : function () {
+        var editContext = this.editContext,
+            editNode = this.editNode,
+            type = editNode.type || editNode.className,
+            typeDesc = editContext.getTitleForType(type),
+            idDesc = editContext.getEditNodeIDDescription(editNode),
+            properties = this.properties || {},
+            keys = isc.getKeys(properties),
+            description
+        ;
+        if (keys.length == 1) {
+            description = "Property '" + keys[0] + "' changed for " + typeDesc + " '" + idDesc + "'";
+        } else {
+            var propertyNames = keys.slice(0, keys.length-1).join(", ") + " and " + keys[keys.length-1];
+            description = "Properties '" + propertyNames + "' changed for " + typeDesc + " '" + idDesc + "'";
+        }
+        return description;
+    },
+
+    logSave : function () {
+        this.logInfo(this.actionName + " action recorded in undoLog for " +
+            this.editNode.ID + "/" + this.editNode.type + ": " + this.echo(this.properties), "editModeUndoLog");
+    },
+
+    logExecute : function () {
+        this.logInfo("Redoing " + this.actionName + " for " +
+            this.editNode.ID + "/" + this.editNode.type + ": " + this.echo(this.properties), "editModeUndoLog");
+    },
+
+    logUndo : function () {
+        this.logInfo("Undoing " + this.actionName + " for " +
+            this.editNode.ID + "/" + this.editNode.type + ": " + this.echo(this.properties), "editModeUndoLog");
+    }
+});
+
+isc.ClassFactory.defineClass("EditModeRemoveNodePropertiesAction", "EditModeAction").addProperties({
+    actionName: "removeNodeProperties",
+
+    save : function (args) {
+        this.arguments = args;
+
+        // Extract arguments for easy reference
+        this.editNode = args[0];
+        this.properties = args[1];
+
+        var properties = this.properties,
+            oldValues = {}
+        ;
+        if (properties) {
+            if (!isc.isAn.Array(properties)) properties = [properties];
+
+            var defaults = this.editNode.defaults,
+                undef
+            ;
+            if (defaults) {
+                properties.map (function (property) {
+                    var value = defaults[property];
+                    if (value != undef) oldValues[property] = value;
+                });
+            }
+        }
+        this.oldValues = oldValues;
+
+        this.targetComponent = this.editNode.liveObject;
+        this.description = this.getDescription();
+
+        this.logSave();
+    },
+
+    execute : function () {
+        this.logExecute();
+        this.editContext.fireCallback(this.actionName, null, this.arguments);
+    },
+
+    undo : function () {
+        this.logUndo();
+
+        var oldValues = this.oldValues;
+        if (!isc.isA.emptyObject(oldValues)) {
+            this.editContext.setNodeProperties(this.editNode, oldValues);
+        }
+    },
+
+    getDescription : function () {
+        var editContext = this.editContext,
+            editNode = this.editNode,
+            type = editNode.type || editNode.className,
+            typeDesc = editContext.getTitleForType(type),
+            idDesc = editContext.getEditNodeIDDescription(editNode),
+            properties = this.properties,
+            description
+        ;
+        if (!isc.isAn.Array(properties)) properties = [properties];
+
+        if (properties.length == 1) {
+            description = "Property '" + properties[0] + "' removed from " + typeDesc + " '" + idDesc + "'";
+        } else if (properties.length > 1) {
+            var propertyNames = properties.slice(0, properties.length-1).join(", ") + " and " + properties[properties.length-1];
+            description = "Properties '" + propertyNames + "' removed from " + typeDesc + " '" + idDesc + "'";
+        }
+        return description;
+    },
+
+    logSave : function () {
+        this.logInfo(this.actionName + " action recorded in undoLog for " +
+            this.editNode.ID + "/" + this.editNode.type + ": " + this.echo(this.properties), "editModeUndoLog");
+    },
+
+    logExecute : function () {
+        this.logInfo("Redoing " + this.actionName + " for " +
+            this.editNode.ID + "/" + this.editNode.type + ": " + this.echo(this.properties), "editModeUndoLog");
+    },
+
+    logUndo : function () {
+        this.logInfo("Undoing " + this.actionName + " for " +
+            this.editNode.ID + "/" + this.editNode.type + ": " + this.echo(this.properties), "editModeUndoLog");
+    }
+});
+
+isc.EditContext.addClassMethods({
+    // Mapping of action names to action classes. Used to record actions.
+    actionClasses : {
+        "addNode": isc.EditModeAddNodeAction,
+        "removeNode": isc.EditModeRemoveNodeAction,
+        "destroyNode": isc.EditModeDestroyNodeAction,
+        "setNodeProperties": isc.EditModeSetNodePropertiesAction
+    }
+});
 
 //> @groupDef devTools
 // The Dashboards &amp; Tools framework enables you to build interfaces in which a set of UI
@@ -68431,6 +73677,8 @@ isc.EditContext.addProperties({
 // @visibility external
 //<
 
+
+
 //> @attr paletteNode.icon (SCImgURL : null : IR)
 // Icon for this paletteNode.
 //
@@ -68453,6 +73701,16 @@ isc.EditContext.addProperties({
 //> @attr paletteNode.idPrefix (String : null : IR)
 // Prefix used to create unique component ID. If not specified, +link{paletteNode.type}
 // is used.
+//
+// @deprecated As of SmartClient version 12.1, deprecated in favor of +link{paletteNode.idName}
+// @visibility external
+//<
+
+//> @attr paletteNode.idName (String : null : IR)
+// Name used to create unique component ID. If not specified, +link{paletteNode.type}
+// is used.
+// <p>
+// Note: idName must follow all rules for a +link{type:Identifier}.
 //
 // @visibility external
 //<
@@ -68611,6 +73869,7 @@ isc.Palette.addInterfaceProperties({
         var componentNode = {
             type : type,
             _constructor : type, // this is here just to match the defaults
+            idName: paletteNode.idName,
             idPrefix: paletteNode.idPrefix,
             canDuplicate: paletteNode.canDuplicate,
             // for display in the target Tree
@@ -68622,6 +73881,8 @@ isc.Palette.addInterfaceProperties({
             autoGen : paletteNode.autoGen,
             editProxyProperties : paletteNode.editProxyProperties
         };
+        if (paletteNode.dropped != null) componentNode.dropped = paletteNode.dropped;
+        isc.EditContext.copyPaletteNodeBehaviors(componentNode, paletteNode);
 
         // support arbitrary properties on the generated edit node
         // This allows 'loadData' to get at properties that might not otherwise be copied
@@ -68643,8 +73904,7 @@ isc.Palette.addInterfaceProperties({
         // - an ID may appear in defaults because palette-based construction is used to reload
         //   views, and in this case the palette node will be used once ever
         var defaults = paletteNode.defaults;
-        if (defaults && defaults.builderAutoID) componentNode.builderAutoID = true;
-        componentNode.ID = paletteNode.ID || (defaults ? isc.DS.getAutoId(defaults) : null);
+        componentNode.ID = paletteNode.ID || (defaults ? isc.DS.getAutoId(defaults, paletteNode) : null);
 
         var clobberDefaults = true;
 
@@ -68762,24 +74022,39 @@ isc.Palette.addInterfaceProperties({
         }
 
         if (this.generateNames && (schema.addGlobalId == null || schema.addGlobalId != false)) {
-            // generate an id and set builderAutoID if one wasn't specified, and
-            var ID = editNode.ID || paletteNodeDefaults[schema.getAutoIdField()];
+            // generate an id and if one wasn't specified
+            var toolAutoIDField = isc.DS.getToolAutoIdField(type),
+                usedAutoIDField = isc.DS.getUsedAutoIdField(paletteNodeDefaults)
+            ;
+
+            var ID = editNode.ID || isc.DS.getAutoId(paletteNodeDefaults);
             if (ID == null) {
-                ID = this.getNextAutoId(paletteNode.idPrefix || paletteNode.type);
-                if (isc.isA.Class(classObject)) editNode.builderAutoID = true;
+                ID = this.getNextAutoId(paletteNode.idName || paletteNode.idPrefix || paletteNode.type, paletteNode);
+                defaults[toolAutoIDField] = ID;
             }
             // ensure a hasStableID() override is installed for an auto-generated ID
 
-            if (!defaults.hasStableID && editNode.builderAutoID) {
+            if (!defaults.hasStableID && defaults[toolAutoIDField]) {
                 defaults.hasStableID = function () {
-                    var builderAutoID = this.editNode && this.editNode.builderAutoID;
-                    return builderAutoID ? false : this.Super("hasStableID", arguments);
+                    var autoIdField = isc.DS.getToolAutoIdField(this.getClassName()),
+                        autoID = (this.editNode && this.editNode.defaults ? this.editNode.defaults[autoIdField] : null)
+                    ;
+                    return autoID ? false : this.Super("hasStableID", arguments);
                 }
             }
             editNode.ID = ID;
 
-            // give the object an autoId in defaults
-            defaults[schema.getAutoIdField()] = ID;
+            // give the object an autoID/autoName in defaults
+
+            if (paletteNodeDefaults.builderAutoID) {
+                defaults[toolAutoIDField] = ID;
+                var autoIDField = schema.getAutoIdField();
+                delete defaults[autoIDField];
+                delete paletteNodeDefaults[autoIDField];
+                delete paletteNodeDefaults.builderAutoID;
+            } else if (usedAutoIDField) {
+                defaults[usedAutoIDField] = ID;
+            }
 
             // don't supply a title for contexts where the ID or name will automatically be
             // used as a title (currently just formItems), otherwise, it will be necessary to
@@ -68791,7 +74066,9 @@ isc.Palette.addInterfaceProperties({
                 schema.getField("title") &&
                 !isc.isA.FormItem(classObject) &&
                 !(isc.isA.DrawItem && isc.isA.DrawItem(classObject)) &&
-                type != "ListGridField" &&
+                !(isc.isA.LayoutResizeBar && isc.isA.LayoutResizeBar(classObject)) &&
+                !(isc.isA.LayoutResizeSnapbar && isc.isA.LayoutResizeSnapbar(classObject)) &&
+                type != "ListGridField" && type != "MenuItem" &&
                 !defaults.title
             ) {
                 defaults.title = ID;
@@ -68805,7 +74082,6 @@ isc.Palette.addInterfaceProperties({
         );
         delete defaults[isc.gwtRef];
         delete defaults[isc.gwtModule];
-        delete defaults.builderAutoID;
         // An xsi:type property in defaults should be dropped to avoid serializing because
         // it won't be valid without proper includes.
         delete defaults["xsi:type"];
@@ -68946,7 +74222,7 @@ isc.TreePalette.addMethods({
 
                         var wrap = isc.isA.FormItem(isc[paletteNode.type]),
                             node = wrap ? target.addFromPaletteNode(paletteNode) :
-                                target.addFromPaletteNodes([paletteNode], defaultParentNode)
+                                target.addFromPaletteNodes([paletteNode], defaultParentNode, null, null, false)
                         ;
                         if (isc.isAn.Array(node)) node = node[0];
                         if (node) isc.EditContext.selectCanvasOrFormItem(node.liveObject, true);
@@ -68957,13 +74233,19 @@ isc.TreePalette.addMethods({
     },
 
     findPaletteNode : function (fieldName, value) {
-        return this.data ? this.data.find(fieldName, value) : null;
+        var node = this.data ? this.data.find(fieldName, value) : null;
+        return (node ? this.data.getCleanNodeData([node], false, false, false)[0] : null);
     },
 
     // NOTE: we can't factor this up to the Palette interface because it wouldn't override the
     // built-in implementation of transferDragData.
     transferDragData : function (targetFolder) {
         return this.getDragData();
+    },
+
+    dragStart : function () {
+        // Adjust drag offset to 0,0
+        isc.EH.setDragTracker(null, null, null, 0, 0);
     }
 });
 
@@ -69469,32 +74751,32 @@ isc.EditPane.addProperties({
     // @include editContext.addNode
     // @visibility external
     //<
-    addNode : function (newNode, parentNode, index, parentProperty, skipParentComponentAdd) {
-        return this.editContext.addNode(newNode, parentNode, index, parentProperty, skipParentComponentAdd);
+    addNode : function (newNode, parentNode, index, parentProperty, skipParentComponentAdd, forceSingularFieldReplace, skipNodeAddedNotification) {
+        return this.editContext.addNode(newNode, parentNode, index, parentProperty, skipParentComponentAdd, forceSingularFieldReplace, skipNodeAddedNotification);
     },
 
     //> @method editPane.addFromPaletteNode()
     // @include editContext.addFromPaletteNode
     // @visibility external
     //<
-    addFromPaletteNode : function (paletteNode, parentNode) {
-        return this.editContext.addFromPaletteNode(paletteNode, parentNode);
+    addFromPaletteNode : function (paletteNode, parentNode, targetIndex, parentProperty, skipParentComponentAdd, forceSingularFieldReplace, skipNodeAddedNotification) {
+        return this.editContext.addFromPaletteNode(paletteNode, parentNode, targetIndex, parentProperty, skipParentComponentAdd, forceSingularFieldReplace, skipNodeAddedNotification);
     },
 
     //> @method editPane.addFromPaletteNodes()
     // @include editContext.addFromPaletteNodes
     // @visibility external
     //<
-    addFromPaletteNodes : function (paletteNodes, parentNode) {
-        return this.editContext.addFromPaletteNodes(paletteNodes, parentNode);
+    addFromPaletteNodes : function (paletteNodes, parentNode, index, skipNodeAddedNotification, isLoadingTree) {
+        return this.editContext.addFromPaletteNodes(paletteNodes, parentNode, index, skipNodeAddedNotification, isLoadingTree);
     },
 
     //> @method editPane.removeNode()
     // @include editContext.removeNode
     // @visibility external
     //<
-    removeNode : function (editNode, skipLiveRemoval) {
-        return this.editContext.removeNode(editNode, skipLiveRemoval);
+    removeNode : function (editNode, skipLiveRemoval, skipNodeRemovedNotification) {
+        return this.editContext.removeNode(editNode, skipLiveRemoval, skipNodeRemovedNotification);
     },
 
     destroyNode : function (editNode) {
@@ -69673,6 +74955,33 @@ isc.EditPane.addProperties({
     //<
     serializeEditNodesAsJSON : function (nodes, settings) {
         return this.editContext.serializeEditNodesAsJSON(nodes, settings);
+    },
+
+    // Undo/redo pass-thru methods
+    // --------------------------------------------------------------------------------------------
+
+    //> @method editPane.undo()
+    // @include editContext.undo
+    // @visibility editModeUndoRedo
+    //<
+    undo : function () {
+        return this.editContext.undo();
+    },
+
+    //> @method editPane.redo()
+    // @include editContext.redo
+    // @visibility editModeUndoRedo
+    //<
+    redo : function () {
+        return this.editContext.redo();
+    },
+
+    //> @method editPane.resetUndoLog()
+    // @include editContext.resetUndoLog
+    // @visibility editModeUndoRedo
+    //<
+    resetUndoLog : function () {
+        return this.editContext.resetUndoLog();
     }
 });
 
@@ -69702,7 +75011,6 @@ isc.EditPane.addProperties({
 //
 // @inheritsFrom TreeGrid
 // @treeLocation Client Reference/Tools/EditContext
-// @implements EditContext
 // @group devTools
 // @visibility external
 //<
@@ -69734,14 +75042,20 @@ isc.EditTree.addMethods({
             type: "identifier",
             width: "*",
             formatCellValue : function (value, record, rowNum, colNum, grid) {
-                var autoId = isc.DS.getAutoId(record.liveObject);
-                return String(autoId).asHTML();
+                var editContext = grid.getEditContext();
+                return editContext.getEditNodeIDDescription(record);
             }
         }, {
             name: "type",
             title: "Type",
             width: "*",
-            canEdit: false
+            canEdit: false,
+            formatCellValue : function (value, record, rowNum, colNum, grid) {
+                var editContext = grid.getEditContext(),
+                    title = editContext.getTitleForType(value)
+                ;
+                return title;
+            }
         }
         //,{name:"parentProperty", title:"Parent Property", dataPath:"/defaults/parentProperty", width:"*"}
         ];
@@ -69813,7 +75127,7 @@ isc.EditTree.addMethods({
             _origNodeAdded: this.editContext.nodeAdded,
             nodeAdded : function (newNode, parentNode, rootNode) {
                 // Let EditContext handler have first run
-                if (this._origNodeAdded) this._origNodeAdded();
+                if (this._origNodeAdded) this._origNodeAdded(newNode, parentNode, rootNode);
 
                 editTree.selectSingleRecord(newNode);
                 editTree.scrollRecordIntoView(editTree.getRecordIndex(newNode));
@@ -69867,31 +75181,25 @@ isc.EditTree.addMethods({
     // in the tree).
     selectedNodeUpdated : function () {
         var selectedNode = this.getSelectedRecord(),
-            selectedNodeParent = this.data.getParent(selectedNode);
-
-        // Special handling for Decks.
-        // In VB, using the Component Tree to select a component managed in a Deck should set that
-        // component as the Deck.currentPane and bring it to front.
-        var selectedObject = selectedNode && selectedNode.liveObject;
-        if (isc.isA.Canvas(selectedObject) && selectedObject._visualProxy == null &&
-            isc.isA.Deck && isc.isA.Deck(selectedObject.parentElement))
-        {
-            var deck = selectedObject.parentElement;
-
-            if (deck.isVisible() && deck._visualProxy == null &&
-                isc.isAn.Array(deck.panes) && deck.panes.contains(selectedObject))
-            {
-                selectedObject.setVisibility(isc.Canvas.INHERIT);
-                // The pane might not have been drawn yet. Call reflowNow() to force the pane
-                // to be drawn.
-                deck.reflowNow();
-                isc.EditContext.selectCanvasOrFormItem(selectedObject, false);
-                return;
-            }
-        }
+            selectedObject = selectedNode && selectedNode.liveObject;
 
         for (var node = selectedNode; node != null; node = this.data.getParent(node)) {
             var object = node.liveObject;
+
+            // Selecting a component in the Component Tree should make sure that the
+            // component is visible upon selection where possible.
+            if (isc.isA.Canvas(object) && !isc.isA.Menu(object) &&
+                (!object.isDrawn() || !object.isVisible()) &&
+                object.showRecursively)
+            {
+                object.showRecursively();
+                if (object.isVisible() && !object.isDrawn()) {
+                    // Give object a chance to draw before determining final selection
+                    this.delayCall("selectedNodeUpdated", []);
+                    return;
+                }
+            }
+
             if (((isc.isA.Canvas(object) || isc.isA.FormItem(object)) &&
                  object.isDrawn() && object.isVisible()) ||
                 (object != null && object._visualProxy != null))
@@ -69918,6 +75226,10 @@ isc.EditTree.addMethods({
 
                 break;
             }
+            if (isc.isA.ValuesManager(object)) {
+                isc.EditContext.selectCanvasOrFormItem(object, false);
+                break;
+            }
         }
     },
 
@@ -69928,81 +75240,154 @@ isc.EditTree.addMethods({
     // Adding / Removing components in the tree
     // --------------------------------------------------------------------------------------------
 
-    willAcceptDrop : function () {
-        if (!this.Super("willAcceptDrop",arguments)) return false;
-        var recordNum = this.getEventRow(),
-            dropTarget = this.getDropFolder(),
-            dragData = this.ns.EH.dragTarget.getDragData()
-        ;
+    getEventDragData : function () {
+        var dragData = this.ns.EH.dragTarget.getDragData();
+        if (!dragData) return;
 
-        if (dragData == null) return false;
         if (isc.isAn.Array(dragData)) {
-            if (dragData.length == 0) return false;
+            if (dragData.length == 0) return;
             dragData = dragData[0];
         }
+        return dragData;
+    },
+
+    dragStart : function () {
+        var dragData = this.getEventDragData();
+        if (!dragData) return;
+
+        // Prevent dragging of component if it cannot be reparented.
+        if (dragData.canReparent == false || dragData.canReparent == "false") {
+            return false;
+        }
+
+        return this.Super("dragStart", arguments);
+    },
+
+    willAcceptDrop : function () {
+        if (!this.Super("willAcceptDrop",arguments)) {
+            return false;
+        }
+
+        var dragData = this.getEventDragData();
+        if (!dragData) return;
+
+        var dropTarget = this.getDropFolder(),
+            dragTarget = this.ns.EH.dragTarget
+        ;
 
         if (dropTarget == null) dropTarget = this.data.getRoot();
         var dragType = dragData.type || dragData.className;
+        if (!dragType) return;
 
-        this.logInfo("checking dragType: " + dragType +
-                     " against dropLiveObject: " + dropTarget.liveObject, "editing");
-
-        return this.editContext.canAddToParent(dropTarget, dragType);
+        return this.editContext.canAddToTarget(dropTarget, dragType, dragTarget, dragData, true);
     },
 
-    folderDrop : function (nodes, parent, index, sourceWidget) {
+    shouldShowDragLineForRecord : function(recordNum) {
+        var dragData = this.getEventDragData();
+        if (!dragData) return;
+
+        // For a component that is always dropped at the root level, don't show a drop line
+        if (dragData.alwaysAllowRootDrop == true || dragData.alwaysAllowRootDrop == "true") {
+            return false;
+        }
+
+        return this.Super("shouldShowDragLineForRecord", arguments);
+    },
+
+    // Adjust drop index within a parentNode to remove DataSource node from applying
+    adjustDropIndex : function (parentNode, index) {
+        if (index == null) return index;
+
+        var children = this.data.getChildren(parentNode);
+
+        for (var i = 0; i < Math.min(index, children.length); i++) {
+            if (isc.isA.DataSource(children[i].liveObject)) {
+                index--;
+                break;
+            }
+        }
+        return index;
+    },
+
+    folderDrop : function (nodes, parentNode, index, sourceWidget) {
         if (sourceWidget != this && !sourceWidget.isA("Palette")) {
             // if the source isn't a Palette, do standard drop interaction
             return this.Super("folderDrop", arguments);
         }
 
         if (sourceWidget != this) {
-            nodes = sourceWidget.transferDragData();
-            if (!nodes) return;
-            nodes = this.makeEditNode(isc.isAn.Array(nodes) ? nodes[0] : nodes);
+            // Drop from palette
+            var paletteNode = sourceWidget.transferDragData();
+            if (!paletteNode) return;
+            if (isc.isAn.Array(paletteNode)) paletteNode = paletteNode[0];
+
+            // If node is dropped from a tree, clean it of internal properties
+            if (sourceWidget.isA("TreePalette")) {
+                paletteNode = sourceWidget.data.getCleanNodeData([paletteNode], false, false, false)[0];
+            }
+
+            // Palette node could be modified later if there are palettized components within.
+            // Copy it now so that future drops are not affected.
+            paletteNode = isc.clone(paletteNode);
+            // flag that this node was dropped by a user
+            paletteNode.dropped = true;
+
+            this.logInfo("sourceWidget is a Palette, dropped node of type: " + paletteNode.type,
+                         "editing");
+
+            // If a DataSource node appears as a sibling earlier in the child list, remove it
+            // from affecting the drop index
+            index = this.adjustDropIndex(parentNode, index);
+
+            // If parentNode doesn't have an editProxy that's not where we need to drop
+            if (!parentNode.liveObject.editProxy) {
+                parentNode = this.data.getParent(parentNode);
+            }
+            if (!isc.isA.DynamicForm(parentNode.liveObject) && parentNode.liveObject.editProxy) {
+                // Defer add into normal editProxy drag-and-drop handler so that common actions
+                // are applied.
+                parentNode.liveObject.editProxy.completeDrop(paletteNode, { index: index });
+            } else {
+
+                var editNode = this.makeEditNode(paletteNode);
+                editNode.dropped = true;
+                parentNode.liveObject.editProxy.completeItemDrop(editNode, index);
+            }
+            return;
         }
 
+        // Self-drop: Repositioning an existing editNode within the tree
         var newNode = (isc.isAn.Array(nodes) ? nodes[0] : nodes);
 
         // flag that this node was dropped by a user
         newNode.dropped = true;
 
-        this.logInfo("sourceWidget is a Palette, dropped node of type: " + newNode.type,
+        this.logInfo("sourceWidget is an existing editNode, dropped node of type: " + newNode.type,
                      "editing");
 
         var editTree = this;
         this.editContext.requestLiveObject(newNode, function (node) {
             if (node == null) return;
-            // self-drop: remove component from old location before re-adding
-            var selfDrop = sourceWidget == editTree,
-                parentProperty = newNode.defaults.parentProperty;
-            if (selfDrop) {
-                // If we're self-dropping to a slot further down in the same parent, this will
-                // cause the index to become off by one
-                var oldParent = editTree.data.getParent(newNode);
-                if (parent == oldParent) {
-                    var oldIndex = editTree.data.getChildren(oldParent).indexOf(newNode);
+            // remove component from old location before re-adding
+            var parentProperty = newNode.defaults.parentProperty;
 
-                    // If node has parentProperty specified the node could be intermingled
-                    // with other nodes having a different parentProperty. The oldIndex
-                    if (oldIndex != null && oldIndex <= index) {
-                        index--;
-                    }
+            // If we're self-dropping to a slot further down in the same parent, this will
+            // cause the index to become off by one
+            var oldParent = editTree.data.getParent(newNode);
+            if (parentNode == oldParent) {
+                var oldIndex = editTree.data.getChildren(oldParent).indexOf(newNode);
+
+                // If node has parentProperty specified the node could be intermingled
+                // with other nodes having a different parentProperty. The oldIndex
+                if (oldIndex != null && oldIndex <= index) {
+                    index--;
                 }
-                editTree.editContext.removeNode(newNode);
             }
+            editTree.editContext.removeNode(newNode, null, true);
 
-            editTree.editContext.addNode(node, parent, index, parentProperty);
+            editTree.editContext.addNode(node, parentNode, index, parentProperty, null, null, true);
 
-            // special case tabs to add default pane
-            if (
-                !selfDrop && node && parent &&
-                (node.type || node.className) == "Tab" &&
-                (parent.type || parent.className) == "TabSet"
-            ) {
-                var liveTabSet = parent.liveObject;
-                if (liveTabSet && liveTabSet.editProxy) liveTabSet.editProxy.addDefaultPane(node);
-            }
+            editTree.editContext.fireNodeMoved(newNode, oldParent, node, parentNode);
         }, sourceWidget);
     },
 
@@ -70027,7 +75412,7 @@ isc.EditTree.addMethods({
         var type = newNode.type || newNode.className,
             node = this.getSelectedRecord();
 
-        while (node && (!this.editContext.canAddToParent(node, type) ||
+        while (node && (!this.editContext.canAddToTarget(node, type, null, null, true) ||
                 (node.liveObject.editProxy && node.liveObject.editProxy.allowNestedDrops == false)))
         {
             node = this.data.getParent(node);
@@ -70035,7 +75420,7 @@ isc.EditTree.addMethods({
 
         var root = this.data.getRoot()
         if (returnNullIfNoSuitableParent) {
-            if (!node && this.editContext.canAddToParent(root, type)) return root;
+            if (!node && this.editContext.canAddToTarget(root, type, null, null, true)) return root;
             return node;
         }
         return node || root;
@@ -70056,6 +75441,17 @@ isc.EditTree.addMethods({
                 tabSet.selectTab(tab);
             }
         }
+    },
+
+    // get clean component tree that can be serialized
+    getCleanComponentData : function () {
+        var tree = this.data;
+        if (!tree) return;
+
+        // get "clean node data" then remove liveObject from nodes
+        var data = tree.getCleanNodeData(tree.root, true, true);
+        if (data) tree.clearProperties(data, "liveObject", true);
+        return data;
     },
 
     // Pass-thru properties
@@ -70162,32 +75558,32 @@ isc.EditTree.addMethods({
     // @include editContext.addNode
     // @visibility external
     //<
-    addNode : function (newNode, parentNode, index, parentProperty, skipParentComponentAdd) {
-        return this.editContext.addNode(newNode, parentNode, index, parentProperty, skipParentComponentAdd);
+    addNode : function (newNode, parentNode, index, parentProperty, skipParentComponentAdd, forceSingularFieldReplace, skipNodeAddedNotification) {
+        return this.editContext.addNode(newNode, parentNode, index, parentProperty, skipParentComponentAdd, forceSingularFieldReplace, skipNodeAddedNotification);
     },
 
     //> @method editTree.addFromPaletteNode()
     // @include editContext.addFromPaletteNode
     // @visibility external
     //<
-    addFromPaletteNode : function (paletteNode, parentNode) {
-        return this.editContext.addFromPaletteNode(paletteNode, parentNode);
+    addFromPaletteNode : function (paletteNode, parentNode, targetIndex, parentProperty, skipParentComponentAdd, forceSingularFieldReplace, skipNodeAddedNotification) {
+        return this.editContext.addFromPaletteNode(paletteNode, parentNode, targetIndex, parentProperty, skipParentComponentAdd, forceSingularFieldReplace, skipNodeAddedNotification);
     },
 
     //> @method editTree.addFromPaletteNodes()
     // @include editContext.addFromPaletteNodes
     // @visibility external
     //<
-    addFromPaletteNodes : function (paletteNodes, parentNode) {
-        return this.editContext.addFromPaletteNodes(paletteNodes, parentNode);
+    addFromPaletteNodes : function (paletteNodes, parentNode, index, skipNodeAddedNotification, isLoadingTree) {
+        return this.editContext.addFromPaletteNodes(paletteNodes, parentNode, index, skipNodeAddedNotification, isLoadingTree);
     },
 
     //> @method editTree.removeNode()
     // @include editContext.removeNode
     // @visibility external
     //<
-    removeNode : function (editNode, skipLiveRemoval) {
-        return this.editContext.removeNode(editNode, skipLiveRemoval);
+    removeNode : function (editNode, skipLiveRemoval, skipNodeRemovedNotification) {
+        return this.editContext.removeNode(editNode, skipLiveRemoval, skipNodeRemovedNotification);
     },
 
     destroyNode : function (editNode) {
@@ -70366,6 +75762,33 @@ isc.EditTree.addMethods({
     //<
     serializeEditNodesAsJSON : function (nodes, settings) {
         return this.editContext.serializeEditNodesAsJSON(nodes, settings);
+    },
+
+    // Undo/redo pass-thru methods
+    // --------------------------------------------------------------------------------------------
+
+    //> @method editTree.undo()
+    // @include editContext.undo
+    // @visibility editModeUndoRedo
+    //<
+    undo : function () {
+        return this.editContext.undo();
+    },
+
+    //> @method editTree.redo()
+    // @include editContext.redo
+    // @visibility editModeUndoRedo
+    //<
+    redo : function () {
+        return this.editContext.redo();
+    },
+
+    //> @method editTree.resetUndoLog()
+    // @include editContext.resetUndoLog
+    // @visibility editModeUndoRedo
+    //<
+    resetUndoLog : function () {
+        return this.editContext.resetUndoLog();
     }
 });
 
@@ -70761,8 +76184,9 @@ isc.FormItemProxyCanvas.addProperties({
         this._syncing = true;
         this.setPageLeft(this.formItem.getPageLeft());
         this.setPageTop(this.formItem.getPageTop());
-        this.setWidth(this.formItem.getVisibleWidth());
-        this.setHeight(this.formItem.getVisibleHeight());
+        // Make sure size isn't 0,0 so it will actually draw something
+        this.setWidth(this.formItem.getVisibleWidth() || 10);
+        this.setHeight(this.formItem.getVisibleHeight() || 10);
         this._syncing = false;
     },
 
@@ -70783,6 +76207,16 @@ isc.FormItemProxyCanvas.addProperties({
     formItemVisibilityChanged : function () {
         if (this.formItem.isVisible()) this.show();
         else this.hide();
+    },
+
+    dragStart : function () {
+        // If we are dragging the current selection and using the selection outline
+        // (which include dragHandle) then reset the drag offset to [0,0],
+        // top-left corner of the drag target
+        if (this.formItem == isc.SelectionOutline.getSelectedObject()) {
+            isc.EH.dragStartOffsetX = isc.EH.dragStartOffsetY = 0;
+        }
+        return true;
     }
 });
 
@@ -71112,7 +76546,7 @@ isc.EditProxy.addClassProperties({
                 var result = isc.EditProxy._getSelectedValue(displayValues[0], escapeChar, selectedChar);
                 if (result.selected) selectedValues.push(result.value);
 
-                array.push(value);
+                array.push(result.value);
 
                 if (displayValues.length == 1) {
                     map[result.value] = (matchDisplayWithValue ? result.value : null);
@@ -71478,6 +76912,27 @@ isc.EditProxy.addProperties({
             {
                 this.editContext.selectSingleComponent(target);
             }
+
+            // Let target's editProxy perform reposition start actions like showing snap grid
+            return target.editProxy.dragRepositionStart();
+        },
+
+        dragRepositionStop : function() {
+            // Let target's editProxy perform reposition stop actions like hiding snap grid
+            var target = this.getTarget();
+            return target.editProxy.dragRepositionStop();
+        },
+
+        dragResizeStart : function() {
+            // Let target's editProxy perform resizing start actions like hiding snap grid
+            var target = this.getTarget();
+            return target.editProxy.dragResizeStart();
+        },
+
+        dragResizeStop : function() {
+            // Let target's editProxy perform resizing stop actions like hiding snap grid
+            var target = this.getTarget();
+            return target.editProxy.dragResizeStop();
         },
 
         pageKeyPress : function (target, eventInfo) {
@@ -71485,66 +76940,69 @@ isc.EditProxy.addProperties({
             var rootPane = this.editContext.getRootEditNode().liveObject;
             if (!rootPane.containsFocus()) return;
 
-            var key = isc.EH.getKeyEventCharacter();
-            if (!isc.isA.AlphaNumericChar(key)) {
-                var masked = this.masterElement,
-                    selection = masked.editContext.getSelectedComponents()
-                ;
-
-                // If our masked component is not selected, ignore the keypress
-                if (!selection.contains(masked)) return;
-
-                // Ignore keyboard movement for percentage-placed components
-                if (this.isPercent(masked.left) || this.isPercent(masked.top)) return;
-
-                // Ignore keyboard movement If component is positioned by snapTo with offset in percentage
-                if (masked.snapTo &&
-                        (this.isPercent(masked.snapOffsetLeft) || this.isPercent(masked.snapOffsetTop)))
-                {
-                    return;
-                }
-
-                var parent = masked.parentElement,
-                    shiftPressed = isc.EH.shiftKeyDown(),
-                    vGap = (shiftPressed ? 1 : parent.snapVGap),
-                    hGap = (shiftPressed ? 1 : parent.snapHGap),
-                    delta = [0,0],
-                    result = false
-                ;
-
-                switch (isc.EH.getKey()) {
-                case "Arrow_Up":
-                    delta = [0, vGap * -1];
-                    break;
-                case "Arrow_Down":
-                    delta = [0, vGap];
-                    break;
-                case "Arrow_Left":
-                    delta = [hGap * -1, 0];
-                    break;
-                case "Arrow_Right":
-                    delta = [hGap, 0];
-                    break;
-                default:
-                    result = null;
-                    break;
-                }
-
-
-                if (delta[0] != 0 || delta[1] != 0) {
-                    parent._movingSelection = true;
-                    if (masked.snapTo) {
-                        // Instead of repositioning component directly, just adjust the
-                        // snapOffsets
-                        masked.setSnapOffsetLeft((masked.snapOffsetLeft || 0) + delta[0]);
-                        masked.setSnapOffsetTop((masked.snapOffsetTop || 0) + delta[1]);
-                    } else {
-                        masked.moveBy(delta[0], delta[1]);
-                    }
-                    parent._movingSelection = false;
-                }
-                return result;
+            var keyName = isc.EH.getKey();
+            if (keyName == null ||
+                (keyName != "Arrow_Up" && keyName != "Arrow_Down" && keyName != "Arrow_Left" && keyName != "Arrow_Right"))
+            {
+                return;
             }
+            var masked = this.masterElement,
+                selection = masked.editContext.getSelectedComponents()
+            ;
+
+            // If our masked component is not selected, ignore the keypress
+            if (!selection.contains(masked)) return;
+
+            // Ignore keyboard movement for percentage-placed components
+            if (this.isPercent(masked.left) || this.isPercent(masked.top)) return;
+
+            // Ignore keyboard movement If component is positioned by snapTo with offset in percentage
+            if (masked.snapTo &&
+                    (this.isPercent(masked.snapOffsetLeft) || this.isPercent(masked.snapOffsetTop)))
+            {
+                return;
+            }
+
+            var parent = masked.parentElement,
+                shiftPressed = isc.EH.shiftKeyDown(),
+                vGap = (shiftPressed ? 1 : parent.snapVGap),
+                hGap = (shiftPressed ? 1 : parent.snapHGap),
+                delta = [0,0],
+                result = false
+            ;
+
+            switch (keyName) {
+            case "Arrow_Up":
+                delta = [0, vGap * -1];
+                break;
+            case "Arrow_Down":
+                delta = [0, vGap];
+                break;
+            case "Arrow_Left":
+                delta = [hGap * -1, 0];
+                break;
+            case "Arrow_Right":
+                delta = [hGap, 0];
+                break;
+            default:
+                result = null;
+                break;
+            }
+
+
+            if (delta[0] != 0 || delta[1] != 0) {
+                parent._movingSelection = true;
+                if (masked.snapTo) {
+                    // Instead of repositioning component directly, just adjust the
+                    // snapOffsets
+                    masked.setSnapOffsetLeft((masked.snapOffsetLeft || 0) + delta[0]);
+                    masked.setSnapOffsetTop((masked.snapOffsetTop || 0) + delta[1]);
+                } else {
+                    masked.moveBy(delta[0], delta[1]);
+                }
+                parent._movingSelection = false;
+            }
+            return result;
         },
 
         _$percent: "%",
@@ -71682,7 +77140,7 @@ isc.EditProxy.addMethods({
         if (editingOn) {
             this.saveOverrideProperties();
             // Calculate dropMargin based on visible size
-            if (!isc.isA.FormItem(this.creator)) this.updateDropMargin();
+            if (isc.isA.Canvas(this.creator)) this.updateDropMargin();
             // Add an event mask if so configured
             if (this.useEditMask) {
                 var editContext = this.creator.editContext,
@@ -71728,10 +77186,12 @@ isc.EditProxy.addMethods({
         if (this.childrenSnapToGrid != null) {
             if (isc.isA.String(this.childrenSnapToGrid)) this.childrenSnapToGrid = (this.childrenSnapToGrid == "true");
             properties.childrenSnapToGrid = this.childrenSnapToGrid;
+            properties.snapGridStyle = "lines";
         }
         if (this.showSnapGrid != null) {
             if (isc.isA.String(this.showSnapGrid)) this.showSnapGrid = (this.showSnapGrid == "true");
             properties.showSnapGrid = this.showSnapGrid;
+            properties.snapGridStyle = "lines";
         }
         if (this.childrenSnapAlign != null) {
             if (isc.isA.String(this.childrenSnapAlign)) this.childrenSnapAlign = (this.childrenSnapAlign == "true");
@@ -71749,6 +77209,32 @@ isc.EditProxy.addMethods({
     destroy : function () {
         this.enableCopyPasteKeyPressHandler(false);
         this.Super("destroy", arguments);
+    },
+
+
+    addDynamicProperty : function (propertyName, source, fromInit) {
+        var liveObject = this.creator;
+        liveObject.addDynamicProperty(propertyName, source, fromInit);
+    },
+
+    clearDynamicProperty : function (propertyName) {
+        var liveObject = this.creator;
+        liveObject.clearDynamicProperty(propertyName);
+    },
+
+    removeDynamicProperty : function (propertyName) {
+        var liveObject = this.creator;
+        liveObject.removeDynamicProperty(propertyName);
+    },
+
+    hasDynamicProperty : function (propertyName) {
+        var liveObject = this.creator;
+        return liveObject.hasDynamicProperty(propertyName);
+    },
+
+    getDynamicProperty : function (propertyName) {
+        var liveObject = this.creator;
+        return liveObject.getDynamicProperty(propertyName);
     },
 
     enableCopyPasteKeyPressHandler : function (enable) {
@@ -71866,6 +77352,12 @@ isc.EditProxy.addMethods({
                                            editContext:liveObject.editContext || liveObject.parentElement,
                                            keepInParentRect: liveObject.keepInParentRect},
                                           svgProps);
+            // When placing an editMask over a CanvasItem (ex. FileItem),
+            // must use the internal canvas as the target
+            if (isc.isA.CanvasItem(liveObject)) {
+                liveObject.canvas.editProxy = liveObject.editProxy;
+                liveObject = liveObject.canvas;
+            }
             this._editMask = isc.EH.makeEventMask(liveObject, props);
         }
         this._editMask.show();
@@ -72008,6 +77500,12 @@ isc.EditProxy.addMethods({
     // @see editProxy.selectedTintColor
     //<
 
+    //> @attr editProxy.showDragHandle (Boolean : null : IR)
+    // Should drag handles or thumb be shown when this component is selected?
+    // These are shown unless this property is set to <code>false</code>.
+    // @visibility external
+    //<
+
     click : function () {
         var liveObject = this.creator;
 
@@ -72083,6 +77581,9 @@ isc.EditProxy.addMethods({
                 editMask.setOpacity(editMask._originalOpacity);
             }
 
+            // Restore default drag resizing appearance
+            editMask.dragResizeAppearance = null;
+
             // Show/hide thumbs
             if (show && showThumbsOrDragHandle) isc.EditProxy.showResizeThumbs(editMask);
             else isc.EditProxy.hideResizeThumbs();
@@ -72105,6 +77606,9 @@ isc.EditProxy.addMethods({
             } else if (!show && editMask._originalBorder != editMask.border) {
                 editMask.setBorder(editMask._originalBorder);
             }
+
+            // Show resized component as it is being drag resized
+            editMask.dragResizeAppearance = "target";
 
             // Show/hide thumbs
             if (show && showThumbsOrDragHandle) isc.EditProxy.showResizeThumbs(editMask);
@@ -72147,10 +77651,19 @@ isc.EditProxy.addMethods({
 
                 // Show drag handle (except on TabBar controls)
 
-                if (showThumbsOrDragHandle && !isc.isA.TabBar(object.parentElement)) {
+                if (showThumbsOrDragHandle && this.showDragHandle != false && !isc.isA.TabBar(object.parentElement)) {
                     isc.SelectionOutline.showDragHandle();
                 }
                 if (this.overrideDragProperties) this.overrideDragProperties();
+
+                // Allow context user to override the selectionLabel leading/trailing tools
+
+                if (showLabel != false && editContext.getSelectedLabelTools) {
+                    var tools = editContext.getSelectedLabelTools(object);
+                    if (tools && tools[0] != null) isc.SelectionOutline.showLeadingTools(tools[0]);
+                    if (tools && tools[1] != null) isc.SelectionOutline.showTrailingTools(tools[1]);
+                }
+
             } else if (isc.SelectionOutline.getSelectedObject() == object) {
                 isc.SelectionOutline.deselect();
                 if (this.restoreDragProperties) this.restoreDragProperties();
@@ -72196,6 +77709,15 @@ isc.EditProxy.addMethods({
                         lastMember = (objectIndex == (childCount-1)),
                         canResize = (!fill || !lastMember)
                     ;
+                    // Normally we don't allow the last member of a layout to be resized,
+                    // however, if the last member is explicitly sized by declaration in the
+                    // class (ie. AbsoluteForm) or in the PalleteNode or EditNode defaults,
+                    // allow the resize.
+                    if (lastMember && !canResize) {
+                        var hasExplicitNodeSize = (vertical ? node.defaults.height != null : node.defaults.width != null);
+                        var hasExplicitInstanceSize = liveObject.getClass().getInstanceProperty(vertical ? "height" : "width") != null;
+                        canResize = hasExplicitNodeSize || hasExplicitInstanceSize;
+                    }
                     if (canResize) {
                         resizeFrom = (vertical ? "B" : "R");
                     }
@@ -72267,51 +77789,67 @@ isc.EditProxy.addMethods({
     // Drag/drop method overrides
     // ---------------------------------------------------------------------------------------
 
-    willAcceptDrop : function (changeObjectSelection) {
-        var liveObject = this.creator;
-        this.logInfo("editProxy.willAcceptDrop for " + liveObject.ID, "editModeDragTarget");
-
-        // Prevent accepting drop of form onto itself
-        var source = liveObject.ns.EH.dragTarget;
-        if (liveObject == source) {
-            return false;
-        }
-
-        var dragData = liveObject.ns.EH.dragTarget.getDragData(),
-            dragType,
-            draggingFromPalette = true;
+    getEventDragData : function () {
+        var liveObject = this.creator,
+            dragData = liveObject.ns.EH.dragTarget.getDragData()
+        ;
 
         // If dragData is null, this is probably because we are drag-repositioning a component
         // in a layout - the dragData is the component itself
         if (dragData == null || (isc.isAn.Array(dragData) && dragData.length == 0)) {
-            draggingFromPalette = false;
-            this.logInfo("dragData is null - using the dragTarget itself", "editModeDragTarget");
             dragData = liveObject.ns.EH.dragTarget;
             if (isc.isA.FormItemProxyCanvas(dragData)) {
-                this.logInfo("The dragTarget is a FormItemProxyCanvas for " + dragData.formItem,
-                                "editModeDragTarget");
                 dragData = dragData.formItem;
             }
-            dragType = dragData._constructor || dragData.Class;
-        } else {
-            if (isc.isAn.Array(dragData)) dragData = dragData[0];
-            dragType = dragData.type || dragData.className;
+        } else if (isc.isAn.Array(dragData)) {
+            dragData = dragData[0];
         }
-        this.logInfo("Using dragType " + dragType, "editModeDragTarget");
+        return dragData;
+    },
+
+    getEventDragType : function (dragData) {
+        var dragType;
+        if (isc.isA.Class(dragData)) dragType = dragData._constructor || dragData.Class;
+        else if (dragData) dragType = dragData.type || dragData.className;
+        return dragType;
+    },
+
+    willAcceptDrop : function (changeObjectSelection) {
+        var liveObject = this.creator;
+
+        // Prevent accepting drop of form onto itself
+        var dragTarget = liveObject.ns.EH.dragTarget;
+        if (liveObject == dragTarget) {
+            this.logInfo("editProxy.willAcceptDrop for " + liveObject.ID + " = false - targeting self", "editModeDragTarget");
+            return false;
+        }
+
+        var dragData = this.getEventDragData(),
+            dragType = this.getEventDragType(dragData),
+            logMessagePrefix = (this.logIsInfoEnabled("editModeDragTarget")
+                ? "editProxy.willAcceptDrop for " + liveObject.ID + " using dragType " + dragType
+                : null)
+        ;
+        if (!dragType) return false;
+
+        this.logInfo(logMessagePrefix, "editModeDragTarget");
 
         var hiliteCanvas = this.findEditNode(dragType);
 
-        var canAdd = this.canAdd(dragType);
+        var canAdd = this.canAddNode(dragType, dragTarget, dragData);
 
         // If canAdd is false, then we conclusively deny the add, without checking parents
-        if (canAdd === false) return false;
+        if (canAdd === false) {
+            this.logInfo(logMessagePrefix + " = false - explicit canAddNode false", "editModeDragTarget");
+            return false;
+        }
 
         // If canAdd is falsy but not false (i.e. null or undefined), then we
         // check ancestors which are in editMode, to see if they can accept the
         // drop.
 
         if (dragType == null || !canAdd) {
-            this.logInfo(liveObject.ID + " does not accept drop of type " + dragType, "editModeDragTarget");
+            this.logInfo(logMessagePrefix + " - drop not accepted. Checking ancestors.", "editModeDragTarget");
 
             var ancestor = liveObject.parentElement;
             while (ancestor && !ancestor.editorRoot) {
@@ -72320,8 +77858,10 @@ isc.EditProxy.addMethods({
                     // thus, once it returns, all ancestors have been checked.
                     var ancestorAcceptsDrop = ancestor.editProxy.willAcceptDrop();
                     if (!ancestorAcceptsDrop) {
-                        this.logInfo("No ancestor accepts drop", "editModeDragTarget");
+                        this.logInfo(logMessagePrefix + " = " + ancestorAcceptsDrop + " - No ancestor accepts drop.", "editModeDragTarget");
                         if (changeObjectSelection != false) {
+                            // Hide any existing selected object
+                            hiliteCanvas = isc.SelectionOutline.getSelectedObject();
                             if (hiliteCanvas && hiliteCanvas.editProxy) {
                                 hiliteCanvas.editProxy.showSelectedAppearance(false);
                             }
@@ -72330,7 +77870,7 @@ isc.EditProxy.addMethods({
                         // Pass through the null or false response
                         return ancestorAcceptsDrop;
                     }
-                    this.logInfo("An ancestor accepts drop", "editModeDragTarget");
+                    this.logInfo(logMessagePrefix + " = true - An ancestor accepts drop.", "editModeDragTarget");
                     return true;
                 }
                 // Note that the effect of the return statements in the
@@ -72342,7 +77882,6 @@ isc.EditProxy.addMethods({
 
             // Given the return statements in the while condition above, we'll only get
             // here if no ancestor had editingOn: true
-            this.logInfo(liveObject.ID + " has no parentElement in editMode", "editModeDragTarget");
             if (changeObjectSelection != false) {
                 if (hiliteCanvas && hiliteCanvas.editProxy) {
                     hiliteCanvas.editProxy.showSelectedAppearance(false);
@@ -72355,12 +77894,13 @@ isc.EditProxy.addMethods({
             // ancestors that are in editMode. That is, if the EditContext as a
             // whole can't handle the drop, we indicate to callers that it
             // shouldn't bubble to ancestors of the EditContext.
+            this.logInfo(logMessagePrefix + " = false - No parentElement in editMode found.", "editModeDragTarget");
             return false;
         }
 
         // This canvas can accept the drop, so select its top-level parent (in case it's a
         // sub-component like a TabSet's PaneContainer)
-        this.logInfo(liveObject.ID + " is accepting the " + dragType + " drop", "editModeDragTarget");
+        this.logInfo(logMessagePrefix + " = true", "editModeDragTarget");
         if (hiliteCanvas) {
             if (changeObjectSelection != false) {
                 this.logInfo(liveObject.ID + ": selecting editNode object " + hiliteCanvas.ID);
@@ -72424,27 +77964,123 @@ isc.EditProxy.addMethods({
         "children": true,
         "peers": true
     },
-    canAdd : function (type) {
-        if (!this.canDropAtLevel()) return false;
-        var liveObject = this.creator;
-        if (liveObject.getObjectField(type) == null) {
-            var clazz = isc.ClassFactory.getClass(type);
-            if (clazz) {
-                if (clazz.isA("FormItem")) {
-                    return (liveObject.getObjectField("DynamicForm", this._excludedFields) != null);
-                } else if (clazz.isA("DrawItem")) {
-                    return (liveObject.getObjectField("DrawPane", this._excludedFields) != null);
-                }
-            }
-            // By default, return null to indicate that we can't add the item,
-            // but callers may wish to check our parent. Subclasses can return
-            // "false" to suggest to callers that they should not check parents
-            // ...  that is, that we "claim" the potential add and conclusively
-            // reject it. This matches the semantics of willAcceptDrop()
-            return null;
-        } else {
+
+    //> @method editProxy.canAddNode()
+    // Can a new node be added to this component? Response takes into account drop rules to
+    // include drops that may be replaced, automatically wrapped by other components, or
+    // target adjusted.
+    // <p>
+    // PaletteNode behaviors that affect the node that will be first dropped are consulted
+    // in the process.
+    // <p>
+    // By using optional argument <code>dropOnFolder</code> subclasses can reject a drop in
+    // the editTree if there is not enough context to determine what to do.
+    //
+    // @param dragType (String) the type of component to be added
+    // @param [dragTarget] (Canvas) the source of the component if being dragged
+    // @param [dragData] (Object) the paletteNode or editNode being dragged
+    // @param [dropOnFolder] (boolean) true if component is being dropped onto a folder in the editTree
+    // @return (Boolean) true if this component will accept an add of the type or component.
+    //                   false if the component will not accept the add at all and no further checks are needed
+    //                   null if the component will not accept the add but caller may want to check our parent
+    //<
+    canAddNode : function (dragType, dragTarget, dragData, dropOnFolder) {
+        var liveObject = this.creator,
+            editNode = liveObject.editNode,
+            logMessagePrefix = (this.logIsInfoEnabled("editModeAddNode")
+                ? "canAddNode to " + liveObject.ID + " of type " + dragType
+                : null)
+        ;
+
+        // For a component that is always dropped at the root level, we accept the drop
+        if (dragData && (dragData.alwaysAllowRootDrop == true || dragData.alwaysAllowRootDrop == "true")) {
+            this.logInfo(logMessagePrefix + " = true - alwaysAllowRootDrop = true", "editModeAddNode");
             return true;
         }
+
+        if (!this.canDropAtLevel()) {
+            this.logInfo(logMessagePrefix + " = false - cannot drop at level", "editModeAddNode");
+            return false;
+        }
+
+        // Support restrictToTarget paletteNode rule for drops in edit tree.
+        if (dragTarget && dragTarget.isA("Palette") && dragData && dragData.restrictToTarget) {
+            if (!liveObject.isA(dragData.restrictToTarget.class)) {
+                // This component does not meet restriction
+                this.logInfo(logMessagePrefix + " = null - restrictToTarget not matched (" +
+                    dragData.restrictToTarget.class + ")", "editModeAddNode");
+                return null;
+            }
+        }
+
+        // Remainder of checks should use substitute node if applicable
+        if (dragData) {
+            var origDragData = dragData;
+            dragData = this.substituteNode(editNode, dragData);
+            dragType = this.getEventDragType(dragData);
+            if (origDragData != dragData) {
+                this.logInfo("canAddNode to " + liveObject.ID + " of type " + dragType +
+                    ": substitute node: " + this.echoLeaf(dragData), "editModeAddNode");
+            }
+
+            var container = this.getContainerNode(editNode, dragData);
+            if (container) {
+                // If a container node will be wrapped around the new node, use it for remaining checks
+                dragData = container;
+                dragType = this.getEventDragType(dragData);
+                this.logInfo("canAddNode to " + liveObject.ID + " of type " + dragType +
+                    ": container node: " + this.echoLeaf(dragData), "editModeAddNode");
+            }
+            logMessagePrefix = (this.logIsInfoEnabled("editModeAddNode")
+                ? "canAddNode to " + liveObject.ID + " of type " + dragType
+                : null);
+        }
+
+        // If this component has a field to hold new component type an add is fine
+        if (liveObject.getObjectField(dragType) != null) {
+            this.logInfo(logMessagePrefix + " = true - has object field for " + dragType,
+                "editModeAddNode");
+            return true;
+        }
+
+        // If node has an addToChild configuration and the dropped type matches the
+        // target then it must be allowed
+        if (editNode && editNode.addToChild) {
+            var addToChild = editNode.addToChild;
+            if (dragType == addToChild.ifDropClass) {
+                this.logInfo(logMessagePrefix + " = true - matches addToChild.ifDropClass",
+                    "editModeAddNode");
+                return true;
+            }
+        }
+
+        // A FormItem or DrawItem added to a normal canvas is allowed if this component will
+        // allow their default container to be added.
+        var clazz = isc.ClassFactory.getClass(dragType);
+        if (clazz) {
+            var targetType;
+            if (clazz.isA("FormItem")) {
+                targetType = "DynamicForm";
+            } else if (clazz.isA("DrawItem")) {
+                targetType = "DrawPane";
+            }
+            if (targetType) {
+                var objField = liveObject.getObjectField(targetType, this._excludedFields);
+                if (objField != null) {
+                    this.logInfo(logMessagePrefix + " = true - has object field for explicit wrapper " + targetType,
+                        "editModeAddNode");
+                    return true;
+                }
+            }
+        }
+
+        // By default, return null to indicate that we can't add the item,
+        // but callers may wish to check our parent. Subclasses can return
+        // "false" to suggest to callers that they should not check parents
+        // ...  that is, that we "claim" the potential add and conclusively
+        // reject it. This matches the semantics of willAcceptDrop()
+        this.logInfo(logMessagePrefix + " = null - fall through", "editModeAddNode");
+        return null;
     },
 
     // Canvas.clearNoDropindicator no-ops if the internal _noDropIndicator flag is null.  This
@@ -72487,23 +78123,20 @@ isc.EditProxy.addMethods({
 
     shouldPassDropThrough : function () {
         var liveObject = this.creator,
-            source = isc.EH.dragTarget,
-            paletteNode,
-            dropType;
+            dragTarget = liveObject.ns.EH.dragTarget
+        ;
 
-        if (!source.isA("Palette")) {
-            dropType = source.isA("FormItemProxyCanvas") ? source.formItem.Class
-                                                         : source.Class;
-        } else {
-            paletteNode = source.getDragData();
-            if (isc.isAn.Array(paletteNode)) paletteNode = paletteNode[0];
-            dropType = paletteNode.type || paletteNode.className;
-        }
+        var dragData = this.getEventDragData(),
+            dragType = this.getEventDragType(dragData),
+            logMessagePrefix = (this.logIsInfoEnabled("editModeDragTarget")
+                ? "editProxy.shouldPassDropThrough for " + liveObject.ID + " using dragType " + dragType
+                : null)
+        ;
+        if (!dragType) return false;
 
-        this.logInfo("Dropping a " + dropType, "formItemDragDrop");
-
-        if (!this.canAdd(dropType)) {
-            this.logInfo("This canvas cannot accept a drop of a " + dropType, "formItemDragDrop");
+        if (!this.canAddNode(dragType, dragTarget, dragData)) {
+            this.logInfo(logMessagePrefix + " = true - cannot add dragType",
+                "editModeDragTarget");
             return true;
         }
 
@@ -72513,14 +78146,20 @@ isc.EditProxy.addMethods({
             liveObject.parentElement.editProxy == null ||
             !liveObject.parentElement.editProxy.willAcceptDrop(false))
         {
-            this.logInfo(liveObject.ID + " is not passing drop through - no ancestor is willing to " +
-                        "accept the drop", "editModeDragTarget");
+            this.logInfo(logMessagePrefix + " = false - no ancestor willing to add",
+                "editModeDragTarget");
             return false;
         }
 
-        if (liveObject.parentElement == source) {
-            this.logInfo(liveObject.ID + " is not passing drop through - attempt to drop on self",
-                        "editModeDragTarget");
+        if (liveObject.parentElement == dragTarget) {
+            this.logInfo(logMessagePrefix + " = false - cannot drop on self",
+                "editModeDragTarget");
+            return false;
+        }
+
+        if (this.persistCoordinates) {
+            this.logInfo(logMessagePrefix + " = false - canvas is persisting coordinates",
+                "editModeDragTarget");
             return false;
         }
 
@@ -72536,20 +78175,20 @@ isc.EditProxy.addMethods({
 
         if (!liveObject.orientation || liveObject.orientation == "vertical") {
             if (x < rect.left + this.dropMargin  || x > rect.right - this.dropMargin) {
-                this.logInfo("Close to right or left edge - passing drop through to parent for " +
-                        liveObject.ID, "editModeDragTarget");
+                this.logInfo(logMessagePrefix + " = true - close to right or left edge",
+                    "editModeDragTarget");
                 return true;
             }
         }
         if (!liveObject.orientation || liveObject.orientation == "horizontal") {
             if (y < rect.top + this.dropMargin  || y > rect.bottom - this.dropMargin) {
-                this.logInfo("Close to top or bottom edge - passing drop through to parent for " +
-                        liveObject.ID, "editModeDragTarget");
+                this.logInfo(logMessagePrefix + " = true - close to top or bottom edge",
+                    "editModeDragTarget");
                 return true;
             }
         }
 
-        this.logInfo(liveObject.ID + " is not passing drop through", "editModeDragTarget");
+        this.logInfo(logMessagePrefix + " = false - fall through", "editModeDragTarget");
         return false;
     },
 
@@ -72560,124 +78199,119 @@ isc.EditProxy.addMethods({
         }
 
         var liveObject = this.creator,
-            source = isc.EH.dragTarget,
-            paletteNode,
-            dropType;
-
-        if (!source.isA("Palette")) {
-            if (source.isA("FormItemProxyCanvas")) {
-                source = source.formItem;
-            }
-            dropType = source._constructor || source.Class;
-        } else {
-            paletteNode = source.transferDragData();
-            if (isc.isAn.Array(paletteNode)) paletteNode = paletteNode[0];
-            paletteNode.dropped = true;
-            dropType = paletteNode.type || paletteNode.className;
-        }
+            dragTarget = liveObject.ns.EH.dragTarget,
+            paletteNode = this.getEventDragData()
+        ;
 
         // If node is dropped from a tree, clean it of internal properties
-        if (source.isA("TreeGrid")) {
-            paletteNode = source.data.getCleanNodeData([paletteNode], false, false, false)[0];
+        if (dragTarget.isA("TreePalette")) {
+            paletteNode = dragTarget.data.getCleanNodeData(paletteNode, false, false, false);
         }
 
         // Palette node could be modified later if there are palettized components within.
         // Copy it now so that future drops are not affected.
         paletteNode = isc.clone(paletteNode);
+        paletteNode.dropped = true;
 
-        // if the source isn't a Palette, we're drag/dropping an existing component, so remove the
+        // if the dragTarget isn't a Palette, we're drag/dropping an existing component, so remove the
         // existing component and re-create it in its new position
-        if (!source.isA("Palette")) {
-            if (source == liveObject) return;  // Can't drop a component onto itself
-            var editContext = liveObject.editContext,
-                editNode = liveObject.editNode,
-                tree = editContext.getEditNodeTree(),
-                oldParent = tree.getParent(source.editNode);
-            editContext.removeNode(source.editNode);
-            var node;
-            if (source.isA("FormItem")) {
-                if (source.isA("CanvasItem")) {
-                    node = editContext.addNode(source.canvas.editNode, editNode);
-                } else {
-                    node = editContext.addWithWrapper(source.editNode, editNode);
-                }
-            } else if (source.isA("DrawItem")) {
-                node = editContext.addWithWrapper(source.editNode, editNode, true);
-            } else {
-                node = editContext.addNode(source.editNode, editNode);
-                // Assign position based on the dragRect because the mouse pointer is
-                // likely offset from there into what was the dragHandle and we want
-                // the drop to occur where the target outline shows
-                var dragRect = isc.EH.getDragRect(),
-                    x = (dragRect ? dragRect[0] - liveObject.getPageLeft() : liveObject.getOffsetX()),
-                    y = (dragRect ? dragRect[1] - liveObject.getPageTop() : liveObject.getOffsetY())
-                ;
-                node.liveObject.moveTo(x, y);
-            }
-            if (node && node.liveObject) {
-                isc.EditContext.selectCanvasOrFormItem(node.liveObject, true);
-            }
+        if (!dragTarget.isA("Palette")) {
+            this.completeReparent(true);
         } else {
-            var skipSnapToGrid = isc.EH.shiftKeyDown();
-            // loadData() operates asynchronously, so we'll have to finish the item drop off-thread
-            if (paletteNode.loadData && !paletteNode.isLoaded) {
-                var _this = this;
-                paletteNode.loadData(paletteNode, function (loadedNode) {
-                    loadedNode = loadedNode || paletteNode;
-                    loadedNode.isLoaded = true;
-                    _this.completeItemDrop(loadedNode, skipSnapToGrid)
-                    loadedNode.dropped = paletteNode.dropped;
-                });
-                return isc.EH.STOP_BUBBLING;
-            }
-
-            this.completeItemDrop(paletteNode, skipSnapToGrid);
+            this.completeDrop(paletteNode, { skipSnapToGrid: isc.EH.shiftKeyDown() });
         }
         return isc.EH.STOP_BUBBLING;
     },
 
-    completeItemDrop : function (paletteNode, skipSnapToGrid) {
+    // Called to complete the drop process from above and also from palette.folderDrop so
+    // that the same processing occurs in both cases.
+    // settings.index - should be the index into the parent component, not the index within the editTree
+    completeDrop : function (paletteNode, settings, callback) {
         var liveObject = this.creator;
 
         if (!liveObject.editContext) return;
 
+        // loadData() operates asynchronously, so we'll have to finish the item drop off-thread.
+        // Although addWithWrapper and addFromPaletteNodes called below will also asynchronously
+        // load a node, doing so there breaks the sequential process which is crucial to completing
+        // the drop.
+        if (paletteNode.loadData && !paletteNode.isLoaded) {
+            var _this = this;
+            paletteNode.loadData(paletteNode, function (loadedNode) {
+                loadedNode = loadedNode || paletteNode;
+                loadedNode.isLoaded = true;
+                _this.completeDrop(loadedNode, settings, function (editNode) {
+                    editNode.dropped = paletteNode.dropped;
+                    if (callback) callback(editNode);
+                });
+            });
+            return;
+        }
+
+        // Unwrap settings
+        var index = (settings ? settings.index : null),
+            parentProperty = (settings ? settings.parentProperty : null),
+            skipNodeAddedNotification = (settings ? settings.skipNodeAddedNotification : null),
+            skipSnapToGrid = (settings ? settings.skipSnapToGrid : null)
+        ;
+
         var editContext = liveObject.editContext,
-            nodeType = paletteNode.type || paletteNode.className,
+            parentNode = liveObject.editNode,
             editNode,
             wrapped = false
         ;
+
+        // Allow substitute nodes
+        paletteNode = this.substituteNode(parentNode, paletteNode);
+        var nodeType = paletteNode.type || paletteNode.className,
+
+        // Find best parent for drop
+        parentNode = this.adjustParentNode(parentNode, paletteNode);
+
         var clazz = isc.ClassFactory.getClass(nodeType);
         if (clazz && (clazz.isA("FormItem") || clazz.isA("DrawItem"))) {
             editNode = editContext.makeEditNode(paletteNode);
             if (clazz && clazz.isA("FormItem")) {
-                editNode = liveObject.editContext.addWithWrapper(editNode, liveObject.editNode);
+                editNode = liveObject.editContext.addWithWrapper(editNode, parentNode, index, parentProperty, null, skipNodeAddedNotification);
             } else {
-                editNode = liveObject.editContext.addWithWrapper(editNode, liveObject.editNode, true);
+                editNode = liveObject.editContext.addWithWrapper(editNode, parentNode, index, parentProperty, true, skipNodeAddedNotification);
             }
             wrapped = true;
         } else {
-            var nodes = editContext.addFromPaletteNodes([paletteNode], liveObject.editNode);
+            // Using addFromPaletteNodes instead of addFromPaletteNode because the former
+            // will find other components within the defaults like a DataSource and create it
+            // as well. This is used in Mockups mode pervasively.
+            var nodes = editContext.addFromPaletteNodes([paletteNode], parentNode, index, skipNodeAddedNotification, false);
             if (nodes && nodes.length > 0) editNode = nodes[0];
         }
-        // move new component to the current mouse position.
-        // if editNode was wrapped, update the wrapper node position
         var node = editNode;
-        if (wrapped) {
-            var tree = editContext.getEditNodeTree(),
-                parent = tree.getParent(node)
+        if (index == null) {
+            // move new component to the current mouse position.
+            // if editNode was wrapped, update the wrapper node position
+            if (wrapped) {
+                var tree = editContext.getEditNodeTree(),
+                    parent = tree.getParent(node)
+                ;
+                if (parent) node = parent;
+            }
+            var x = liveObject.getOffsetX(),
+                y = liveObject.getOffsetY()
             ;
-            if (parent) node = parent;
+            // Respect snapTo grid if specified
+            if (liveObject.childrenSnapToGrid && !skipSnapToGrid) {
+                x = liveObject.getHSnapPosition(x);
+                y = liveObject.getVSnapPosition(y);
+            }
+            if (node.liveObject && node.liveObject.moveTo) node.liveObject.moveTo(x, y);
         }
-        var x = liveObject.getOffsetX(),
-            y = liveObject.getOffsetY()
-        ;
-        // Respect snapTo grid if specified
-        if (liveObject.childrenSnapToGrid && !skipSnapToGrid) {
-            x = liveObject.getHSnapPosition(x);
-            y = liveObject.getVSnapPosition(y);
-        }
-        if (node.liveObject && node.liveObject.moveTo) node.liveObject.moveTo(x, y);
-        if (this.canSelectChildren && editNode.liveObject.editProxy != null &&
+
+        // Once DS is added to component, make sure component is selected
+        if (isc.isA.DataSource(node.liveObject)) {
+            // Force correct selection - DBC might already be marked as selected
+            // but the selection updated event should be triggered.
+            editContext.deselectAllComponents();
+            editContext.selectSingleComponent(parentNode.liveObject);
+        } else if (this.canSelectChildren && editNode.liveObject.editProxy != null &&
             editNode.liveObject.editProxy.canSelect != false)
         {
             editContext.selectSingleComponent(node.liveObject);
@@ -72689,13 +78323,220 @@ isc.EditProxy.addMethods({
         }
 
         if (node.liveObject && isc.isA.Function(node.liveObject.focus)) {
-            //isc.logWarn("Trying to focus Canvas " + node.liveObject.ID + " in completeItemDrop");
+            //isc.logWarn("Trying to focus Canvas " + node.liveObject.ID + " in completeDrop");
             node.liveObject._eventMask ? node.liveObject._eventMask.focus()
                                        : node.liveObject.focus();
             //isc.logWarn(node.liveObject.ID + (node.liveObject._eventMask ? "_eventMask" : "") +
             //                            " has the focus? " +
             //                            (node.liveObject._eventMask ? node.liveObject._eventMask.hasFocus : node.liveObject.hasFocus));
         }
+
+        if (callback) callback(node);
+    },
+
+    // dragTarget passed in by overrides that present a dialog before completing the drop
+    completeReparent : function (reposition, dragTarget) {
+        var liveObject = this.creator;
+        dragTarget = dragTarget || liveObject.ns.EH.dragTarget
+
+        // Cannot drop a component onto itself
+        if (dragTarget == liveObject) return;
+
+        var editContext = liveObject.editContext,
+            editNode = liveObject.editNode,
+            sourceNode = dragTarget.editNode
+        ;
+
+        if (this.logIsInfoEnabled("editing")) {
+            var editTree = editContext.getEditNodeTree(),
+                oldParent = editTree.getParent(sourceNode)
+            ;
+            this.logInfo("Reparenting " + dragTarget.ID + " from " + oldParent.liveObject.ID +
+                " to " + liveObject.ID, "editing");
+        }
+
+        // Remove existing editNode from editTree.
+        editContext.removeNode(sourceNode, null, true);
+
+        var node;
+        if (dragTarget.isA("FormItem")) {
+            if (dragTarget.isA("CanvasItem")) {
+                node = editContext.addNode(dragTarget.canvas.editNode, editNode);
+            } else {
+                node = editContext.addWithWrapper(sourceNode, editNode);
+            }
+        } else if (dragTarget.isA("DrawItem")) {
+            node = editContext.addWithWrapper(sourceNode, editNode, null, null, true);
+        } else {
+            // Don't offer a binding dialog if so configured because the node isn't really new
+            node = editContext.addNode(sourceNode, editNode, null, null, null, null, true);
+
+            if (reposition) {
+                // Assign position based on the dragRect because the mouse pointer is
+                // likely offset from there into what was the dragHandle and we want
+                // the drop to occur where the target outline shows
+                var dragRect = isc.EH.getDragRect(),
+                    x = (dragRect ? dragRect[0] - liveObject.getPageLeft() : liveObject.getOffsetX()),
+                    y = (dragRect ? dragRect[1] - liveObject.getPageTop() : liveObject.getOffsetY())
+                ;
+                node.liveObject.moveTo(x, y);
+            }
+        }
+        if (node && node.liveObject) {
+            isc.EditContext.selectCanvasOrFormItem(node.liveObject, true);
+        }
+        if (node) {
+            var tree = editContext.getEditNodeTree(),
+                oldParentNode = tree.getParent(sourceNode);
+            editContext.fireNodeMoved(sourceNode, oldParentNode, node, editNode);
+        }
+        return node;
+    },
+
+    // Returns node to be "dropped" which could be a substitute
+    substituteNode : function (parentNode, paletteNode) {
+        if (paletteNode.substituteDrop) {
+            var substituteDrop = paletteNode.substituteDrop,
+                substitute = true
+            ;
+
+            var parentClass = (parentNode ? isc.ClassFactory.getClass(parentNode.type) : null);
+            if (!parentClass ||
+                (substituteDrop.ifParentClass && !parentClass.isA(substituteDrop.ifParentClass)) ||
+                (substituteDrop.ifNotParentClass && parentClass.isA(substituteDrop.ifNotParentClass)))
+            {
+                substitute = false;
+            }
+
+            if (substitute) {
+                var liveObject = this.creator,
+                    editContext = liveObject.editContext,
+                    newPaletteNode = substituteDrop;
+                ;
+                if (substituteDrop.useNode) {
+                    // substitute comes from a reference to another paletteNode
+                    newPaletteNode = editContext.findPaletteNode("refID", substituteDrop.useNode);
+                    if (!newPaletteNode) {
+                        // Invalid refID
+                        this.logWarn("Invalid 'substituteDrop.useNode' reference found in palette node for " + paletteNode.type + ". Ignoring substituteDrop.");
+                    }
+                    var palette = editContext.getDefaultPalette();
+                    if (!isc.isA.TreePalette(palette)) {
+                        newPaletteNode = isc.clone(newPaletteNode);
+                    }
+                } else {
+                    newPaletteNode = isc.clone(newPaletteNode);
+                    delete newPaletteNode.ifParentClass;
+                    delete newPaletteNode.ifNotParentClass;
+                }
+                if (newPaletteNode) paletteNode = newPaletteNode;
+            }
+        }
+        return paletteNode;
+    },
+
+    // Returns node to be wrapped around "dropped" node (i.e. container)
+    getContainerNode : function (parentNode, paletteNode) {
+        var container;
+        if (parentNode && parentNode.insertContainer) {
+            var insertContainer = parentNode.insertContainer,
+                wrap = true
+            ;
+
+            if (insertContainer.ifDropClass) {
+                var dragType = paletteNode.type || paletteNode.className;
+                var dropClass = isc.ClassFactory.getClass(dragType);
+                if (!dropClass ||
+                    (insertContainer.ifDropClass && !dropClass.isA(insertContainer.ifDropClass)))
+                {
+                    wrap = false;
+                }
+            }
+
+            if (wrap) {
+                var liveObject = this.creator,
+                    editContext = liveObject.editContext,
+                    newPaletteNode = insertContainer
+                ;
+                if (insertContainer.useNode) {
+                    // container comes from a reference to another paletteNode
+                    newPaletteNode = editContext.findPaletteNode("refID", insertContainer.useNode);
+                    if (!newPaletteNode) {
+                        // Invalid refID
+                        this.logWarn("Invalid 'insertContainer.useNode' reference found in palette node for " + parentNode.type + ". Ignoring insertContainer.");
+                    }
+                    var palette = editContext.getDefaultPalette();
+                    if (!isc.isA.TreePalette(palette)) {
+                        newPaletteNode = isc.clone(newPaletteNode);
+                    }
+                } else {
+                    newPaletteNode = isc.clone(newPaletteNode);
+                    delete newPaletteNode.ifDropClass;
+                }
+                if (newPaletteNode) container = newPaletteNode;
+            }
+        }
+        return container;
+    },
+
+    // Returns node to be used as parent
+    adjustParentNode : function (parentNode, paletteNode) {
+        var liveObject = this.creator,
+            editContext = liveObject.editContext
+        ;
+
+        if (parentNode.addToChild) {
+            var addToChild = parentNode.addToChild;
+            if (paletteNode.type == addToChild.ifDropClass) {
+                var editTree = liveObject.editContext.getEditNodeTree(),
+                    childNodes = editTree.getChildren(parentNode),
+                    childClass = addToChild.childClass,
+                    childNode
+                ;
+                if (childClass) {
+
+                    if (childNodes && childNodes.length > 0) {
+                        for (var i = 0; i < childNodes.length; i++) {
+                            if (childClass == childNodes[i].type) {
+                                childNode = childNodes[i];
+                                break;
+                            }
+                        }
+                    }
+                    if (childNode) {
+                        // Found child class
+                        return childNode;
+                    } else {
+                        // Child class not found, create an instance
+                        // new child comes from a reference to another paletteNode
+                        if (addToChild.createFrom) {
+                            var childPaletteNode = editContext.findPaletteNode("refID", addToChild.createFrom);
+                            if (childPaletteNode) {
+                                var editNode = editContext.makeEditNode(childPaletteNode);
+                                editNode.dropped = true;
+                                parentNode = editContext.addNode(editNode, parentNode, null, null, null, null, true);
+                            } else {
+                                // Invalid refID
+                                this.logWarn("Invalid 'addToChild.createFrom' reference found in palette node for " + parentNode.type + ". Ignoring addToChild.");
+                            }
+                        } else {
+                            // createFrom not defined
+                            this.logWarn("Invalid 'addToChild.createFrom' found in palette node for " + parentNode.type + ". Ignoring addToChild.");
+                        }
+                    }
+                } else {
+                    // Missing childClass
+                    this.logWarn("Invalid 'addToChild.childClass' found in palette node for " + parentNode.type + ". Ignoring addToChild.");
+                }
+            } else if (!addToChild.ifDropClass) {
+                // Missing ifDropClass
+                this.logWarn("Invalid 'addToChild.ifDropClass' found in palette node for " + parentNode.type + ". Ignoring addToChild.");
+            }
+        } else if (paletteNode.alwaysAllowRootDrop == true || paletteNode.alwaysAllowRootDrop == "true") {
+            var editTree = liveObject.editContext.getEditNodeTree();
+            parentNode = editTree.getRoot();
+        }
+        return parentNode;
     },
 
     dropMove : function () {
@@ -72704,9 +78545,10 @@ isc.EditProxy.addMethods({
         if (!this.willAcceptDrop()) return false;
         if (!this.shouldPassDropThrough()) {
 
-            if (this.creator.dropMove && this.creator.getClass() != isc.Canvas &&
+            if (this.creator.dropMove &&
+                    this.creator.getClass() != isc.Canvas && this.creator.getClass() != isc.AbsoluteContainer &&
                     this.creator.getClass() != isc.EditPane && this.creator.getClass() != isc.TabSet &&
-                    this.creator.getClass() != isc.DetailViewer)
+                    this.creator.getClass() != isc.DetailViewer && this.creator.getClass() != isc.SectionHeader)
             {
                 this.creator.Super("dropMove", arguments);
             }
@@ -72741,7 +78583,8 @@ isc.EditProxy.addMethods({
             return false;
         }
         if (!this.shouldPassDropThrough()) {
-            if (this.creator.dropMove && this.creator.getClass() != isc.Canvas &&
+            if (this.creator.dropOver &&
+                    this.creator.getClass() != isc.Canvas && this.creator.getClass() != isc.AbsoluteContainer &&
                     this.creator.getClass() != isc.EditPane && this.creator.getClass() != isc.DrawPane &&
                     this.creator.getClass() != isc.TabSet && this.creator.getClass() != isc.DetailViewer)
             {
@@ -72792,7 +78635,15 @@ isc.EditProxy.addMethods({
             dragAppearance: "outline",
             // These method overrides are to clobber special record-based drag handling
             // implemented by ListGrid and its children
-            dragStart : function () { return true; },
+            dragStart : function () {
+                // If we are dragging the current selection and using the selection outline
+                // (which include dragHandle) then reset the drag offset to [0,0],
+                // top-left corner of the drag target
+                if (isc.EH.dragTarget == isc.SelectionOutline.getSelectedObject()) {
+                    isc.EH.dragStartOffsetX = isc.EH.dragStartOffsetY = 0;
+                }
+                return true;
+            },
             dragMove : function () { return true; },
             setDragTracker : function () {isc.EH.setDragTracker(""); return false; },
             dragStop : function () {
@@ -72855,6 +78706,7 @@ isc.EditProxy.addMethods({
         if (dataSource != null) {
             var schemaFields = dataSource.fields;
             if (schemaFields && isc.getKeys(schemaFields).length == 1 &&
+                    schemaFields[isc.firstKey(fields)] &&
                     dataSource.fieldIsComplexType(schemaFields[isc.firstKey(fields)].name))
             {
                 schema = dataSource.getSchema(schemaFields[isc.firstKey(fields)].type);
@@ -72964,29 +78816,44 @@ isc.EditProxy.addMethods({
         for (var key in allSchemaFields) {
             var field = allSchemaFields[key];
             if (!liveObject.shouldUseField(field, dataSource)) continue;
-            if (keepFields.find("name", key)) continue;
+            if (keepFields.find("name", key) || keepFields.find("autoName", key)) continue;
 
             // duplicate the field on the DataSoure - we don't want to have the live component
             // sharing actual field objects with the DataSource
-            var fieldCopy = isc.addProperties({}, allSchemaFields[key]);
+            var fieldCopy = isc.addProperties({}, field);
+
             fields.add(fieldCopy);
             newFields.add(fieldCopy);
         }
+        if (this.layoutNewFields) this.layoutNewFields(dataSource, fields);
 
         liveObject.setDataSource(dataSource, fields);
 
         // See GridEditProxy.setInlineEditText for details
         if (!this._skipAddDefaultFields) {
             for (var i = 0; i < newFields.length; i++) {
-                var field = newFields[i];
+                var field = newFields[i],
+                    defaults = null
+                ;
+                if (field.top != null || field.left != null) {
+                    defaults = { top: field.top, left: field.left };
+                }
                 // What constitutes a "field" varies by DBC type
-                var fieldConfig = this.makeFieldPaletteNode(editContext, field, schema);
+                var fieldConfig = this.makeFieldPaletteNode(editContext, field, schema, defaults);
+                if (fieldConfig.defaults.name) {
+                    // Move name property to autoName so that title changes will trigger a rename
+                    fieldConfig.defaults.autoName = fieldConfig.defaults.name;
+                    delete fieldConfig.defaults.name;
+                }
                 var editNode = editContext.makeEditNode(fieldConfig);
                 //this.logWarn("editProxy.setDataSource adding field: " + field.name);
 
                 editContext.addNode(editNode, liveObject.editNode, null, null, true);
             }
         }
+
+
+        editContext.fireEditNodeUpdated(liveObject.editNode, { dataSource: dataSource });
     },
 
     // whether a field has been edited
@@ -73002,7 +78869,7 @@ isc.EditProxy.addMethods({
                 hasNonBaseProperties = false
             ;
 
-            var name = defaults.name,
+            var name = defaults.name || defaults.autoName,
                 dsType,
                 dsTitle
             ;
@@ -73018,11 +78885,16 @@ isc.EditProxy.addMethods({
                 }
             }
 
+            var nonBaseProperties = [];
             for (var key in defaults) {
-                if (key == "name" || key == "title" || key == "parentProperty" || key.startsWith("_")) continue;
+                if (key == "name" || key == "autoName" || key == "title" || key == "parentProperty" || key.startsWith("_")) continue;
                 if (key == "type" && dsType && dsType == defaults.type) continue;
+                nonBaseProperties.add(key);
                 hasNonBaseProperties = true;
-                break;
+            }
+            // If the extra properties are only a specific placement treat them as base
+            if (hasNonBaseProperties && nonBaseProperties.length == 2 && nonBaseProperties.contains("top") && nonBaseProperties.contains("left")) {
+                hasNonBaseProperties = false;
             }
             if (!hasNonBaseProperties) {
                 var title = defaults.title;
@@ -73199,7 +79071,7 @@ isc.EditProxy.addMethods({
 
         var item = form.getItem(this._$editField);
         if (item) {
-            item.focusInItem();
+            item.delayCall("focusInItem");
 
             if (appendChar || isBackspace) {
                 var valueLength = (value != null ? value.length : 0);
@@ -73228,6 +79100,7 @@ isc.EditProxy.addMethods({
                 width: "*", height: "*",
                 showTitle: false
             },
+            this.inlineEditFieldProperties,
             {
                 keyPress : function (item, form, keyName) {
                     if (keyName == "Escape") {
@@ -73266,15 +79139,20 @@ isc.EditProxy.addMethods({
     },
 
     positionAndSizeInlineEditor : function () {
-        this.positionInlineEditor();
         this.sizeInlineEditor();
+        this.positionInlineEditor();
     },
 
     positionInlineEditor : function () {
         var liveObject = this.creator,
+            height = liveObject.getVisibleHeight(),
             left = liveObject.getPageLeft(),
             top = liveObject.getPageTop()
         ;
+        if (this.centerInlineEdit && this.inlineEditForm.getHeight() < height) {
+            // Center editor vertically within target
+            top += Math.round((height - this.inlineEditForm.getHeight()) / 2);
+        }
         this.inlineEditLayout.moveTo(left, top);
     },
 
@@ -73380,6 +79258,113 @@ isc.EditProxy.addMethods({
     }
 });
 
+// Edit Proxy for ValuesManager
+//-------------------------------------------------------------------------------------------
+
+//> @class ValuesManagerEditProxy
+// +link{EditProxy} that handles +link{ValuesManager,ValuesManager} objects when editMode is enabled.
+//
+// @inheritsFrom EditProxy
+// @group devTools
+// @treeLocation Client Reference/Tools/EditProxy
+// @visibility external
+//<
+isc.defineClass("ValuesManagerEditProxy", "EditProxy").addProperties({
+
+    // override of EditProxy.canAddNode
+    // - Allow drop of DataSource from a palette
+    canAddNode : function (dragType, dragTarget, dragData, dropOnFolder) {
+        var canAdd = this.Super("canAddNode", arguments);
+
+        if (canAdd == null) {
+            var liveObject = this.creator;
+            if (dragTarget && dragTarget.isA("Palette")) {
+                var clazz = isc.ClassFactory.getClass(dragType);
+                if (clazz && clazz.isA("DataSource")) canAdd = true;
+            }
+        }
+
+        return canAdd;
+    },
+
+    // override - drop doesn't add new node but just calls setDataSource on ValuesManager
+    completeDrop : function (paletteNode, settings, callback) {
+        var liveObject = this.creator;
+
+        if (!liveObject.editContext) return;
+
+        // loadData() operates asynchronously, so we'll have to finish the item drop off-thread.
+        // Although addWithWrapper and addFromPaletteNodes called below will also asynchronously
+        // load a node, doing so there breaks the sequential process which is crucial to completing
+        // the drop.
+        if (paletteNode.loadData && !paletteNode.isLoaded) {
+            var _this = this;
+            paletteNode.loadData(paletteNode, function (loadedNode) {
+                loadedNode = loadedNode || paletteNode;
+                loadedNode.isLoaded = true;
+                _this.completeDrop(loadedNode, settings, function (editNode) {
+                    editNode.dropped = paletteNode.dropped;
+                    if (callback) callback(editNode);
+                });
+            });
+            return;
+        }
+
+        var ds = paletteNode.liveObject;
+
+        if (!ds) return;
+
+        var parentNode = liveObject.editNode;
+
+        liveObject.setDataSource(ds.ID);
+        liveObject.editContext.setNodeProperties(parentNode, { dataSource: ds.ID });
+
+        // Once DS is added to component, make sure component is selected
+
+        // Force correct selection - DBC might already be marked as selected
+        // but the selection updated event should be triggered.
+        liveObject.editContext.deselectAllComponents();
+        liveObject.editContext.selectSingleComponent(parentNode.liveObject);
+
+        if (callback) callback(paletteNode);
+    },
+
+    setDataSource : function (dataSource, fields, forceRebind) {
+        //this.logWarn("editProxy.setDataSource called" + isc.Log.getStackTrace());
+        var liveObject = this.creator;
+
+        liveObject.setDataSource(dataSource, fields);
+    },
+
+    showSelectedAppearance : function (show, hideLabel, showThumbsOrDragHandle) {
+        var liveObject = this.creator;
+
+        // Selecting a ValuesManager shows an outline around all member components that
+        // are visible.
+        if (show) {
+            // Update SelectionOutline with this context's properties
+            isc.SelectionOutline.border = "1px dashed blue";
+
+            var members = liveObject.getMembers();
+            if (members && members.length > 0) {
+                // editContext root canvas may be part of VM. Don't select it.
+                var rootCanvas = liveObject.editContext.getRootEditNode().liveObject,
+                    targets = []
+                ;
+                for (var i = 0; i < members.length; i++) {
+                    if (members[i] != rootCanvas) targets.add(members[i]);
+                }
+                isc.SelectionOutline.select(targets, false, false);
+            } else {
+                isc.SelectionOutline.deselect();
+            }
+
+        } else if (isc.SelectionOutline.getSelectedObject() == liveObject) {
+            isc.SelectionOutline.deselect();
+        }
+    }
+
+});
 
 // Edit Proxy for Canvas
 //-------------------------------------------------------------------------------------------
@@ -73611,8 +79596,250 @@ isc.CanvasEditProxy.addMethods({
 
         // figure out which components are now in the selector hoop
         this.updateCurrentSelection();
+    },
+
+    // Shared confirm replacement question
+    confirmReplaceComponent : function (existingNode, newNode, callback) {
+        var _this = this;
+        this.makeConfirmReplaceDialog(existingNode, newNode, function (wrapperType) {
+            if (callback) _this.fireCallback(callback, "wrapperType", [wrapperType]);
+        });
+
+        this.showConfirmReplaceDialog(existingNode.liveObject);
+    },
+
+    showConfirmReplaceDialog : function (target) {
+        // Window is automatically drawn off-screen so that
+        // the size is correct based on contents.
+        //
+        var window = this.confirmReplaceWindow;
+
+        if (target.isVisible()) {
+            var width = window.getVisibleWidth(),
+                height = window.getVisibleHeight(),
+                left = ((target.getWidth() - width) / 2) +
+                            Math.max(0,
+                                target.getScrollLeft()
+                            ),
+                top = ((target.getHeight() - height) / 2) +
+                            Math.max(0,
+                                target.getScrollTop()
+                            );
+
+            // Don't try to apply decimal positions, don't position top of window off-screen
+            left = Math.round(left);
+            top = Math.max(Math.round(top),0);
+
+            window.placeNear(left + target.getPageLeft(), top + target.getPageTop());
+        } else {
+            window.centerInPage();
+        }
+        window.show();
+    },
+
+    dialogLayoutDefaults: {
+        _constructor: isc.VLayout,
+        autoDraw: false,
+        width: 600,
+        padding: 5
+    },
+
+    confirmReplaceFormDefaults: {
+        _constructor: isc.DynamicForm,
+        autoParent: "dialogLayout",
+        autoDraw: false,
+        width: "100%",
+        height: "100%",
+        numCols: 1,
+        init : function () {
+            this.fields = [
+                {name: "blurb", type: "blurb", defaultValue: this.intro },
+                {name: "action", type: "radioGroup", showTitle: false, wrap: false,
+                 valueMap: this.actions}
+            ];
+            this.values = { action: this.actions[0] };
+            this.Super("init", arguments);
+        }
+    },
+
+    buttonsLayoutDefaults: {
+        _constructor: isc.HLayout,
+        autoParent: "dialogLayout",
+        autoDraw: false,
+        width: "100%",
+        height: 30,
+        membersMargin: 10,
+        align: "right"
+    },
+    okButtonDefaults: {
+        _constructor: "IButton",
+        autoParent: "buttonsLayout",
+        autoDraw: false,
+        title: "OK",
+        getSelectedIndex : function () {
+            var values = this.form.actions,
+                value = this.form.getValue("action")
+            ;
+            for (var i = 0; i < values.length; i++) {
+                if (value == values[i]) return i;
+            }
+            return null;
+        }
+    },
+    cancelButtonDefaults: {
+        _constructor: "IButton",
+        autoParent: "buttonsLayout",
+        autoDraw: false,
+        title: "Cancel",
+        click : function () {
+            this.creator.cancelClick();
+        }
+    },
+
+    // Wrapper types that correlate to valueMap defined below
+    _wrapperTypes: [
+        "VLayout",
+        "HLayout",
+        null
+    ],
+
+    makeConfirmReplaceDialog : function (existingNode, newNode, callback) {
+        var liveObject = this.creator,
+            editContext = liveObject.editContext,
+            _this = this,
+            paneDesc = "pane"
+        ;
+
+        if (this.getChildNodeDescription) {
+            paneDesc = this.getChildNodeDescription(existingNode);
+            paneDesc = paneDesc.substring(1, paneDesc.length-1);
+        }
+
+        if (this.confirmReplaceForm) this.confirmReplaceForm.markForDestroy();
+
+        var existingComponentDesc = editContext.getEditNodeIDDescription(existingNode, true);
+        var newComponentDesc = editContext.getEditNodeIDDescription(newNode, true);
+
+        var intro = "There is already a component in the " + paneDesc + ". Do you want to:",
+            valueMap = [
+                "combine " + newComponentDesc + " with " + existingComponentDesc + " in VLayout (vertical stacking)",
+                "combine " + newComponentDesc + " with " + existingComponentDesc + " in HLayout (horizontal stacking)",
+                "replace " + existingComponentDesc + " with " + newComponentDesc
+            ]
+        ;
+
+        if (this.confirmReplaceWindow) this.confirmReplaceWindow.markForDestroy();
+
+        this.confirmReplaceForm = this.createAutoChild("confirmReplaceForm", { intro: intro, actions: valueMap });
+        this.cancelButton = this.createAutoChild("cancelButton", {
+            click : function () {
+                this.creator.confirmReplaceWindow.hide();
+            }
+        });
+        this.okButton = this.createAutoChild("okButton", {
+            form: this.confirmReplaceForm,
+            click : function () {
+                var index = this.getSelectedIndex();
+                this.creator.confirmReplaceWindow.hide();
+                if (callback) {
+                    var wrapperType = _this._wrapperTypes[index];
+                    _this.fireCallback(callback, "wrapperType", [wrapperType]);
+                }
+            }
+        });
+        this.buttonsLayout = this.createAutoChild("buttonsLayout", { members: [this.cancelButton, this.okButton] });
+        this.dialogLayout = this.createAutoChild("dialogLayout", { members: [this.confirmReplaceForm, this.buttonsLayout ]});
+
+        this.confirmReplaceWindow = isc.Window.create({
+            title: "Replace existing component?",
+            // autoDraw off-screen to get correct size
+            autoDraw: true,
+            top: -500, left: -1000,
+            showCloseButton: false,
+            showMinimizeButton: false,
+
+            isModal: true, showModalMask: true,
+            autoSize: true,
+
+            items: [ this.dialogLayout ]
+        });
+    },   // end makeConfirmReplaceDialog
+
+    wrapExistingComponent : function (existingNode, wrapperType) {
+        var liveObject = this.creator,
+            editContext = liveObject.editContext,
+            parentNode = editContext.getParentNode(existingNode)
+        ;
+
+        // Remove existing component from editTree
+        editContext.removeNode(existingNode, null, true);
+
+        // Remove reference to parentProperty from existing node so it isn't used to
+        // add to new wrapper parent
+        if (existingNode.defaults) delete existingNode.defaults.parentProperty;
+
+        // Create new wrapper for wrapperType
+        var paletteNode = editContext.findPaletteNode("type", wrapperType) || editContext.findPaletteNode("className", wrapperType);
+        if (!paletteNode) {
+            paletteNode = {
+                type: wrapperType,
+                defaults : { _constructor: wrapperType }
+            };
+        }
+        paletteNode = isc.clone(paletteNode);
+
+        var wrapperNode = editContext.makeEditNode(paletteNode);
+
+        // add the wrapper to the parent
+        editContext.addNode(wrapperNode, parentNode, null, null, null, null, true);
+
+        // add the existing component node to the wrapper
+        editContext.addNode(existingNode, wrapperNode);
+
+        return wrapperNode;
     }
 });
+
+// Edit Proxy for AbsoluteContainer
+//-------------------------------------------------------------------------------------------
+
+//> @class AbsoluteContainerEditProxy
+// +link{EditProxy} that handles +link{Canvas,Canvas} objects when editMode is enabled.
+//
+// @inheritsFrom EditProxy
+// @group devTools
+// @treeLocation Client Reference/Tools/EditProxy
+// @visibility external
+//<
+isc.defineClass("AbsoluteContainerEditProxy", "CanvasEditProxy").addProperties({
+
+    // override of EditProxy.canAddNode
+    // - Allow drop of Canvas, FormItem and DrawItem from a palette
+    canAddNode : function (dragType, dragTarget, dragData, dropOnFolder) {
+        var canAdd = this.Super("canAddNode", arguments);
+
+        if (canAdd == null) {
+            var liveObject = this.creator;
+            if (isc.isAn.AbsoluteContainer(liveObject) && dragTarget && dragTarget.isA("Palette")) {
+                // We also accept a drop of a FormItem; this will be detected downstream and handled by
+                // wrapping the FormItem inside an auto-created DynamicForm.  Similarly a DrawItem
+                // can be accepted because it will be wrapped inside an auto-created DrawPane.
+                var clazz = isc.ClassFactory.getClass(dragType);
+                if (clazz && clazz.isA("Canvas") || clazz.isA("FormItem") || clazz.isA("DrawItem")) {
+                    canAdd = true;
+                }
+            }
+        }
+
+        return canAdd;
+    },
+
+    shouldPassDropThrough : function () {
+        // Never pass a drop through
+        return false;
+    }
+});
+
 
 // Edit Proxy for Layout
 //-------------------------------------------------------------------------------------------
@@ -73628,7 +79855,9 @@ isc.CanvasEditProxy.addMethods({
 isc.defineClass("LayoutEditProxy", "CanvasEditProxy").addMethods({
 
     drop : function () {
-        var liveObject = this.creator;
+        var liveObject = this.creator,
+            editContext = liveObject.editContext
+        ;
 
         if (this.shouldPassDropThrough()) {
             liveObject.hideDropLine();
@@ -73638,6 +79867,7 @@ isc.defineClass("LayoutEditProxy", "CanvasEditProxy").addMethods({
         isc.EditContext.hideAncestorDragDropLines(liveObject);
 
         var source = isc.EH.dragTarget,
+            paletteNode,
             editNode,
             dropType;
 
@@ -73647,10 +79877,9 @@ isc.defineClass("LayoutEditProxy", "CanvasEditProxy").addMethods({
             }
             dropType = source._constructor || source.Class;
         } else {
-            var paletteNode = source.transferDragData();
-            editNode = liveObject.editContext.makeEditNode(paletteNode);
-            editNode.dropped = true;
-            dropType = editNode.type || editNode.className;
+            paletteNode = source.transferDragData();
+            if (isc.isAn.Array(paletteNode)) paletteNode = paletteNode[0];
+            dropType = paletteNode.type || paletteNode.className;
         }
 
         // Establish the actual drop node (this may not be the canvas accepting the drop - for a
@@ -73659,6 +79888,55 @@ isc.defineClass("LayoutEditProxy", "CanvasEditProxy").addMethods({
         var dropTargetNode = this.findEditNode(dropType);
         if (dropTargetNode) {
             dropTargetNode = dropTargetNode.editNode;
+        }
+
+        // If drop target isn't this layout and not another LayoutEditProxy, defer handling
+        // to the correct proxy.
+        if (dropTargetNode.liveObject != liveObject &&
+            dropTargetNode.liveObject.editProxy &&
+            dropTargetNode.liveObject.editProxy != this)
+        {
+            liveObject.hideDropLine();
+
+            // If node is dropped from a tree, clean it of internal properties
+            if (source.isA("TreePalette")) {
+                paletteNode = source.data.getCleanNodeData(paletteNode, false, false, false);
+            }
+
+            // Palette node could be modified later if there are palettized components within.
+            // Copy it now so that future drops are not affected.
+            if (paletteNode) {
+                paletteNode = isc.clone(paletteNode);
+                paletteNode.dropped = true;
+            }
+
+            // if the dragTarget isn't a Palette, we're drag/dropping an existing component, so remove the
+            // existing component and re-create it in its new position
+            var editProxy = dropTargetNode.liveObject.editProxy;
+            if (!source.isA("Palette")) {
+                editProxy.completeReparent(true);
+            } else {
+                editProxy.completeDrop(paletteNode, { skipSnapToGrid: isc.EH.shiftKeyDown() });
+            }
+            return isc.EH.STOP_BUBBLING;
+        }
+
+        var index = liveObject.getDropPosition(dropType);
+
+        if (paletteNode) {
+            // Allow substitute nodes
+            paletteNode = this.substituteNode(dropTargetNode, paletteNode);
+            dropType = paletteNode.type || paletteNode.className;
+
+            // Find best parent for drop
+            var oldDropTargetNode = dropTargetNode;
+            dropTargetNode = this.adjustParentNode(dropTargetNode, paletteNode);
+            if (oldDropTargetNode != dropTargetNode) index = null;
+        }
+
+        if (paletteNode) {
+            editNode = editContext.makeEditNode(paletteNode);
+            editNode.dropped = true;
         }
 
         // modifyEditNode() is a late-modify hook for components with unusual drop requirements
@@ -73678,11 +79956,11 @@ isc.defineClass("LayoutEditProxy", "CanvasEditProxy").addMethods({
         // existing component and re-create it in its new position
         if (!source.isA("Palette")) {
             if (source == liveObject) return;  // Can't drop a component onto itself
-            var tree = liveObject.editContext.getEditNodeTree(),
+            var tree = editContext.getEditNodeTree(),
                 oldParent = tree.getParent(source.editNode),
                 oldIndex = tree.getChildren(oldParent).indexOf(source.editNode),
                 newIndex = liveObject.getDropPosition(dropType);
-                liveObject.editContext.removeNode(source.editNode);
+            editContext.removeNode(source.editNode, null, true);
 
             // If we've moved the child component to a slot further down in the same parent,
             // indices will now be off by one because we've just removeed it from its old slot
@@ -73693,40 +79971,51 @@ isc.defineClass("LayoutEditProxy", "CanvasEditProxy").addMethods({
                 // directly; otherwise, we would end up with teetering arrangments of Canvases in
                 // inside CanvasItems inside DynamicForms inside CanvasItems inside DynamicForms...
                 if (source.isA("CanvasItem")) {
-                    node = liveObject.editContext.addNode(source.canvas.editNode, dropTargetNode, newIndex);
+                    node = editContext.addNode(source.canvas.editNode, dropTargetNode, newIndex);
                 } else {
                     // Wrap the FormItem in a DynamicForm
-                    node = liveObject.editContext.addWithWrapper(source.editNode, dropTargetNode);
+                    node = editContext.addWithWrapper(source.editNode, dropTargetNode, newIndex);
                 }
             } else if (source.isA("DrawItem")) {
                 // Wrap the DrawItem in a DrawPane
-                node = liveObject.editContext.addWithWrapper(source.editNode, dropTargetNode, true);
+                node = editContext.addWithWrapper(source.editNode, dropTargetNode, newIndex, null, true);
             } else {
-                node = liveObject.editContext.addNode(source.editNode, dropTargetNode, newIndex);
+                // Don't offer a binding dialog if so configured because the node isn't really new
+                node = editContext.addNode(source.editNode, dropTargetNode, newIndex, null, null, null, true);
             }
+
+            if (node) {
+                editContext.fireNodeMoved(source.editNode, oldParent, node, dropTargetNode);
+            }
+
             if (isc.isA.TabSet(dropTargetNode.liveObject)) {
                 dropTargetNode.liveObject.selectTab(source);
             } else if (node && node.liveObject) {
                 isc.EditContext.delayCall("selectCanvasOrFormItem", [node.liveObject, true], 200);
             }
         } else {
-            var nodeAdded;
-            var clazz = isc.ClassFactory.getClass(dropType);
+            var clazz = isc.ClassFactory.getClass(dropType),
+                nodeAdded;
             if (clazz && clazz.isA("FormItem")) {
                 // Create a wrapper form to allow the FormItem to be added to this Canvas
-                nodeAdded = liveObject.editContext.addWithWrapper(editNode, dropTargetNode);
+                nodeAdded = editContext.addWithWrapper(editNode, dropTargetNode, index);
             } else if (clazz && clazz.isA("DrawItem")) {
                 // Create a wrapper form to allow the DrawItem to be added to this Canvas
-                nodeAdded = liveObject.editContext.addWithWrapper(editNode, dropTargetNode, true);
+                nodeAdded = editContext.addWithWrapper(editNode, dropTargetNode, index, null, true);
             } else {
                 // A DataSource drop should always be dropped at position 0. Probably a ListGrid.
-                var index = liveObject.getDropPosition(dropType),
-                    iscClass = isc.DataSource.getNearestSchemaClass(dropType)
-                ;
+                var iscClass = isc.DataSource.getNearestSchemaClass(dropType);
                 if (iscClass && iscClass.isA(isc.DataSource)) index = 0;
-                nodeAdded = liveObject.editContext.addNode(editNode, dropTargetNode, index);
+                nodeAdded = editContext.addNode(editNode, dropTargetNode, index);
             }
             if (nodeAdded != null) {
+                if (this.canSelectChildren && editNode.liveObject.editProxy != null &&
+                    editNode.liveObject.editProxy.canSelect != false)
+                {
+                    editContext.selectSingleComponent(editNode.liveObject);
+                }
+
+                // Let node's proxy know that it has just been dropped in place
                 if (editNode.liveObject.editProxy && editNode.liveObject.editProxy.nodeDropped) {
                     editNode.liveObject.editProxy.nodeDropped();
                 }
@@ -73783,6 +80072,7 @@ isc.defineClass("LayoutEditProxy", "CanvasEditProxy").addMethods({
 
     dropOut : function () {
         var liveObject = this.creator;
+        this.showSelectedAppearance(false);
 
         if (!this.shouldPassDropThrough()) {
             if (liveObject.dropOut) liveObject.dropOut();
@@ -73798,6 +80088,39 @@ isc.defineClass("LayoutEditProxy", "CanvasEditProxy").addMethods({
     supportsInlineEdit: false
 });
 
+//> @class LayoutResizeBarEditProxy
+// +link{EditProxy} that handles +link{LayoutResizeBar}
+// objects when editMode is enabled.
+//
+// @inheritsFrom EditProxy
+// @group devTools
+// @treeLocation Client Reference/Tools/EditProxy
+// @visibility external
+//<
+isc.defineClass("LayoutResizeBarEditProxy", "EditProxy").addMethods({
+
+    // This component should operate as it does in live mode so no drag handle is shown
+    showDragHandle: false,
+
+    // Override EditProxy.dragMove to let the component do the normal dragMove operation
+    dragMove : function() {
+        return this.creator.dragMove();
+    },
+
+    click : function () {
+        // Let proxy click handler select canvas if needed
+        var result = this.Super("click", arguments);
+        // Then pass click event back to component to perform normal action
+        this.creator.click();
+        return result;
+    },
+
+    // Component editor handling
+    // ---------------------------------------------------------------------------------------
+
+    supportsInlineEdit: false,
+    inlineEditOnDrop: false
+});
 
 isc.defineClass("DeckEditProxy", "LayoutEditProxy").addMethods({
     // When a pane is dropped into the Deck, set the new pane as the current pane.
@@ -73812,6 +80135,235 @@ isc.defineClass("DeckEditProxy", "LayoutEditProxy").addMethods({
 //Edit Proxy for NavPanel
 //-------------------------------------------------------------------------------------------
 isc.defineClass("NavPanelEditProxy", "LayoutEditProxy").addMethods({
+    onFolderDrop: function (draggedNodes, folder, targetIndex, dropPosition, sourceWidget) {
+        var liveObject = this.creator;
+        var editContext = folder.editContext || liveObject.editContext;
+        var editNode = folder.editNode || liveObject.editNode;
+        var dropType = draggedNodes[0].type;
+
+        // If the dropType is null/undefined (this indicates that a live object is being dropped
+        // rather than a palette node), then return early so that we do not crash.
+        if (dropType == null) return;
+
+        // If a non-NavItem is dropped into tree and dropPosition isn't "over" convert it to
+        // "over". To insert a folder into the tree where desired, the user should drop
+        // a NavItem directly.
+        if (dropType != "NavItem" && dropType != "NavSeparator" && dropType != "NavHeader" &&
+            editNode.type == "NavItem" &&
+            (dropPosition == "before" || dropPosition == "after"))
+        {
+            dropPosition = "over";
+        }
+
+        var addedNavItemNode;
+        if (dropPosition == "after" && editNode.type == "NavPanel") {
+            // If the user drops a NavItem node over the blank area of the navGrid, then create
+            // a new NavItem.
+            if (dropType == "NavItem") {
+                addedNavItemNode = editContext.addFromPaletteNode(draggedNodes[0], editNode, targetIndex);
+
+            // If the user drops a widget node over the blank area of the navGrid, then implicitly
+            // create a new NavItem whose pane is the widget created from the dropped widget node.
+            } else {
+                var navItemNode = editContext.findPaletteNode("type", "NavItem")
+                var innerNode = editContext.addFromPaletteNode(navItemNode, editNode, targetIndex);
+                addedNavItemNode = innerNode;
+                var itemPaneNode = innerNode.liveObject.editContext.addFromPaletteNode(draggedNodes[0], innerNode);
+                liveObject.setItemPane(innerNode.liveObject, itemPaneNode.liveObject);
+            }
+        } else {
+            var parentNode = editNode;
+            if (dropPosition == "before") {
+                // Dropping "before" the target node allows an insert into the tree
+                var tree = editContext.getEditNodeTree();
+                parentNode = tree.getParent(editNode);
+
+                var siblings = tree.getChildren(parentNode);
+                targetIndex = siblings.findIndex("ID", editNode.ID);
+            }
+
+            // If the user drops a NavItem node, then create a new NavItem where the NavItem
+            // node was dropped.
+            if (dropType == "NavItem") {
+                addedNavItemNode = editContext.addFromPaletteNode(draggedNodes[0], parentNode, targetIndex);
+
+            // If the user drops a widget node onto a header NavItem, then implicitly create a
+            // new NavItem whose pane is the widget created from the dropped widget node.
+            // This makes sense because a header NavItem cannot itself have a pane.
+
+            } else if (folder == this.creator.navGrid.data.getRoot() || parentNode.liveObject.isHeader) {
+                var navItemNode = editContext.findPaletteNode("type", "NavItem")
+                var innerNode = editContext.addFromPaletteNode(navItemNode, parentNode, targetIndex);
+                addedNavItemNode = innerNode;
+                var itemPaneNode = innerNode.liveObject.editContext.addFromPaletteNode(draggedNodes[0], innerNode);
+                liveObject.setItemPane(innerNode.liveObject, itemPaneNode.liveObject);
+
+            // Otherwise, create a widget from the dropped node (presumably a widget node) and
+            // set the item pane of whichever NavItem onto which the node was dropped.
+            } else {
+                var existingComponent = isc.DS.getChildObject(parentNode.liveObject, "Canvas"),
+                    editProxy = this.creator.editProxy
+                ;
+                var _this = this;
+                var finishAdd = function (dropNode, parentNode, targetIndex, paneNode) {
+                    var itemPaneNode = editContext.addFromPaletteNode(dropNode, parentNode, targetIndex);
+                    if (!paneNode) paneNode = itemPaneNode;
+                    liveObject.setItemPane(folder, paneNode.liveObject);
+                    liveObject.setCurrentItem(folder);
+                };
+                // By default a new component dropped onto a NavItem is placed at index 0
+                // so it shows before any sub-items
+                targetIndex = 0;
+
+                if (existingComponent) {
+                    var droppedNode = draggedNodes[0];
+                    editProxy.confirmReplaceComponent(existingComponent.editNode, droppedNode, function (wrapperType) {
+                        // Wrap existing component if specified
+                        var paneNode = null;
+                        if (wrapperType) {
+                            parentNode = paneNode = editProxy.wrapExistingComponent(existingComponent.editNode, wrapperType);
+                            // Add at default position within wrapper
+                            targetIndex = null;
+                        }
+                        finishAdd(droppedNode, parentNode, targetIndex, paneNode);
+                    });
+                } else {
+                    finishAdd(draggedNodes[0], parentNode, targetIndex);
+                }
+            }
+        }
+
+        // Select and start inline editing of any new non-separator NavItem.
+        if (addedNavItemNode != null) {
+            var addedNavItem = addedNavItemNode.liveObject;
+            if (!addedNavItem.isSeparator) {
+                liveObject.setCurrentItem(addedNavItem);
+                liveObject.editProxy.delayCall("startItemInlineEditing", [addedNavItem, liveObject.navGrid.getRecordIndex(addedNavItem)]);
+            }
+        }
+
+        return false;
+    },
+    setEditMode : function (editingOn) {
+        var properties = this.Super("setEditMode", arguments);
+        if (editingOn) {
+            this.creator.navGrid.canAcceptDroppedRecords = true;
+            this.creator.navGrid.canDragRecordsOut = true;
+            this.creator.navGrid.canReorderRecords = false;
+            this.creator.navGrid.canReparentNodes = false;
+            this.creator.navGrid.canDropOnLeaves = true;
+            this.creator.navGrid.onFolderDrop = this.onFolderDrop;
+            this.creator.navGrid.dragDataAction = "copy";
+            this.creator.navGrid.showOpenIcons = true;
+            this.creator.navGrid.showDropIcons = true;
+
+            this.creator.navGrid._setUpDragProperties();
+
+            // Update the NavPanel's editNode with the current currentItemId
+            this.creator.editContext.setNodeProperties(this.creator.editNode, { currentItemId: this.creator.currentItemId });
+
+        } else {
+            this.creator.navGrid.canAcceptDroppedRecords = false;
+            this.creator.navGrid.canDropOnLeaves = false;
+            this.creator.navGrid.canDragRecordsOut = false;
+            this.creator.navGrid.canReorderRecords = false;
+            this.creator.navGrid.canReparentNodes = false;
+            delete this.creator.navGrid.onFolderDrop;
+            this.creator.navGrid._setUpDragProperties();
+        }
+    },
+
+    // override of EditProxy.canAddNode
+    // - Don't allow a NavItem to be dropped into the NavGrid
+    canAddNode : function (dragType, dragTarget, dragData, dropOnFolder) {
+        var canAdd = this.Super("canAddNode", arguments);
+
+        // Don't allow a NavItem to be dropped into the NavGrid
+        if (canAdd && !dropOnFolder && dragType == "NavItem" && !this.creator.navGrid.containsEvent()) {
+            canAdd = null;
+        }
+
+        return canAdd;
+    },
+
+    // override of EditProxy.completeDrop
+    // - ignore any drop from component tree
+    completeDrop : function (paletteNode, settings, callback) { },
+
+    drop : function () {
+        // this.creator.navDeck.setBorder("");
+        if (!this.creator.navGrid.containsEvent()) {
+            if (this.shouldPassDropThrough()) {
+                return;
+            }
+
+            var liveObject = this.creator,
+                source = isc.EH.dragTarget,
+                paletteNode,
+                dropType;
+
+            if (!source.isA("Palette")) {
+                if (source.isA("FormItemProxyCanvas")) {
+                    source = source.formItem;
+                }
+                dropType = source._constructor || source.Class;
+            } else {
+                paletteNode = source.transferDragData();
+                if (isc.isAn.Array(paletteNode)) paletteNode = paletteNode[0];
+                paletteNode.dropped = true;
+                dropType = paletteNode.type || paletteNode.className;
+            }
+
+            // If node is dropped from a tree, clean it of internal properties
+            if (source.isA("TreePalette")) {
+                paletteNode = source.data.getCleanNodeData([paletteNode], false, false, false)[0];
+            }
+
+            // Palette node could be modified later if there are palettized components within.
+            // Copy it now so that future drops are not affected.
+            paletteNode = isc.clone(paletteNode);
+
+            // if the source isn't a Palette, we're drag/dropping an existing component, so remove the
+            // existing component and re-create it in its new position
+            if (!source.isA("Palette")) {
+                if (source == liveObject) return;  // Can't drop a component onto itself
+                var editContext = liveObject.editContext,
+                    editNode = liveObject.editNode,
+                    tree = editContext.getEditNodeTree(),
+                    oldParent = tree.getParent(source.editNode);
+                editContext.removeNode(source.editNode);
+            }
+
+            var folder = this.creator.navGrid.getSelectedRecord();
+            if (folder == null) {
+                folder = this.creator.navGrid.data.getRoot();
+            }
+            this.onFolderDrop([paletteNode], folder, 0, "over");
+        }
+        return isc.EH.STOP_BUBBLING;
+    },
+
+    dropOut : function () {
+        this.showSelectedAppearance(false);
+        // this.creator.navDeck.setBorder("");
+    },
+
+    dropMove : function () {
+        if (!this.willAcceptDrop()) return false;
+        if(this.creator.hideDropLine) this.creator.hideDropLine();
+        if (!this.shouldPassDropThrough()) {
+            // if (this.creator.navGrid.containsEvent()) {
+            //     this.creator.navDeck.setBorder("");
+            // } else {
+            //     this.creator.navDeck.setBorder("2px dashed blue");
+            // }
+            return isc.EH.STOP_BUBBLING;
+        }
+    },
+
+    // Component editor handling
+    // ---------------------------------------------------------------------------------------
+
     supportsInlineEdit: true,
 
     // inline editing will only be triggered programmatically
@@ -73855,173 +80407,14 @@ isc.defineClass("NavPanelEditProxy", "LayoutEditProxy").addMethods({
             var liveNavGridBody = liveNavGrid.body;
             if (liveNavGridBody != null) liveNavGridBody.redrawIfDirty("setInlineEditText");
         }
+
+        this.delayCall("selectNavItem", [this._inlineEditItem], 100);
     },
 
-    onFolderDrop: function (draggedNodes, folder, targetIndex, dropPosition, sourceWidget) {
+    selectNavItem : function (item) {
         var liveObject = this.creator;
-        var editContext = folder.editContext || liveObject.editContext;
-        var editNode = folder.editNode || liveObject.editNode;
-        var dropType = draggedNodes[0].type;
-
-        // If the dropType is null/undefined (this indicates that a live object is being dropped
-        // rather than a palette node), then return early so that we do not crash.
-        if (dropType == null) return;
-
-        var addedNavItemNode;
-        if (dropPosition == "over") {
-            // If the user drops a NavItem node, then create a new NavItem where the NavItem
-            // node was dropped.
-            if (dropType == "NavItem") {
-                addedNavItemNode = editContext.addFromPaletteNode(draggedNodes[0], editNode);
-
-            // If the user drops a widget node onto a header NavItem, then implicitly create a
-            // new NavItem whose pane is the widget created from the dropped widget node.
-            // This makes sense because a header NavItem cannot itself have a pane.
-
-            } else if (editNode.liveObject.isHeader) {
-                var navItemNode = editContext.findPaletteNode("type", "NavItem")
-                var innerNode = editContext.addFromPaletteNode(navItemNode, editNode, targetIndex);
-                addedNavItemNode = innerNode;
-                var itemPaneNode = innerNode.liveObject.editContext.addFromPaletteNode(draggedNodes[0], innerNode);
-                liveObject.setItemPane(innerNode.liveObject, itemPaneNode.liveObject);
-
-            // Otherwise, create a widget from the dropped node (presumably a widget node) and
-            // set the item pane of whichever NavItem onto which the node was dropped.
-            } else {
-                var itemPaneNode = editContext.addFromPaletteNode(draggedNodes[0], editNode);
-                liveObject.setItemPane(folder, itemPaneNode.liveObject);
-            }
-
-        } else {
-            // If the user drops a NavItem node over the blank area of the navGrid, then create
-            // a new NavItem.
-            if (dropType == "NavItem") {
-                addedNavItemNode = editContext.addFromPaletteNode(draggedNodes[0], editNode, targetIndex);
-
-            // If the user drops a widget node over the blank area of the navGrid, then implicitly
-            // create a new NavItem whose pane is the widget created from the dropped widget node.
-            } else {
-                var navItemNode = editContext.findPaletteNode("type", "NavItem")
-                var innerNode = editContext.addFromPaletteNode(navItemNode, editNode, targetIndex);
-                addedNavItemNode = innerNode;
-                var itemPaneNode = innerNode.liveObject.editContext.addFromPaletteNode(draggedNodes[0], innerNode);
-                liveObject.setItemPane(innerNode.liveObject, itemPaneNode.liveObject);
-            }
-        }
-
-        // Start inline editing of any new non-separator NavItem.
-        if (addedNavItemNode != null) {
-            var addedNavItem = addedNavItemNode.liveObject;
-            if (!addedNavItem.isSeparator) {
-                liveObject.editProxy.delayCall("startItemInlineEditing", [addedNavItem, liveObject.navGrid.getRecordIndex(addedNavItem)]);
-            }
-        }
-
-        return false;
-    },
-    setEditMode : function (editingOn) {
-        var properties = this.Super("setEditMode", arguments);
-        if (editingOn) {
-            this.creator.navGrid.canAcceptDroppedRecords = true;
-            this.creator.navGrid.canDragRecordsOut = true;
-            this.creator.navGrid.canReorderRecords = false;
-            this.creator.navGrid.canReparentNodes = false;
-            this.creator.navGrid.canDropOnLeaves = true;
-            this.creator.navGrid.onFolderDrop = this.onFolderDrop;
-            this.creator.navGrid.dragDataAction = "copy";
-            this.creator.navGrid.showOpenIcons = true;
-            this.creator.navGrid.showDropIcons = true;
-
-            this.creator.navGrid._setUpDragProperties();
-
-            // Update the NavPanel's editNode with the current currentItemId
-            this.creator.editContext.setNodeProperties(this.creator.editNode, { currentItemId: this.creator.currentItemId });
-
-        } else {
-            this.creator.navGrid.canAcceptDroppedRecords = false;
-            this.creator.navGrid.canDropOnLeaves = false;
-            this.creator.navGrid.canDragRecordsOut = false;
-            this.creator.navGrid.canReorderRecords = false;
-            this.creator.navGrid.canReparentNodes = false;
-            delete this.creator.navGrid.onFolderDrop;
-            this.creator.navGrid._setUpDragProperties();
-        }
-    },
-    canAdd : function (dropType) {
-        var liveObject = this.creator;
-        if (dropType == "NavItem" && !liveObject.navGrid.containsEvent()) {
-            return false;
-        }
-        return true;
-    },
-    drop : function () {
-        this.creator.navDeck.setBorder("");
-        if (!this.creator.navGrid.containsEvent()) {
-            if (this.shouldPassDropThrough()) {
-                return;
-            }
-
-            var liveObject = this.creator,
-                source = isc.EH.dragTarget,
-                paletteNode,
-                dropType;
-
-            if (!source.isA("Palette")) {
-                if (source.isA("FormItemProxyCanvas")) {
-                    source = source.formItem;
-                }
-                dropType = source._constructor || source.Class;
-            } else {
-                paletteNode = source.transferDragData();
-                if (isc.isAn.Array(paletteNode)) paletteNode = paletteNode[0];
-                paletteNode.dropped = true;
-                dropType = paletteNode.type || paletteNode.className;
-            }
-
-            // If node is dropped from a tree, clean it of internal properties
-            if (source.isA("TreeGrid")) {
-                paletteNode = source.data.getCleanNodeData([paletteNode], false, false, false)[0];
-            }
-
-            // Palette node could be modified later if there are palettized components within.
-            // Copy it now so that future drops are not affected.
-            paletteNode = isc.clone(paletteNode);
-
-            // if the source isn't a Palette, we're drag/dropping an existing component, so remove the
-            // existing component and re-create it in its new position
-            if (!source.isA("Palette")) {
-                if (source == liveObject) return;  // Can't drop a component onto itself
-                var editContext = liveObject.editContext,
-                    editNode = liveObject.editNode,
-                    tree = editContext.getEditNodeTree(),
-                    oldParent = tree.getParent(source.editNode);
-                editContext.removeNode(source.editNode);
-            }
-
-            var folder = this.creator.navGrid.getSelectedRecord();
-            if (folder == null) {
-                folder = this.creator.navGrid.data.getRoot();
-            }
-            this.onFolderDrop([paletteNode], folder, 0, "over");
-        }
-        return isc.EH.STOP_BUBBLING;
-    },
-
-    dropOut : function () {
-        this.creator.navDeck.setBorder("");
-    },
-
-    dropMove : function () {
-        if (!this.willAcceptDrop()) return false;
-        if(this.creator.hideDropLine) this.creator.hideDropLine();
-        if (!this.shouldPassDropThrough()) {
-            if (this.creator.navGrid.containsEvent()) {
-                this.creator.navDeck.setBorder("");
-            } else {
-                this.creator.navDeck.setBorder("2px dashed blue");
-            }
-            return isc.EH.STOP_BUBBLING;
-        }
+        isc.EditContext.selectCanvasOrFormItem(item);
+        liveObject.setCurrentItem(item);
     }
 });
 
@@ -74039,15 +80432,133 @@ isc.defineClass("NavPanelEditProxy", "LayoutEditProxy").addMethods({
 //<
 isc.defineClass("SplitPaneEditProxy", "LayoutEditProxy").addMethods({
 
-    // When a component is dragged onto a SplitPane show an overlay with 3 panes as targets
+    // observe() callbacks - rerun logic to locate first breadth-first DBC
+    _$updatePaneComponent:  "observer._updatePaneComponent(arguments[1])",
+    _$updatePaneComponents: "observer._updatePaneComponent(arguments[1]);" +
+         "if(arguments[1]!=arguments[3])observer._updatePaneComponent(arguments[3])",
+
+    // When a component is dragged onto a SplitPane show an overlay with 2 or 3 panes as targets
     // for the drop. Panes show the current component, if any.
+    //
+    // A SplitPane shows 2 panes for drop where a TriplePane shows 3 panes.
 
 
 
-    // Reject additions via the EditTree since it's not clear what pane
-    // the addition would target.
-    canAddToParent : function (type) {
-        return false;
+    setEditMode : function (editingOn) {
+        this.Super("setEditMode", arguments);
+        var liveObject = this.creator;
+
+        this.isTriplePane = isc.isA.TriplePane(liveObject);
+
+        // Show instruction canvas where no content panes are yet assigned.
+        // Overridden set*Pane methods will remove the instruction canvas when
+        // adding a real pane and create a new if the pane is removed.
+        var detailListPane = (this.isTriplePane ? "List Pane" : "Navigation Pane");
+        if (!liveObject.navigationPane) {
+            liveObject._setNavigationPane(this.createInstructionPane(null, "Navigation Pane",
+                                                                     "navigationPane"));
+        }
+        if (!liveObject.listPane && this.isTriplePane) {
+            liveObject._setListPane(this.createInstructionPane(null, "List Pane", "listPane"));
+        }
+        if (!liveObject.detailPane) {
+            liveObject._setDetailPane(this.createInstructionPane(null, "Detail Pane",
+                                                                 "detailPane", detailListPane));
+        }
+
+
+        var editContext = liveObject.editContext;
+        if (editingOn) {
+            this.observe(editContext, "nodeAdded",   this._$updatePaneComponent);
+            this.observe(editContext, "nodeRemoved", this._$updatePaneComponent);
+            this.observe(editContext, "nodeMoved",   this._$updatePaneComponents);
+        } else {
+            this.ignore(editContext, "nodeAdded");
+            this.ignore(editContext, "nodeRemoved");
+            this.ignore(editContext, "nodeMoved");
+        }
+
+        liveObject.updateUI(true);
+    },
+
+
+    _updatePaneComponent : function (parentEditNode) {
+        if (!parentEditNode) return;
+
+        var liveObject = this.creator,
+            listPane = liveObject.listPane,
+            navPane = liveObject.navigationPane,
+            parentNode = parentEditNode.liveObject
+        ;
+        // walk up the parent chain looking for our SplitPane's panes
+        while (parentNode != null) {
+            if (listPane == parentNode) {
+                liveObject._observePane("list", listPane, true);
+                return;
+            }
+            if (navPane == parentNode) {
+                liveObject._observePane("navigation", navPane, true);
+                return;
+            }
+            parentNode = parentNode.parentElement;
+        }
+        // node wasn't under our SplitPane's navigation or list pane
+    },
+
+    getOverrideProperties : function () {
+        var properties = this.Super("getOverrideProperties", arguments);
+
+        properties = isc.addProperties({}, properties, {
+            // Override set*Pane methods to remove or add instruction pane
+            setNavigationPane: this.setNavigationPane,
+            setListPane: this.setListPane,
+            setDetailPane: this.setDetailPane
+        });
+        return properties;
+    },
+
+    setNavigationPane : function (pane) {
+        var oldPane = this.creator.navigationPane;
+        if (!pane) pane = this.createInstructionPane(null, "Navigation Pane", "navigationPane");
+
+        this.creator.Super("setNavigationPane", [pane]);
+        if (oldPane != null && oldPane != pane && oldPane._instructionPane) {
+            oldPane.destroy();
+        }
+    },
+
+    setListPane : function (pane) {
+        var oldPane = this.creator.listPane;
+        if (!pane) pane = this.createInstructionPane(null, "List Pane", "listPane");
+
+        this.creator.Super("setListPane", [pane]);
+        if (oldPane != null && oldPane != pane && oldPane._instructionPane) {
+            oldPane.destroy();
+        }
+    },
+
+    setDetailPane : function (pane) {
+        var oldPane = this.creator.detailPane;
+        if (!pane) {
+            var detailListPane = (this.isTriplePane ? "List Pane" : "Navigation Pane");
+            pane = this.createInstructionPane(null, "Detail Pane", "detailPane", detailListPane);
+        }
+
+        this.creator.Super("setDetailPane", [pane]);
+        if (oldPane != null && oldPane != pane && oldPane._instructionPane) {
+            oldPane.destroy();
+        }
+    },
+
+    // override of EditProxy.canAddNode
+    // - Reject additions via the EditTree since it's not clear what pane the addition would target
+    canAddNode : function (dragType, dragTarget, dragData, dropOnFolder) {
+        var canAdd = this.Super("canAddNode", arguments);
+
+        // Reject additions via the EditTree since it's not clear what pane the addition would target
+        if (canAdd && dropOnFolder) canAdd = null;
+
+        return canAdd;
     },
 
     drop : function () {
@@ -74066,12 +80577,142 @@ isc.defineClass("SplitPaneEditProxy", "LayoutEditProxy").addMethods({
         }
         if (!this.shouldPassDropThrough()) {
             this.showDropOverlay(true);
+            this.creator.hideDropLine();
         }
         return isc.EH.STOP_BUBBLING;
     },
 
+    dropMove : function () {
+        var result = this.Super("dropMove", arguments);
+
+        // While dropOver normally handles showing the drop overlay, if the first "over"
+        // location is in the dropMargin, shouldPassDropThrough returns true to allow drop
+        // over parent component and therefore doesn't show the drop overlay. Once the
+        // drop location moves further over this component and therefore not being passed
+        // through (i.e. returns STOP_BUBBLING) make sure the drop overlay is showing.
+        if (result == isc.EH.STOP_BUBBLING) {
+            this.showDropOverlay(true);
+            this.creator.hideDropLine();
+        }
+        return result;
+    },
+
     dropOut : function () {
+        this.showSelectedAppearance(false);
         this.showDropOverlay(false);
+    },
+
+    // Instruction panes
+
+    paneDefaults : {
+        _constructor: "VLayout",
+        align: "center",
+        showDropLines: false,
+        padding: 30,
+        membersMargin: 5,
+        overflow: "hidden"
+    },
+
+    paneHeaderDefaults: {
+        _constructor: "Label",
+        autoDraw: false,
+        height: 10,
+        align: "center",
+        styleName: "instructionsHeader"
+    },
+
+    paneExistingComponentDefaults: {
+        _constructor: "Label",
+        autoDraw: false,
+        height: 10,
+        align: "center",
+        styleName: "instructionsComponent"
+    },
+
+    paneInstructionsDefaults: {
+        _constructor: "Label",
+        autoDraw: false,
+        height: 10,
+        align: "center",
+        styleName: "instructionsText"
+    },
+
+    paneImageDefaults: {
+        _constructor: "Img",
+        autoDraw: false,
+        layoutAlign: "center",
+        imageStyle: "normal"
+    },
+
+    _paneDetails: {
+        navigationPane: {
+            showResizeBar: true,
+            text: "Typically contains a TreeGrid or ListGrid that updates data " +
+                  "in other panes when clicked.",
+            imageSrc: "SplitPane_navigationPane.png",
+            imageHeight: 230,
+            imageWidth: 310
+        },
+        listPane: {
+            showResizeBar: true,
+            text: "Usually contains a ListGrid which is updated based on " +
+                  "selections in the navigation pane.",
+            imageSrc: "SplitPane_listPane.png",
+            imageHeight: 195,
+            imageWidth: 296
+        },
+        detailPane: {
+            text: "Add new records, or view / update those selected in the ${detailListPane} " +
+                  "by adding a DetailGrid or TableLayoutForm.",
+            imageSrc: "SplitPane_detailPane.png",
+            imageHeight: 170,
+            imageWidth: 370
+        }
+    },
+
+    createInstructionPane : function (width, title, parentProperty, detailListPane) {
+        var paneDetails = this._paneDetails[parentProperty];
+
+        var pane = this.createAutoChild("pane", {
+            _instructionPane: true,
+            width: width,
+            name: title,
+            canAcceptDrop: true,
+            parentProperty: parentProperty,
+            showResizeBar: (width != null ? paneDetails.showResizeBar : false),
+            drop : function () {
+                return this.creator.addPane(this.parentProperty);
+            }
+        });
+
+        var paneHeader = pane.paneHeader = this.createAutoChild("paneHeader", {
+            contents: this.getTitleSpan(title, false)
+        });
+
+        var paneExistingComponent = pane.paneExistingComponent = this.createAutoChild("paneExistingComponent", {
+            visibility: "hidden"
+        });
+
+        var paneInstructions = this.createAutoChild("paneInstructions", {
+            contents: paneDetails.text.evalDynamicString(null, { detailListPane: detailListPane })
+        });
+
+        var paneImage = this.createAutoChild("paneImage", {
+            src: paneDetails.imageSrc,
+            height: paneDetails.imageHeight,
+            width: paneDetails.imageWidth
+        });
+
+        pane.addMembers([paneHeader, paneExistingComponent, paneInstructions, paneImage]);
+
+        return pane;
+    },
+
+    getTitleSpan : function (title, over) {
+        var titleStyle = (over ? "style='color:#0000ff'" : ""),
+            span = "<span " + titleStyle + ">" + title + "</span>"
+        ;
+        return span;
     },
 
     dropOverlayDefaults: {
@@ -74081,71 +80722,53 @@ isc.defineClass("SplitPaneEditProxy", "LayoutEditProxy").addMethods({
         width: "100%",
         height: "100%",
 
-        paneDefaults : {
-            _constructor: "VLayout",
-            border: "1px solid blue",
-            align: "center",
-            showDropLines: false
-        },
-
         initWidget : function () {
             this.Super("initWidget", arguments);
 
-            this.navPane = this.createPane("30%", "Navigation Pane", "navigationPane");
-            this.listPane = this.createPane("100%", "List Pane", "listPane");
-            this.detailPane = this.createPane("100%", "Detail Pane", "detailPane");
+            // Create drop panes. For a TriplePane all 3 panes are shown but for a
+            // SplitPane just show the nav and detail panes
+            var detailListPane = (this.isTriplePane ? "List Pane" : "Navigation Pane");
+            this.navPane = this.creator.createInstructionPane("40%", "Navigation Pane", "navigationPane");
+            this.detailPane = this.creator.createInstructionPane("100%", "Detail Pane", "detailPane", detailListPane);
+            this._panes = [ this.navPane, this.detailPane ];
+
+            var rightPaneMembers = [this.detailPane];
+            if (this.isTriplePane) {
+                this.listPane = this.creator.createInstructionPane("100%", "List Pane", "listPane");
+                rightPaneMembers.addAt(this.listPane, 0);
+                this._panes.add(this.listPane);
+            }
 
             var rightLayout = isc.VLayout.create({
-                widht: "70%",
-                members: [ this.listPane, this.detailPane ]
+                width: "60%",
+                members: rightPaneMembers
             });
             this.addChild(isc.HLayout.create({
                 width: "100%",
                 height: "100%",
                 members: [ this.navPane, rightLayout ]
             }));
-
-            this._panes = [ this.navPane, this.listPane, this.detailPane ];
         },
 
-        createPane : function (width, title, parentProperty) {
-            var initialText = this.getPaneText(title, false, parentProperty),
-                label = isc.Label.create({
-                    align: "center",
-                    overflow: "hidden",
-                    contents: initialText
-                })
-            ;
-
-            return this.createAutoChild("pane", {
-                width: width,
-                members: [ label ],
-                name: title,
-                canAcceptDrop: true,
-                parentProperty: parentProperty,
-                drop : function () {
-                    return this.creator.creator.addPane(this.parentProperty);
-                }
-            });
+        updatePane : function (pane, over) {
+            pane.paneHeader.setContents(this.creator.getTitleSpan(pane.name, over));
+            var existingComponent = this.getPaneComponent(pane);
+            pane.paneExistingComponent.setContents(existingComponent);
+            if (!existingComponent) pane.paneExistingComponent.hide();
+            else pane.paneExistingComponent.show();
         },
 
-        setPaneLabel : function (pane, text) {
-            var label = pane.getMember(0);
-            label.setContents(text);
-        },
-
-        getPaneText : function (title, over, parentProperty) {
-            var titleStyle = (over ? "style='color:#0000ff'" : ""),
-                text = "<span " + titleStyle + ">" + title + "</span>",
-                editProxy = this.creator,
+        getPaneComponent : function (pane) {
+            var editProxy = this.creator,
                 liveObject = editProxy.creator,
-                component = liveObject[parentProperty]
+                component = liveObject[pane.parentProperty],
+                text = null;
             ;
-            if (component) {
+            if (component && !component._instructionPane) {
                 var label = (this.editContext.getSelectedLabelText
                                 ? this.editContext.getSelectedLabelText(component)
                                 : component.toString());
-                text += "<br>Currently: <span style='color:#666666'>" + label + "</span>";
+                text = "Currently: " + label;
             }
             return text;
         },
@@ -74171,12 +80794,10 @@ isc.defineClass("SplitPaneEditProxy", "LayoutEditProxy").addMethods({
             }
             if (!this._lastDropPane || this._lastDropPane != dropPane) {
                 if (this._lastDropPane && this._lastDropPane != dropPane) {
-                    var text = this.getPaneText(this._lastDropPane.name, false, this._lastDropPane.parentProperty);
-                    this.setPaneLabel(this._lastDropPane, text);
+                    this.updatePane(this._lastDropPane, false);
                 }
                 if (dropPane) {
-                    var text = this.getPaneText(dropPane.name, true, dropPane.parentProperty);
-                    this.setPaneLabel(dropPane, text);
+                    this.updatePane(dropPane, true);
                 }
 
                 this._lastDropPane = dropPane;
@@ -74209,10 +80830,8 @@ isc.defineClass("SplitPaneEditProxy", "LayoutEditProxy").addMethods({
             this.Super("show", arguments);
             delete this._lastDropPane;
             for (var i = 0; i < this._panes.length; i++) {
-                var pane = this._panes[i],
-                    text = this.getPaneText(pane.name, false, pane.parentProperty)
-                ;
-                this.setPaneLabel(pane, text);
+                var pane = this._panes[i];
+                this.updatePane(pane, false);
             }
         },
 
@@ -74227,6 +80846,15 @@ isc.defineClass("SplitPaneEditProxy", "LayoutEditProxy").addMethods({
             return this;
         },
 
+        matchPaneSizes : function () {
+            var master = this.creator.creator;
+            if (master) {
+                if (master.navigationPane) this.navPane.setWidth(master.navigationPane.getVisibleWidth());
+                if (master.listPane) this.listPane.setHeight(master.listPane.getVisibleHeight());
+               else if (master.detailPane) this.detailPane.setHeight(master.detailPane.getVisibleWidth());
+            }
+        },
+
         // Event Bubbling
         // ---------------------------------------------------------------------------------------
 
@@ -74234,6 +80862,12 @@ isc.defineClass("SplitPaneEditProxy", "LayoutEditProxy").addMethods({
         // brings the mask to the front when we stop dragging - which is not what we want, so we
         // suppress it here.
         bringToFront : function () { },
+
+        // When showing the overlay it needs to be brought to the front of all other children.
+        // If not, the resize bar in the component may bleed through if manually moved.
+        _bringToFront : function () {
+            this.Super("bringToFront", arguments);
+        },
 
         // Resize
         // ---------------------------------------------------------------------------------------
@@ -74257,11 +80891,14 @@ isc.defineClass("SplitPaneEditProxy", "LayoutEditProxy").addMethods({
             if (!this._dropOverlay) {
                 var props = isc.addProperties({}, this.dropOverlayDefaults, this.dropOverlayProperties, {
                     editContext: liveObject.editContext,
-                    creator: this
+                    creator: this,
+                    isTriplePane: this.isTriplePane
                 });
                 this._dropOverlay = isc.Canvas.create(props);
                 liveObject.addChild(this._dropOverlay);
             }
+            this._dropOverlay.matchPaneSizes();
+            this._dropOverlay._bringToFront();
             this._dropOverlay.show();
         } else if (this._dropOverlay) {
             this._dropOverlay.hide();
@@ -74271,9 +80908,12 @@ isc.defineClass("SplitPaneEditProxy", "LayoutEditProxy").addMethods({
     addPane : function (parentProperty) {
         var liveObject = this.creator,
             source = isc.EH.dragTarget,
+            parentNode = liveObject.editNode,
             editNode,
             dropType
         ;
+
+        liveObject.hideDropLine();
 
         if (!source.isA("Palette")) {
             if (source.isA("FormItemProxyCanvas")) {
@@ -74282,11 +80922,65 @@ isc.defineClass("SplitPaneEditProxy", "LayoutEditProxy").addMethods({
             dropType = source._constructor || source.Class;
         } else {
             var paletteNode = source.transferDragData();
+            if (isc.isAn.Array(paletteNode)) paletteNode = paletteNode[0];
+
+            // If node is dropped from a tree, clean it of internal properties
+            if (source.isA("TreePalette")) {
+                paletteNode = source.data.getCleanNodeData([paletteNode], false, false, false)[0];
+            }
+
+            // Palette node could be modified later if there are palettized components within.
+            // Copy it now so that future drops are not affected.
+            paletteNode = isc.clone(paletteNode);
+
+            paletteNode.dropped = true;
+
+            // Allow substitute nodes
+            paletteNode = this.substituteNode(liveObject.editNode, paletteNode);
+
+            // Find best parent for drop
+            parentNode = this.adjustParentNode(parentNode, paletteNode);
+            if (parentNode != liveObject.editNode) {
+                // Not adding to the split pane
+                liveObject.editContext.addFromPaletteNodes([paletteNode], parentNode, null, null, false);
+                return isc.EH.STOP_BUBBLING;
+            }
+
             editNode = liveObject.editContext.makeEditNode(paletteNode);
             editNode.dropped = true;
             editNode.defaults.parentProperty = parentProperty;
             dropType = editNode.type || editNode.className;
         }
+
+        var existingComponent = isc.DS.getChildObject(liveObject, "Canvas", null, parentProperty),
+            _this = this;
+        if (existingComponent && !existingComponent._instructionPane) {
+            this.confirmReplaceComponent(existingComponent.editNode, editNode, function (wrapperType) {
+                _this.finishAddPane(parentProperty, editNode, dropType, wrapperType);
+            });
+        } else {
+            // set*Pane override methods above will remove the instruction pane as needed
+            this.finishAddPane(parentProperty, editNode, dropType);
+        }
+
+        return isc.EH.STOP_BUBBLING;
+    },
+
+    // Drop always positions node at the end but we want them to always show in the
+    // "targetPositions" order below. Reorder new node to maintain this desired
+    // order. Note that on screen re-load the order is as defined in the
+    // SplitPane schema so the corresponding fields there must also be in this
+    // order.
+    _targetPositions: {
+        "navigationPane": 0,
+        "listPane"      : 1,
+        "detailPane"    : 2
+    },
+
+    finishAddPane : function (parentProperty, editNode, dropType, wrapperType) {
+        var liveObject = this.creator,
+            editContext = liveObject.editContext
+        ;
 
         // Establish the actual drop node (this may not be the canvas accepting the drop - for a
         // composite component like TabSet, the dropped-on canvas will be the tabBar or
@@ -74296,171 +80990,117 @@ isc.defineClass("SplitPaneEditProxy", "LayoutEditProxy").addMethods({
             dropTargetNode = dropTargetNode.editNode;
         }
 
+        // dropTargetNode is the SplitPane
+        // parentProperty identifies the pane
+        // wrapperType [null, VLayout, HLayout] specifies the desired wrapper
+
+        // Determine targetPosition for drop node
+        var data = editContext.getEditNodeTree(),
+            children = data.getChildren(dropTargetNode),
+            targetPosition = this._targetPositions[parentProperty]
+        ;
+
+        // By default the parentNode of our drop is the dropTarget unless a wrapper is applied
+        var parentNode = dropTargetNode,
+            wrapperNode
+        ;
+
+        if (wrapperType != null) {
+            // Wrapping existing component and new editNode with a "wrapperType" container
+
+            // Remove existing component from editTree
+            var existingComponent = isc.DS.getChildObject(liveObject, "Canvas", null, parentProperty),
+                existingNode = existingComponent.editNode,
+                index = children.indexOf(existingComponent.editNode)
+            ;
+            editContext.removeNode(existingNode, null, true);
+
+            // Remove reference to parentProperty from existing node so it isn't used to
+            // add to new wrapper parent
+            if (existingNode.defaults) delete existingNode.defaults.parentProperty;
+
+            // Create new wrapper for wrapperType
+            var paletteNode = {
+                type: wrapperType,
+                defaults : { _constructor: wrapperType },
+                parentProperty: parentProperty
+            };
+            wrapperNode = editContext.makeEditNode(paletteNode);
+
+            // add the wrapper to the parent
+            editContext.addNode(wrapperNode, parentNode, index, parentProperty, null, null, true);
+
+            // add the existing component node to the wrapper
+            editContext.addNode(existingNode, wrapperNode);
+
+            // Addition of actual dropped component goes into wrapperNode.
+            // And parentProperty is no longer needed.
+            parentNode = wrapperNode;
+            parentProperty = null;
+
+            // Remove reference to parentProperty from new node so it isn't used to
+            // add to new wrapper parent
+            if (editNode.defaults) delete editNode.defaults.parentProperty;
+        }
+
         // modifyEditNode() is a late-modify hook for components with unusual drop requirements
         // that don't fit in with the normal scheme of things (SectionStack only, as of August 09).
         // This method can be used to modify the editNode that is going to be the parent - or
         // replace it with a whole different one
         if (this.modifyEditNode) {
-            dropTargetNode = this.modifyEditNode(editNode, dropTargetNode, dropType);
-            if (!dropTargetNode) {
-                liveObject.hideDropLine();
-                return isc.EH.STOP_BUBBLING;
-            }
+            parentNode = this.modifyEditNode(editNode, parentNode, dropType);
+            if (!parentNode) return;
         }
 
-        // if the source isn't a Palette, we're drag/dropping an existing component, so remove the
-        // existing component and re-create it in its new position
-        if (!source.isA("Palette")) {
-            if (source == liveObject) return;  // Can't drop a component onto itself
-            var tree = liveObject.editContext.getEditNodeTree(),
-                oldParent = tree.getParent(source.editNode),
-                oldIndex = tree.getChildren(oldParent).indexOf(source.editNode),
-                newIndex = liveObject.getDropPosition(dropType);
-                liveObject.editContext.removeNode(source.editNode)
-            ;
-
-            // If we've moved the child component to a slot further down in the same parent,
-            // indices will now be off by one because we've just removeed it from its old slot
-            if (oldParent == this.editNode && newIndex > oldIndex) newIndex--;
-            var node;
-            if (source.isA("FormItem")) {
-                // If the source is a CanvasItem, unwrap it and insert the canvas into this Layout
-                // directly; otherwise, we would end up with teetering arrangments of Canvases in
-                // inside CanvasItems inside DynamicForms inside CanvasItems inside DynamicForms...
-                if (source.isA("CanvasItem")) {
-                    source.canvas.editNode.defaults.parentProperty = parentProperty;
-                    node = liveObject.editContext.addNode(source.canvas.editNode, dropTargetNode, newIndex, parentProperty);
-                } else {
-                    // Wrap the FormItem in a DynamicForm
-                    source.editNode.defaults.parentProperty = parentProperty;
-                    node = liveObject.editContext.addWithWrapper(source.editNode, dropTargetNode, null, parentProperty);
-                }
-            } else if (source.isA("DrawItem")) {
-                // Wrap the DrawItem in a DrawPane
-                source.editNode.defaults.parentProperty = parentProperty;
-                node = liveObject.editContext.addWithWrapper(source.editNode, dropTargetNode, true, parentProperty);
-            } else {
-                source.editNode.defaults.parentProperty = parentProperty;
-                node = liveObject.editContext.addNode(source.editNode, dropTargetNode, newIndex, parentProperty);
-            }
-            if (isc.isA.TabSet(dropTargetNode.liveObject)) {
-                dropTargetNode.liveObject.selectTab(source);
-            } else if (node && node.liveObject) {
-                isc.EditContext.delayCall("selectCanvasOrFormItem", [node.liveObject, true], 200);
-            }
+        var nodeAdded;
+        var clazz = isc.ClassFactory.getClass(dropType);
+        if (clazz && clazz.isA("FormItem")) {
+            // Create a wrapper form to allow the FormItem to be added to this Canvas
+            nodeAdded = editContext.addWithWrapper(editNode, parentNode, null, parentProperty);
+        } else if (clazz && clazz.isA("DrawItem")) {
+            // Create a wrapper form to allow the DrawItem to be added to this Canvas
+            nodeAdded = editContext.addWithWrapper(editNode, parentNode, null, parentProperty, true);
         } else {
-            var nodeAdded;
-            var clazz = isc.ClassFactory.getClass(dropType);
-            if (clazz && clazz.isA("FormItem")) {
-                // Create a wrapper form to allow the FormItem to be added to this Canvas
-                nodeAdded = liveObject.editContext.addWithWrapper(editNode, dropTargetNode, null, parentProperty);
-            } else if (clazz && clazz.isA("DrawItem")) {
-                // Create a wrapper form to allow the DrawItem to be added to this Canvas
-                nodeAdded = liveObject.editContext.addWithWrapper(editNode, dropTargetNode, true, parentProperty);
-            } else {
-                nodeAdded = liveObject.editContext.addNode(editNode, dropTargetNode,
-                        liveObject.getDropPosition(dropType), parentProperty);
-            }
-            if (nodeAdded != null) {
-                if (editNode.liveObject.editProxy && editNode.liveObject.editProxy.nodeDropped) {
-                    editNode.liveObject.editProxy.nodeDropped();
+            nodeAdded = editContext.addNode(editNode, parentNode,
+                    liveObject.getDropPosition(dropType), parentProperty);
+        }
+        if (nodeAdded != null) {
+            var paneNode = wrapperNode || nodeAdded;
+
+            // Reorder new node to maintain this desired order.
+            if (targetPosition != null) {
+                // Find current position
+                var currentPosition = null;
+                for (var i = 0; i < children.length; i++) {
+                    var childNode = children[i];
+                    if (childNode == paneNode) {
+                        currentPosition = i;
+                        break;
+                    }
+                }
+                // Reorder node into correct position if needed
+                if (currentPosition != null) {
+                    var targetChild = children[targetPosition];
+                    if (targetChild != paneNode) {
+                        editContext.reorderNode(dropTargetNode, currentPosition, targetPosition);
+                    }
                 }
             }
-        }
 
-        liveObject.hideDropLine();
-        return isc.EH.STOP_BUBBLING;
-
-    },
-
-    // Component editor handling
-    // ---------------------------------------------------------------------------------------
-
-    supportsInlineEdit: false
-});
-
-// Edit Proxy for SectionStack
-//-------------------------------------------------------------------------------------------
-
-//> @class SectionStackEditProxy
-// +link{EditProxy} that handles +link{SectionStack} objects when editMode is enabled.
-//
-// @group devTools
-// @inheritsFrom LayoutEditProxy
-// @treeLocation Client Reference/Tools/EditProxy
-// @visibility external
-//<
-isc.defineClass("SectionStackEditProxy", "LayoutEditProxy").addMethods({
-
-    canAdd : function (type) {
-        if (!this.canDropAtLevel()) return false;
-
-        // SectionStack is a special case for DnD - although it is a VLayout, its schema marks
-        // children, peers and members as inapplicable.  However, anything can be put into a
-        // SectionStackSection.  Therefore, we accept drop of any canvas, and handle adding it
-        // to the appropriate section in the drop method.
-        // We also accept a drop of a FormItem; this will be detected downstream and handled by
-        // wrapping the FormItem inside an auto-created DynamicForm.  Similarly a DrawItem
-        // can be accepted because it will be wrapped inside an auto-created DrawPane.
-        if (type == "SectionStackSection") return true;
-        var classObject = isc.ClassFactory.getClass(type);
-        if (classObject &&
-                (classObject.isA("Canvas") || classObject.isA("FormItem") || classObject.isA("DrawItem")))
-        {
-            return true;
-        }
-        return null;
-    },
-
-    //  Return the modified editNode (or a completely different one); return false to abandon
-    //  the drop
-    modifyEditNode : function (paletteNode, newEditNode, dropType) {
-        if (dropType == "SectionStackSection") return newEditNode;
-        var dropPosition = this.creator.getDropPosition();
-        if (dropPosition == 0) {
-            isc.warn("Cannot drop before the first section header");
-            return false;
-        }
-
-        var headers = this._getHeaderPositions();
-        for (var i = headers.length-1; i >= 0; i--) {
-            if (dropPosition > headers[i]) {
-                // Return the edit node off the section header
-                return this.creator.getSectionHeader(i).editNode;
+            // Fire "event"
+            if (editNode.liveObject.editProxy && editNode.liveObject.editProxy.nodeDropped) {
+                editNode.liveObject.editProxy.nodeDropped();
             }
         }
-        // Shouldn't ever get here
-        return newEditNode;
     },
 
-    //  getDropPosition() - explicitly called from SectionStack.getDropPosition if the user isn't doing
-    //  a drag reorder of sections.
-    getDropPosition : function (dropType) {
-        var pos = this.creator.invokeSuper(isc.SectionStack, "getDropPosition");
-        if (!dropType || dropType == "SectionStackSection") {
-            return pos;
-        }
-
-        var headers = this._getHeaderPositions();
-        for (var i = headers.length-1; i >= 0; i--) {
-            if (pos > headers[i]) {
-                return pos - headers[i] - 1;
-            }
-        }
-
-        return 0;
-    },
-
-    _getHeaderPositions : function () {
+    getChildNodeDescription : function (node) {
         var liveObject = this.creator,
-            headers = [],
-            j = 0;
-        for (var i = 0; i < liveObject.getMembers().length; i++) {
-            if (liveObject.getMember(i).isA(liveObject.sectionHeaderClass)) {
-                headers[j++] = i;
-            }
-        }
-        return headers;
+            pane = node.liveObject
+        ;
+        if (liveObject.navigationPane == pane) return "[Navigation Pane]";
+        else if (liveObject.listPane == pane) return "[List Pane]";
+        else if (liveObject.detailPane == pane) return "[Detail Pane]";
     },
 
     // Component editor handling
@@ -74468,7 +81108,6 @@ isc.defineClass("SectionStackEditProxy", "LayoutEditProxy").addMethods({
 
     supportsInlineEdit: false
 });
-
 
 // Edit Proxy for TabSet
 //-------------------------------------------------------------------------------------------
@@ -74638,29 +81277,34 @@ isc.defineClass("TabSetEditProxy", "CanvasEditProxy").addMethods({
             liveObject.editContext.removeNode(node);
         });
 
+        var editContext = this.creator.editContext,
+            paletteNode = this.getNodePropertiesForType("Tab")
+        ;
+
         // Add new tabs
         for (var i = 0; i < tabNames.length; i++) {
             if (existingTabNames.contains(tabNames[i])) continue;
 
-            var tab = {
-                type: "Tab",
-                defaults: {
-                    title: tabNames[i]
-                }
-            };
-            var node = this.creator.editContext.addNode(this.creator.editContext.makeEditNode(tab),
-                                                     this.creator.editNode, i);
-            this.addDefaultPane(node);
+            var nodeProperties = paletteNode || { type: "Tab" };
+            nodeProperties.defaults = { title: tabNames[i] };
+
+            this.creator.editContext.addNode(
+                editContext.makeEditNode(nodeProperties),
+                this.creator.editNode,
+                i);
         }
     },
 
-    addDefaultPane : function (tabNode) {
-        if (!tabNode) return;
-        var defaultPane = isc.addProperties({}, this.creator.defaultPaneDefaults);
-        if (!defaultPane.type && !defaultPane.className) {
-            defaultPane.type = defaultPane._constructor || this.creator.defaultPaneConstructor;
+    getNodePropertiesForType : function (type) {
+        var editContext = this.creator.editContext,
+            palette = editContext.getDefaultPalette(),
+            paletteNode
+        ;
+        if (palette && palette.findPaletteNode) {
+            paletteNode = palette.findPaletteNode("type", type);
+            if (paletteNode) paletteNode = isc.clone(paletteNode);
         }
-        this.creator.editContext.addNode(this.creator.editContext.makeEditNode(defaultPane), tabNode);
+        return paletteNode;
     },
 
     // Extra stuff to do when tabSet.addTabs() is called when the tabSet is in an editable context
@@ -74705,19 +81349,19 @@ isc.defineClass("TabSetEditProxy", "CanvasEditProxy").addMethods({
         return this.Super("findEditNode", arguments);
     },
 
-    // Override completeItemDrop() to add the default pane to tabs (and drop into
-    // edit-title)
-    completeItemDrop : function (paletteNode, itemIndex, rowNum, colNum, side, callback) {
-        this.Super("completeItemDrop", arguments);
-        if (paletteNode && (paletteNode.type || paletteNode.className) == "Tab") {
-            var liveObj = paletteNode.liveObject;
-            this.addDefaultPane(paletteNode);
-            this.creator.selectTab(liveObj);
+    // Override completeDrop() to initiate title editing
+    completeDrop : function (paletteNode, settings, callback) {
+        var liveObject = this.creator;
+        this.Super("completeDrop", [paletteNode, settings, function (editNode) {
+            if (editNode && (editNode.type || editNode.className) == "Tab") {
+                var targetComponent = editNode.liveObject;
+                liveObject.selectTab(targetComponent);
 
-            liveObj.editProxy.delayCall("editTitle");
-        }
+                targetComponent.editProxy.delayCall("editTitle");
+                if (callback) callback(editNode);
+            }
+        }]);
     }
-
 });
 
 
@@ -74769,12 +81413,106 @@ isc.defineClass("StatefulCanvasEditProxy", "CanvasEditProxy").addMethods({
         return properties;
     },
 
+    // override of EditProxy.mouseDown
+    // - Allow live component to process mouseDown event via handleMouseDown
+    mouseDown : function (event, eventInfo) {
+        var result = this.Super("mouseDown", arguments);
+        if (result == false) return result;
+
+        var liveObject = this.creator;
+
+        // In editMode allow stateful canvas to process mouseDown events so that special
+        // media or styling can be applied during that state.
+        if (liveObject.handleMouseDown) return liveObject.handleMouseDown(event, eventInfo);
+    },
+
+    // override of EditProxy.mouseUp
+    // - Allow live component to process mouseUp event via handleMouseUp
+    mouseUp : function (event, eventInfo) {
+        var result = this.Super("mouseUp", arguments);
+        if (result == false) return result;
+
+        var liveObject = this.creator;
+
+        // In editMode allow stateful canvas to process mouseUp events so that special
+        // media or styling can be applied during the mouseDown state and restored.
+        if (liveObject.handleMouseUp) return liveObject.handleMouseUp(event, eventInfo);
+    },
+
     click : function (event, eventInfo) {
         var result = this.Super("click", arguments);
 
 
         if (this.creator.handleActivate) this.creator.handleActivate(event, eventInfo);
         return result;
+    },
+
+    getNodeDescription : function (node) {
+        if (node.type == "Tab") {
+            // A Tab is auto-assigned an ID but that doesn't match well with the
+            // tab's title so use the title as additional description
+            var liveObject = this.creator;
+            return "Tab: " + liveObject.title.asHTML();
+        }
+    },
+
+    completeReparent : function (reposition) {
+        var liveObject = this.creator,
+            dragTarget = liveObject.ns.EH.dragTarget
+        ;
+
+        // Cannot drop a component onto itself
+        if (dragTarget == liveObject) return;
+
+        var sourceNode = dragTarget.editNode;
+
+        // When dropping a component onto a Tab button we offer to replace the existing
+        // pane or modify it
+        if (isc.isA.TabBar(liveObject.parentElement)) {
+            var existingComponent = isc.DS.getChildObject(liveObject, "Canvas"),
+                _this = this
+            ;
+            if (existingComponent) {
+                this.confirmReplaceComponent(existingComponent.editNode, sourceNode, function (wrapperType) {
+                    // "replace" is the normal operation - let superclass take care of it
+                    if (!wrapperType) return _this.Super("completeReparent", [reposition,dragTarget]);
+
+                    // Add wrapper and move existing component into wrapper
+                    var wrapperNode = this.wrapExistingComponent(existingComponent.editNode, wrapperType);
+
+                    // Complete the original drop using the wrapper EditProxy so all behaviors can be applied
+                    return wrapperNode.liveObject.editProxy.completeReparent(reposition, dragTarget);
+                });
+                return;
+            }
+        }
+        return this.Super("completeReparent", arguments);
+    },
+
+    completeDrop : function (paletteNode, settings, callback) {
+        var liveObject = this.creator;
+
+        // When dropping a component onto a Tab button we offer to replace the existing
+        // pane or modify it
+        if (isc.isA.TabBar(liveObject.parentElement)) {
+            var existingComponent = isc.DS.getChildObject(liveObject, "Canvas"),
+                _this = this
+            ;
+            if (existingComponent) {
+                this.confirmReplaceComponent(existingComponent.editNode, paletteNode, function (wrapperType) {
+                    // "replace" is the normal operation - let superclass take care of it
+                    if (!wrapperType) return _this.Super("completeDrop", arguments);
+
+                    // Add wrapper and move existing component into wrapper
+                    var wrapperNode = this.wrapExistingComponent(existingComponent.editNode, wrapperType);
+
+                    // Complete the original drop using the wrapper EditProxy so all behaviors can be applied
+                    return wrapperNode.liveObject.editProxy.completeDrop(paletteNode, settings, callback);
+                });
+                return;
+            }
+        }
+        return this.Super("completeDrop", arguments);
     },
 
     // Component editor handling
@@ -74812,12 +81550,15 @@ isc.defineClass("StatefulCanvasEditProxy", "CanvasEditProxy").addMethods({
 //> @class ImgEditProxy
 // +link{EditProxy} that handles +link{Img} objects when editMode is enabled.
 //
-// @inheritsFrom CanvasEditProxy
+// @inheritsFrom StatefulCanvasEditProxy
 // @group devTools
 // @treeLocation Client Reference/Tools/EditProxy
 // @visibility external
 //<
-isc.defineClass("ImgEditProxy", "CanvasEditProxy");
+isc.defineClass("ImgEditProxy", "StatefulCanvasEditProxy").addProperties({
+    supportsInlineEdit: false,
+    inlineEditOnDrop: false
+});
 
 //> @class ToolStripSeparatorEditProxy
 // +link{EditProxy} that handles +link{ToolStripSeparator} objects when editMode is enabled.
@@ -74832,7 +81573,7 @@ isc.defineClass("ToolStripSeparatorEditProxy", "ImgEditProxy").addMethods({
 });
 
 //> @class LabelEditProxy
-// +link{EditProxy} that handles +link{Label} and +link{SectionHeader} objects when editMode is enabled.
+// +link{EditProxy} that handles +link{Label} objects when editMode is enabled.
 //
 // @inheritsFrom StatefulCanvasEditProxy
 // @group devTools
@@ -74853,9 +81594,6 @@ isc.defineClass("LabelEditProxy", "StatefulCanvasEditProxy").addMethods({
     // @visibility external
     //<
     getInlineEditText : function () {
-        if (isc.isA.SectionHeader(this.creator)) {
-            return this.creator.getTitle();
-        }
         return this.creator.getContents();
     },
 
@@ -74872,11 +81610,52 @@ isc.defineClass("LabelEditProxy", "StatefulCanvasEditProxy").addMethods({
     setInlineEditText : function (newValue) {
         var liveObject = this.creator;
 
-        if (isc.isA.SectionHeader(liveObject)) {
-            liveObject.editContext.setNodeProperties(liveObject.editNode, { title: newValue });
-        } else {
-            liveObject.editContext.setNodeProperties(liveObject.editNode, { contents: newValue });
-        }
+        liveObject.editContext.setNodeProperties(liveObject.editNode, { contents: newValue });
+    }
+});
+
+//> @class HeaderEditProxy
+// +link{HeaderEditProxy} that handles +link{Header} objects when editMode is enabled.
+//
+// @inheritsFrom LayoutEditProxy
+// @group devTools
+// @treeLocation Client Reference/Tools/EditProxy
+// @visibility external
+//<
+isc.defineClass("HeaderEditProxy", "LayoutEditProxy").addMethods({
+
+    // Component editor handling
+    // ---------------------------------------------------------------------------------------
+
+    supportsInlineEdit: true,
+    inlineEditOnDrop: true,
+
+    //> @method headerEditProxy.getInlineEditText()
+    // Returns the text based on the current component state to be edited inline.
+    // Called by the +link{editProxy.inlineEditForm} to obtain the starting edit value.
+    // <p>
+    // Returns the component's <code>title</code>.
+    //
+    // @visibility external
+    //<
+    getInlineEditText : function () {
+        return this.creator.title;
+    },
+
+    //> @method headerEditProxy.setInlineEditText()
+    // Save the new value into the component's state. Called by the
+    // +link{editProxy.inlineEditForm} to commit the change.
+    // <p>
+    // Updates the component's <code>title</code>.
+    //
+    // @param newValue (String) the new component title
+    //
+    // @visibility external
+    //<
+    setInlineEditText : function (newValue) {
+        var liveObject = this.creator;
+
+        liveObject.editContext.setNodeProperties(liveObject.editNode, { title: newValue });
     }
 });
 
@@ -74937,22 +81716,26 @@ isc.defineClass("ProgressbarEditProxy", "StatefulCanvasEditProxy").addMethods({
 //<
 isc.defineClass("WindowEditProxy", "LayoutEditProxy").addMethods({
 
-    canAdd : function (dropType) {
-        var liveObject = this.creator;
-        var dragData = liveObject.ns.EH.dragTarget.getDragData(),
-            obj = (isc.isAn.Array(dragData) ? dragData[0] : dragData)
-        ;
+    // override of EditProxy.canAddNode
+    // - Allow header/footer component drop only in correct target area
+    canAddNode : function (dragType, dragTarget, dragData, dropOnFolder) {
+        var canAdd = this.Super("canAddNode", arguments);
 
-        var typeClass = isc.ClassFactory.getClass(obj.type);
-        if (typeClass) {
-            if (typeClass._markerTarget == "header" && liveObject.header && !liveObject.header.containsEvent()) {
-                return false;
-            }
-            if (typeClass._markerTarget == "footer" && liveObject.footer && !liveObject.footer.containsEvent()) {
-                return false;
+        if (canAdd && !dropOnFolder) {
+            // Allow header/footer component drop only in correct target area
+            var typeClass = isc.ClassFactory.getClass(dragType);
+            if (typeClass) {
+                var liveObject = this.creator;
+                if (typeClass._markerTarget == "header" && liveObject.header && !liveObject.header.containsEvent()) {
+                    canAdd = null;
+                }
+                if (typeClass._markerTarget == "footer" && liveObject.footer && !liveObject.footer.containsEvent()) {
+                    canAdd = null;
+                }
             }
         }
-        return true;
+
+        return canAdd;
     },
 
     dropMove : function () {
@@ -74978,6 +81761,7 @@ isc.defineClass("WindowEditProxy", "LayoutEditProxy").addMethods({
     },
 
     dropOut : function () {
+        this.showSelectedAppearance(false);
         if (this.creator.header) this.creator.header.setBorder("");
         if (this.creator.footer) this.creator.footer.setBorder("");
     },
@@ -75000,6 +81784,7 @@ isc.defineClass("WindowEditProxy", "LayoutEditProxy").addMethods({
             if (this.shouldPassDropThrough()) return;
 
             var liveObject = this.creator,
+                editContext = liveObject.editContext,
                 source = isc.EH.dragTarget,
                 paletteNode,
                 dropType;
@@ -75014,7 +81799,7 @@ isc.defineClass("WindowEditProxy", "LayoutEditProxy").addMethods({
             }
 
             // If node is dropped from a tree, clean it of internal properties
-            if (source.isA("TreeGrid")) {
+            if (source.isA("TreePalette")) {
                 paletteNode = source.data.getCleanNodeData([paletteNode], false, false, false)[0];
             }
 
@@ -75024,19 +81809,56 @@ isc.defineClass("WindowEditProxy", "LayoutEditProxy").addMethods({
 
             // if the source isn't a Palette, we're drag/dropping an existing component, so remove the
             // existing component and re-create it in its new position
+            var skipNodeAddedNotification = null,
+                wrapped = false
+            ;
             if (!source.isA("Palette")) {
                 if (source == liveObject) return;  // Can't drop a component onto itself
-                var editContext = liveObject.editContext,
-                    editNode = liveObject.editNode,
-                    tree = editContext.getEditNodeTree(),
-                    oldParent = tree.getParent(source.editNode);
-                editContext.removeNode(source.editNode);
+                editContext.removeNode(source.editNode, null, true);
+                skipNodeAddedNotification = true;
+            } else {
+                var clazz = isc.ClassFactory.getClass(dropType);
+                if (clazz && (clazz.isA("FormItem") || clazz.isA("DrawItem"))) {
+                    var editNode = editContext.makeEditNode(paletteNode);
+                    if (clazz && clazz.isA("FormItem")) {
+                        editNode = editContext.addWithWrapper(editNode, liveObject.editNode, null, targetAttribute);
+                    } else {
+                        editNode = editContext.addWithWrapper(editNode, liveObject.editNode, null, targetAttribute, true);
+                    }
+                    wrapped = true;
+                }
             }
 
-            var newEditNode = liveObject.editContext.makeEditNode(paletteNode, liveObject.editNode);
-            liveObject.editContext.addNode(newEditNode, liveObject.editNode, null, targetAttribute);
+            if (!wrapped) {
+                var newEditNode = liveObject.editContext.makeEditNode(paletteNode, liveObject.editNode);
+                // Don't offer a binding dialog if so configured because the node isn't really new
+                editContext.addNode(newEditNode, liveObject.editNode, null, targetAttribute, null, null, skipNodeAddedNotification);
+
+                if (skipNodeAddedNotification) {
+                    var oldEditNode = source.editNode,
+                        tree = editContext.getEditNodeTree(),
+                        oldParentNode = tree.getParent(oldEditNode);
+                    editContext.fireNodeMoved(oldEditNode, oldParentNode, newEditNode, liveObject.editNode);
+                }
+            }
         }
         return isc.EH.STOP_BUBBLING;
+    },
+
+    // override of EditProxy.getResizeEdges
+    // - A modal window can be resized
+    getResizeEdges : function () {
+        var liveObject = this.creator;
+        if (isc.isA.ModalWindow(liveObject) || liveObject.isModal) {
+            this.persistCoordinates = true;
+            return ["B", "R"];
+        }
+        return this.Super("getResizeEdges", arguments);
+    },
+
+    getNodeDescription : function (node) {
+        var liveObject = this.creator;
+        return (liveObject.isModal ? "initially hidden" : null);
     },
 
     // Component editor handling
@@ -75404,11 +82226,123 @@ isc.MenuEditProxy.changeDefaults("inlineEditFormDefaults", { minHeight: 150 });
 
 isc.MenuEditProxy.addMethods({
 
+    // Assigning a visualProxy for a Menu might be helpful but is not required at present
+    // setEditMode : function (editingOn) {
+    //     this.Super("setEditMode", arguments);
+
+    //     if (isc.isA.Menu(this.creator)) {
+    //         var editContext = this.creator.editContext,
+    //             parentNode = editContext.getParentNode(this.creator.editNode)
+    //         ;
+
+    //         if (parentNode.liveObject.menu == this.creator) {
+    //             this.creator._visualProxy = parentNode.liveObject;
+    //         }
+    //     }
+    // },
+
+    // Disable autoDismissOnBlur for the menuButton
+    getOverrideProperties : function () {
+        var properties = this.Super("getOverrideProperties", arguments);
+
+        var liveObject = this.creator;
+        if (isc.isA.Menu(liveObject)) {
+            var editContext = liveObject.editContext,
+                parentNode = editContext.getParentNode(liveObject.editNode),
+                parentComponent = (parentNode ? parentNode.liveObject : null)
+            ;
+            // A context menu isn't shown in the UI.
+            if (!parentComponent || parentComponent.contextMenu != liveObject) {
+                // For a normal menu have it stay visible when shown until explicitly hidden
+                isc.addProperties(properties, { autoDismiss: false, autoDismissOnBlur: false });
+            }
+        }
+        return properties;
+    },
+
+    showSelectedAppearance : function (show, hideLabel, showThumbsOrDragHandle) {
+        this.Super("showSelectedAppearance", arguments);
+
+        // Show/hide the menu
+        var liveObject = this.creator;
+        if (isc.isA.Menu(liveObject)) {
+            var editContext = liveObject.editContext,
+                parentNode = editContext.getParentNode(liveObject.editNode),
+                parentComponent = (parentNode ? parentNode.liveObject : null)
+            ;
+            // A context menu isn't shown in the UI.
+            if (!parentComponent || parentComponent.contextMenu != liveObject) {
+                if (show) this.showMenu()
+                else this.hideMenu();
+            }
+        }
+    },
+
+
+    showMenu : function () {
+        var liveObject = this.creator,
+            show = function (object) {
+                if (object.contextMenu && object.showContextMenu) object.showContextMenu();
+                else if (object.menu && object.showMenu) object.showMenu();
+            }
+        ;
+        if (isc.isA.Menu(liveObject)) {
+            var editContext = this.creator.editContext,
+                parentNode = editContext.getParentNode(liveObject.editNode)
+            ;
+
+            if (parentNode && parentNode.liveObject) {
+                var parentObject = parentNode.liveObject;
+                show(parentObject);
+            }
+        } else {
+            show(liveObject);
+        }
+    },
+
+    hideMenu : function () {
+        var liveObject = this.creator,
+            hide = function (object) {
+                if (object.contextMenu && object.showContextMenu) object.hideContextMenu();
+                else if (object.menu && object.showMenu) object.menu.hide();
+            }
+        ;
+        if (isc.isA.Menu(liveObject)) {
+            var editContext = this.creator.editContext,
+                parentNode = editContext.getParentNode(liveObject.editNode)
+            ;
+
+            if (parentNode && parentNode.liveObject) {
+                var parentObject = parentNode.liveObject;
+                hide(parentObject);
+            }
+        } else {
+            hide(liveObject);
+        }
+     },
+
     // Component editor handling
     // ---------------------------------------------------------------------------------------
 
     supportsInlineEdit: true,
     inlineEditMultiline: true,
+
+    // A MenuButton should support inline editing in both VB and mockup mode.
+    // editContext.isVisualBuilder == true when in VB mode.
+    createInlineEditForm : function () {
+        var liveObject = this.creator,
+            editContext = liveObject.editContext
+        ;
+        if (editContext.isVisualBuilder && this.inlineEditMultiline) {
+            this.inlineEditMultiline = false;
+            isc.MenuEditProxy.changeDefaults("inlineEditFormDefaults", { minHeight: 20 });
+        } else if (!editContext.isVisualBuilder && !this.inlineEditMultiline) {
+            this.inlineEditMultiline = true;
+            isc.MenuEditProxy.changeDefaults("inlineEditFormDefaults", { minHeight: 150 });
+        }
+
+        return this.Super("createInlineEditForm", arguments);
+    },
 
     //> @method menuEditProxy.getInlineEditText()
     // Returns the text based on the current component state to be edited inline.
@@ -75419,7 +82353,12 @@ isc.MenuEditProxy.addMethods({
     // @visibility external
     //<
     getInlineEditText : function () {
-        var liveObject = this.creator;
+        var liveObject = this.creator,
+            editContext = liveObject.editContext
+        ;
+        if (editContext.isVisualBuilder) {
+            return this.creator.getTitle();
+        }
 
         var string = "";
         if (isc.isA.MenuButton(liveObject)) {
@@ -75455,7 +82394,13 @@ isc.MenuEditProxy.addMethods({
     // @visibility external
     //<
     setInlineEditText : function (newValue) {
-        var liveObject = this.creator;
+        var liveObject = this.creator,
+            editContext = liveObject.editContext
+        ;
+        if (editContext.isVisualBuilder) {
+            liveObject.editContext.setNodeProperties(liveObject.editNode, { title: newValue });
+            return;
+        }
 
         if (isc.isA.MenuButton(liveObject)) {
             var menu = isc.MenuEditProxy.parseMenuButtonString(newValue);
@@ -75480,6 +82425,241 @@ isc.MenuEditProxy.addMethods({
     }
 });
 
+// Edit Proxy for SectionStack
+//-------------------------------------------------------------------------------------------
+
+//> @class SectionStackEditProxy
+// +link{EditProxy} that handles +link{SectionStack} objects when editMode is enabled.
+//
+// @group devTools
+// @inheritsFrom LayoutEditProxy
+// @treeLocation Client Reference/Tools/EditProxy
+// @visibility external
+//<
+isc.defineClass("SectionStackEditProxy", "LayoutEditProxy").addMethods({
+
+    // override of EditProxy.canAddNode
+    // - Allow any Canvas, FormItem or DrawItem to be dropped into a section
+    canAddNode : function (dragType, dragTarget, dragData, dropOnFolder) {
+        var canAdd = this.Super("canAddNode", arguments);
+
+        if (!canAdd) {
+            // SectionStack is a special case for DnD - although it is a VLayout, its schema marks
+            // children, peers and members as inapplicable.  However, anything can be put into a
+            // SectionStackSection.  Therefore, we accept drop of any canvas, and handle adding it
+            // to the appropriate section in the drop method.
+            //
+            // We also accept a drop of a FormItem; this will be detected downstream and handled by
+            // wrapping the FormItem inside an auto-created DynamicForm.  Similarly a DrawItem
+            // can be accepted because it will be wrapped inside an auto-created DrawPane.
+            var classObject = isc.ClassFactory.getClass(dragType);
+            if (classObject &&
+                (classObject.isA("Canvas") || classObject.isA("FormItem") || classObject.isA("DrawItem")))
+            {
+                canAdd = true;
+            }
+        }
+
+        return canAdd;
+    },
+
+    //  Return the modified editNode (or a completely different one); return false to abandon
+    //  the drop
+    modifyEditNode : function (paletteNode, newEditNode, dropType) {
+        if (dropType == "SectionStackSection") return newEditNode;
+        var dropPosition = this.creator.getDropPosition();
+        if (dropPosition == 0) {
+            isc.warn("Cannot drop before the first section header");
+            return false;
+        }
+
+        var headers = this._getHeaderPositions();
+        for (var i = headers.length-1; i >= 0; i--) {
+            if (dropPosition > headers[i]) {
+                // Return the edit node off the section header
+                return this.creator.getSectionHeader(i).editNode;
+            }
+        }
+        // Shouldn't ever get here
+        return newEditNode;
+    },
+
+    //  getDropPosition() - explicitly called from SectionStack.getDropPosition if the user isn't doing
+    //  a drag reorder of sections.
+    getDropPosition : function (dropType) {
+        var pos = this.creator.invokeSuper(isc.SectionStack, "getDropPosition");
+        if (!dropType || dropType == "SectionStackSection") {
+            return pos;
+        }
+
+        var headers = this._getHeaderPositions();
+        for (var i = headers.length-1; i >= 0; i--) {
+            if (pos > headers[i]) {
+                return pos - headers[i] - 1;
+            }
+        }
+
+        return 0;
+    },
+
+    _getHeaderPositions : function () {
+        var liveObject = this.creator,
+            headers = [],
+            j = 0;
+        for (var i = 0; i < liveObject.getMembers().length; i++) {
+            if (liveObject.getMember(i).isA(liveObject.sectionHeaderClass)) {
+                headers[j++] = i;
+            }
+        }
+        return headers;
+    },
+
+    // Component editor handling
+    // ---------------------------------------------------------------------------------------
+
+    supportsInlineEdit: false
+});
+
+//> @class SectionStackSectionEditProxy
+// +link{EditProxy} that handles +link{SectionStackSection} objects when editMode is enabled.
+//
+// @group devTools
+// @inheritsFrom LabelEditProxy
+// @treeLocation Client Reference/Tools/EditProxy
+// @visibility external
+//<
+isc.defineClass("SectionStackSectionEditProxy", "LabelEditProxy").addMethods({
+
+    // Disable double-click suppression on header
+    getOverrideProperties : function () {
+        var properties = this.Super("getOverrideProperties", arguments);
+        isc.addProperties(properties, { noDoubleClicks: false, canAcceptDrop: true });
+        return properties;
+    },
+
+    getNodeDescription : function (node) {
+        // A Section is auto-assigned an ID but that doesn't match well with the
+        // section's title so use the title as additional description
+        var liveObject = this.creator;
+        return "Section: " + liveObject.title.asHTML();
+    },
+
+    getChildNodeDescription : function (node) {
+        var liveObject = this.creator,
+            child = node.liveObject
+        ;
+        if (liveObject.controls && liveObject.controls.contains(child)) return "[Header control]";
+        return null;
+    },
+
+    // Drag/drop method overrides
+    // ---------------------------------------------------------------------------------------
+
+    // Potentially override dropOver, dropMove and dropOut to show target of drop:
+    // items vs controls.
+
+    drop : function () {
+        // Consider the SectionHeader to be divided horizontally into thirds.
+        // A drop in the middle third is added to the "controls" where a drop
+        // elsewhere is added to the normal "items" array.
+
+        var liveObject = this.creator,
+            width = liveObject.getVisibleWidth(),
+            rect = liveObject.getPageRect(),
+            left = rect[0],
+            right = left + width,
+            x = isc.EH.getX()
+        ;
+
+        // If normal "items" drop, let superclass handle the drop
+        if (x < (left + (width / 3)) || x > (right - (width / 3))) {
+            return this.Super("drop", arguments);
+        }
+
+        // Drop on controls
+        var source = isc.EH.dragTarget;
+        if (!source.isA("Palette")) {
+            // Ignore drop of existing nodes onto controls for now
+            return isc.EH.STOP_BUBBLING;
+        }
+
+        var paletteNode = source.transferDragData();
+        if (isc.isAn.Array(paletteNode)) paletteNode = paletteNode[0];
+        paletteNode.dropped = true;
+
+        // If node is dropped from a tree, clean it of internal properties
+        if (source.isA("TreePalette")) {
+            paletteNode = source.data.getCleanNodeData([paletteNode], false, false, false)[0];
+        }
+
+        // Palette node could be modified later if there are palettized components within.
+        // Copy it now so that future drops are not affected.
+        paletteNode = isc.clone(paletteNode);
+
+        var newEditNode = liveObject.editContext.makeEditNode(paletteNode, liveObject.editNode);
+        liveObject.editContext.addNode(newEditNode, liveObject.editNode, null, "controls");
+
+        return isc.EH.STOP_BUBBLING;
+    },
+
+    // Component editor handling
+    // ---------------------------------------------------------------------------------------
+
+    supportsInlineEdit: true,
+    centerInlineEdit: true,
+
+    getInlineEditText : function () {
+        return this.creator.getTitle();
+    },
+
+    setInlineEditText : function (newValue) {
+        var liveObject = this.creator;
+
+        liveObject.editContext.setNodeProperties(liveObject.editNode, { title: newValue });
+    },
+
+    extraEditorPadding: 6,
+
+    // Position editor to the right of the icon
+    positionInlineEditor : function () {
+        this.Super("positionInlineEditor", arguments);
+
+        var liveObject = this.creator;
+
+        if (!liveObject.background) {
+            var iconWidth = (liveObject.icon ? liveObject.iconWidth || liveObject.iconSize : 0),
+                iconSpace = iconWidth + liveObject.getIconSpacing() + this.extraEditorPadding
+            ;
+            if (iconSpace > 0) this.inlineEditLayout.moveBy(iconSpace, 0);
+        }
+    },
+
+    // Adjust editor width to exclude the space taken up by the icon and controls
+    sizeInlineEditor : function () {
+        this.Super("sizeInlineEditor", arguments);
+
+        var liveObject = this.creator,
+            width;
+        if (liveObject.background) {
+            width = liveObject.background.label.getVisibleWidth();
+        } else {
+            var iconWidth = (liveObject.icon ? liveObject.iconWidth || liveObject.iconSize : 0),
+                iconSpace = iconWidth + liveObject.getIconSpacing() + this.extraEditorPadding,
+                controlsSpace = (liveObject.controlsLayout ? liveObject.controlsLayout.getVisibleWidth() + this.extraEditorPadding: 0)
+            ;
+            width = this.inlineEditLayout.getWidth() - iconSpace - controlsSpace;
+        }
+        this.inlineEditLayout.setWidth(width);
+    },
+
+
+    doubleClick : function () {
+        var liveObject = this.creator;
+        if (liveObject._clearPendingClickTimer) liveObject._clearPendingClickTimer();
+        this.Super("doubleClick", arguments);
+    }
+});
+
 
 
 //> @class FormEditProxy
@@ -75496,6 +82676,9 @@ isc.defineClass("FormEditProxy", "CanvasEditProxy").addMethods({
     dropMargin: 5,
 
     setEditMode : function (editingOn) {
+        // An absolute form persists coordinates and sizes for canvas children
+        this.persistCoordinates = (this.creator.itemLayout == "absolute" ? true : null);
+
         this.Super("setEditMode", arguments);
 
         // Throw away anything the user might have typed in edit or live mode
@@ -75516,16 +82699,22 @@ isc.defineClass("FormEditProxy", "CanvasEditProxy").addMethods({
         return properties;
     },
 
-    willAcceptDrop : function (changeObjectSelection) {
-        var liveObject = this.creator;
+    // override of EditProxy.canAddNode
+    // - Allow fields to be reordered within the form but reject item from another form
+    canAddNode : function (dragType, dragTarget, dragData, dropOnFolder) {
+        // A drop of FormItemIcon is always accepted
+        if (dragType == "FormItemIcon") return true;
 
-        // Prevent accepting drop of form onto itself
-        var source = liveObject.ns.EH.dragTarget;
-        if (liveObject == source) {
-            return false;
+        var canAdd = this.Super("canAddNode", arguments);
+
+        if (canAdd && dragData && dragData.liveObject) {
+            var item = dragData.liveObject;
+            // Allow reordering of fields within the form but reject an item from another form
+            if (!isc.isA.FormItem(item) || !item.form || (item.form && item.form != this.creator)) {
+                canAdd = null;
+            }
         }
-
-        return this.Super("willAcceptDrop", arguments);
+        return canAdd;
     },
 
     dropOver : function () {
@@ -75541,6 +82730,11 @@ isc.defineClass("FormEditProxy", "CanvasEditProxy").addMethods({
         this._lastDragOverItem = null;
         // just to be safe
         liveObject.hideDragLine();
+
+        var dragData = this.getEventDragData(),
+            dragType = this.getEventDragType(dragData)
+        ;
+        if (dragType == "FormItemIcon") return isc.EH.STOP_BUBBLING;
 
         // If this component will not accept the because it would
         // be hierarchical, allow the event to continue bubbling
@@ -75566,10 +82760,18 @@ isc.defineClass("FormEditProxy", "CanvasEditProxy").addMethods({
         this._lastDragRect = liveObject.ns.EH.getDragRect();
 
         // DataSource is a special case - we accept drop, but show no drag line
-        var item = liveObject.ns.EH.getDragTarget().getDragData();
-        if (isc.isAn.Array(item)) item = item[0];
-        if (item && (item.type || item.className) == "DataSource" || this.isAbsoluteLayout()) {
+        // Similarly, dropping a FormItemIcon is special and targets a specific FormItem.
+        var dragData = this.getEventDragData(),
+            dragType = this.getEventDragType(dragData)
+        ;
+        if (dragType == "DataSource" || dragType == "FormItemIcon" || this.isAbsoluteLayout()) {
             liveObject.hideDragLine();
+            if (dragType == "FormItemIcon") {
+                var event = liveObject.ns.EH.lastEvent,
+                    dropItem = liveObject.getNearestItem(event.x, event.y)
+                ;
+                this._lastDragOverItem = dropItem;
+            }
             return isc.EH.STOP_BUBBLING;
         }
 
@@ -75587,7 +82789,6 @@ isc.defineClass("FormEditProxy", "CanvasEditProxy").addMethods({
         }
 
         var event = liveObject.ns.EH.lastEvent,
-            overItem = liveObject.getItemAtPageOffset(event.x, event.y),
             dropItem = liveObject.getNearestItem(event.x, event.y);
 
         //if (this._lastDragOverItem && this._lastDragOverItem != dropItem) {
@@ -75625,8 +82826,45 @@ isc.defineClass("FormEditProxy", "CanvasEditProxy").addMethods({
         // DataSource is a special case - it's the only non-visual property that users can drag
         // and drop and a position within the form doesn't make sense
         var liveObject = this.creator,
-            dropItem = liveObject.ns.EH.getDragTarget().getDragData();
+            source = liveObject.ns.EH.getDragTarget(),
+            dropItem = source.getDragData();
         if (isc.isAn.Array(dropItem)) dropItem = dropItem[0];
+
+        if (source.isA("Palette")) {
+            var paletteNode = dropItem,
+                parentNode = liveObject.editNode
+            ;
+
+            // If node is dropped from a tree, clean it of internal properties
+            if (source.isA("TreePalette")) {
+                paletteNode = source.data.getCleanNodeData([paletteNode], false, false, false)[0];
+            }
+
+            // Palette node could be modified later if there are palettized components within.
+            // Copy it now so that future drops are not affected.
+            paletteNode = isc.clone(paletteNode);
+
+            paletteNode.dropped = true;
+
+            // Find best parent for drop
+            parentNode = this.adjustParentNode(parentNode, paletteNode);
+            if (parentNode != liveObject.editNode) {
+                // Not adding to this form
+                var newNodes = liveObject.editContext.addFromPaletteNodes([paletteNode], parentNode, null, null, false);
+                if (newNodes && newNodes.length > 0) {
+                    var editNode = newNodes[0];
+                    if (this.canSelectChildren && editNode.liveObject.editProxy != null &&
+                        editNode.liveObject.editProxy.canSelect != false)
+                    {
+                        liveObject.editContext.selectSingleComponent(editNode.liveObject);
+                    }
+                }
+                return isc.EH.STOP_BUBBLING;
+            }
+
+            dropItem = paletteNode;
+        }
+
         if ((dropItem && (dropItem.type || dropItem.className) == "DataSource") ||
                 (!this.isAbsoluteLayout() && liveObject.getItems().length == 0))     // special case of empty for in normal layout
         {
@@ -75665,6 +82903,12 @@ isc.defineClass("FormEditProxy", "CanvasEditProxy").addMethods({
         if (this.shouldPassDropThrough()) {
             liveObject.hideDragLine();
             return;
+        }
+
+        if (dropItem && (dropItem.type || dropItem.className) == "FormItemIcon") {
+            liveObject.hideDragLine();
+            liveObject.editContext.addFromPaletteNodes([dropItem], item.editNode, null, null, false);
+            return isc.EH.STOP_BUBBLING;
         }
 
         if (insertIndex != null && insertIndex >= 0) {
@@ -75723,7 +82967,7 @@ isc.defineClass("FormEditProxy", "CanvasEditProxy").addMethods({
             // indices will now be off by one because we've just removed it from its old slot
             if (oldParent == liveObject.editNode && itemIndex > oldIndex) itemIndex--;
 
-            var node = liveObject.editContext.addNode(source.editNode, liveObject.editNode, itemIndex);
+            var node = this.addNode(liveObject.editContext, source.editNode, liveObject.editNode, itemIndex);
             if (node && node.liveObject) {
                 isc.EditContext.delayCall("selectCanvasOrFormItem", [node.liveObject, true], 200);
             }
@@ -75790,7 +83034,7 @@ isc.defineClass("FormEditProxy", "CanvasEditProxy").addMethods({
 
                 var parentProperty = (!isc.isA.FormItemProxyCanvas(item) ? "children" : null);
 
-                node = liveObject.editContext.addNode(editNode, liveObject.editNode, itemIndex, parentProperty);
+                node = this.addNode(liveObject.editContext, editNode, liveObject.editNode, itemIndex, parentProperty);
             } else {
                 // Moving node on same parent - repositioning
                 node = editNode;
@@ -75833,44 +83077,44 @@ isc.defineClass("FormEditProxy", "CanvasEditProxy").addMethods({
             canvasEditNode;
         if (isc.isA.Button(sourceObject) || isc.isAn.IButton(sourceObject)) {
             // Special case - Buttons become ButtonItems
+            var title = (sourceObject.title != sourceObject.ID ? sourceObject.title : null),
+                defaults = editNode.defaults
+            ;
+            delete defaults._constructor;
+            delete defaults.autoDraw;
+            delete defaults.ID;
+            delete defaults.autoID;
+            if (defaults.title && title) defaults.title = title;
+            else if (defaults.title && !title) delete defaults.title;
+            sourceObject.markForDestroy();
+
             editNode = liveObject.editContext.makeEditNode({
                 type: "ButtonItem",
-                title: sourceObject.title,
-                defaults : editNode.defaults
-            })
-        } else if (isc.isA.Canvas(sourceObject)) {
+                title: title,
+                defaults: defaults
+            });
+        }
+
+        // Obtain container node to wrap dropped no in if applicable
+        var container = this.getContainerNode(liveObject.editNode, editNode);
+        if (container) {
             skipTitleEdit = true;
             canvasEditNode = editNode;
-            editNode = liveObject.editContext.makeEditNode({type: "CanvasItem"});
-            isc.addProperties(editNode.defaults, {
-                canvas: sourceObject,
-                showTitle: false,
-                startRow: true,
-                endRow: true,
-                width: "*",
-                colSpan: "*"
-            });
+            editNode = liveObject.editContext.makeEditNode(container);
         }
         editNode.dropped = true;
 
         editNode = this.itemDropping(editNode, itemIndex, true);
         if (!editNode) return;
 
-        var nodeAdded = liveObject.editContext.addNode(editNode, liveObject.editNode, itemIndex);
+        var nodeAdded = this.addNode(liveObject.editContext, editNode, liveObject.editNode, itemIndex);
 
         if (nodeAdded) {
 
             isc.EditContext.clearSchemaProperties(nodeAdded);
 
             if (canvasEditNode) {
-                nodeAdded = liveObject.editContext.addNode(canvasEditNode, nodeAdded, 0);
-
-
-                // FIXME: Need a cleaner factoring here (see also Layout.dropItem())
-                if (isc.isA.TabSet(sourceObject)) {
-
-                    sourceObject.delayCall("showAddTabEditor", [], 1000);
-                }
+                nodeAdded = this.addNode(liveObject.editContext, canvasEditNode, nodeAdded, 0);
             }
 
             // Make sure nodeAdded.liveObject is the actual object and not
@@ -75891,15 +83135,15 @@ isc.defineClass("FormEditProxy", "CanvasEditProxy").addMethods({
                 if (item.setEditMode) item.setEditMode(true, item.editContext, item.editNode);
             }
 
-            isc.EditContext.delayCall("selectCanvasOrFormItem", [editNode.liveObject, true], 200);
+            isc.EditContext.delayCall("selectCanvasOrFormItem", [nodeAdded.liveObject, true], 100);
 
 
-            if (skipTitleEdit) {
-                if (nodeAdded.liveObject.inlineEditOnDrop) {
-                    nodeAdded.liveObject.editProxy.delayCall("startInlineEditing");
+            if (skipTitleEdit || (nodeAdded.liveObject.editProxy && nodeAdded.liveObject.editProxy.inlineEditOnDrop)) {
+                if (nodeAdded.liveObject.inlineEditOnDrop || nodeAdded.liveObject.editProxy.inlineEditOnDrop) {
+                    nodeAdded.liveObject.editProxy.delayCall("startInlineEditing", null, 200);
                 }
             } else if (nodeAdded.showTitle != false && nodeAdded.liveObject.editProxy) {
-                nodeAdded.liveObject.editProxy.delayCall("editTitle");
+                nodeAdded.liveObject.editProxy.delayCall("editTitle", null, 200);
             }
         }
         if (callback) this.fireCallback(callback, "node", [nodeAdded]);
@@ -75920,7 +83164,7 @@ isc.defineClass("FormEditProxy", "CanvasEditProxy").addMethods({
         editNode = this.itemDropping(editNode, itemIndex, true);
         if (!editNode) return;
 
-        var nodeAdded = liveObject.editContext.addNode(editNode, liveObject.editNode, itemIndex, parentProperty);
+        var nodeAdded = this.addNode(liveObject.editContext, editNode, liveObject.editNode, itemIndex, parentProperty);
 
         if (nodeAdded) {
 
@@ -76174,8 +83418,7 @@ isc.defineClass("FormEditProxy", "CanvasEditProxy").addMethods({
                         height: 0,
                         _generatedByBuilder: true
                     });
-                    var nodeAdded = liveObject.editContext.addNode(paletteNode, liveObject.editNode,
-                                                             insertIndex);
+                    var nodeAdded = this.addNode(liveObject.editContext, paletteNode, liveObject.editNode, insertIndex);
                     // Keep track of how many new items we've added to the form, because we need
                     // to step the insert point on for any later adds
                     delta++;
@@ -76235,7 +83478,7 @@ isc.defineClass("FormEditProxy", "CanvasEditProxy").addMethods({
                             height: 0,
                             _generatedByBuilder : true
                         });
-                        liveObject.editContext.addNode(paletteNode, liveObject.editNode, rowStartIndex);
+                        this.addNode(liveObject.editContext, paletteNode, liveObject.editNode, rowStartIndex);
                     }
                     this.itemDrop(liveObject.ns.EH.getDragTarget(),
                                     rowStartIndex + (colNum != 0 ? 1 : 0), row, colNum, side,
@@ -76291,7 +83534,7 @@ isc.defineClass("FormEditProxy", "CanvasEditProxy").addMethods({
                             height: 0,
                             _generatedByBuilder: true
                         });
-                        liveObject.editContext.addNode(paletteNode, liveObject.editNode, existingItemIndex + 1);
+                        this.addNode(liveObject.editContext, paletteNode, liveObject.editNode, existingItemIndex + 1);
                     }
                     this.itemDrop(liveObject.ns.EH.getDragTarget(),
                                     existingItemIndex + (padding > 0 ? 2 : 1), row, colNum, side,
@@ -76343,7 +83586,7 @@ isc.defineClass("FormEditProxy", "CanvasEditProxy").addMethods({
                         height: 0,
                         _generatedByBuilder : true
                     });
-                    liveObject.editContext.addNode(paletteNode, liveObject.editNode, rowStartIndex);
+                    this.addNode(liveObject.editContext, paletteNode, liveObject.editNode, rowStartIndex);
                 }
                 this.itemDrop(liveObject.ns.EH.getDragTarget(), rowStartIndex + (colNum == 0 ? 0 : 1),
                     row, colNum, side, function (node) {
@@ -76371,6 +83614,23 @@ isc.defineClass("FormEditProxy", "CanvasEditProxy").addMethods({
 
     },
 
+    addNode : function (editContext, paletteNode, parentNode, rowStartIndex, parentProperty) {
+        var data = editContext.getEditNodeTree(),
+            children = data.getChildren(parentNode),
+            index = rowStartIndex
+        ;
+        if (index != null) {
+
+            for (var i = 0; i < Math.min(rowStartIndex, children.length); i++) {
+                if (isc.isA.DataSource(children[i].liveObject)) {
+                    index++;
+                    break;
+                }
+            }
+        }
+        return editContext.addNode(paletteNode, parentNode, index, parentProperty);
+    },
+
     getAdjustedColSpan  : function(item) {
         if (!item) return 0;
         var cols = item.colSpan != null ? item.colSpan : 1;
@@ -76385,16 +83645,6 @@ isc.defineClass("FormEditProxy", "CanvasEditProxy").addMethods({
         }
 
         return cols;
-    },
-
-    // Override of EditProxy.canAdd - DynamicForm will accept a drop of a Canvas in addition to the
-    // FormItems advertised in its schema
-    canAdd : function (type) {
-        if (!this.canDropAtLevel()) return false;
-        if (this.creator.getObjectField(type) != null) return true;
-        var classObject = isc.ClassFactory.getClass(type);
-        if (classObject && classObject.isA("Canvas")) return true;
-        return null;
     },
 
     // This undocumented method is called from itemDrop() just before the editNode is
@@ -76486,6 +83736,40 @@ isc.defineClass("FormEditProxy", "CanvasEditProxy").addMethods({
         return paletteNode;
     },
 
+    layoutNewFields : function (dataSource, fields) {
+        var liveObject = this.creator;
+        if (liveObject.itemLayout != "absolute") return;
+
+        // For an absolute form where a DataSource is dropped,
+        // stagger the fields so they don't sit on top of each other
+        var top = 0,
+            left = 0,
+            topInc = liveObject.snapVGap || 8,
+            leftInc = liveObject.snapHGap || 8,
+            height = liveObject.height,
+            width = liveObject.width
+        ;
+        for (var i = 0; i < fields.length; i++) {
+            var field = fields[i];
+            var itemType = liveObject.getEditorType(field, liveObject.values),
+                className = isc.FormItemFactory.getItemClassName(field, itemType, liveObject),
+                classObject = isc.FormItemFactory.getItemClass(className),
+                defaultHeight = classObject.getInstanceProperty("height"),
+                defaultWidth = classObject.getInstanceProperty("width")
+            ;
+
+            if ((top + defaultHeight) > height) {
+                // Field will overflow form height. Create another column.
+                top = 0;
+                left = defaultWidth + 50;
+            }
+            field.top = top;
+            field.left = left;
+            top += topInc;
+            left += leftInc;
+        }
+    },
+
     // Edit Mode extras for FormItem and its children
     // -------------------------------------------------------------------------------------------
     changed : function (form, item, value) {
@@ -76548,7 +83832,7 @@ isc.defineClass("FormEditProxy", "CanvasEditProxy").addMethods({
         // otherwise, assume target is in a canvasItem of liveObject and locate that canvasItem
         while (target.parentElement && !target.canvasItem) target = target.parentElement;
         return !target.canvasItem ? null :
-            isc.DynamicForm._getItemInfoFromElement(target.canvasItem.getHandle(), liveObject);
+            isc.DynamicForm._getItemInfoFromElement(target.canvasItem._getItemInfoElement(), liveObject);
     },
 
     getClickedFormItem : function (allModes) {
@@ -76590,6 +83874,9 @@ isc.defineClass("FormEditProxy", "CanvasEditProxy").addMethods({
 //<
 isc.defineClass("FormItemEditProxy", "EditProxy").addMethods({
 
+    // Name of field in defaults where changed value should be saved
+    valueField: "defaultValue",
+
     getOverrideProperties : function () {
         var properties = this.Super("getOverrideProperties", arguments);
         properties = isc.addProperties({}, properties, {
@@ -76603,7 +83890,9 @@ isc.defineClass("FormItemEditProxy", "EditProxy").addMethods({
         // Called in the context of the FormItem itself (this == FormItem)
         var editContext = this.editContext;
         // Save entered value to FormItem defaultValue
-        editContext.setNodeProperties(this.editNode, { defaultValue: value });
+        var properties = {};
+        properties[this.editProxy.valueField] = value;
+        editContext.setNodeProperties(this.editNode, properties);
 
         this.Super("handleChanged", arguments);
     },
@@ -76849,6 +84138,41 @@ isc.defineClass("FormItemEditProxy", "EditProxy").addMethods({
     valueMapEscapeChar: "\\"
 });
 
+//> @class FileItemEditProxy
+// +link{EditProxy} that handles +link{FileItem,FileItems} when editMode is enabled.
+//
+// @inheritsFrom FormItemEditProxy
+// @group devTools
+// @treeLocation Client Reference/Tools/EditProxy
+// @visibility external
+//<
+isc.defineClass("FileItemEditProxy", "FormItemEditProxy").addMethods({
+
+    // To prevent interactions with the FILE element while in editMode,
+    // an editMask is used to capture the mouse events.
+    useEditMask: true,
+
+    editMaskProperties: {
+
+        select : function () {
+            var item = this.masterElement.targetItem,
+                form = item.form
+            ;
+            if (form.editProxy.selectItemsMode != "never") {
+                isc.EditContext.selectCanvasOrFormItem(item, true);
+            }
+        },
+
+        canDrag:false,
+        canDragReposition:false,
+        contents: "&nbsp;",
+        showFocusOutline: false,
+
+        showContextMenu: function () { }
+    }
+});
+
+
 //> @class TextItemEditProxy
 // +link{EditProxy} that handles +link{TextItem,TextItems}, +link{StaticTextItem,StaticTextItems}
 // and +link{BlurbItem,BlurbItems} when editMode is enabled.
@@ -76954,15 +84278,15 @@ isc.defineClass("ButtonItemEditProxy", "FormItemEditProxy").addProperties({
 });
 
 //> @class SelectItemEditProxy
-// +link{EditProxy} that handles +link{SelectItem,SelectItems}, +link{ComboBoxItem,ComboBoxItems}
-// and +link{RadioGroupItem,RadioGroupItems} when editMode is enabled.
+// +link{EditProxy} that handles +link{SelectItem,SelectItems} and +link{ComboBoxItem,ComboBoxItems}
+// when editMode is enabled.
 //
 // @group devTools
 // @inheritsFrom FormItemEditProxy
 // @treeLocation Client Reference/Tools/EditProxy
 // @visibility external
 //<
-// Currently used by SelectItem, ComboBoxItem and RadioGroupItem
+// Currently used by SelectItem and ComboBoxItem
 isc.defineClass("SelectItemEditProxy", "FormItemEditProxy").addMethods({
 
     // Component editor handling
@@ -76970,9 +84294,9 @@ isc.defineClass("SelectItemEditProxy", "FormItemEditProxy").addMethods({
 
     supportsInlineEdit: true,
     inlineEditMultiline: true,
-    inlineEditInstructions: "Enter options, one per line. Use \"*\" to mark the selected option. " +
-        "Use \"StoredValue:Display Value\" to create a mapping between stored values and " +
-        "values displayed to the user.",
+    inlineEditInstructions: "Enter options, one per line. Use trailing \"*\" to mark the " +
+        "selected option. Use \"StoredValue:Display Value\" to create a mapping between " +
+        "stored values and values displayed to the user.",
 
     //> @method selectItemEditProxy.getInlineEditText()
     // Returns the text based on the current component state to be edited inline.
@@ -77099,6 +84423,49 @@ isc.defineClass("SelectItemEditProxy", "FormItemEditProxy").addMethods({
     }
 });
 
+//> @class RadioGroupItemEditProxy
+// +link{EditProxy} that handles +link{RadioGroupItem,RadioGroupItems} when editMode is enabled.
+//
+// @group devTools
+// @inheritsFrom SelectItemEditProxy
+// @treeLocation Client Reference/Tools/EditProxy
+// @visibility external
+//<
+isc.defineClass("RadioGroupItemEditProxy", "SelectItemEditProxy").addMethods({
+
+    setEditMode : function (editingOn) {
+
+        // When component is first created (not from project load) don't let inline editing
+        // begin until the item has been focused.
+
+        if (!isc._loadingNodeTree) this._inlineEditOnFocus = true;
+
+        this.Super("setEditMode", arguments);
+    },
+
+    // Component editor handling
+    // ---------------------------------------------------------------------------------------
+
+    inlineEditOnDrop: true,
+
+    // Name of field in defaults where changed value should be saved
+    valueField: "value",
+
+    startInlineEditing : function (appendChar, key) {
+        // If inline editing is delayed until receiving focus, exit now
+        if (this._inlineEditOnFocus) return;
+        return this.Super("startInlineEditing", arguments);
+    },
+
+
+    doubleClick : function () {
+        var liveObject = this.creator;
+        if (liveObject._clearPendingClickTimer) liveObject._setProcessedDoubleClick();
+        this.Super("doubleClick", arguments);
+    }
+
+});
+
 //> @class CheckboxItemEditProxy
 // +link{EditProxy} that handles +link{CheckboxItem} when editMode is enabled.
 //
@@ -77114,6 +84481,10 @@ isc.defineClass("CheckboxItemEditProxy", "FormItemEditProxy").addMethods({
 
     supportsInlineEdit: true,
 
+    // override of FormItemEditProxy.editTitle
+    // - Suppress title editing
+    editTitle : function (titleField, completionCallback) { },
+
     //> @method checkboxItemEditProxy.getInlineEditText()
     // Returns the text based on the current component state to be edited inline.
     // Called by the +link{editProxy.inlineEditForm} to obtain the starting edit value.
@@ -77123,7 +84494,12 @@ isc.defineClass("CheckboxItemEditProxy", "FormItemEditProxy").addMethods({
     // @visibility external
     //<
     getInlineEditText : function () {
-        var liveObject = this.creator;
+        var liveObject = this.creator,
+            editContext = liveObject.editContext
+        ;
+        if (editContext.isVisualBuilder) {
+            return this.creator.getTitle();
+        }
 
         return (liveObject.value ? "[x]" : "[ ]");
     },
@@ -77139,6 +84515,14 @@ isc.defineClass("CheckboxItemEditProxy", "FormItemEditProxy").addMethods({
     // @visibility external
     //<
     setInlineEditText : function (newValue) {
+        var liveObject = this.creator,
+            editContext = liveObject.editContext
+        ;
+        if (editContext.isVisualBuilder) {
+            liveObject.editContext.setNodeProperties(liveObject.editNode, { title: newValue });
+            return;
+        }
+
         newValue = newValue.replace(/\s+/g, "").toLowerCase();
 
         var checked = ("[x]" == newValue ||
@@ -77385,9 +84769,15 @@ isc.GridEditProxy.addMethods({
         }
     },
 
-    canAddToParent : function (type) {
-        if (isc.isA.TreeGrid(this.creator) && type == "ListGridField") return false;
-        return true;
+    // override of EditProxy.canAddNode
+    // - Reject ListGridField adds for a TreeGrid
+    canAddNode : function (dragType, dragTarget, dragData, dropOnFolder) {
+        var canAdd = this.Super("canAddNode", arguments);
+
+        // Reject ListGridField adds for a TreeGrid
+        if (isc.isA.TreeGrid(this.creator) && canAdd && dragType == "ListGridField") canAdd = null;
+
+        return canAdd;
     },
 
     getOverrideProperties : function () {
@@ -77921,6 +85311,17 @@ isc.GridEditProxy.addMethods({
     supportsInlineEdit: true,
     inlineEditMultiline: true,
 
+    // Grid should allow inline editing only when in Mockup Mode.
+    // editContext.isVisualBuilder == true when in VB mode.
+    startInlineEditing : function () {
+        var liveObject = this.creator,
+            editContext = liveObject.editContext
+        ;
+        // Suppress inline edit
+        if (editContext.isVisualBuilder) return;
+        return this.Super("startInlineEditing", arguments);
+    },
+
     //> @method gridEditProxy.getInlineEditText()
     // Returns the text based on the current component state to be edited inline.
     // Called by the +link{editProxy.inlineEditForm} to obtain the starting edit value.
@@ -78246,7 +85647,7 @@ isc.defineClass("DrawPaneEditProxy", "CanvasEditProxy").addMethods({
                         dropTargetNode = dropTargetNode.editNode;
                     }
 
-                    node = liveObject.editContext.addWithWrapper(editNode, dropTargetNode, true);
+                    node = liveObject.editContext.addWithWrapper(editNode, dropTargetNode, null, null, true);
                 }
                 node.liveObject.moveTo(liveObject.getOffsetX(), liveObject.getOffsetY());
 
@@ -78825,13 +86226,17 @@ isc.defineClass("PropertySheet", "DynamicForm").addProperties({
         textBoxStyle:"propSheetField"
     },
 
+    MeasureItemDefaults : {
+        width:"*",
+        height:20
+    },
+
 
     ColorItemDefaults : {
         width:"*",
-        height:16,
+        height:20,
         pickerIconHeight:16, pickerIconWidth:16,
-        pickerIconSrc:"[SKIN]/DynamicForm/PropSheet_ColorPicker_icon.png",
-        textBoxStyle:"propSheetField"
+        pickerIconSrc:"[SKIN]/DynamicForm/PropSheet_ColorPicker_icon.png"
     },
 
     HeaderItemDefaults : {
@@ -78859,7 +86264,8 @@ isc.defineClass("PropertySheet", "DynamicForm").addProperties({
     titleWidth:120,
     cellSpacing:0,
     cellPadding:0,
-    backgroundColor:"white",
+
+    // backgroundColor:"white",
     requiredTitlePrefix:"<span style='color:green'>",
     requiredTitleSuffix:"</span>",
     titleSuffix:"",
@@ -78913,12 +86319,8 @@ isc.ListEditor.addProperties({
         autoParent:"gridLayout",
         selectionType:isc.Selection.SINGLE,
         recordClick:"this.creator.recordClick(record)",
-        editorEnter:"if (this.creator.moreButton) this.creator.moreButton.enable()",
-        selectionChanged: function() {
-            if (this.anySelected() && this.creator.moreButton) {
-                this.creator.moreButton.enable();
-            }
-        },
+        editorEnter:"this.creator.updateButtonStates()",
+        selectionChanged: "this.creator.updateButtonStates()",
         contextMenu : {
             data : [
                 {title:"Remove", click: "target.creator.removeRecord()" }
@@ -79036,7 +86438,6 @@ isc.ListEditor.addProperties({
         this.addAutoChild("grid", { _constructor: this.gridConstructor } );
         this.addAutoChildren(this.gridButtonsGroup);
         this.addAutoChildren(this.formGroup);
-
     },
 
     formGroup : [
@@ -79123,6 +86524,14 @@ isc.ListEditor.addProperties({
         if (this.inlineEdit) {
             this.gridLayout.animateHide({effect:"wipe", startFrom:"R"});
             this.formLayout.animateShow({effect:"wipe", startFrom:"R"});
+        }
+    },
+
+    updateButtonStates : function () {
+        if (this.grid.anySelected()) {
+            if (this.moreButton) this.moreButton.enable();
+        } else {
+            if (this.moreButton) this.moreButton.disable();
         }
     },
 
@@ -79643,8 +87052,9 @@ getView : function () {
 },
 
 //> @method viewLoader.viewLoaded()
-// StringMethod fired when the view has been loaded.  Has no default implementation.  May be
-// observed or overridden to fire custom logic when loading completes.
+// StringMethod fired when the view has been loaded. Has no default implementation.
+// <smartclient>May be observed or overridden</smartclient><smartgwt>Add a notification</smartgwt>
+// to fire custom logic when loading completes.
 //
 // @param view (Canvas) the view that was loaded
 //
@@ -80123,7 +87533,18 @@ evalScriptBlocks: null,
 // @group contentLoading
 // @visibility external
 //<
-captureSCComponents: true
+captureSCComponents: true,
+
+//> @attr htmlFlow.canSelectText (Boolean : true : IR)
+// Text selection for copy and paste is enabled by default in the HTMLFlow class.
+// Note that this setting has no impact if +link{contentsType} is set to
+// <smartclient>"page".</smartclient>
+// <smartgwt>{@link com.smartgwt.client.types.ContentsType#PAGE}.</smartgwt>
+// In this case contents is loaded from a target URL via an IFRAME element, and text selection
+// behavior will be dictated by the loaded HTML.
+// @visibility external
+//<
+canSelectText: true
 
 //> @attr htmlFlow.selectContentOnSelectAll (Boolean : null : IRW)
 // When this <code>HTMLFlow</code> is focused, causes Ctrl-A / Command-A keypresses to select just
@@ -80179,13 +87600,15 @@ initWidget : function () {
 // Don't load content until draw to allow declarative delayed loading
 draw : function () {
     if (!this.readyToDraw()) return this;
+    var containsIFrame = this.containsIFrame();
+    // disable the 'canSelectText' flag if we contain an iFrame
+
+    if (containsIFrame) this.canSelectText = false;
     this.Super("draw", arguments);
 
     // in this case content isn't loaded until draw, when the IFRAME is created.
     // NOTE: actual code for this resides in Canvas
-    var undef;
-    if (this.containsIFrame()) return this;
-    else if (this.canSelectText === undef) this.canSelectText = true;
+    if (containsIFrame) return this;
 
     // this will cause contents to be loaded if they are not already loading
     if (this.contentsURL &&
@@ -80358,25 +87781,26 @@ _evalContents : function (html, evalScriptBlocks) {
 // @group dataBoundComponentMethods
 // @visibility external
 //<
-fetchRelatedData : function (record, schema, callback, requestProperties) {
+fetchRelatedData : function (record, schema, callback, requestProperties, returnWillFetch) {
     var self = this;
 
-    this.invokeSuper(isc.HTMLFlow, "fetchRelatedData", record, schema, function (dsResponse, data, dsRequest) {
+    return this.invokeSuper(isc.HTMLFlow, "fetchRelatedData", record, schema,
+                            function (dsResponse, data, dsRequest) {
         if (data && data.length > 0) {
             var dataSource = isc.DS.get(dsRequest.dataSource);
 
             if (dataSource.descriptionField) {
                 self.setContents(data[0][dataSource.descriptionField]);
             } else {
-                isc.logWarn("HTMLFlow.fetchRelatedData() called for DataSource '" + dsRequest.dataSource +
-                "' which does not have a descriptionField set.");
+                isc.logWarn("HTMLFlow.fetchRelatedData() called for DataSource '" +
+                    dsRequest.dataSource + "' which does not have a descriptionField set.");
             }
         }
 
         if (callback) {
             callback(dsResponse, data, dsRequest);
         }
-    }, requestProperties);
+    }, requestProperties, returnWillFetch);
 },
 
 getData : function () {
@@ -80508,7 +87932,8 @@ transformHTML : function (html) {
 
 //> @method htmlFlow.contentLoaded()
 // StringMethod fired when content is completely loaded in this htmlFlow. Has no default
-// implementation. May be observed or overridden as a notification type method to fire custom
+// implementation. <smartclient>May be observed or overridden as a notification type method
+// </smartclient><smartgwt>Add a notification</smartgwt> to fire custom
 // logic when loading completes.
 // <P>
 // Notes:
@@ -81014,6 +88439,42 @@ isc.WSDataSource.addMethods({
 // <P>
 // As with the XML format above, an unrecoverable error is indicated by setting the
 // <code>status</code> attribute to -1 and the <code>data</code> property to the error message.
+// <P>
+// <b>Responses with related updates</b>
+// <P>
+// Related updates is a way to communicate additional changes that occur as a consequence of the
+// current DSResponse succeeding, such as changes to other records in the same DataSource or to
+// records from unrelated DataSources. Related updates can be attached to main response via
+// <code>DSResponse.addRelatedUpdate(dsResponse)</code> server-side API, see its docs for more details.
+// RestDataSource supports this on the client, +link{DataSource.updateCaches} will be called for all
+// related updates found in response. Here's schematic example of how they look like:
+// <pre>
+// &lt;response&gt;
+//     ... normal response ...
+//     &lt;relatedUpdates&gt;
+//         &lt;response&gt;
+//              ... normal response ...
+//         &lt;/response&gt;
+//         &lt;response&gt;
+//              ... normal response ...
+//         &lt;/response&gt;
+//     &lt;/relatedUpdates&gt;
+// &lt;/response&gt;
+// </pre>
+// same in JSON format
+// <pre>
+// {
+//   ... normal response ...,
+//   relatedUpdates: [
+//     {
+//       ... normal response ...
+//     },
+//     {
+//       ... normal response ...
+//     }
+//   ]
+// }
+// </pre>
 // <P>
 // <b>Server inbound data formats</b>
 // <P>
@@ -82112,6 +89573,9 @@ isc.RestDataSource.addProperties({
             if (rawResponse.startRow != null) dsResponse.startRow = rawResponse.startRow;
             if (rawResponse.endRow != null) dsResponse.endRow = rawResponse.endRow;
 
+            var relatedUpdates = rawResponse.relatedUpdates;
+            this.handleRelatedUpdates(relatedUpdates);
+
         } else {
             if (dsRequest.clientOnly) return dsResponse;
             dsResponse.status = this.getValidStatus(data.selectString("//status"));
@@ -82142,8 +89606,35 @@ isc.RestDataSource.addProperties({
 
             var endRow = data.selectNumber("//endRow");
             if (endRow != null) dsResponse.endRow = endRow;
+
+            var relatedUpdates = isc.xml.toJS(data.selectNodes("//relatedUpdates/response"));
+            this.handleRelatedUpdates(relatedUpdates);
         }
         return dsResponse;
+    },
+
+    handleRelatedUpdates : function (relatedUpdates) {
+        if (relatedUpdates) {
+            for (var i = 0; i < relatedUpdates.length; i++) {
+                var ds = isc.DataSource.getDataSource(relatedUpdates[i].dataSource);
+
+                // Transform data to correctly feed it to DataSource.updateCaches(), "data" should directly
+                // hold a single record object or an array of multiple records, so if server returns
+                // data structured as follows, move records up one level.
+                // {
+                //   ...
+                //   "data":{
+                //     "record":[
+                //       {...},
+                //       {...}
+                //     ]
+                //   }
+                // }
+                if (relatedUpdates[i].data.record) relatedUpdates[i].data = relatedUpdates[i].data.record;
+
+                ds.updateCaches(relatedUpdates[i]);
+            }
+        }
     },
 
     shouldUseTestDataFetch : function () {
@@ -82228,6 +89719,18 @@ isc.DataSource.create({
             type:"boolean",
             xmlAttribute:"true",
             name:"useStrictJSON",
+            validators:[
+            ]
+        },
+        {
+            type:"boolean",
+            name:"apidoc",
+            validators:[
+            ]
+        },
+        {
+            type:"boolean",
+            name:"isSampleDS",
             validators:[
             ]
         },
@@ -83115,6 +90618,13 @@ isc.DataSource.create({
             name:"requiredMessage",
             validators:[
             ]
+        },
+        {
+            type:"AdvancedCriteria",
+            xmlAttribute:"true",
+            name:"implicitCriteria",
+            validators:[
+            ]
         }
     ]
 })
@@ -83272,6 +90782,13 @@ isc.DataSource.create({
             type:"boolean",
             visibility:"internal",
             name:"xmlExplicitTypes",
+            validators:[
+            ]
+        },
+        {
+            type:"boolean",
+            visibility:"internal",
+            name:"xmlAttributeInRuleCriteria",
             validators:[
             ]
         },
@@ -83980,6 +91497,24 @@ isc.DataSource.create({
         {
             type:"string",
             name:"moveTo",
+            validators:[
+            ]
+        },
+        {
+            type:"string",
+            name:"uploadFieldName",
+            validators:[
+            ]
+        },
+        {
+            type:"string",
+            name:"batchUploadOperationId",
+            validators:[
+            ]
+        },
+        {
+            type:"boolean",
+            name:"batchUploadCaseSensitive",
             validators:[
             ]
         }
@@ -85374,9 +92909,9 @@ setupClause : function () {
         // only show the operator item if the field is not missing - if the field IS missing,
         // extend the text shown as the field-title to show an readable explanation instead
         items.add(isc.addProperties({}, this.operatorPickerDefaults,
-            { width: this.operatorPickerWidth },
+            { width: this.operatorPickerWidth, showIf: this.missingField ? "false" : "true" },
             this.operatorPickerProperties,
-            { name:"operator", showIf: this.missingField ? "false" : "true" }
+            { name:"operator" }
         ));
         var criterion = this.criterion,
             fieldNames = this.getFieldNames(),
@@ -85444,7 +92979,7 @@ setupClause : function () {
                     displayField = (this.showFieldTitles ? "title" : "name"),
                     targetRuleScope = this.getTopLevelFilterBuilder()._targetRuleScope,
                     targetComponent = this.getTopLevelFilterBuilder().targetComponent,
-                    ds = this.getMultiDSFieldDataSource(targetRuleScope.getRuleContext(), targetComponent)
+                    ds = isc.Canvas.getMultiDSFieldDataSource(targetRuleScope, this._ruleScopeDataSources, targetComponent, this.getTopLevelFilterBuilder().excludedRuleScope, this.multiDSFieldFormat)
                 ;
                 // assign ruleScope field DS to fieldPicker item
                 isc.addProperties(items[0], {
@@ -85457,6 +92992,7 @@ setupClause : function () {
                         { name: "title", type: "text", hidden: (pathField != "title") }
                     ],
                     pickListProperties: {
+                        showHeader: false,
                         reusePickList : function () { return false; },
                         formatCellValue : function (value, record, rowNum, colNum) {
                             return (record.enabled == false || _this.multiDSFieldFormat == isc.FilterBuilder.QUALIFIED ? value : "&nbsp;&nbsp;" + value);
@@ -85525,14 +93061,18 @@ setupClause : function () {
             var field = this.field || this.getField(selectedFieldName);
 
             if (!this.missingField && field) {
-                var valueMap = field ? this.getFieldOperatorMap(field, false, "criteria", true) : null;
+                var ds = this.getPrimaryDS();
+                // if the ds has operators specified for the field-type (ds.setTypeOperators()
+                // has been called), we want to allow all the operators specified, including
+                // those that are normally hidden, like isNull et al
+                var includeHidden = ds && ds._typeOperators && ds._typeOperators[field.type] != null;
+                var valueMap = field ? this.getFieldOperatorMap(field, includeHidden, "criteria", true) : null;
 
                 operatorItem.valueMap = valueMap;
                 if (valueMap) {
                     if (criterion && criterion.operator) {
                         operatorItem.defaultValue = criterion.operator;
                     } else {
-                        var ds = this.getPrimaryDS();
                         if (ds) {
                             // use defaultOperator from the data-type of the field or simpleType
                             operatorItem.defaultValue = ds.getFieldDefaultOperator(field.name);
@@ -85750,17 +93290,14 @@ buildValueItemList : function (field, operator, fieldName) {
                 showTitle: false,
                 title : this.valueItemTitle,
                 width: valueItemWidth,
+                hint: hintText,
+                showHintInField: (hintText != null),
                 changed : function () {
                     this.form.creator.valueChanged(this, this.form);
                 }
             },
             valueFieldProps
         );
-
-        if (hintText) {
-            fieldDef.showHintInField = true;
-            fieldDef.hint = hintText;
-        }
 
         if (editorType) fieldDef.editorType = editorType;
 
@@ -85888,7 +93425,7 @@ buildValueItemList : function (field, operator, fieldName) {
                 displayField = (this.showFieldTitles ? "title" : "name"),
                 targetRuleScope = this.getTopLevelFilterBuilder()._targetRuleScope,
                 targetComponent = this.getTopLevelFilterBuilder().targetComponent,
-                ds = this.getMultiDSFieldDataSource(targetRuleScope.getRuleContext(), targetComponent)
+                ds = isc.Canvas.getMultiDSFieldDataSource(targetRuleScope, this._ruleScopeDataSources, targetComponent, this.getTopLevelFilterBuilder().excludedRuleScope, this.multiDSFieldFormat)
             ;
             // assign ruleScope field DS to fieldPicker item
             props = isc.addProperties(props, {
@@ -85900,6 +93437,7 @@ buildValueItemList : function (field, operator, fieldName) {
                     { name: "title", type: "text", hidden: (pathField != "title") }
                 ],
                 pickListProperties: {
+                    autoFitData: "horizontal",
                     reusePickList : function () { return false; },
                     formatCellValue : function (value, record, rowNum, colNum) {
                         return (record.enabled == false || _this.multiDSFieldFormat == isc.FilterBuilder.QUALIFIED ? value : "&nbsp;&nbsp;" + value);
@@ -86352,7 +93890,9 @@ updateValueItems : function (field,operator,fieldName) {
     var form = this.clause;
     var oldValueItem = form.getItem("value");
     var oldValueType = oldValueItem ? oldValueItem.valueType : null;
+    var oldValue = oldValueItem ? oldValueItem.getValue() : null;
 
+    oldValueItem = null;
     this.removeValueFields();
     if (fieldName) form.removeExtraAdvancedCriteriaFields([fieldName]);
 
@@ -86361,20 +93901,32 @@ updateValueItems : function (field,operator,fieldName) {
     form.addItems(items);
     var valueItem = form.getItem("value");
     var valuePathItem = form.getItem("valuePath");
-    if (valueItem &&
-        // type changed (so was a field picker, now a text field, etc)
-        ((valueItem.valueType != oldValueType) ||
-         (valueItem.getValueMap() && valueItem._valueInValueMap &&
-                 !valueItem._valueInValueMap(valueItem.getValue()) ||
-         valueItem.optionDataSource ||
-         !this.retainValuesAcrossFields))
-        )
-    {
-        valueItem.clearValue();
-        if (valuePathItem) {
-            valuePathItem.clearValue();
+    var newValueType = valueItem ? valueItem.valueType : null;
+
+    // keep the value if there's a new valueItem and retainValuesAcrossFields is set (default)
+    var keepValue = valueItem != null && newValueType != null && this.retainValuesAcrossFields;
+
+    if (keepValue) {
+        if (valueItem.optionDataSource ||
+            // operator valueType changed (eg, was a "valueRange" and is now a "valueSet")
+            (newValueType != oldValueType &&
+                // if it was a fieldType and is now a valueSet, retain the value - single value
+                // into an array of one item is fine, no need to clear the value
+                (oldValueType != "fieldType" && newValueType != "valueSet")) ||
+            (valueItem.getValueMap() && valueItem._valueInValueMap &&
+                     !valueItem._valueInValueMap(oldValue))
+            )
+        {
+            keepValue = false;
         }
     }
+
+    if (!keepValue) {
+            //isc.logWarn("clearing value =-= types from " + oldValueType + " to " + newValueType);
+        if (valueItem) valueItem.clearValue();
+        if (valuePathItem) valuePathItem.clearValue();
+    }
+
     if (this.dynamicValueButton) {
         if (valuePathItem) {
             this.dynamicValueButton.show();
@@ -86506,7 +94058,7 @@ updateFields : function () {
     this._lastFieldName = fieldName;
 },
 
-// Wrapper for getfieldOperators. Internal calls pass field but
+// Wrapper for getFieldOperators. Internal calls pass field but
 // filterClause.getFieldOperators, which is public and overridable,
 // takes a fieldName. Extract the fieldName and pass both.
 _getFieldOperators : function (field) {
@@ -86630,7 +94182,7 @@ createDynamicValueWindow : function (fieldName, fieldTitle, pathField, valuePath
     var _this = this,
         targetRuleScope = this.getTopLevelFilterBuilder()._targetRuleScope,
         targetComponent = this.getTopLevelFilterBuilder().targetComponent,
-        ds = this.getMultiDSFieldDataSource(targetRuleScope.getRuleContext(), targetComponent)
+        ds = isc.Canvas.getMultiDSFieldDataSource(targetRuleScope, this._ruleScopeDataSources, targetComponent, this.getTopLevelFilterBuilder().excludedRuleScope, this.multiDSFieldFormat)
     ;
     if (valuePath != null) {
         // Add option to clear valuePath
@@ -86654,7 +94206,7 @@ createDynamicValueWindow : function (fieldName, fieldTitle, pathField, valuePath
 
     this.dynamicValueWindow = this.createAutoChild("dynamicValueWindow", {
         title: this.dynamicValueWindowTitle.evalDynamicString(this, { fieldTitle: fieldTitle }),
-        items: [ ruleScopeGrid, isc.HLayout.create({ height: 1, layoutAlign: "right", membersMargin: 5, members: [ okButton, cancelButton ] }) ],
+        items: [ ruleScopeGrid, isc.HLayout.create({ height: 1, layoutAlign: "right", membersMargin: 10, members: [ okButton, cancelButton ] }) ],
         ruleScopeDS : ds,
         ruleScopeGrid: ruleScopeGrid,
         selectedValuePath : valuePath,
@@ -86684,111 +94236,6 @@ createDynamicValueWindow : function (fieldName, fieldTitle, pathField, valuePath
             }
         }
     });
-},
-
-getMultiDSFieldDataSource : function (ruleContext, targetComponent) {
-    var dataSources = this._ruleScopeDataSources,
-        excludedRuleScope = this.getTopLevelFilterBuilder().excludedRuleScope,
-        targetRuleScope = this.getTopLevelFilterBuilder()._targetRuleScope,
-        owners = isc.Canvas.getRuleScopeDataSourceOwners(targetRuleScope),
-        targetComponentData = [],
-        targetComponentLocalData = [],
-        suppressTargetComponentData = false,
-        testData = [],
-        lastDsID = ""
-    ;
-    for (var i = 0; i < dataSources.length; i++) {
-        var dataSource = dataSources[i];
-        if (isc.isA.String(dataSource)) dataSource = isc.DataSource.get(dataSource);
-        if (dataSource == null) {
-            this.logWarn("getMultiDSFieldDataSource() - unable to locate dataSource:"
-                + dataSources[i]);
-            continue;
-        }
-        var dsID = dataSource.getID(),
-            dsFields = dataSource.getFieldNames(),
-            separatedFormat = (this.multiDSFieldFormat == isc.FilterBuilder.SEPARATED)
-        ;
-
-        // Fields from the targetComponent should be shown first
-        var data = testData;
-        if (targetComponent) {
-            if (dataSource.criteriaBasePath) {
-                var componentID = dataSource.criteriaBasePath.split(".")[0];
-                if (componentID == targetComponent.ID) {
-                    data = targetComponentLocalData;
-                }
-            } else if (targetComponent.dataSource && targetComponent.dataSource.getID() == dsID) {
-                data = targetComponentData;
-            }
-        }
-
-        if (separatedFormat && lastDsID != dsID) {
-            var titlePrefix = (dataSource.criteriaBasePath ? "" : "<i>"),
-                titleSuffix = (dataSource.criteriaBasePath ? "" : "</i>"),
-                dsTitle = dataSource.pluralTitle || dataSource.title || dsID,
-                title = titlePrefix + (data == targetComponentData && dataSource.criteriaBasePath ? "Current Component" : dsTitle) + titleSuffix + " Fields",
-                owner = owners[dataSource.ID],
-                source = (owner ? isc.Canvas.getRuleScopeSourceFromComponent(owner) : null)
-            ;
-            if (owner && source) title += " (" + source + " in <i>" + owner.getID() + "</i>)";
-
-            // Suppress standard DS fields if current component is the provider. This
-            // gives preferences to simple, local fields instead.
-            if (owner == targetComponent && source) suppressTargetComponentData = true;
-
-            data[data.length] = { name: dsID, title: title, type: "text", enabled: false };
-            lastDsID = dsID;
-        }
-
-        for (var j = 0; j < dsFields.length; j++) {
-            var fieldName = dsID + "." + dsFields[j],
-                field = dataSource.fields[dsFields[j]],
-                fieldTitle = (separatedFormat ? field.title : fieldName)
-            ;
-            var record = { name: fieldName, title: fieldTitle, type: field.type };
-            if (dataSource.criteriaBasePath) {
-                record.criteriaPath = field.criteriaPath || fieldName.replace(dsID, dataSource.criteriaBasePath);
-                if (excludedRuleScope && excludedRuleScope.contains(record.criteriaPath)) {
-                    continue;
-                }
-                // Localize criteriaPath for targetComponent fields
-                // This will be applied to valuePath selections
-                if (data == targetComponentData && !field.criteriaPath) {
-                    var criteriaBasePath = field.criteriaBasePath || dataSource.criteriaBasePath,
-                        oldCriteriaPath = record.criteriaPath
-                    ;
-                    record.criteriaPath = record.criteriaPath.replace(criteriaBasePath, "");
-                    if (record.criteriaPath.startsWith(".")) record.criteriaPath = record.criteriaPath.substring(1)
-                }
-            } else if (excludedRuleScope && excludedRuleScope.contains(fieldName)) {
-                continue;
-            }
-
-            if (ruleContext) {
-                record.value = isc.DataSource.getPathValue(ruleContext, fieldName);
-            }
-            data[data.length] = record;
-        }
-    }
-
-    if (!suppressTargetComponentData && targetComponentData.length > (separatedFormat ? 1 : 0)) {
-        testData.addListAt(targetComponentData, 0);
-    }
-    if (targetComponentLocalData.length > (separatedFormat ? 1 : 0)) {
-        testData.addListAt(targetComponentLocalData, 0);
-    }
-
-    var ds = isc.DS.create({
-        _isMultiDSFieldDS: true,    // identification to use during destroy
-        clientOnly: true,
-        fields: [
-             { name: "name", type: "text" },
-             { name: "title", type: "text" }
-        ],
-        testData: testData
-    });
-    return ds;
 }
 
 });
@@ -87074,7 +94521,7 @@ dynamicValueButtonPrompt: "Select dynamic value",
 dynamicValueWindowTitle: "Choose dynamic value for field ${fieldTitle}",
 
 //> @attr filterBuilder.dynamicValueClearValueText (String : "&lt;Use static value instead&gt;" : IR)
-// The prefix to be displayed before a valuePath value in the clause.
+// The message to display in picker for entry reverting selection to manual entry.
 // @group i18nMessages
 // @visibility rules
 //<
@@ -87090,7 +94537,7 @@ dynamicValueClearValueText: "&lt;Use static value instead&gt;",
 //<
 setDataSource : function(ds) {
     var aDS = isc.DataSource.get(ds);
-    if (!this.dataSource || (isc.DataSource.get(this.dataSource).ID != aDS.ID)) {
+    if (!aDS || !this.dataSource || (isc.DataSource.get(this.dataSource).ID != aDS.ID)) {
         this.dataSource = aDS;
         if (this.clauses) this.clearCriteria();
         else this.rebuild();
@@ -87698,11 +95145,11 @@ initWidget : function () {
 destroy : function () {
     if (this._ruleScopeDataSources && this._destroyRuleScopeDataSources) {
         // Destroy auto-generated DataSources used for field picking.
-        // These DataSources are identified because of the criteriaBasePath
+        // These DataSources are identified because of the _tempScope
         // special property.
         for (var i = 0; i < this._ruleScopeDataSources.length; i++) {
             var ds = this._ruleScopeDataSources[i];
-            if (ds.criteriaBasePath) {
+            if (ds._tempScope) {
                 ds.destroy();
             }
         }
@@ -90671,6 +98118,462 @@ isc.defineClass("ReadOnlyRuleEditor", "SelectItem").addProperties({
 }   // End of check for DynamicForm being defined
 
 
+
+//> @class StackedListEditor
+// A user-interface component for creation and editing a list of components.
+// @treeLocation Client Reference/Data Binding
+// @visibility stackedListEditor
+//<
+isc.defineClass("StackedListEditor", "VLayout").addProperties({
+
+    //> @attr stackedListEditor.items (Array of Class : null : IR)
+    // Specifies the list of existing items to be edited.
+    //
+    // @visibility stackedListEditor
+    //<
+
+    //> @attr stackedListEditor.canAddItems (Boolean : null : IR)
+    // When explicitly set to false, disallows new items to be added.
+    //
+    // @visibility stackedListEditor
+    //<
+
+    //> @attr stackedListEditor.showAddButtonInHeader (Boolean : null : IR)
+    // By default when items can be added an add button is shown beneath
+    // the last item. By enabling this setting the add button is instead
+    // shown in the last item's header next to the remove button, if enabled.
+    //
+    // @visibility stackedListEditor
+    //<
+
+    //> @attr stackedListEditor.addButtonTitle (String : null : IR)
+    // Title to show for add new item button.
+    //
+    // @visibility stackedListEditor
+    //<
+    addButtonTitle: "Add item",
+
+    //> @attr stackedListEditor.canRemoveItems (Boolean : null : IR)
+    // When explicitly set to false, disallows removing items.
+    //
+    // @visibility stackedListEditor
+    //<
+
+    //> @attr stackedListEditor.canReorderItems (Boolean : null : IR)
+    // When explicitly set to false, disallows reordering items.
+    //
+    // @visibility stackedListEditor
+    //<
+
+    //> @attr stackedListEditor.showReorderButtons (Boolean : null : IR)
+    // When explicitly set to false and +link{canReorderItems} is not
+    // also false, reorder buttons are not shown in
+    // section headers. List reordering can only be done by dragging.
+    //
+    // @visibility stackedListEditor
+    //<
+
+    //> @attr stackedListEditor.newItemTitle (String : "[New item]" : IR)
+    // Title to show for a new item.
+    //
+    // @visibility stackedListEditor
+    //<
+    newItemTitle: "[New item]",
+
+    //> @attr stackedListEditor.itemEditorConstructor (SCClassName : null : IR)
+    // Class used to construct the editor for each item.
+    //
+    // @visibility stackedListEditor
+    //<
+
+    //> @attr stackedListEditor.addIcon (SCImgURL : "[SKIN]actions/add.png" : IR)
+    // Default icon to show for add item button..
+    // @visibility stackedListEditor
+    //<
+    addIcon: "[SKIN]actions/add.png",
+
+    //> @attr stackedListEditor.addIconSize (Number : 16 : IRW)
+    // Default width and height of +link{addIcon,add icon}.
+    //
+    // @visibility stackedListEditor
+    //<
+    addIconSize: 16,
+
+    //> @attr stackedListEditor.removeIcon (SCImgURL : "[SKIN]actions/remove.png" : IR)
+    // Default icon to show for remove item button..
+    // @visibility stackedListEditor
+    //<
+    removeIcon: "[SKIN]actions/remove.png",
+
+    //> @attr stackedListEditor.removeIconSize (Number : 16 : IRW)
+    // Default width and height of +link{removeIcon,remove icons}.
+    //
+    // @visibility stackedListEditor
+    //<
+    removeIconSize: 16,
+
+    mainLayoutDefaults: {
+        _constructor: isc.VLayout,
+        height: "100%",
+        membersMargin: 5
+    },
+
+    stackDefaults: {
+        _constructor: isc.SectionStack,
+        autoParent: "mainLayout",
+        visibilityMode: "multiple",
+        overflow: "auto",
+        membersChanged : function () {
+            // Keep add button showing on the last section after reordering
+            this.creator.updateSectionControls();
+        }
+    },
+
+    upButtonDefaults: {
+        _constructor: isc.ImgButton,
+        src:"[SKIN]headerIcons/arrow_up.png", size:16,
+        prompt: "Move item up",
+        showDisabled: false, showDown:false,
+        click : "this.creator.moveItemUp(this.itemEditor);return false;"
+    },
+
+    downButtonDefaults: {
+        _constructor: isc.ImgButton,
+        src:"[SKIN]headerIcons/arrow_down.png", size:16,
+        prompt: "Move item down",
+        showDisabled: false, showDown:false,
+        click : "this.creator.moveItemDown(this.itemEditor);return false;"
+    },
+
+    addButtonDefaults: {
+        _constructor: isc.ImgButton,
+        src:"[SKIN]actions/add.png", size:16,
+        showFocused:false, showRollOver:false, showDown:false,
+        click : "this.creator.addItem();return false;"
+    },
+
+    lowerAddButtonDefaults: {
+        _constructor: isc.IButton,
+        wrap: false, autoFit: true,
+        icon:"[SKIN]actions/add.png", iconSize:16,
+        layoutAlign: "center",
+        click : "this.creator.addItem();return false;"
+    },
+
+    removeButtonDefaults: {
+        _constructor: isc.ImgButton,
+        src:"[SKIN]actions/remove.png", size:16,
+        showFocused:false, showRollOver:false, showDown:false,
+        click : "this.creator.removeItem(this.itemEditor);return false;"
+    },
+
+    itemEditorDefaults: {
+        height: 50  // Minimum height
+    },
+
+    initWidget : function () {
+        this.Super("initWidget", arguments);
+
+        this.addAutoChild("mainLayout");
+        this.addAutoChild("stack", { canReorderSections: (this.canReorderItems != false) });
+
+        if (this.canAddItems != false && !this.showAddButtonInHeader) {
+            var properties = { icon: this.addIcon, iconSize: this.addIconSize, title: this.addButtonTitle },
+                addButton = this.createAutoChild("lowerAddButton", properties)
+            ;
+            this.mainLayout.addMember(addButton);
+        }
+
+        if (this.items) {
+            this.setItems(this.items.duplicate());
+        } else if (this.canAddItems != false) {
+            // Add empty item
+            this.addItem();
+        }
+    },
+
+    moveSection : function (sections, position) {
+        this.Super("moveSection", arguments);
+        this.updateSectionControls();
+    },
+
+    updateSectionControls : function () {
+        var sections = this.stack.getSections();
+        for (var i = 0; i < sections.length; i++) {
+            var sectionHeader = this.stack.getSectionHeader(sections[i]),
+                buttonLayout = sectionHeader.controls[this.showReorderButtons != false ? 2 : 0],
+                moveLayout = sectionHeader.controls[0];
+            ;
+            buttonLayout.showAddButton(this.canAddItems != false && i == sections.length-1);
+            if (this.showReorderButtons != false) {
+                var states = [];
+                if (i == 0) states.add("top");
+                if (i == sections.length-1) states.add("bottom");
+                moveLayout.setStates(states);
+            }
+        }
+    },
+
+    //> @method stackedListEditor.handleTitleChanged()
+    // Can be called by an item editor to change the section title
+    // for the item.
+    //
+    // @param itemEditor (Canvas) item editor making the change
+    // @param title (String) new title
+    // @visibility stackedListEditor
+    //<
+    handleTitleChanged : function (itemEditor, title) {
+        var sectionNum = this.stack.getSectionNumber(itemEditor.sectionName);
+        if (sectionNum >= 0) {
+            this.stack.setSectionTitle(sectionNum, title);
+        }
+    },
+
+    //> @method stackedListEditor.getItemTitle()
+    // Returns the title to show for the section for the item.
+    //
+    // @param item (Object) item
+    // @return (String) section title
+    // @visibility stackedListEditor
+    //<
+
+    //> @method stackedListEditor.getItemEditorProperties()
+    // Returns per-item editor custom properties to be applied.
+    //
+    // @param item (Object) item
+    // @return (Object) custom properties
+    // @visibility stackedListEditor
+    //<
+
+    //> @method stackedListEditor.getSectionProperties()
+    // Returns per-item section custom properties to be applied.
+    // Useful to tracking information within the section that is not
+    // applicable for the editor.
+    //
+    // @param item (Object) item
+    // @return (Object) custom properties
+    // @visibility stackedListEditor
+    //<
+
+    //> @method stackedListEditor.getItemEditorValue()
+    // Returns the item value from the item editor.
+    //
+    // @param itemEditor (Canvas) item editor making the change
+    // @param section (Canvas) stack section
+    // @return (Any) editor value
+    // @visibility stackedListEditor
+    //<
+    getItemEditorValue : function (itemEditor, section) {
+        return null;
+    },
+
+    getSectionIndexForEditor : function (itemEditor) {
+        var sections = this.stack.getSections();
+        for (var i = 0; i < sections.length; i++) {
+            var sectionHeader = this.stack.getSectionHeader(sections[i]),
+                editor = sectionHeader.items[0]
+            ;
+            if (itemEditor == editor) return i;
+        }
+        return null;
+    },
+
+    moveItemUp : function (itemEditor) {
+        var sectionIndex = this.getSectionIndexForEditor(itemEditor);
+        if (sectionIndex != null) {
+            this.stack.moveSection(sectionIndex, sectionIndex-1);
+        }
+    },
+
+    moveItemDown : function (itemEditor) {
+        var sectionIndex = this.getSectionIndexForEditor(itemEditor);
+        if (sectionIndex != null) {
+            this.stack.moveSection(sectionIndex, sectionIndex+1);
+        }
+    },
+
+    addItem : function (item) {
+        var title = this.newItemTitle;
+        if (item) title = this.getItemTitle(item);
+
+        var itemEditorProperties = (this.getItemEditorProperties ? this.getItemEditorProperties(item) : {}),
+            editor = this.createAutoChild("itemEditor", itemEditorProperties),
+            sectionItems = [ editor ],
+            sectionControls
+        ;
+
+        if ((this.canAddItems != false && this.showAddButtonInHeader) || this.canRemoveItems != false) {
+            var members = [],
+                canAdd = this.canAddItems != false && this.showAddButtonInHeader
+            ;
+            if (canAdd) {
+                var properties = { src: this.addIcon, size: this.addIconSize },
+                    addButton = this.createAutoChild("addButton", properties)
+                ;
+                members.add(addButton);
+            }
+            if (this.canRemoveItems != false) {
+                var properties = { itemEditor: editor, src: this.removeIcon, size: this.removeIconSize },
+                    removeButton = this.createAutoChild("removeButton", properties)
+                ;
+                members.add(removeButton);
+            }
+
+            var buttonLayout = isc.HLayout.create({
+                height: Math.max(this.addIconSize, this.removeIconSize),
+                width: 16,
+                membersMargin: 2,
+                align: "right",
+                members: members,
+                showAddButton : function (show) {
+                    if (!canAdd) return;
+                    var addButton = this.getMember(0);
+                    if (show) addButton.show();
+                    else addButton.hide();
+                }
+            });
+
+            sectionControls = [ buttonLayout ];
+        }
+        if (this.showReorderButtons != false) {
+            var upButton = this.createAutoChild("upButton", { itemEditor: editor }),
+                downButton = this.createAutoChild("downButton", { itemEditor: editor })
+            ;
+            var buttonLayout = isc.HLayout.create({
+                height: 16,
+                width: 16,
+                membersMargin: 2,
+                align: "right",
+                members: [ upButton, downButton],
+                setStates : function (states) {
+                    var upButton = this.getMember(0),
+                        downButton = this.getMember(1)
+                    ;
+                    if (states.contains("top")) upButton.disable();
+                    else upButton.enable();
+                    if (states.contains("bottom")) downButton.disable();
+                    else downButton.enable();
+                }
+            });
+
+            if (!sectionControls) sectionControls = [];
+            sectionControls.addAt(isc.LayoutSpacer.create({ width: 5 }), 0);
+            sectionControls.addAt(buttonLayout, 0);
+        }
+
+        var sectionProperties = {
+            title: title,
+            items: sectionItems,
+            expanded: !item,
+            controls: sectionControls
+        };
+        if (this.getSectionProperties) isc.addProperties(sectionProperties, this.getSectionProperties(item));
+        this.stack.addSection(sectionProperties);
+
+        // save item's sectionName on the editor to be used in handleTitleChanged
+        var sectionNames = this.stack.getSectionNames(),
+            sectionName = sectionNames[sectionNames.length-1]
+        ;
+        editor.sectionName = sectionName;
+
+        this.updateSectionControls();
+    },
+
+    removeItem : function (itemEditor) {
+        var section = this.stack.sectionForItem(itemEditor);
+        this.removeItemInSection(section.name);
+
+        // Always keep at least one item in stack
+        var sections = this.stack.getSections();
+        if (sections.length == 0) {
+            this.addItem();
+        }
+        this.updateSectionControls();
+    },
+
+    removeItemInSection : function (section) {
+
+        var stack = this.stack;
+        this.stack.collapseSection(section, function () {
+            stack.removeSection(section);
+        });
+    },
+
+    //> @method stackedListEditor.validate()
+    // Validate the current set of items. Entries without a validator type selected
+    // are ignored.
+    // @return (boolean) true if validation passed for all validator forms, false otherwise.
+    // @visibility stackedListEditor
+    //<
+    validate : function () {
+        var failed = false,
+            sections = this.stack.getSections()
+        ;
+        for (var i = 0; i < sections.length; i++) {
+            var section = sections[i],
+            header = this.stack.getSectionHeader(section),
+            itemEditor = header.items[0]
+            ;
+            failed = (itemEditor.validate() == false) || failed;
+        }
+        return !failed;
+    },
+
+    //> @method stackedListEditor.getItems()
+    // Get the list of entered items. Null values will be
+    // skipped. (see +link{getItemEditorValue})
+    // @return (Array of Class) list of edited items
+    // @visibility stackedListEditor
+    //<
+    getItems : function () {
+        var sections = this.stack.getSections(),
+            items = []
+        ;
+        for (var i = 0; i < sections.length; i++) {
+            var section = sections[i],
+                header = this.stack.getSectionHeader(section),
+                itemEditor = header.items[0],
+                item = this.getItemEditorValue(itemEditor, header)
+            ;
+
+            if (item) items.add(item);
+        }
+        return items;
+    },
+
+    //> @method stackedListEditor.setItems()
+    // Show the specified items in this stackedListEditor.
+    // @param Class (Array of Class) list of items to edit.
+    // @visibility stackedListEditor
+    //<
+    setItems: function (items) {
+        this.items = items;
+
+        var editor = this;
+        var createSections = function (items) {
+            for (var i = 0; i < items.length; i++) {
+                editor.addItem(items[i]);
+            }
+            if (editor.canAddItems != false) {
+                // Add empty item
+                editor.addItem();
+            }
+        };
+
+        var sections = this.stack.getSections();
+        if (sections && sections.length > 0) {
+            var stack = this.stack;
+            this.stack.collapseSection(sections, function () {
+                stack.removeSection(sections);
+                createSections(items);
+            });
+        } else {
+            createSections(items);
+        }
+    }
+});
+
+
 //> @class ValidatorEditor
 // A user-interface component for creation and editing of a +link{Validator}.
 // @treeLocation Client Reference/Data Binding
@@ -91582,7 +99485,7 @@ isc.ValidatorEditor.addProperties({
 // @treeLocation Client Reference/Data Binding
 // @visibility devTools
 //<
-isc.defineClass("ValidatorsEditor", "VLayout").addProperties({
+isc.defineClass("ValidatorsEditor", "StackedListEditor").addProperties({
 
     //> @attr validatorsEditor.fieldName (FieldName : null : IR)
     // Specifies the name of the DataSource field whose validators are being edited.
@@ -91602,37 +99505,10 @@ isc.defineClass("ValidatorsEditor", "VLayout").addProperties({
     // @visibility devTools
     //<
 
-    mainLayoutDefaults: {
-        _constructor: isc.SectionStack,
-        height: "100%",
-        visibilityMode: "multiple",
-        overflow: "auto",
-        // Validator order matters - so allow user to adjust them
-        canReorderSections: true,
-        membersChanged : function () {
-            // Keep add button showing on the last validator after reordering
-            this.creator.updateSectionControls();
-        }
-    },
+    newItemTitle: "[New Validator]",
 
-    addButtonDefaults: {
-        _constructor: isc.ImgButton,
-        src:"[SKIN]actions/add.png", size:16,
-        showFocused:false, showRollOver:false, showDown:false,
-        click : "this.creator.addValidator();return false;"
-    },
-
-    removeButtonDefaults: {
-        _constructor: isc.ImgButton,
-        src:"[SKIN]actions/remove.png", size:16,
-        showFocused:false, showRollOver:false, showDown:false,
-        click : "this.creator.removeValidator(this.validatorDetail);return false;"
-    },
-
-    validatorDetailDefaults: {
-        _constructor: isc.ValidatorEditor,
-        height: 50, // Minimum height
-
+    itemEditorConstructor: isc.ValidatorEditor,
+    itemEditorProperites: {
         saveOperationType: "add",
         getSaveOperationType : function () {
             return this.saveOperationType;
@@ -91654,124 +99530,50 @@ isc.defineClass("ValidatorsEditor", "VLayout").addProperties({
     },
 
     initWidget : function () {
+        // use validators as items list
+        this.items = this.validators;
+
         this.Super("initWidget", arguments);
 
         if (this.fieldName.contains(".")) {
             var parts = this.fieldName.split(".");
             this.fieldName = parts[parts.length-1];
         }
-
-        this.addAutoChild("mainLayout");
-
-        if (this.validators) this.setValidators(this.validators.duplicate());
-        // Add empty validator
-        this.addValidator();
     },
 
-    moveSection : function (sections, position) {
-        this.Super("moveSection", arguments);
-        this.updateSectionControls();
+    getItemTitle : function (item) {
+        return item.shortName || isc.Validator.getShortName(item.type);
     },
 
-    updateSectionControls : function () {
-        // A single field will not have many validators so
-        // checking each section on change is not a big deal
-        var sections = this.mainLayout.getSections();
-        for (var i = 0; i < sections.length; i++) {
-            var sectionHeader = this.mainLayout.getSectionHeader(sections[i]),
-                buttonLayout = sectionHeader.controls[0],
-                addButton = buttonLayout.getMember(0)
-            ;
-            if (i == sections.length-1) {
-                // Last section
-                addButton.show();
-            } else {
-                // Not last section
-                addButton.hide();
-            }
-        }
-    },
-
-    addValidator : function (validator) {
-        var title = "[New Validator]";
-        if (validator) title = validator.shortName || isc.Validator.getShortName(validator.type);
-
-        var validatorDetailProperties = {
+    getItemEditorProperties : function (item) {
+        return {
             fieldName: this.fieldName,
             dataSource: this.dataSource,
-            validator: validator
-        }
-        var detail = this.createAutoChild("validatorDetail", validatorDetailProperties);
-        var addButton = this.createAutoChild("addButton");
-        var removeButton = this.createAutoChild("removeButton", { validatorDetail: detail });
+            validator: item
+        };
+    },
 
-        var buttonLayout = isc.HLayout.create({
-            height: 16,
-            width: 16,
-            align: "right",
-            members: [ addButton, removeButton ]
-        });
-
+    getSectionProperties : function (item) {
         // Generated, type validators are not to be shown but must be returned
         // as-is in the edited validator list. To do this a hidden section is
         // used to maintain the correct placement. The raw validator is also
         // attached to the section so it can be pulled instead of the edited
         // version which will not include the hidden properties.
-        var isGeneratedTypeValidator = (validator && validator._generated && validator._typeValidator);
+        var isGeneratedTypeValidator = (item && item._generated && item._typeValidator);
 
-        this.mainLayout.addSection({
-            title: title,
-            items: [ detail ],
-            expanded: !validator,
+        return {
             hidden: isGeneratedTypeValidator,
-            validator: validator,
-            controls: [ buttonLayout ]
-        });
-
-        this.updateSectionControls();
+            validator: item
+        };
     },
 
-    removeValidator : function (validatorDetail) {
-        var section = this.mainLayout.sectionForItem(validatorDetail),
-            sectionHeader = this.mainLayout.getSectionHeader(section),
-            hadAddButton = (sectionHeader.controls[0].getMembers().length > 1)
-        ;
-        this.removeValidatorInSection(section.name);
+    getItemEditorValue : function (itemEditor, section) {
+        var validator = itemEditor.getValidator();
 
-        // Always keep at least one validator in stack
-        var sections = this.mainLayout.getSections();
-        if (sections.length == 0) {
-            this.addValidator();
-        }
-        this.updateSectionControls();
-    },
+        // Pull hidden, raw item if not edited
+        if (section.hidden) validator = section.validator;
 
-    removeValidatorInSection : function (section) {
-
-        var mainLayout = this.mainLayout;
-        this.mainLayout.collapseSection(section, function () {
-            mainLayout.removeSection(section);
-        });
-    },
-
-    //> @method validatorsEditor.validate()
-    // Validate the current set of validators. Entries without a validator type selected
-    // are ignored.
-    // @return (boolean) true if validation passed for all validator forms, false otherwise.
-    // @visibility devTools
-    //<
-    validate : function () {
-        var failed = false,
-            sections = this.mainLayout.getSections()
-        ;
-        for (var i = 0; i < sections.length; i++) {
-            var section = sections[i],
-                header = this.mainLayout.getSectionHeader(section),
-                validatorDetail = header.items[0]
-            ;
-            failed = (validatorDetail.validate() == false) || failed;
-        }
-        return !failed;
+        return validator;
     },
 
     //> @method validatorsEditor.getValidators()
@@ -91781,21 +99583,7 @@ isc.defineClass("ValidatorsEditor", "VLayout").addProperties({
     // @visibility devTools
     //<
     getValidators : function () {
-        var sections = this.mainLayout.getSections(),
-            validators = []
-        ;
-        for (var i = 0; i < sections.length; i++) {
-            var section = sections[i],
-                header = this.mainLayout.getSectionHeader(section),
-                validatorDetail = header.items[0],
-                validator = validatorDetail.getValidator()
-            ;
-            // Pull hidden, raw validator if not edited
-            if (header.hidden) validator = header.validator;
-
-            if (validator) validators.add(validator);
-        }
-        return validators;
+        return this.getItems();
     },
 
     //> @method validatorsEditor.setValidators()
@@ -91804,24 +99592,7 @@ isc.defineClass("ValidatorsEditor", "VLayout").addProperties({
     // @visibility devTools
     //<
     setValidators : function (validators) {
-        this.validators = validators;
-
-        var editor = this;
-        var createSections = function (validators) {
-            for (var i = 0; i < validators.length; i++) {
-                editor.addValidator(validators[i]);
-            }
-        };
-
-        var sections = this.mainLayout.getSections();
-        if (sections && sections.length > 0) {
-            this.mainLayout.collapseSection(sections, function () {
-                this.mainLayout.removeSection(sections);
-                createSections(validators);
-            });
-        } else {
-            createSections(validators);
-        }
+        this.setItems(validators);
     }
 
 });
@@ -93076,7 +100847,7 @@ isc.ListGrid.addMethods({
 
         var selection = this.selectionManager,
             value = record != null ? record : rowNum;
-        if (selection && selection.isSelected && selection.isSelected(value)) {
+        if (selection && selection.isSelected && selection.isSelected(value, rowNum)) {
             if (state == null) state = {}
             state.selected = true;
         }
@@ -93114,8 +100885,8 @@ isc.TreeGrid.addMethods({
 
         var theTree = this.data,
             manager = this.selectionManager,
-            selected = !!(manager && manager.isSelected && manager.isSelected(node, true)),
-            level = theTree.getLevel(node);
+            selected = !!(manager && manager.isSelected && manager.isSelected(node, rowNum, true)),
+            level = theTree.getLevel(node, rowNum);
 
         var state = { selected : selected,
                       level : level,
@@ -93125,7 +100896,12 @@ isc.TreeGrid.addMethods({
                       posinset : rowNum + 1
                     };
 
-        if (theTree.isFolder(node)) state.expanded = !!theTree.isOpen(node);
+        var nodeLocator;
+        if (theTree.isMultiLinkTree()) {
+            nodeLocator = theTree.getNodeLocator(rowNum);
+        }
+
+        if (theTree.isFolder(node)) state.expanded = !!theTree.isOpen(nodeLocator || node);
 
         // an attempt to use the hasparent attribute to link nodes.  Not respected by FF1.5
         //var parent = theTree.getParent(node);
@@ -93760,53 +101536,11 @@ overflow: "visible",
 mainEditorDefaults: {
     _constructor: "ComponentEditor",
     autoDraw:false,
+    autoFocus:true,
     numCols:8,
     overflow:"visible",
 //    backgroundColor: "black",
     dataSource:"DataSource",
-    fields : [
-        {name:"ID", title: "ID", required:true},
-        //{name:"dataFormat", defaultValue:"iscServer", redrawOnChange:true},
-
-        {type:"section", defaultValue:"XPath Binding",
-         showIf:"values.dataFormat != 'iscServer' && values.serverType != 'sql'",
-         itemIds:["dataURL", "selectBy", "recordXPath", "recordName"]},
-        {name:"dataURL", showIf:"values.dataFormat != 'iscServer'"},
-        {name:"selectBy", title:"Select Records By",
-         shouldSaveValue:false,
-         valueMap:{ tagName:"Tag Name", xpath:"XPath Expression" },
-         defaultValue:"xpath",
-         redrawOnChange:true,
-         // can't use tagName in JSON
-         showIf:"values.dataFormat == 'xml'"},
-        // allowed in XML or JSON
-        {name:"recordXPath",
-         showIf:"values.dataFormat != 'iscServer' && form.getItem('selectBy').getValue() == 'xpath'"},
-        // allow in XML only
-        {name:"recordName",
-         showIf:"values.dataFormat == 'xml' && values.selectBy == 'tagName'"},
-
-        {type:"section", defaultValue:"SQL Binding",
-         showIf:"values.serverType == 'sql' || values.serverType == 'hibernate'",
-         itemIds:["dbName", "schema", "tableName"]},
-        {name:"dbName", showIf:"values.serverType == 'sql'"},
-        {name:"schema", showIf:"values.serverType == 'sql'"},
-        {name:"tableName",
-         showIf:"values.serverType == 'sql' || values.serverType == 'hibernate'"},
-
-        {type:"section", defaultValue:"Record Titles", sectionExpanded:false,
-         itemIds:["title", "pluralTitle"]},
-        {name:"title"},
-        {name:"pluralTitle"},
-        {type:"section", defaultValue:"Advanced", sectionExpanded:false,
-            itemIds:["dropExtraFields", "autoDeriveSchema", "quoteTableName", "beanClassName", "titleField"]},
-        {name:"dropExtraFields"},
-        {name:"autoDeriveSchema"},
-        {name:"quoteTableName", showIf:"values.serverType == 'sql'"},
-        {name:"beanClassName",
-         showIf:"values.serverType == 'sql' || values.serverType == 'hibernate'"},
-        {name:"titleField"}
-    ],
     itemHoverStyle: "docHover",
     titleHoverHTML : function (item) {
         if (isc.jsdoc.hasData()) {
@@ -93820,6 +101554,82 @@ mainEditorDefaults: {
     }
 },
 
+
+mainEditorFields: [
+    {name:"ID", title: "ID", required:true, validateOnExit: true, hoverWidth: 300,
+        validators: [
+            {
+                type:"custom",
+                condition: function (item, validator, value, record, additionalContext) {
+                    if (!value) return true;
+                    if (!validator.idMap) {
+                        // Create idMap to map from lowercase ID to actual ID so that
+                        // entered name can be matched to an existing schema regardless
+                        // of case.
+                        var allDataSources = isc.DS.getRegisteredDataSourceObjects(),
+                            idMap = {}
+                        ;
+                        for (var i = 0; i < allDataSources.length; i++) {
+                            var ds = allDataSources[i];
+                            if (ds && ds.componentSchema) {
+                                var id = ds.ID;
+                                idMap[id.toLowerCase()] = id;
+                            }
+                        }
+                        validator.idMap = idMap;
+                    }
+                    var ds = isc.DS.get(validator.idMap[value.toLowerCase()]);
+                    return (!ds || !ds.componentSchema);
+                },
+                errorMessage: "DataSource ID matches a system DataSource. Please choose another ID."
+            }
+        ]},
+    //{name:"dataFormat", defaultValue:"iscServer", redrawOnChange:true},
+
+    {type:"section", defaultValue:"XPath Binding",
+     showIf:"values.dataFormat != 'iscServer' && values.serverType != 'sql' && values.serverType != null",
+     itemIds:["dataURL", "selectBy", "recordXPath", "recordName"]},
+    {name:"dataURL", showIf:"values.dataFormat != 'iscServer'"},
+    {name:"selectBy", title:"Select Records By",
+     shouldSaveValue:false,
+     valueMap:{ tagName:"Tag Name", xpath:"XPath Expression" },
+     defaultValue:"xpath",
+     redrawOnChange:true,
+     // can't use tagName in JSON
+     showIf:"values.dataFormat == 'xml'"},
+    // allowed in XML or JSON
+    {name:"recordXPath",
+     showIf:"values.dataFormat != 'iscServer' && form.getItem('selectBy').getValue() == 'xpath'"},
+    // allow in XML only
+    {name:"recordName",
+     showIf:"values.dataFormat == 'xml' && values.selectBy == 'tagName'"},
+
+    {type:"section", defaultValue:"SQL Binding",
+     showIf:"values.serverType == 'sql' || values.serverType == 'hibernate'",
+     itemIds:["dbName", "schema", "tableName"]},
+    {name:"dbName", showIf:"values.serverType == 'sql'", showHint: true, showHintInField: true, hint: "default"},
+    {name:"schema", showIf:"values.serverType == 'sql'", showHint: true, showHintInField: true, hint: "default"},
+    {name:"tableName",
+     showIf:"values.serverType == 'sql' || values.serverType == 'hibernate'",
+     showHint: true, showHintInField: true,
+     hint: "same as ID"},
+
+    {type:"section", defaultValue:"Record Titles", sectionExpanded:false,
+     itemIds:["title", "pluralTitle"]},
+    {name:"title", showHint: true, showHintInField: true, hint: "same as ID"},
+    {name:"pluralTitle", showHint: true, showHintInField: true, hint: "same as ID + 's'"},
+
+    {type:"section", defaultValue:"Advanced", sectionExpanded:false,
+        showIf:"values.serverType != null",
+        itemIds:["dropExtraFields", "autoDeriveSchema", "quoteTableName", "beanClassName", "titleField"]},
+    {name:"dropExtraFields"},
+    {name:"autoDeriveSchema"},
+    {name:"quoteTableName", showIf:"values.serverType == 'sql'"},
+    {name:"beanClassName",
+     showIf:"values.serverType == 'sql' || values.serverType == 'hibernate'"},
+    {name:"titleField"}
+],
+
 fieldEditorDefaults: {
     _constructor: "ListEditor",
     autoDraw:false,
@@ -93827,68 +101637,6 @@ fieldEditorDefaults: {
     dataSource:"DataSourceField",
     saveLocally:true,
     gridButtonsOrientation:"right",
-    fields:[
-        {name:"name", treeField: true,
-            // Where includeFrom has been used, the name defaults to includeFrom's name.
-            // So as well show that instead of nothing. We'll put it in italics to indicate
-            // that it is special.
-            //
-            // In fact, we may as well show the includeFrom value in all cases (where
-            // present) -- this will help avoid confusion where the name has been edited.
-            formatCellValue : function(value, record, rowNum, colNum, grid) {
-                if (!record) record = {};
-                var formattedValue = this._nameFromValueOrIncludeFrom(value, record.includeFrom);
-                if (record.includeFrom) {
-                    formattedValue +=" <i>[" + record.includeFrom + "]</i>";
-                }
-                return formattedValue;
-            },
-
-            // If the value is present, return it. Otherwise, return the last
-            // part of the includeFrom -- which is what the name defaults to.
-            _nameFromValueOrIncludeFrom : function(value, includeFrom) {
-                if (value) {
-                    return value;
-                } else {
-                    var dotIndex = includeFrom.lastIndexOf(".");
-                    if (dotIndex == -1) {
-                        return value;
-                    } else {
-                        return includeFrom.substring(dotIndex + 1);
-                    }
-                }
-            },
-
-            // Note that name is *required* in the schema. This isn't literally true
-            // anymore, since now name is optional when includesFrom is specified.
-            // We could make it optional in the schema, but that may cause difficulties
-            // elsewhere. So, for the moment, we're doing some massaging here.
-            //
-            // For editing, we'll display the last part of the includeFrom if the name
-            // is blank -- that is what the default actually is, so it is a reasonable
-            // starting point for editing.
-            formatEditorValue : function(value, record, form, item) {
-                if (!record) record = {};
-                return this._nameFromValueOrIncludeFrom(value, record.includeFrom);
-            },
-
-            // If the user blanks the value, it would normally be an error (since
-            // the name is required. So, let's simply supply the default in that
-            // case -- that is, use the includeFrom's name. The alternative would
-            // be to allow the blank, but that would mean changing the schema so that
-            // name would not be required.
-            parseEditorValue : function(value, record, rowNum, colNum, grid) {
-                if (!record) record = {};
-                return this._nameFromValueOrIncludeFrom(value, record.includeFrom);
-            }
-        },
-        {name:"title"},
-        {name:"type", width:60},
-        {name:"required", title:"Req.", width:40, canToggle:true},
-        {name:"hidden", width:40},
-        {name:"length", width:60},
-        {name:"primaryKey", title:"is PK", width:40}
-    ],
     formProperties: {
         numCols:4,
         initialGroups:10
@@ -94051,15 +101799,9 @@ fieldEditorDefaults: {
         selectionType:isc.Selection.SINGLE,
         recordClick:"this.creator.recordClick(record)",
         modalEditing:true,
-        editorEnter:"if (this.creator.moreButton) this.creator.moreButton.enable(); if (this.creator.creator.validatorsButton) this.creator.creator.validatorsButton.enable()",
-        selectionChanged: function() {
-            if (this.anySelected() && this.creator.moreButton) {
-                this.creator.moreButton.enable();
-            }
-            if (this.anySelected() && this.creator.creator.validatorsButton) {
-                this.creator.creator.validatorsButton.enable();
-            }
-        },
+        editorEnter:"this.creator.updateButtonStates()",
+        cellChanged:"this.creator.updateButtonStates()",
+        selectionChanged: "this.creator.updateButtonStates()",
         contextMenu : {
             data : [
                 {title:"Remove", click: "target.creator.removeRecord()" }
@@ -94079,8 +101821,9 @@ fieldEditorDefaults: {
                 fieldName = field[this.fieldIdProperty],
                 isNameOrTitle = (fieldName == "name" || fieldName == "title");
             if (isc.isA.TreeGrid(this)) {
-                if (record.isFolder &&
-                !(isNameOrTitle || fieldName == "required" || fieldName == "hidden")) {
+                if (record && record.isFolder &&
+                    !(isNameOrTitle || fieldName == "required" || fieldName == "hidden"))
+                {
                     return false;
                 }
             }
@@ -94106,8 +101849,33 @@ fieldEditorDefaults: {
             var record = this.getRecord(rowNum);
             this.creator.fieldDeleted(record);
             this.Super("removeRecordClick", arguments);
-        }
+        },
+        // When tabbing into a new record, assign the default values so that it saves correctly.
+        // Same basic code as newRecord.
+        rowEditorEnter : function (record, editValues, rowNum) {
+            if (record) return;
+            if (!this.creator.creator.canEditChildSchema) return;
 
+            var grid = this,
+                tree = grid.data,
+                editor = this.creator,
+                selectedNode = editor.getSelectedNode();
+
+            if (!selectedNode) selectedNode = tree.root;
+            var parentNode = tree.getParent(selectedNode)
+
+            if (selectedNode) {
+                if (!selectedNode.isFolder) selectedNode = parentNode;
+                var id = editor.getNextUnusedNodeId(),
+                    newNode = {
+                        name: editor.getNextUniqueFieldName(selectedNode, "field"),
+                        id: id,
+                        parentId: selectedNode ? selectedNode.id : null
+                    }
+                ;
+                grid.delayCall("setEditValues", [rowNum, newNode]);
+            }
+        }
     },
 
     _fieldNameChanged : function (fromName, toName) {
@@ -94171,6 +101939,21 @@ fieldEditorDefaults: {
         }
     },
 
+    updateButtonStates : function () {
+        this.Super("updateButtonStates", arguments);
+        if (this.grid.anySelected()) {
+            if (this.creator.validatorsButton) this.creator.validatorsButton.enable();
+            if (this.creator.legalValuesButton) {
+                var record = this.grid.getSelectedRecord();
+                if (record.type == "enum") this.creator.legalValuesButton.enable();
+                else this.creator.legalValuesButton.disable();
+            }
+        } else {
+            if (this.creator.validatorsButton) this.creator.validatorsButton.disable();
+            if (this.creator.legalValuesButton) this.creator.legalValuesButton.disable();
+        }
+    },
+
     updateValidatorFieldNames : function (validator, fromName, toName) {
         var applyWhen = validator.applyWhen;
         if (!applyWhen || isc.isA.emptyObject(applyWhen)) return;
@@ -94231,12 +102014,20 @@ fieldEditorDefaults: {
 
             if (selectedNode) {
                 if (!selectedNode.isFolder) selectedNode = parentNode;
-                var newNode = {
-                    name: this.getNextUniqueFieldName(selectedNode, "field"),
-                    id: this.getNextUnusedNodeId(),
-                    parentId: selectedNode ? selectedNode.id : null
-                };
+                var id = this.getNextUnusedNodeId(),
+                    newNode = {
+                        name: this.getNextUniqueFieldName(selectedNode, "field"),
+                        id: id,
+                        parentId: selectedNode ? selectedNode.id : null
+                    };
                 this.addNode(newNode, selectedNode);
+                var node = grid.findByKey(id);
+                if (node) {
+                    var rowNum = grid.getRecordIndex(node);
+                    if (rowNum >= 0) {
+                        grid.startEditing(rowNum);
+                    }
+                }
             }
         } else this.Super("newRecord", arguments);
     },
@@ -94273,8 +102064,109 @@ fieldEditorDefaults: {
             if (!item) return i;
         }
         return 1;
+    },
+
+    baseFieldTypesValueMap: {
+        "text": "text: a normal text value",
+        "enum": "enum: a text field allowing only certain values",
+        "integer": "integer: a whole number",
+        "float": "float: a fractional or decimal number",
+        "boolean": "boolean: only a true or false allowed",
+        "date": "date: a specific date, with no time",
+        "time": "time: a specific time, with no date",
+        "datetime": "datetime: a specific time on a specific date",
+        "sequence": "sequence: a number where every new record gets a new value automatically",
+        "URL": "URL: a link to something on the web",
+        "image": "image: a link to an image on the web",
+        "color": "color: a color value",
+        "phoneNumber": "phoneNumber: a phone number"
+    },
+    binaryFieldTypesValueMap: {
+        "imageFile": "imageFile: an image stored in this DataSource",
+        "binary": "binary: any binary file that is not an image"
+    },
+
+    getFieldTypeValueMap : function () {
+        var valueMap;
+        if (!isc.isA.MockDataSource(this.targetDataSource) && !this.targetDataSource.clientOnly) {
+            valueMap = this._binaryFieldTypesValueMap;
+            if (!valueMap) {
+                valueMap = this._binaryFieldTypesValueMap = isc.addProperties({}, this.baseFieldTypesValueMap, this.binaryFieldTypesValueMap);
+            }
+        } else {
+            valueMap = this.baseFieldTypesValueMap;
+        }
+        return valueMap;
     }
 },
+
+
+fieldEditorFields:[
+    {name:"name", treeField: true, required: true,
+        // Where includeFrom has been used, the name defaults to includeFrom's name.
+        // So as well show that instead of nothing. We'll put it in italics to indicate
+        // that it is special.
+        //
+        // In fact, we may as well show the includeFrom value in all cases (where
+        // present) -- this will help avoid confusion where the name has been edited.
+        formatCellValue : function(value, record, rowNum, colNum, grid) {
+            if (!record) record = {};
+            var formattedValue = this._nameFromValueOrIncludeFrom(value, record.includeFrom);
+            if (record.includeFrom) {
+                formattedValue +=" <i>[" + record.includeFrom + "]</i>";
+            }
+            return formattedValue;
+        },
+
+        // If the value is present, return it. Otherwise, return the last
+        // part of the includeFrom -- which is what the name defaults to.
+        _nameFromValueOrIncludeFrom : function(value, includeFrom) {
+            if (value || !includeFrom) {
+                return value;
+            } else {
+                var dotIndex = includeFrom.lastIndexOf(".");
+                if (dotIndex == -1) {
+                    return value;
+                } else {
+                    return includeFrom.substring(dotIndex + 1);
+                }
+            }
+        },
+
+        // Note that name is *required* in the schema. This isn't literally true
+        // anymore, since now name is optional when includesFrom is specified.
+        // We could make it optional in the schema, but that may cause difficulties
+        // elsewhere. So, for the moment, we're doing some massaging here.
+        //
+        // For editing, we'll display the last part of the includeFrom if the name
+        // is blank -- that is what the default actually is, so it is a reasonable
+        // starting point for editing.
+        formatEditorValue : function(value, record, form, item) {
+            if (!record) record = {};
+            return this._nameFromValueOrIncludeFrom(value, record.includeFrom);
+        },
+
+        // If the user blanks the value, it would normally be an error (since
+        // the name is required. So, let's simply supply the default in that
+        // case -- that is, use the includeFrom's name. The alternative would
+        // be to allow the blank, but that would mean changing the schema so that
+        // name would not be required.
+        parseEditorValue : function(value, record, rowNum, colNum, grid) {
+            if (!record) record = {};
+            return this._nameFromValueOrIncludeFrom(value, record.includeFrom);
+        }
+    },
+    {name:"title"},
+    {name:"type", width:280, type: "ComboBoxItem", editorProperties: { completeOnTab: true },
+        getEditorValueMap : function (values, field, grid) {
+            return grid.creator.getFieldTypeValueMap();
+        }
+    },
+    {name:"required", title:"Req.", width:40, canToggle:true},
+    {name:"hidden", width:60, canToggle:true},
+    {name:"length", width:70},
+    {name:"primaryKey", title:"is PK", width:70, canToggle:true}
+],
 
 mockEditorDefaults: {
     _constructor: "DynamicForm",
@@ -94282,11 +102174,44 @@ mockEditorDefaults: {
     minHeight: 20,
     width: "100%",
     height: "100%",
-    numCols: 1,
+    numCols: 2,
     fields: [
+        {
+            name:"ID", title: "DataSource name", wrapTitle: false, required:true,
+            hoverWidth: 300,
+            validateOnExit: true,
+            validators: [
+                {
+                    type:"custom",
+                    condition: function (item, validator, value, record, additionalContext) {
+                        if (!value) return true;
+                        if (!validator.idMap) {
+                            // Create idMap to map from lowercase ID to actual ID so that
+                            // entered name can be matched to an existing schema regardless
+                            // of case.
+                            var allDataSources = isc.DS.getRegisteredDataSourceObjects(),
+                                idMap = {}
+                            ;
+                            for (var i = 0; i < allDataSources.length; i++) {
+                                var ds = allDataSources[i];
+                                if (ds && ds.componentSchema) {
+                                    var id = ds.ID;
+                                    idMap[id.toLowerCase()] = id;
+                                }
+                            }
+                            validator.idMap = idMap;
+                        }
+                        var ds = isc.DS.get(validator.idMap[value.toLowerCase()]);
+                        return (!ds || !ds.componentSchema);
+                    },
+                    errorMessage: "DataSource name matches a system DataSource. Please choose another name."
+                }
+            ]
+        },
         {
             name: "edit",
             type: "TextArea",
+            colSpan: 2,
             allowNativeResize: true,
             width: "*", height: "*",
             showTitle: false
@@ -94310,17 +102235,30 @@ moreButtonDefaults:{
 
 buttonLayoutDefaults: {
     _constructor: "HLayout",
-    width: "100%",
-    membersMargin: 5
+    height:42,
+    layoutMargin:10,
+    membersMargin:10,
+    align: "right"
+},
+
+cancelButtonDefaults: {
+    _constructor: "IButton",
+    autoDraw: false,
+    title: "Cancel",
+    width: 75,
+    autoParent: "buttonLayout",
+    click: function() {
+        this.creator.cancel();
+    }
 },
 
 saveButtonDefaults: {
     _constructor: "IButton",
     autoDraw: false,
     title: "Save",
-    autoFit: true,
+    width: 75,
     autoParent: "buttonLayout",
-    click: function(){
+    click: function() {
         this.creator.save();
     }
 },
@@ -94339,6 +102277,33 @@ addTestDataButtonDefaults: {
             targetDataSource: dsData.ID
         });
         dataImportDialog.show();
+    }
+},
+
+legalValuesButtonDefaults: {
+    _constructor: "IButton",
+    autoDraw: false,
+    title: "Legal values..",
+    autoFit: true,
+    disabled: true,
+    click: function() {
+        var editor = this.creator.fieldEditor,
+            grid = editor.grid,
+            tree = grid.data,
+            selectedNode = grid.getSelectedRecord() || tree.root,
+            parentNode = (isc.isA.Tree(tree) ? tree.getParent(selectedNode) : null)
+        ;
+
+        if (selectedNode && !selectedNode.isFolder && parentNode == tree.root) {
+            // Look up the creator chain for the DataSourceEditor
+            var dsEditor = this;
+            while (dsEditor && !isc.isA.DataSourceEditor(dsEditor)) dsEditor = dsEditor.creator;
+            if (!dsEditor) {
+                this.logWarn("Could not find the DataSourceEditor");
+                return;
+            }
+            dsEditor.editFieldLegalValues(selectedNode);
+        }
     }
 },
 
@@ -94459,8 +102424,65 @@ previewGridDefaults: {
 },
 
 // properties
-canEditChildSchema: false,
+
+//> @attr dataSourceEditor.canAddChildSchema (Boolean : false : IRW)
+// Can a child schema be added to a field?
+//
+// @visibility devTools
+//<
 canAddChildSchema: false,
+
+//> @attr dataSourceEditor.canEditChildSchema (Boolean : false : IRW)
+// Can a child schema be edited on a field?
+//
+// @visibility devTools
+//<
+canEditChildSchema: false,
+
+//> @attr dataSourceEditor.canSelectPrimaryKey (Boolean : true : IRW)
+// Can a field be selected as a primary key?
+//
+// @visibility devTools
+//<
+canSelectPrimaryKey: true,
+
+//> @attr dataSourceEditor.showMoreButton (Boolean : true : IRW)
+// Show "More" button for editing field details?
+//
+// @visibility devTools
+//<
+
+//> @attr dataSourceEditor.showLegalValuesButton (Boolean : null : IRW)
+// Show "Legal values.." button for editing field enum values?
+//
+// @visibility devTools
+//<
+
+//> @attr dataSourceEditor.editMockData (Boolean : null : IRW)
+// When editing a MockDataSource only a text field is presented to enter
+// the +link{MockDataSource.mockData} text unless explicit fields are
+// defined. To force editing of fields instead of <code>mockData</code>
+// set this property to <code>false</code>.
+//
+// @visibility devTools
+//<
+
+//> @attr dataSourceEditor.createInternalIdPK (Boolean : null : IRW)
+// When saving the edited DataSource and no primary key field is
+// defined (locally or on a parent) should a primary key fields be
+// automatically added? An automatic primary key field is always
+// called "internalId".
+//
+// @visibility devTools
+//<
+
+//> @attr dataSourceEditor.makeUniqueTableName (Boolean : null : IRW)
+// When saving the edited DataSource should the tableName be checked
+// against the DB to confirm it is unique. If not unique a suffix
+// will be added to guarantee uniqueness.
+//
+// @visibility devTools
+//<
 
 // methods
 editNew : function (dataSource, callback, instructions) {
@@ -94482,6 +102504,10 @@ editSaved : function (dataSource, callback, instructions) {
     this.start(dataSource, callback, false, instructions);
 },
 
+setKnownDataSources : function (dataSourceList) {
+    this.knownDataSources = dataSourceList;
+},
+
 start : function (dataSource, callback, isNew, instructions) {
     if (instructions) {
         this.mainStack.showSection(0);
@@ -94489,14 +102515,18 @@ start : function (dataSource, callback, isNew, instructions) {
     } else {
         this.mainStack.hideSection(0);
     }
-    if (isc.isA.MockDataSource(dataSource)) {
+    if (this.canEditMockData(dataSource)) {
         this.mainStack.hideSection(1);
         this.mainStack.hideSection(2);
         this.mainStack.showSection(3);
+        this.mockEditor.show();
+        this._editingMockData = true;
     } else {
         this.mainStack.showSection(1);
         this.mainStack.showSection(2);
         this.mainStack.hideSection(3);
+        this.mockEditor.hide();
+        this._editingMockData = false;
     }
 
     if (this.mainEditor) this.mainEditor.clearValues();
@@ -94508,8 +102538,8 @@ start : function (dataSource, callback, isNew, instructions) {
     // to be called when editing completes
     this.saveCallback = callback;
 
-    this.logWarn("editing " + (isNew ? "new " : "" ) +
-                 "DataSource: " + this.echo(dataSource));
+    //this.logWarn("editing " + (isNew ? "new " : "" ) +
+    //             "DataSource: " + this.echo(dataSource));
 
     if (!dataSource) {
         // no initial dataSource properties at all, start editing from scratch
@@ -94517,6 +102547,7 @@ start : function (dataSource, callback, isNew, instructions) {
     }
 
     this.dsClass = dataSource.Class;
+    this.origDSName = null;
     if (isNew) {
         // dataSource has never been saved
         if (isc.isA.DataSource(dataSource)) {
@@ -94530,6 +102561,7 @@ start : function (dataSource, callback, isNew, instructions) {
 
             this.logWarn("editing new DataSource from live DS, data: " +
                          this.echo(dataSource));
+            this.origDSName = dataSource.ID;
         } else {
             dataSource.ID = this.getUniqueDataSourceID();
         }
@@ -94540,6 +102572,7 @@ start : function (dataSource, callback, isNew, instructions) {
         var self = this;
 
         this.dsDataSource.getFile({
+            ownerId: this.ownerId,
             fileName: dataSource.ID,
             fileType: "ds",
             fileFormat: "xml"
@@ -94551,8 +102584,19 @@ start : function (dataSource, callback, isNew, instructions) {
                     self._loadSchemaReply(data);
                 }
             });
+        }, {
+            operationId: (this.ownerId ? "allOwners" : null)
         });
+
+        // Save original DS Name to know if it is changed so uniqueness can be checked
+        this.origDSName = dataSource.ID;
     }
+},
+
+canEditMockData : function (dataSource) {
+    return (isc.isA.MockDataSource(dataSource) &&
+            this.editMockData != false &&
+            !dataSource.hasExplicitFields());
 },
 
 // override point to provide a unique datasource-id
@@ -94587,6 +102631,11 @@ _startEditing : function (defaults) {
     if (!isc.isAn.Array(fields)) fields = isc.getValues(defaults.fields);
 
     if (this.fieldEditor) {
+        if (this.createInternalIdPK) {
+            // Remove internalId field if it exists so user doesn't see it.
+            // A new one will be added during save automatically.
+            this.removeInternalIdField(fields);
+        }
         if (this.canEditChildSchema) {
             this.setupIDs(fields, 1, null);
 
@@ -94601,15 +102650,25 @@ _startEditing : function (defaults) {
             });
             tree.openAll();
             this.fieldEditor.setData(tree);
-        } else this.fieldEditor.setData(fields);
+        } else {
+            this.fieldEditor.setData(fields);
+        }
+        if (this.canSelectPrimaryKey) this.fieldEditor.grid.showField("primaryKey");
+        else this.fieldEditor.grid.hideField("primaryKey");
+        this.fieldEditor.targetDataSource = defaults;
         this.fieldEditor.formLayout.hide();
         this.fieldEditor.gridLayout.show();
     }
-    if (this.mockEditor && defaults && defaults.mockData) {
-        this.mockEditor.setValue("edit", defaults.mockData.replace(/\\/g, "\\").replace(/^\[(.*)\]$/m, "{$1}"));
+    if (this.mockEditor) {
+        this.mockEditor.setValue("ID", defaults.ID);
+        if (defaults.mockData) {
+            var mockData = defaults.mockData;
+            if (!defaults.mockDataFormat || defaults.mockDataFormat == "mock") {
+                mockData = mockData.replace(/\\/g, "\\").replace(/^\[(.*)\]$/m, "{$1}");
+            }
+            this.mockEditor.setValue("edit", mockData);
+        }
     }
-
-    this.show();
 },
 
 setupIDs : function (fields, nextId, parentId) {
@@ -94648,17 +102707,109 @@ getDatasourceData : function () {
         dsData.fields = this.fieldEditor.getData();
     }
 
-    if (dsClass == "MockDataSource") {
-        var mockData = this.mockEditor.getValue("edit"),
-            mockDataType = dsData.mockDataType || "grid"
+    if (dsClass == "MockDataSource" && this._editingMockData) {
+        var ID = this.mockEditor.getValue("ID"),
+            mockData = this.mockEditor.getValue("edit") || "",
+            mockDataType = dsData.mockDataType || "grid",
+            mockDataFormat = dsData.mockDataFormat || "mock"
         ;
-        dsData.mockData = (mockDataType == "tree" ? mockData.trim() : mockData.trim().replace(/\\/g, "\\").replace("{", "[").replace("}", "]"));
+        dsData.ID = ID;
+        dsData.mockData = (mockDataFormat != "mock" || mockDataType == "tree" ? mockData.trim() :
+            mockData.trim().replace(/\\/g, "\\").replace("{", "[").replace("}", "]"));
+        dsData.fromServer = true;
         // These properties are derived from the mockData on initialization
         delete dsData.cacheData;
         delete dsData.fields;
     }
 
     return dsData;
+},
+
+legalValuesWindowDefaults: {
+    _constructor: isc.Window,
+    autoCenter: true,
+
+    height: 250,
+    width: 500,
+
+    isModal: true,
+    showModalMask: true,
+    showHeaderIcon: false,
+    showMinimizeButton: false,
+    keepInParentRect: true,
+    close : function () {
+        this.Super("close", arguments);
+        this.markForDestroy();
+    }
+},
+
+legalValuesFormDefaults: {
+    _constructor: isc.DynamicForm,
+    addAsChild: true,
+    width: "100%",
+    height: "100%",
+    numCols: 1,
+    fields: [
+        { name: "values", editorType: "ValueMapItem",
+            showTitle: false, showMapTypeButton: false, showHeader: false }
+    ]
+},
+
+legalValuesToolbarDefaults: {
+    _constructor: isc.HLayout,
+    width: "100%",
+    height: 30,
+    padding: 10,
+    align: "right",
+    membersMargin: 4,
+    members: [
+        { _constructor: isc.Button,
+            title: "Save",
+            icon: "[SKIN]actions/save.png",
+            width: 75,
+            click: function () {
+                this.parentElement.saveLegalValues();
+            }
+        },
+        { _constructor: isc.Button,
+            title: "Cancel",
+            icon: "[SKIN]actions/cancel.png",
+            width: 75,
+            click: function () {
+                this.topElement.destroy();
+            }
+        }
+    ]
+},
+
+editFieldLegalValues : function (field) {
+
+    var legalValuesWindowProperties = {
+        title: "Enter legal values for " + field.name
+    }
+    var window = this.createAutoChild("legalValuesWindow", legalValuesWindowProperties);
+
+    var legalValuesFormProperties = {
+        values: { values: field.valueMap }
+    };
+    this.legalValuesForm = this.createAutoChild("legalValuesForm", legalValuesFormProperties);
+
+    var legalValuesToolbarProperties = {
+        window : window,
+        editor : this.legalValuesForm,
+        saveLegalValues : function () {
+            if (this.editor.validate()) {
+                var valueMap = this.editor.getValue("values");
+                field.valueMap = valueMap;
+                this.window.markForDestroy();
+            }
+        }
+    };
+    this.legalValuesToolbar = this.createAutoChild("legalValuesToolbar", legalValuesToolbarProperties);
+
+    window.addItem(this.legalValuesForm);
+    window.addItem(this.legalValuesToolbar);
+    window.show();
 },
 
 validatorsWindowDefaults: {
@@ -94717,7 +102868,6 @@ validatorsToolbarDefaults: {
     ]
 },
 
-
 editFieldValidators : function (field) {
     // Create a temporary DataSource for use by validatorsEditor.
     // fields array is updated by the DS creation so deep clone
@@ -94761,7 +102911,7 @@ editFieldValidators : function (field) {
 
 createLiveDSInstance : function (dsData) {
 
-    var dsClass = this.dsClass || "DataSource",
+    var dsClass = this.dsClass || dsData._constructor || "DataSource",
         schema;
     if (isc.DS.isRegistered(dsClass)) {
         schema = isc.DS.get(dsClass);
@@ -94774,6 +102924,16 @@ createLiveDSInstance : function (dsData) {
     var liveDS = isc.ClassFactory.getClass(dsClass).create(dsData);
 
     return liveDS;
+},
+
+cancel : function () {
+    // This editor is typically embedded in a Window that has a body layout.
+    // Find the Window object, if any, and close it.
+    var parents = this.getParentElements();
+    if (parents && parents.length > 0) {
+        var window = parents[parents.length-1];
+        if (isc.isA.Window(window)) window.closeClick();
+    }
 },
 
 save : function () {
@@ -94789,10 +102949,17 @@ save : function () {
 
     var dsData = this.getDatasourceData();
 
-    if (dsData.serverType == "sql" || dsData.serverType == "hibernate") {
-        if (!dsData.fields.getProperty("primaryKey").or()) {
+    // When field editor is visible (i.e. not a basic MockDataSource)
+    // validate that there is a PK or add one
+    if (fieldEditor.isVisible()) {
+        // Determine if there is a defined field marked as PK or
+        // DataSource inherits a PK field.
+        var hasPK = dsData.fields.getProperty("primaryKey").or();
+        if (!hasPK && this._removedInternalIdField) {
+            // Flag provided to force re-adding the internalId field. Clear to reset state
+            delete this._removedInternalIdField;
+        } else if (!hasPK) {
             // This DataSource might inherit its primaryKey field...
-            var inheritsPK = false;
             if (isc.isA.DataSource(this._editingDataSource)) {
                 var allFields = this._editingDataSource.getFields(),
                     localFields = this._editingDataSource.getLocalFields();
@@ -94801,12 +102968,17 @@ save : function () {
                     // Catch the case that the user has overridden its inherited PK
                     // field and removed the primaryKey designation
                     if (fld.primaryKey && !dsData.fields.find("name",key)) {
-                        inheritsPK = true;
+                        hasPK = true;
                         break;
                     }
                 }
             }
-            if (!inheritsPK) {
+        }
+
+        if (!hasPK) {
+            if (this.createInternalIdPK) {
+                this.createInternalIdField(dsData.fields);
+            } else if (dsData.serverType == "sql" || dsData.serverType == "hibernate") {
                 isc.warn("SQL / Hibernate DataSources must have a field marked as the primary key");
                 return false;
             }
@@ -94821,9 +102993,89 @@ save : function () {
     // And remove _constructor: DatabaseBrowser if present ... not sure where that comes from
     if (dsData._constructor == "DatabaseBrowser") delete dsData._constructor;
 
-    this.doneEditing(dsData);
+    var _this = this;
+    var finishEditing = function () {
+        if (_this.makeUniqueTableName && !_this.readOnly) {
+            _this.verifyUniqueTableName(dsData);
+        } else {
+            _this.doneEditing(dsData);
+        }
+    };
+
+    // If editing an existing DS and the ID hasn't changed, don't check for uniqueness
+    if (this.origDSName != null && this.origDSName == dsData.ID) {
+        finishEditing();
+        return true;
+    }
+
+    // Confirm that the DS ID is unique
+    var dsDataSource = (this.builder ? this.builder.dsDataSource : this.dsDataSource),
+        dataSourceName = dsData.ID,
+        fileSpec = {
+            fileName: dataSourceName,
+            fileType: "ds",
+            fileFormat: "xml"
+        }
+    ;
+    dsDataSource.hasFile(fileSpec, function (dsResponse, data, dsRequest) {
+        if (!data) {
+            // Filename wasn't found so it is unique
+            finishEditing();
+            return;
+        }
+        // Warn user that continuing will overwrite existing DS
+        isc.warn("DataSource name '" + dataSourceName + "' is already in use. " +
+                    "Overwrite the existing DataSource?",
+        function (value) {
+            if (value) finishEditing();
+        }, {
+            buttons: [
+                isc.Dialog.CANCEL,
+                { title: "Overwrite", width:75, overflow: "visible",
+                    click: function () { this.topElement.okClick() }
+                }
+            ],
+            autoFocusButton: 1
+        })
+    });
 
     return true;
+},
+
+verifyUniqueTableName : function (dsData, nextSuffix) {
+    var tableName = (dsData.tableName || dsData.ID) + (nextSuffix != null ? "_" + nextSuffix : ""),
+        _this = this
+    ;
+
+    isc.DMI.call({
+        appID: "isc_builtin",
+        className: "com.isomorphic.tools.AdminConsole",
+        methodName: "tableExists",
+        arguments: [ tableName, null ],
+        callback : function (request, data) {
+            if (data) {
+                var suffix = nextSuffix || -1;
+                _this.verifyUniqueTableName(dsData, suffix + 1);
+            } else {
+                if (nextSuffix != null) dsData.tableName = tableName;
+                _this.doneEditing(dsData);
+            }
+        }
+    });
+},
+
+createInternalIdField : function (fields) {
+    fields.addAt({ name: "internalId", type: "sequence", primaryKey: true, hidden: true }, 0);
+},
+
+removeInternalIdField : function (fields) {
+    var index = fields.findIndex("name", "internalId");
+    if (index >= 0) {
+        fields.removeAt(index);
+        // Set flag to indicate to DS saving that internalId field was removed. This way it
+        // can be re-added automatically.
+        this._removedInternalIdField = true;
+    }
 },
 
 getExtraCleanNodeData : function (nodeList, includeChildren) {
@@ -94857,6 +103109,15 @@ getExtraCleanNodeData : function (nodeList, includeChildren) {
 },
 
 doneEditing : function (dsData) {
+    if (this.readOnly) {
+        var liveDS = isc.DS.get(dsData.ID);
+
+        // fire the callback passed in when editing began
+        this.fireCallback(this.saveCallback, "dataSource", [liveDS]);
+        this.saveCallback = null;
+        return;
+    }
+
     // handle custom subclasses of DataSource for which there is no schema defined by
     // serializing based on the DataSource schema but adding the _constructor property to
     // get the correct class.
@@ -94864,7 +103125,7 @@ doneEditing : function (dsData) {
     // it's specific class, it uses the superClass schema but loses it's Constructor
     // XXX we to preserve the class, we need to end up with the "constructor" property set
     // in XML, but this has special semantics in JS
-    var dsClass = this.dsClass || "DataSource",
+    var dsClass = this.dsClass || dsData._constructor || "DataSource",
         schema;
     if (isc.DS.isRegistered(dsClass)) {
         schema = isc.DS.get(dsClass);
@@ -94879,9 +103140,19 @@ doneEditing : function (dsData) {
 
     // serialize to XML and save to server
     var xml = schema.xmlSerialize(dsData);
-    this.logWarn("saving DS with XML: " + xml);
+    //this.logWarn("saving DS with XML: " + xml);
 
     var _this = this;
+    var fireCallback = function () {
+        // create a live instance
+        var liveDS = isc.DS.get(dsData.ID);
+        if (!liveDS) liveDS = isc.ClassFactory.getClass(dsClass).create(dsData);
+
+        // fire the callback passed in when editing began
+        _this.fireCallback(_this.saveCallback, "dataSource", [liveDS]);
+        _this.saveCallback = null;
+    };
+
     this.dsDataSource.saveFile({
         fileName: dsData.ID,
         fileType: "ds",
@@ -94889,16 +103160,16 @@ doneEditing : function (dsData) {
     }, xml, function() {
         // Reload the DataSource we just changed
         if (_this._editingDataSource) {
-            isc.DataSource.load(_this._editingDataSource.ID, null, true, true);
+            if (_this._editingDataSource.destroy) {
+                _this._editingDataSource.destroy();
+            }
+            isc.DataSource.load(_this._editingDataSource.ID, function() {
+                fireCallback();
+            }, true, true);
+        } else {
+            fireCallback();
         }
     });
-
-    // create a live instance
-    var liveDS = isc.ClassFactory.getClass(dsClass).create(dsData);
-
-    // fire the callback passed in when editing began
-    this.fireCallback(this.saveCallback, "dataSource", [liveDS]);
-    this.saveCallback = null;
 },
 clear : function () {
     if (this.mainEditor) this.mainEditor.clearValues();
@@ -94913,10 +103184,14 @@ getFieldRenames : function () {
 initWidget : function () {
     this.Super('initWidget', arguments);
 
-    this.addAutoChildren(["mainStack", "instructions", "mainEditor", "mockEditor", "buttonLayout"]);
-    this.buttonLayout.addMember(this.createAutoChild("saveButton"));
+    this.addAutoChildren(["mainStack", "instructions"]);
+    this.addAutoChild("mainEditor", { fields: isc.clone(this.mainEditorFields) });
+    this.addAutoChildren(["mockEditor", "buttonLayout"]);
     this.addTestDataButton = this.createAutoChild("addTestDataButton");
     this.buttonLayout.addMember(this.addTestDataButton);
+    this.buttonLayout.addMember(isc.LayoutSpacer.create({ width: 10 }));
+    this.buttonLayout.addMember(this.createAutoChild("cancelButton"));
+    this.buttonLayout.addMember(this.createAutoChild("saveButton"));
 
     if (this.dsDataSource) this.dsDataSource = isc.DataSource.get(this.dsDataSource);
 
@@ -94925,9 +103200,11 @@ initWidget : function () {
         this.addAutoChild("addChildButton");
     }
 
+    this.legalValuesButton = this.createAutoChild("legalValuesButton", { visibility: (this.showLegalValuesButton ? "inherit" : "hidden") });
     this.validatorsButton = this.createAutoChild("validatorsButton");
 
     this.addAutoChild("fieldEditor", {
+        fields: isc.clone(this.fieldEditorFields),
         // NOTE: provided dynamically because there's currently a forward dependency: DataSourceEditor is
         // defined in ISC_DataBinding but ComponentEditor is defined in ISC_Tools
         formConstructor:isc.TComponentEditor || isc.ComponentEditor,
@@ -94942,7 +103219,7 @@ initWidget : function () {
     this.moreButton = this.fieldEditor.moreButton;
     this.newButton = this.fieldEditor.newButton;
 
-    this.fieldEditor.gridButtons.addMember(this.validatorsButton);
+    this.fieldEditor.gridButtons.addMembers([this.legalValuesButton, this.validatorsButton]);
     if (this.canAddChildSchema) this.fieldEditor.gridButtons.addMember(this.addChildButton);
 
     var stack = this.mainStack;
@@ -94997,9 +103274,6 @@ initWidget : function () {
     this.previewGrid = this.createAutoChild("previewGrid");
     stack.addSection({ID: "previewSection", title: "Preview", expanded: false, items: [this.previewGrid]});
     */
-
-    stack.addSections({expanded: true, showHeader: false, items: [this.saveButton]});
-
 },
 
 execSQL : function () {
@@ -95063,12 +103337,354 @@ deriveFields : function (ds) {
 
 });
 
+/**************************************************
+Parsed Data DataSource Editor
+***************************************************/
+
+//> @class ParsedDataDSEditor
+// Provides a UI for creating +link{DataSource, DataSources)
+// whose data comes from parsing an input file. A tab is included
+// to show the input data as parsed based on field edits.
+//
+// @inheritsFrom VLayout
+// @visibility devTools
+//<
+isc.defineClass("ParsedDataDSEditor", "VLayout");
+
+
+isc.ParsedDataDSEditor.addProperties({
+
+    //> @attr parsedDataDSEditor.dsProperties (Object : null : IR)
+    // The properties that define the DataSource to be created.
+    //<
+
+    //> @attr parsedDataDSEditor.fileType (String : null : IR)
+    // Type of the input data: CSV, XML or JSON
+    //
+    // @visibility devTools
+    //<
+
+    // rawData
+    // guessedRecords
+
+    // i18n messages
+    //---------------------------------------------------------------------------------------
+
+    //> @attr parsedDataDSEditor.instructions (HTMLString : "Edit detected fields and observe results for imported data" : IR)
+    // The instructions message shown to the top of the wizard.
+    //
+    // @group i18nMessages
+    //<
+    instructions: "Edit detected fields and observe results for imported data",
+
+    // internal components
+    //---------------------------------------------------------------------------------------
+
+    instructionsFlowDefaults: {
+        _constructor: isc.HTMLFlow,
+        autoDraw: false,
+        width: "100%",
+        height: 35,
+        padding: 10
+    },
+
+    tabSetDefaults: {
+        _constructor: isc.TabSet,
+        autoDraw: false,
+        width: "100%",
+        height: "*",
+        tabs: [
+            { title: "Edit Fields" },
+            { title: "View Data", pane: "autoChild:viewDataPane" }
+        ]
+    },
+
+    buttonLayoutDefaults: {
+        _constructor: isc.HLayout,
+        autoDraw: false,
+        width: "100%", height: 35,
+        padding: 5,
+        membersMargin: 10,
+        align: "right"
+    },
+
+    createDataSourceButtonDefaults: {
+        _constructor: isc.IButton,
+        autoParent: "buttonLayout",
+        autoDraw: false,
+        title:"Save",
+        click : function () {
+            this.creator.save();
+        }
+    },
+
+    importDataButtonDefaults: {
+        _constructor: isc.IButton,
+        autoParent: "buttonLayout",
+        autoDraw: false,
+        title:"Import from file..",
+        // Disabled until upload feature is confirmed
+        disabled: true,
+        click : function () {
+            this.creator.importDataClick();
+        }
+    },
+
+    // DS Editor tab
+    dsEditorPaneDefaults: {
+        _constructor: isc.DataSourceEditor,
+        autoDraw: false,
+        width: "100%",
+        height: "100%",
+        canAddChildSchema: false,
+        canEditChildSchema: false,
+        buttonLayoutProperties: {
+            // Wizard "finish" button is used to trigger save so
+            // the button layout of the DS editor is not shown
+            visibility: "hidden"
+        },
+        mainStackProperties: {
+            _constructor: "TSectionStack"
+        },
+        mainEditorProperties: {
+            _constructor: "TComponentEditor",
+            formConstructor: isc.TComponentEditor
+        },
+        fieldLayoutProperties: {
+            _constructor: "TLayout"
+        },
+        fieldEditorProperties: {
+            fieldNameChanged : function (fromName, toName) {
+                this.creator.creator.fieldNameChanged(fromName, toName);
+            },
+            fieldTypeChanged : function (field) {
+                this.creator.creator.fieldTypeChanged(field);
+            }
+        }
+    },
+
+    // View Data tab
+    viewDataPaneDefaults: {
+        _constructor: isc.SectionStack,
+        autoDraw: false,
+        width: "100%",
+        height: "100%",
+        visibilityMode: "multiple",
+        sections: [
+            { name: "records", title: "Records", showHeader: false, expanded: true,
+                items: [ "autoChild:dataViewer" ]
+            },
+            { name: "errors", title: "Warnings/Errors", //expanded: false, hidden: true,
+                items: [ "autoChild:errorViewer" ]
+            }
+        ]
+    },
+
+    dataViewerDefaults: {
+        _constructor: isc.ListGrid,
+        autoDraw: false,
+        width: "100%",
+        height: "100%"
+    },
+
+    errorViewerDefaults: {
+        _constructor: isc.ListGrid,
+        autoDraw: false,
+        width: "100%",
+        autoFitData: "vertical",
+        autoFitMaxRecords: 10,
+        defaultFields: [
+            { name: "fieldName", title: "Field", width: 200 },
+            { name: "message", title: "Message", width: "*" }
+        ]
+    }
+
+});
+
+isc.ParsedDataDSEditor.addMethods({
+
+    initWidget : function () {
+        this.Super("initWidget", arguments);
+
+        this.addAutoChild("instructionsFlow", { contents: this.instructions });
+        this.addAutoChild("tabSet");
+        this.addAutoChild("buttonLayout");
+
+        this.addAutoChild("createDataSourceButton");
+
+        this.editorPane = this.createAutoChild("dsEditorPane");
+        this.tabSet.setTabPane(0, this.editorPane);
+
+        this.dataPane = this.createAutoChild("viewDataPane");
+        this.tabSet.setTabPane(1, this.dataPane);
+    },
+
+    editNew : function (dataSource, callback, instructions) {
+        // Make a copy of dsProperties to avoid changing caller's version
+        this.dsProperties = isc.addProperties({}, dataSource.defaults);
+        delete this.dsProperties.ID;
+
+        var guessedRecords = this.guessedRecords,
+            guessedFields,
+            parseDetails
+        ;
+
+        if (!guessedRecords) {
+            this._createParserAndGuesser();
+
+            var parsedFields = this.parsedFields,
+                parsedData = this.parsedData
+            ;
+
+            var guesser = this.guesser;
+            guesser.fields = parsedFields;
+            guessedFields = guesser.extractFieldsFrom(parsedData);
+            guessedRecords = guesser.convertData(parsedData);
+
+            parseDetails = guesser.parseDetails;
+        }
+
+        this._rebindDataViewer(null, guessedRecords, parseDetails);
+
+        this.editorPane.editNew(dataSource, callback, instructions);
+    },
+
+    editSaved : function (dataSource, callback, instructions) {
+
+        //this.editorPane.editSaved(dataSource, callback, instructions);
+    },
+
+    save : function () {
+        this.editorPane.save();
+    },
+
+    setKnownDataSources : function (dataSourceList) {
+        this.editorPane.knownDataSources = dataSourceList;
+    },
+
+    _createParserAndGuesser : function () {
+        if (!this.parser) {
+            this.parser = isc.FileParser.create({ hasHeaderLine: true });
+        }
+        if (!this.parsedData || !this.parsedFields) {
+            var parser = this.parser,
+                fileType = this.fileType,
+                rawData = this.rawData
+            ;
+
+            // Perform initial parse to get fields
+            if (fileType == "JSON" || fileType == "XML") {
+                // XML data is pre-processed into JSON before getting here
+                this.parsedData = parser.parseJsonData(rawData);
+            } else if (fileType == "CSV") {
+                this.parsedData = parser.parseCsvData(rawData);
+            }
+            this.parsedFields = parser.getFields();
+        }
+        if (!this.guesser) {
+            var parsedFields = this.parser.getFields();
+            this.guesser = isc.SchemaGuesser.create({ fields: parsedFields });
+        }
+    },
+
+    fieldNameChanged : function (fromName, toName) {
+        this._createParserAndGuesser();
+
+        var parser = this.parser,
+            fileType = this.fileType,
+            rawData = this.rawData,
+            fieldNames = parser.getFieldNames(),
+            idx = fieldNames.indexOf(fromName)
+        ;
+        if (idx < 0) return;
+
+        fieldNames[idx] = toName;
+        this.parser.fieldNames = fieldNames;
+
+        var parsedData = this.parsedData;
+        if (fileType == "CSV") {
+            // Re-parse original data with new field name
+            parsedData = parser.parseCsvData(rawData);
+        } else {
+            // Rename the field in data
+            parsedData.forEach(function (record) {
+                if (record[fromName] != null) {
+                    record[toName] = record[fromName];
+                    delete record[fromName];
+                }
+            });
+        }
+        this.parsedData = parsedData;
+        this.parsedFields = parser.getFields();
+
+        // Guess fields and convert data
+        var guesser = this.guesser;
+        guesser.fields = this.parsedFields;
+        var guessedFields = guesser.extractFieldsFrom(parsedData),
+            guessedRecords = guesser.convertData(parsedData)
+        ;
+
+        // Re-create testDS with updated fields/data
+        this._rebindDataViewer(guessedFields, guessedRecords, guesser.parseDetails);
+    },
+
+    fieldTypeChanged : function (field) {
+        this._createParserAndGuesser();
+
+        // Updated parsed fields to apply type
+        var parsedFields = this.parsedFields,
+            parsedData = this.parsedData
+        ;
+
+        var parsedField = parsedFields.find("name", field.name);
+        if (parsedField) {
+            parsedField.type = field.type;
+
+            var guesser = this.guesser;
+            guesser.fields = parsedFields;
+            var guessedFields = guesser.extractFieldsFrom(parsedData),
+                guessedRecords = guesser.convertData(parsedData)
+            ;
+
+            // Re-create testDS with updated fields/data
+            this._rebindDataViewer(guessedFields, guessedRecords, guesser.parseDetails);
+        }
+    },
+
+    _rebindDataViewer : function (guessedFields, guessedRecords, parseDetails) {
+        // Re-create testDS with updated fields/data
+        if (this.testDS) this.testDS.destroy();
+
+        var dsProperties = isc.addProperties({}, this.dsProperties, {
+            clientOnly: true,
+            testData: guessedRecords
+        });
+        if (guessedFields) dsProperties.fields = guessedFields;
+
+        this.testDS = isc.DataSource.create(dsProperties);
+
+        // Rebind grid
+        this.dataViewer.setDataSource(this.testDS);
+        this.dataViewer.fetchData();
+
+        if (parseDetails && parseDetails.length > 0) {
+            var _this = this;
+            this.dataPane.expandSection(1, function () {
+                // Make sure the errorViewer has been created
+                _this.errorViewer.setData(parseDetails);
+            });
+        } else if (guessedFields) {
+            this.dataPane.collapseSection(1);
+        }
+    }
+});
+
 }
 isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._debugModules.push('DataBinding');isc.checkForDebugAndNonDebugModules();isc._moduleEnd=isc._DataBinding_end=(isc.timestamp?isc.timestamp():new Date().getTime());if(isc.Log&&isc.Log.logIsInfoEnabled('loadTime'))isc.Log.logInfo('DataBinding module init time: ' + (isc._moduleEnd-isc._moduleStart) + 'ms','loadTime');delete isc.definingFramework;if (isc.Page) isc.Page.handleEvent(null, "moduleLoaded", { moduleName: 'DataBinding', loadTime: (isc._moduleEnd-isc._moduleStart)});}else{if(window.isc && isc.Log && isc.Log.logWarn)isc.Log.logWarn("Duplicate load of module 'DataBinding'.");}
 /*
 
   SmartClient Ajax RIA system
-  Version v12.0p_2018-09-15/LGPL Deployment (2018-09-15)
+  Version SNAPSHOT_v12.1d_2019-05-29/LGPL Deployment (2019-05-29)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

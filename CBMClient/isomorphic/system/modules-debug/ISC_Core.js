@@ -1,7 +1,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version v12.0p_2018-09-15/LGPL Deployment (2018-09-15)
+  Version SNAPSHOT_v12.1d_2019-05-29/LGPL Deployment (2019-05-29)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -42,8 +42,9 @@ if (!window.isc || typeof isc.Packager != "object") {
 
 
 //> @object isc
-// The <code>isc</code> object contains global methods and objects of the Isomorphic SmartClient
-// framework.
+// <code>window.isc</code> is the base object for the Isomorphic SmartClient framework.
+// Every SmartClient class is available on this object as <code>isc.<i>ClassName</i></code>.
+// The <code>isc</code> also contains a number of static utility methods.
 // <P>
 // See also +link{group:simpleNamesMode,Simple Names mode}.
 //
@@ -91,15 +92,15 @@ isc._start = new Date().getTime();
 
 // versioning - values of the form ${value} are replaced with user-provided values at build time.
 // Valid values are: version, date, project (not currently used)
-isc.version = "v12.0p_2018-09-15/LGPL Deployment";
-isc.versionNumber = "v12.0p_2018-09-15";
-isc.buildDate = "2018-09-15";
+isc.version = "SNAPSHOT_v12.1d_2019-05-29/LGPL Deployment";
+isc.versionNumber = "SNAPSHOT_v12.1d_2019-05-29";
+isc.buildDate = "2019-05-29";
 isc.expirationDate = "";
 
-isc.scVersion = "12.0p";
-isc.scVersionNumber = "12.0";
-isc.sgwtVersion = "12.0p";
-isc.sgwtVersionNumber = "12.0";
+isc.scVersion = "12.1d";
+isc.scVersionNumber = "12.1";
+isc.sgwtVersion = "12.1d";
+isc.sgwtVersionNumber = "12.1";
 
 // these reflect the latest stable version relative to the branch from which this build is
 // created.  So for example for 11.0d/6.0d, this will be 10.1/5.1.  But for 10.0/5.0 this will
@@ -1424,6 +1425,10 @@ isc.Browser.isUnix = (!isc.Browser.isMac &&! isc.Browser.isWin);
 // real hardware. Refer to Apple's +externalLink{https://developer.apple.com/library/ios/documentation/IDEs/Conceptual/AppDistributionGuide/Introduction/Introduction.html,App Distribution Guide} for complete instructions on provisioning the app for testing devices, in particular, the section titled
 // +externalLink{https://developer.apple.com/library/ios/documentation/IDEs/Conceptual/AppDistributionGuide/TestingYouriOSApp/TestingYouriOSApp.html#//apple_ref/doc/uid/TP40012582-CH8-SW1,Beta Testing Your iOS App}.
 //
+// <p>Apple has deprecated UIWebView and we recommend switching to the officially supported
+// +externalLink{https://github.com/apache/cordova-plugin-wkwebview-engine,WKWebView} plugin to
+// resolve momentum scrolling issues and obtain more Safari-like behavior.
+//
 // <h3>Android Platform</h3>
 // To begin targeting Android devices, follow the instructions on the
 // +externalLink{http://docs.phonegap.com/en/edge/guide_platforms_android_index.md.html,Android Platform Guide}.
@@ -1536,6 +1541,11 @@ isc.Browser._useTouchMoveImageCSS = isc.Browser.supportsDualInput &&
 
 isc.Browser._useTouchMoveCanvasCSS = isc.Browser._useTouchMoveImageCSS &&
         window.isc_useNativeTouchScrolling == false;
+
+
+if (isc.Browser.supportsDualInput && isc.Browser.isChrome) {
+    isc.Browser.minDualInputThumbLength = 28;
+}
 
 //> @classAttr browser.isTouch (boolean : auto-detected based on device : RW)
 // Is the application running on a touch device (e.g. iPhone, iPad, Android device, etc.)?
@@ -1652,10 +1662,16 @@ if (isc.Browser.isIPhone) {
     // not contain the word "Safari".
     isc.Browser.isUIWebView = navigator.userAgent.indexOf("Safari") < 0;
 
-    isc.Browser.isMobileSafari = !isc.Browser.isUIWebView &&
-                                 // Exclude Chrome for iOS
-                                 // https://developers.google.com/chrome/mobile/docs/user-agent#chrome_for_ios_user-agent
-                                 navigator.userAgent.indexOf("CriOS/") < 0;
+    // Chrome for iOS
+    // https://developers.google.com/chrome/mobile/docs/user-agent#chrome_for_ios_user-agent
+    isc.Browser.isIOSChrome = navigator.userAgent.indexOf("CriOS/") >= 0;
+    // Firefox for iOS
+    // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/User-Agent/Firefox
+    isc.Browser.isIOSFirefox = navigator.userAgent.indexOf("FxiOS/") >= 0;
+
+    isc.Browser.isMobileSafari = !isc.Browser.isUIWebView && !isc.Browser.isIOSChrome
+                                    && !isc.Browser.isIOSFirefox;
+
 }
 
 // iPad.  Checks for "iPhone" OS + "iPad" in UA String.
@@ -3586,45 +3602,70 @@ isc.iscToLocaleString = function isc_iscToLocaleString(object) {
     return isc.emptyString + object;
 }
 
-isc._$toolSkinNames = ["ToolSkin","ToolSkinNative"];
+isc.documentCurrentScriptCapable = document.currentScript != null;
+isc.getCurrentScriptSrc = function () {
+    if (document.currentScript != null) {
+        return document.currentScript.src;
+    } else if (isc.documentCurrentScriptCapable) {
+        // without this check, a call to this API after script execution (e.g. via eval()) would
+        // be indistinguishable from an older browser and would fall through to the logic below
+        // which would inevitably return something like "anonymous", but generally, on modern
+        // browsers, we would like to be able to distinguish this case (from a possible eval
+        // stack mis-detection value)
+        return null;
+    } else {
+        var error = new Error(),
+            stack = error.stack
+        ;
 
-isc.setCurrentSkin = function isc_setCurrentSkin(skinName, seriesName) {
-    // store the current skin so we can detect multiple skins being loaded
-    if (isc.currentSkin && !isc._$toolSkinNames.contains(skinName)) {
-        isc.logWarn("Detected loading of more than one skin - '" + skinName + "' was loaded " +
-            "when '" + isc.currentSkin.name + "' was already loaded.  See the QuickStart Guide " +
-            "for instructions on correctly changing the current skin");
+        if (stack == null) try {
+            throw error;
+        } catch (error) {
+            stack = error.stack
+        }
+
+        if (stack != null) {
+
+
+            var atText = stack.indexOf(" at ") >= 0 ? " at " : "@";
+            var lastAtPos = stack.lastIndexOf(atText);
+            if (lastAtPos >= 0) {
+                var src = stack.substring(lastAtPos + atText.length);
+
+                // remove outermost parentheses (required for IE10+)
+                src = src.replace(/^[^(]*\((.*)\)[^)]*$/, "$1");
+
+                // Remove the trailing lineno/colno.
+                var re = new RegExp(":\\d+\\s*$");
+                var result = re.exec(src);
+                if (result) {
+                    src = src.substring(0, result.index);
+                    result = re.exec(src);
+                    if (result) {
+                        src = src.substring(0, result.index);
+                    }
+                }
+
+                return src;
+            }
+
+        // IE9 and below will enter this section
+
+        } else if (document.documentMode >= 8) {
+            var oldOnerrorHandler = window.onerror;
+            window.onerror = function (message, url, lineno) {
+                return url;
+                // window.onerror = oldOnerrorHandler;
+                // return true;
+            };
+
+            window.noSuchMethod();
+        } else {
+            var scriptElems = document.getElementsByTagName("script");
+            var lastScriptElem = scriptElems[scriptElems.length - 1];
+            return lastScriptElem.src;
+        }
     }
-    // make isc.currentSkin an object so we can hang the "series" name and other skinning
-    // details onto it, for use with upcoming skinning improvements
-    isc.currentSkin = {
-        name: skinName,
-        series: seriesName
-    };
-}
-
-isc.getCurrentSkin = function isc_getCurrentSkin() {
-    return isc.currentSkin;
-}
-
-isc.getCurrentSkinName = function isc_getCurrentSkinName() {
-    return isc.currentSkin && isc.currentSkin.name;
-}
-
-isc.parseSkinURLParams = function isc_parseSkinURLParams(defaultSizeIncrease, defaultFontIncrease) {
-    // apply the sizeIncrease
-    var sizeInc = parseInt(isc.params.sizeIncrease);
-    if (isNaN(sizeInc)) sizeInc = defaultSizeIncrease;
-    isc.Canvas.resizeControls(sizeInc);
-
-    // apply the fontIncrease
-    var fontInc = parseInt(isc.params.fontIncrease);
-    if (isNaN(fontInc)) fontInc = defaultFontIncrease;
-    isc.Canvas.resizeFonts(fontInc, null, true);
-
-    // store
-    isc.currentSkin.sizeIncrease = sizeInc;
-    isc.currentSkin.fontIncrease = fontInc;
 }
 
 
@@ -4845,7 +4886,8 @@ isc.addMethods(isc.ClassFactory, {
 
     addGlobalID : function (object, ID, dontWarn) {
         // if an ID was passed, use that
-        object.ID = ID || object.ID;
+        object.ID = ID || object.ID || object.autoID;
+        delete object.autoID;
 
         var wd = this.getWindow();
 
@@ -4910,7 +4952,8 @@ isc.addMethods(isc.ClassFactory, {
 
 
             if (scClassInstance && wd[object.ID].destroy != null &&
-                !isc.isA.ClassObject(wd[object.ID]))
+                !isc.isA.ClassObject(wd[object.ID]) &&
+                !isc.isA.FormItem(wd[object.ID]))
             {
                 wd[object.ID].destroy();
             }
@@ -4960,6 +5003,11 @@ isc.addMethods(isc.ClassFactory, {
             wd[object.ID] = object;
         }
 
+
+        if (isc.isA && isc.isA.Canvas && !isc.isA.Canvas(object) && object._initDynamicProperties) {
+            object._initDynamicProperties();
+            object._createDynamicPropertyRules();
+        }
     },
 
     _$isc_OID_ : "isc_OID_",
@@ -5575,21 +5623,59 @@ isc.Class.addClassMethods({
     //    @visibility external
     //<
     create : function (A,B,C,D,E,F,G,H,I,J,K,L,M) {
-        var newInstance = this.createRaw();
+        var clazz = this;
+
+        // apply CreateScreenSettings - remap new instance's class, or return different instance
+
+        var screenSettings = isc._createScreenSettings;
+        if (screenSettings) {
+            var replacement, newClass,
+                classSubs     = screenSettings.classSubstitutions,
+                componentSubs = screenSettings.componentSubstitutions;
+            // apply component substitutions first; these target a specific instance ID
+            if (componentSubs) {
+                var ID = this._getIDfromPropertyObjs(arguments);
+                if (ID && componentSubs[ID]) { // found a mapped ID
+                    replacement = componentSubs[ID];
+                    // if the replacement is an instance, just return it
+                    if (isc.isAn.Instance(replacement)) return replacement;
+                    // otherwise, treat it as a class name and resolve it
+                    newClass = isc.ClassFactory.getClass(replacement, true);
+                }
+            }
+            // if we haven't executed a component substitution, try a class substitution
+            if (classSubs && !newClass) {
+                replacement = classSubs[clazz.getClassName()];
+                // if we map the current class, try to resolve the replacement class name
+                if (replacement) newClass = isc.ClassFactory.getClass(replacement, true);
+            }
+            // if we've remapped the current class, newClass will be non-null
+            if (newClass) {
+                if (this.logIsInfoEnabled("makeScreen")) {
+                    this.logInfo("Using class " + newClass.getClassName() + " in place of " +
+                        clazz.getClassName() + " due to createScreenSettings", "createScreen");
+                }
+                clazz = newClass;
+            }
+        }
+
+        var newInstance = clazz.createRaw();
 
         if (newInstance != null) {
             newInstance = newInstance.completeCreation(A,B,C,D,E,F,G,H,I,J,K,L,M);
         }
 
-
-        if (isc.isA && isc.isA.Canvas && !isc.isA.Canvas(newInstance) && newInstance._initDynamicProperties) {
-            newInstance._initDynamicProperties();
-            newInstance._createDynamicPropertyRules();
-        }
-
         // return the new instance
-        return newInstance
+        return newInstance;
     },
+
+     // given a list of property objects A, B, C, D, ..., return last ID binding
+     _getIDfromPropertyObjs: function (propertyObjList) {
+         for (var i = propertyObjList.length - 1; i >= 0; i--) {
+             var arg = propertyObjList[i];
+             if (arg && arg.ID) return arg.ID;
+         }
+     },
 
 
 
@@ -8174,9 +8260,11 @@ isc.Class.addMethods({
                 if (!isc.capturedComponents) isc.capturedComponents = [];
                 isc.capturedComponents.add(component);
 
-                if (component.defaults.ID) {
-                    isc.ClassFactory.addGlobalID(component, component.defaults.ID);
-                    //isc.Log.logWarn("adding global component: " + component.defaults.ID);
+                if (component.defaults.ID || component.defaults.autoID) {
+                    isc.ClassFactory.addGlobalID(component, component.defaults.ID ||
+                                                 component.defaults.autoID);
+                    // isc.Log.logWarn("adding global component: " +
+                    //                 (component.defaults.ID || component.defaults.autoID));
                 }
 
                 // restore original value of isc.captureDefaults
@@ -8820,43 +8908,74 @@ isc.Class.addMethods({
     // @title Observation
     //<
 
-    //>    @method        class.observe()
-    // Take an arbitrary action whenever a method is called on an instance.<br><br>
-    //
-    // When you observe some method of another object, eg:<br>
-    //            <code>thisObject.observe(thatObject, "someMethod", "observer.foo()")</code><br><br>
-    //
-    // When <code>thatObject.someMethod()</code> is called,<br>
-    //            <code>thisObject.foo()</code> <br>
-    // will be called automatically, after the observed method completes.<br><br>
-    //
-    // Action is typically a string expression.  Available variables:
+    //>    @method class.observe()
+    // Set up a notification action to be invoked whenever some method is called on a target
+    // object.
+    // <P>
+    // For example, if you wanted to take an action every time some ListGrid on your page
+    // had its +link{listGrid.selectionUpdated(),selection updated}, instead of
+    // <i>overriding</i> the <code>selectioUpdated()</code> method on the grid, you could
+    // observe it with code like this:
+    // <P>
+    // <code>myCanvas.observe(myListGrid, "selectionUpdated", "observer.gridSelectionUpdated()")</code>
+    // <P>
+    // In this example, every time <i>selectionUpdated()</i> fired on the grid "myListGrid",
+    // after that method completed, the specified action would be invoked. (In this case
+    // the action would call a method called "gridSelectionUpdated"  on the observer, "myCanvas").
+    // <P>
+    // An unlimited number of observers can be set up to observe any method. The notification
+    // actions will all be fired automatically in the order that the observations were set up.
+    // <P>
+    // NOTES:
     // <ul>
-    //    <li> observed: target of the observation, that is, object passed to observe()
-    //    <li> observer: object that observes, that is, object that observe() was called on
-    //    <li> returnVal: return value of observed function
+    // <li>The object to observe may be any JavaScript object with the specified method,
+    //     including simple JavaScript Objects or Arrays, or instances of SmartClient classes
+    //     like +link{Canvas}.</li>
+    // <li>A method could potentially trigger an observation of itself by another object,
+    //     either through code within the method itself or within an observer's action.<br>
+    //     In this case the observation will be set up, but the new observation action will
+    //     not fire as part of this thread. For subsequent calls to the method, the newly
+    //     added observer will be fired.</li>
+    // <li><i>[Potential memory leak]</i>: If the target object is a simple JavaScript object
+    //     (not an instance of a SmartClient class), developers should always call
+    //     +link{class.ignore(),ignore()} to stop observing the object if an observation
+    //     is no longer necessary.<br>
+    //     This ensures that if the observed object is subsequently allowed to go out of scope by
+    //     application code, the observation system will not retain a reference
+    //     to it (so the browser can reclaim the allocated memory).<br>
+    //     While cleaning up observations that are no longer required is always good practice,
+    //     this memory leak concern is not an issue if the target object is an instance of
+    //     a SmartClient class. In that case the observation is automatically released when the
+    //     target is +link{class.destroy(),destroyed}.</li>
     // </ul>
     //
-    // An unlimited number of observers can observe any message, they will all be notified
-    // automatically in the order that the observations were set up.<br><br>
-    //
-    // NOTES:
-    // - observation also works on JavaScript Array objects
-    // - a method may trigger an observation of itself by another object, either through code
-    //   within the method itself or within an observer's action.  In this case the observation
-    //   will be set up, but the new observation action will not fire as part of this thread.
-    //   When the method is called again in the future the newly added observer will be fired.
-    //
-    //
-    //        @param    object        (Object)    object to observe
-    //        @param    methodName    (String)    name of the method to observe
-    //        @param    [action]    (String)    String for the function to call.
-    //                                        In this string,
-    //                                            <code>observer</code> is the object that is observing,
-    //                                            <code>this</code> is the object that is being observed
-    //
-    //                                        If <code>action</code> is not specified,
-    //                                            <code>observer.methodName()</code> will be called.
+    // @param object (Object) Object to observe. This may be any JavaScript object with the specified
+    //   target method, including native arrays, and instances of SmartClient classes such as
+    //   +link{class:canvas}.
+    // @param methodName (String) Name of the method to observe. Every time this method is invoked
+    //   on the target object the specified action will fire
+    //   (after the default implementation completes).
+    // @param [action] (Function | String) Optional action to take when the observed method is invoked
+    //  on the target object.<br>
+    //   If <code>action</code> is a string to execute, certain keywords are available for context:
+    //   <ul>
+    //   <li><code>observer</code> is this object (the object on which the
+    //       <code>observe(...)</code> method was called).</li>
+    //   <li><code>observed</code> is the target object being observed (on which the method was invoked).</li>
+    //   <li><code>returnVal</code> is the return value from the observed method (if there is one)</li>
+    //   <li>For functions defined with explicit parameters, these will also be available as keywords within
+    //       the action string</li>
+    //   </ul>
+    //   If <code>action</code> is a function, this will be executed in the scope of the
+    //   observer (so <code>this</code> will be the object on which <code>observe()</code>
+    //   was invoked). The arguments for the original method will also be
+    //   passed to this action function as arguments. If developers need to access the target
+    //   object being observed from the action function they may use native javascript techniques
+    //   such as
+    //   +externalLink{https://developer.mozilla.org/en-US/docs/Web/JavaScript/Closures,javascript closure}
+    //   to do so. The return value from the observed method is not available to the action function.<br>
+    //   If the <code>action</code> parameter is omitted the default behavior will invoke the
+    //   same named method on the observer, passing in the same parameters.
     //
     //        @return    (boolean)    true == observation set up, false == observation not set up
     //      @see Class.ignore()
@@ -10578,12 +10697,31 @@ isc.Class.addMethods({
     getRuleScopeComponent : function () {
         if (!this.ruleScope) return null;
 
-        var component = window[this.ruleScope];
+        var ruleScope = this.getRuleScope();
+        if (!ruleScope) return null;
+
+        var component = window[ruleScope];
         return (!component || component.destroyed ? null : component);
     },
 
     getRuleScope : function () {
-        if (!this.ruleScope) return null;
+        if (isc.disableRuleScope) {
+            // Only show message once
+            if (!isc.Canvas._loggedDisabledRuleScope) {
+                isc.logWarn("RuleScope has been explicitly disabled (isc.disableRuleScope=true). No ruleContext operations will be processed.")
+                isc.Canvas._loggedDisabledRuleScope = true;
+            }
+            return null;
+        }
+        if (!this.ruleScope) {
+            // A FormItem should take on the ruleScope of its form.
+            // This is useful for pushing to Workflow Process from
+            // button click for example.
+            if (this.form && isc.isA.FormItem(this)) {
+                return this.form.getRuleScope();
+            }
+            return null;
+        }
 
         // If Canvas was provided as ruleScope, always return ID
         return (isc.isA.Canvas(this.ruleScope) ? this.ruleScope.getID() : this.ruleScope);
@@ -10632,6 +10770,11 @@ isc.Class.addMethods({
 
     _initDynamicProperties : function () {
         if (!this.dynamicProperties) return;
+
+        if (isc.disableRuleScope) {
+            this.logWarn("Dynamic properties defined while RuleScope has been explicitly disabled (isc.disableRuleScope=true). Dynamic properties will be ignored.");
+            return;
+        }
 
         if (!this._dynamicProperties) this._dynamicProperties = {};
 
@@ -10725,6 +10868,11 @@ isc.Class.addMethods({
         if (isc.isAn.Object(source)) {
             source = this._normalizeDynamicProperty(source);
         }
+        if (isc.disableRuleScope) {
+            this.logInfo("Attempt to add Dynamic Property while RuleScope has been explicitly disabled (isc.disableRuleScope=true). Dynamic property will be ignored.")
+            return;
+        }
+
         this.logDebug("Add dynamicProperty " + propertyName + "=" + this.echoFull(source), "dynamicProperties");
 
         // Remove existing dynamic propery configuration and rule
@@ -10814,6 +10962,10 @@ isc.Class.addMethods({
         }
         if (!this.ruleScope && (!isc.Canvas || !isc.isA.Canvas(this))) {
             this.logInfo("Dynamic properties defined on non-canvas class but has no specified ruleScope - ignoring");
+            return;
+        }
+        if (isc.disableRuleScope) {
+            this.logWarn("Dynamic properties defined while RuleScope has been explicitly disabled (isc.disableRuleScope=true). Dynamic properties will be ignored.");
             return;
         }
 
@@ -10973,7 +11125,6 @@ isc.Class.addMethods({
             }
         }
     }
-
 });
 
 // NOTE: toString functions CANNOT be added by addMethods, because a property named "toString"
@@ -11589,6 +11740,25 @@ isc.Func.addClassMethods({
 
         return template.join(isc._emptyString);
     },
+    _workflowActionToExpressionTemplate: [
+        "var process = isc.ClassFactory.newInstance(",  // 0
+        ,                                               // 1 Expression as string
+        ");",                                           // 2
+        "if (!process){",                               // 3
+        "var message='Cannot create process';",         // 4
+        "isc.Log.logWarn(message);if(isc.designTime)isc.say(message);return}",  // 5
+        "var ruleScope=(this.getRuleScope?this.getRuleScope():null);",          // 6
+        "if (ruleScope)process.ruleScope=ruleScope;",   // 7
+        "var screenComponent=isc.isA.FormItem(this)?this.form._screen:this._screen;", // 8
+        "if (!screenComponent && this.componentID && isc.isA.ListGrid(window[this.componentID])) screenComponent=window[this.componentID]._screen;", // 9
+        "if (screenComponent)process.screenComponent=screenComponent;", // 10
+        "process.start();"                              // 11
+    ],
+    _workflowActionToExpressionString : function (expression) {
+        var template = this._workflowActionToExpressionTemplate;
+        template[1] = isc.JSON.encode(expression);
+        return template.join(isc._emptyString);
+    },
     _expressionToFunction : function (variables, expression, comment) {
 
 
@@ -11609,6 +11779,8 @@ isc.Func.addClassMethods({
         //        callback : "someExpression()" // something use manually entered
         //    }
         //  }
+        // or workflow process properties object
+        //  { _constructor: "Process", elements: [...], ... }
         if (isc.isAn.Object(expression)) {
             var varsArray = variables;
             if (isc.isA.String(varsArray)) varsArray= variables.split(",");
@@ -11618,7 +11790,9 @@ isc.Func.addClassMethods({
             if (!isc.isAn.Array(varsArray)) varsArray = [];
             expression = isc.Func._resolveAction(expression);
             var expressionString;
-            if (isc.isAn.Array(expression)) {
+            if (expression._constructor == "Process") {
+                expressionString = isc.Func._workflowActionToExpressionString(expression);
+            } else if (isc.isAn.Array(expression)) {
                 var numExpressions = expression.length;
                 var expressionStrings = [];
                 for (var i = 0; i < numExpressions; ++i) {
@@ -11653,7 +11827,6 @@ isc.Func.addClassMethods({
         if (isc.isAn.Array(variables)) {
             variables = variables.join();
         }
-
 
         var isSimpleExpression = true;
         // loop through expression character by character. if there is any
@@ -19984,8 +20157,8 @@ _splitDateString : function (string, format, zeroEmptyTime) {
         // Note: We don't support years greater than 9999. Attempting to set a year greater than
         // 9999 on a JS date causes a native browser crash on IE6
         var regex =
-        //          YYYY || YY/[M]M  /  YYYY || YY/[M]M  /  YYYY || YY/[M]M [(space) [H]H  :    MM    [:     SS]]
-        new RegExp(/^\s*(-?\d{1,4})[^\d](-?\d{1,4})[^\d](-?\d{1,4})([^\d](\d{1,2})[^\d](\d\d)[^\d]?(\d\d)?)?\s*([ap]m?)?\s*$/),
+        //          YYYY || YY/[M]M  /  YYYY || YY/[M]M  /  YYYY || YY/[M]M [(space) [H]H  :    MM    [:     SS]] (case-insensitive am/pm)
+        new RegExp(/^\s*(-?\d{1,4})[^\d](-?\d{1,4})[^\d](-?\d{1,4})([^\d](\d{1,2})[^\d](\d\d)[^\d]?(\d\d)?)?\s*([AaPp][Mm]?)?\s*$/),
             results = string.match(regex);
 
         if (results == null) return null;
@@ -21092,6 +21265,17 @@ setToZeroTime : function (date) {
 
     // No need to return the date - we updated it directly.
 
+},
+
+// helper method to return the argument as a real date
+_getAsDate : function (date) {
+    if (isc.isA.Date(date)) return date;
+    // convert date passed as epoch millis or a string
+    if (isc.isA.String(date) || isc.isA.Number(date)) {
+        date = new Date(date);
+        if (!isNaN(date.getTime())) return date;
+    }
+    return null;
 }
 
 });
@@ -21853,7 +22037,7 @@ _serialize : function () {
 //     sql.defaultDatabase: AppDatabase
 //     sql.AppDatabase.database.type: mysql
 //     sql.AppDatabase.driver: com.mysql.jdbc.jdbc2.optional.MysqlDataSource
-//     <b>sql.AppDatabase.useUTCDataTimes: true</b>
+//     <b>sql.AppDatabase.useUTCDateTimes: true</b>
 //     etc
 // </pre>
 // If the <code>useUTCDateTimes</code> flag is set, SmartClient generates SQL that renders
@@ -22218,12 +22402,20 @@ isNextWeek : function (dateObj) {
     return dateObj.getTime() >= weekStart.getTime() && dateObj.getTime() <= weekEnd.getTime();
 },
 
-isNextMonth : function (dateObj) {
+isThisMonth : function (dateObj) {
     if (!dateObj) return false;
-    var monthStart = isc.DateUtil.getStartOf(isc.DateUtil.getAbsoluteDate("+1m", this), "M"),
+    var monthStart = isc.DateUtil.getStartOf(this, "M"),
         monthEnd = isc.DateUtil.getEndOf(monthStart, "M")
     ;
     return dateObj.getTime() >= monthStart.getTime() && dateObj.getTime() <= monthEnd.getTime();
+},
+
+isNextMonth : function (dateObj) {
+    if (!dateObj) return false;
+    var date = this.duplicate();
+    // this wraps years as expected
+    date.setMonth(date.getMonth()+1);
+    return (dateObj.getFullYear() == date.getFullYear() && dateObj.getMonth() == date.getMonth())
 }
 
 });
@@ -23328,7 +23520,7 @@ isc.DateUtil.addClassMethods({
                 boundary = true;
             case "m":
                 // assign last day of the target month to tempDate - it should never exceed that
-                var tempDate = isc.Date.createLogicalDate(date.getFullYear(),
+                var tempDate = isc.DateUtil.createLogicalDate(date.getFullYear(),
                                    date.getMonth() + (amount * multiplier) + 1, 0);
 
                 // for invalid date, use the min/max supported date
@@ -23338,7 +23530,11 @@ isc.DateUtil.addClassMethods({
                 }
                 // tempDate has last day of month - if date has earlier day of month, use that
                 if (date.getDate() < tempDate.getDate()) tempDate.setDate(date.getDate());
-                date = tempDate.duplicate();
+                // update date from tempDate - retains original logicalDate flag and time
+                // portion - date will be rounded later, if "boundary" is true (M rather than m)
+                date.setDate(tempDate.getDate());
+                date.setFullYear(tempDate.getFullYear());
+                date.setMonth(tempDate.getMonth());
                 break;
 
             case "Q":
@@ -23772,6 +23968,49 @@ isc.DateUtil.addClassMethods({
         var periodLength = (endDate.getTime() - startDate.getTime());
         if (unit) periodLength = isc.DateUtil.convertPeriodUnit(periodLength, "ms", unit);
         return periodLength;
+    },
+
+    isWithinPeriodOf : function (thisDate, thatDate, amount, unit) {
+        if (!thatDate) return false;
+        var sign = "+";
+        var relativeString;
+        var roundUnit = "D";
+        if (["ms", "s", "mn", "n", "h"].contains(unit)) {
+            // unit to round to - day for day and larger units, period unit otherwise
+            roundUnit = unit.toUpperCase();
+        }
+        if (amount < 0) {
+            // thatDate should be before thisDate
+            amount = amount * -1;
+            sign = "-";
+        }
+        relativeString = sign + amount + unit + "[" + sign + "0" + roundUnit + "]";
+
+        var endDate = isc.DateUtil.getAbsoluteDate(relativeString, thisDate);
+
+        var dateObjTime = thatDate.getTime();
+        if (sign == "-") {
+            if (dateObjTime >= endDate.getTime() && dateObjTime <= thisDate.getTime()) return true;
+        } else {
+            if (dateObjTime >= thisDate.getTime() && dateObjTime <= endDate.getTime()) return true;
+        }
+        return false;
+    },
+
+
+    getAsDisplayDate : function (date) {
+        if (!date) date = new Date();
+        if (!isc.Time._customTimezone) {
+            return date;
+        }
+        var offsetDate = date._getTimezoneOffsetDate(
+            isc.Time.getUTCHoursDisplayOffset(date),
+            isc.Time.getUTCMinutesDisplayOffset(date)
+        );
+        return offsetDate;
+    },
+    getNewDisplayDate : function () {
+        return isc.DateUtil.getAsDisplayDate(new Date());
     }
 });
 
@@ -24874,6 +25113,7 @@ getDisplayValue : function () {
     var value = this.getValue();
     if (value == null || isc.isA.String(value)) return value;
     if (value.title != null) return "[" + value.title + "]"
+    if (value._constructor == "Process") return "[workflow]";
     // If we were created with a string value, return the raw expression
     return value;
 
@@ -24888,10 +25128,12 @@ cdata : function (string) {
 
 _xmlSerialize : function (name, type, namespace, prefix, refs, path) {
     var value = this.value;
-    if (isc.isA.String(value)) return isc.Comm._xmlValue(name, this.cdata(value),
-                                      type || "stringMethod", namespace, prefix);
-    else
+    if (isc.isA.String(value)) {
+        return isc.Comm._xmlValue(name, this.cdata(value),
+            type || "stringMethod", namespace, prefix);
+    } else {
         return isc.StringMethod._xmlSerializeAction(value, name, prefix, refs, path);
+    }
 
 }
 
@@ -24912,15 +25154,17 @@ isc.StringMethod.addClassMethods({
 _$Action:"Action",
 _xmlSerializeAction : function (action, name, indent, refs, path) {
 
-        var actionDS = isc.DataSource.get(this._$Action);
-        if (!actionDS) return isc.Comm._xmlSerializeObject(name, action, path, refs, indent);
+    var schemaName = (action._constructor ? action._constructor : this._$Action),
+        schema = isc.DataSource.get(schemaName)
+    ;
+    if (!schema) return isc.Comm._xmlSerializeObject(name, action, path, refs, indent);
 
-        return [isc.Comm._xmlOpenTag(name),
-                 actionDS.xmlSerialize(action, null, indent + "        ", this._$Action),
-                 "\n", indent,
-                 isc.Comm._xmlCloseTag(name)].join(isc.emptyString);
-
+    return [isc.Comm._xmlOpenTag(name),
+             schema.xmlSerialize(action, null, indent + "        ", schemaName),
+             "\n", indent,
+             isc.Comm._xmlCloseTag(name)].join(isc.emptyString);
 }
+
 
 })
 
@@ -25547,24 +25791,24 @@ isc.StackTrace.getPrototype().toString = function () {
 // The native stack trace for Mozilla has changed.  For FF14 and above, the arguments are
 // no longer supplied and the native stack trace looks like:
 //
-// isc_Canvas_editSummaryField@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v12.0p_2018-09-15.js:30870
-// isc_Canvas_addSummaryField@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v12.0p_2018-09-15.js:30865
-// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v12.0p_2018-09-15.js:420
-// isc_Menu_selectMenuItem@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v12.0p_2018-09-15.js:28093
-// isc_Menu_rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v12.0p_2018-09-15.js:28059
-// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v12.0p_2018-09-15.js:7836
-// isc_GridRenderer__rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v12.0p_2018-09-15.js:6199
-// isc_c_Class_invokeSuper@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v12.0p_2018-09-15.js:2263
-// isc_c_Class_Super@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v12.0p_2018-09-15.js:2198
-// isc_GridBody__rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v12.0p_2018-09-15.js:6793
-// isc_GridRenderer_click@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v12.0p_2018-09-15.js:6178
-// isc_Canvas_handleClick@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v12.0p_2018-09-15.js:25741
-// isc_c_EventHandler_bubbleEvent@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v12.0p_2018-09-15.js:15164
-// isc_c_EventHandler_handleClick@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v12.0p_2018-09-15.js:14083
-// isc_c_EventHandler__handleMouseUp@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v12.0p_2018-09-15.js:13973
-// isc_c_EventHandler_handleMouseUp@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v12.0p_2018-09-15.js:13916
-// isc_c_EventHandler_dispatch@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v12.0p_2018-09-15.js:15541
-// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v12.0p_2018-09-15.js:420
+// isc_Canvas_editSummaryField@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v12.1d_2019-05-29.js:30870
+// isc_Canvas_addSummaryField@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v12.1d_2019-05-29.js:30865
+// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v12.1d_2019-05-29.js:420
+// isc_Menu_selectMenuItem@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v12.1d_2019-05-29.js:28093
+// isc_Menu_rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v12.1d_2019-05-29.js:28059
+// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v12.1d_2019-05-29.js:7836
+// isc_GridRenderer__rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v12.1d_2019-05-29.js:6199
+// isc_c_Class_invokeSuper@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v12.1d_2019-05-29.js:2263
+// isc_c_Class_Super@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v12.1d_2019-05-29.js:2198
+// isc_GridBody__rowClick@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v12.1d_2019-05-29.js:6793
+// isc_GridRenderer_click@http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v12.1d_2019-05-29.js:6178
+// isc_Canvas_handleClick@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v12.1d_2019-05-29.js:25741
+// isc_c_EventHandler_bubbleEvent@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v12.1d_2019-05-29.js:15164
+// isc_c_EventHandler_handleClick@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v12.1d_2019-05-29.js:14083
+// isc_c_EventHandler__handleMouseUp@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v12.1d_2019-05-29.js:13973
+// isc_c_EventHandler_handleMouseUp@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v12.1d_2019-05-29.js:13916
+// isc_c_EventHandler_dispatch@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v12.1d_2019-05-29.js:15541
+// anonymous@http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v12.1d_2019-05-29.js:420
 //
 // For FF13 and earlier, the lines from the native stack trace look something like this:
 //
@@ -25901,16 +26145,16 @@ isc.ChromeStackTrace.addClassMethods({
 // The error.stack from IE10 looks like:
 //
 // "TypeError: Unable to set property 'foo' of undefined or null reference
-//   at isc_Canvas_editSummaryField (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v12.0p_2018-09-15.js:30842:5)
-//   at sc_Canvas_addSummaryField (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v12.0p_2018-09-15.js:30837:5)
+//   at isc_Canvas_editSummaryField (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v12.1d_2019-05-29.js:30842:5)
+//   at sc_Canvas_addSummaryField (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v12.1d_2019-05-29.js:30837:5)
 //   at Function code (Function code:1:1)
-//   at isc_Menu_selectMenuItem (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v12.0p_2018-09-15.js:28093:9)
-//   at isc_Menu_rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v12.0p_2018-09-15.js:28059:5)
+//   at isc_Menu_selectMenuItem (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v12.1d_2019-05-29.js:28093:9)
+//   at isc_Menu_rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v12.1d_2019-05-29.js:28059:5)
 //   at Function code (Function code:1:142)
-//   at isc_GridRenderer__rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v12.0p_2018-09-15.js:6199:5)
-//   at isc_c_Class_invokeSuper (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v12.0p_2018-09-15.js:2262:17)
-//   at isc_c_Class_Super (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=v12.0p_2018-09-15.js:2198:9)
-//   at isc_GridBody__rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=v12.0p_2018-09-15.js:679[3:13)
+//   at isc_GridRenderer__rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v12.1d_2019-05-29.js:6199:5)
+//   at isc_c_Class_invokeSuper (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v12.1d_2019-05-29.js:2262:17)
+//   at isc_c_Class_Super (http://localhost:49011/isomorphic/system/modules/ISC_Core.js?isc_version=SNAPSHOT_v12.1d_2019-05-29.js:2198:9)
+//   at isc_GridBody__rowClick (http://localhost:49011/isomorphic/system/modules/ISC_Grids.js?isc_version=SNAPSHOT_v12.1d_2019-05-29.js:679[3:13)
 
 isc.defineClass("IEStackTrace", isc.StackTrace).addMethods({
     preambleLines:1,
@@ -26912,6 +27156,8 @@ isc.Class.addClassProperties(isc._debug);
 
 
 
+
+
 // The log functions below will always be defined even with DEBUG> <DEBUG blocks stripped, so that
 // if an end user calls a log function and forgets to mark it with DEBUG, it doesn't result in a
 // JS error.
@@ -27392,11 +27638,15 @@ isc.ClassFactory.defineClass("Log");
 // by a browser bookmark and the source maps for your project navigated to place breakpoints
 // where needed.
 // <P>
-// Note that Google Chrome is recommended as the primary browser for use with Super Dev Mode
-// for all versions of GWT, because while the built-in Firefox debugger supports source maps,
-// it doesn't appear to stop at breakpoints for GWT versions before 2.7.0, and hangs when
-// trying to do so in GWT 2.7.0 (as of Firefox 38).  Source maps don't work at all for any GWT
-// version in IE11 or +externalLink{https://code.google.com/p/fbug/issues/detail?id=5765,Firefox Firebug}.
+// Testing with SmartGWT and GWT 2.7.0 and 2.8.x have shown that Google Chrome,
+// +externalLink{https://www.mozilla.org/en-US/firefox/organizations/,Firefox 60 ESR}, and IE11
+// all support source maps when connecting to Eclipse in Super Development Mode, and allow you
+// to set breakpoints in Java source which are properly hit during execution to permit stepping.
+// (Newer, non-ESR versions of Firefox should work as well, but (now unsupported) Firefox 52 ESR
+// does not).  Note that to connect to Super Development Mode remotely with source map support,
+// you must configure Eclipse to run SDM with the -bindAddress argument set to your external IP.
+// For further information, see the official overview and command-line option listing for
+// +externalLink{http://www.gwtproject.org/articles/superdevmode.html,Super Development Mode}.
 // <p>
 // <i>Refer to +link{superDevModeTroubleshooting, Troubleshooting Super Dev Mode} for more
 // detailed help running Super Dev Mode.</i>
@@ -28194,12 +28444,13 @@ isc.ClassFactory.defineClass("Log");
 // and "save as" the page into your Eclipse war directory.
 // <p>
 // <h3> Browser Source Map Support</h3>
-// As discussed in +link{debugging, Debugging: Dev Mode and Super Dev Mode}, not all browsers
-// and debuggers at this time support the Source Maps feature that's required to set
-// breakpoints for Super Dev Mode.  To enable them in Chrome, make sure the "Enable JavaScript
-// Source Maps" checkbox is ticked in the Developer Tools preferences.  When the page is loaded
-// and you've hit the "Dev Mode On" bookmark, you can browse the Java source in the debugger
-// (under the "sources tab"), and set breakpoints in Java code.
+// Most current browsers should support source maps, required for source debugging, as discussed
+// in +link{debugging, Debugging: Dev Mode and Super Dev Mode}.  If they're not working, make
+// sure that they're enabled in the settings of your browser's developer tools.  For example, to
+// enable them in Chrome, make sure the "Enable JavaScript Source Maps" checkbox is ticked in
+// the Developer Tools preferences.  When the page is loaded and you've hit the "Dev Mode On"
+// bookmark, you should be able to browse the Java source in the debugger (under the "sources
+// tab"), and set breakpoints in Java code.
 // <p>
 // <h3><u>Troubleshooting</u></h3>
 // <table width="90%" class="normal" align="center" border="1" cellpadding="5">
@@ -28246,6 +28497,20 @@ isc.ClassFactory.defineClass("Log");
 // <td>Remove the <code>gwt.codesvr</code> argument from the URL, or don't use the Eclipse GWT
 // "Web Application" Run Configuration template (intended originally for Dev Mode) to launch
 // your Web Application.  You may deploy your Web Application manually outside of Eclipse.</td>
+// </tr><tr>
+// <td>Skins aren't loaded when the application loads, resulting in missing icons and missized
+// controls and fonts.  Failed file requests are logged by the browser, but no errors are
+// reported by GWT in Eclipse.</td>
+// <td>You've failed to set global variable <code>isomorphicDir</code> in the application's root
+// HTML page, so the Framework is unable to locate the skin files.</td>
+// <td>Add a <code>&lt;script&gt;</code> declaration in the root HTML page defining
+// <code>isomorphicDir</code> to be "[MODULE_NAME]/sc", where the actual name of
+// your project is substituted for the variable, as it appears in the
+// <code>&lt;module&gt;</code> declaration in your project (gwt.xml) file.
+// <p><br>
+// For example, see the file <p><pre>helloworld-2.0/war/HelloWorld.html</pre><p> in the "Hello
+// World" sample for SGWT LGPL, or the file <p><pre>built-in-ds/war/BuiltInDS.html</pre><p>
+// in the "Built-in DS" sample for  SGWT EE.</td>
 // </tr><tr>
 // <td>When the SDM Server is launched in Eclipse, the SGWT Application fails to
 // load, resource or configuration files are reported missing, or browser errors are hit
@@ -30013,8 +30278,6 @@ isc._dataModelLogMessage = function (priority, message, category, timestamp) {
 
     //<DEBUG
 }
-
-
 
 
 
@@ -33312,7 +33575,12 @@ autoSetupParentLinks:true,
 pathDelim:"/",
 
 // not documented:
-// parentProperty : always generated, // direct pointer to parent node
+// direct pointer to parent node.  Only useful in non-multiLink trees (although the property
+// name itself is used in various places to establish a node's tree membership, which is
+// generally useful).  For multiLink trees, this property will just point to the parent node
+// most recently linked into the tree for this child node; it is not used for parent/child
+// relationship purposes in multiLink trees.  Instead, we use the nodeIndex.
+// parentProperty : always generated,
 
 treeProperty : "_isc_tree", // internal property pointing back to the origin tree
 
@@ -33377,6 +33645,11 @@ childrenProperty:"children",
 // it to a custom value if you want to declaratively specify this state, but be careful - if
 // you display this Tree in multiple TreeGrids at the same time, the open state will not be
 // tracked independently - see +link{group:sharingNodes} for more info on this.
+// <p>
+// For +link{tree.isMultiLinkTree(),multi-link tree}s, we do not track open state on the nodes
+// themselves, because this would mean that multiple instances of a node in the tree would open
+// and close in lockstep.  Instead, open state is tracked in an internal index structure, and
+// the <code>openProperty</code> is not used at all.
 //
 // @group    openList
 // @see group:sharingNodes
@@ -33813,7 +34086,133 @@ defaultNodeTitle:"Untitled",
 //            default load state for nodes where is has not been explicitly set
 //<
 // ResultTree defines a setter for this property.
-defaultLoadState: isc.Tree.UNLOADED
+defaultLoadState: isc.Tree.UNLOADED,
+
+//>    @attr tree.multiLinkTree (Boolean : null : IR)
+// If true, indicates this is a "multiLink" tree - ie, one that can contain the same node in more
+// than one place.  Note, multiLink trees <b>must</b> use the "parent"
+// +link{tree.modelType,model type}
+// <p>
+// See +link{tree.linkData} and +link{resultTree.linkDataSource} for further details of
+// multiLink trees.
+// @group multiLinkTree
+// @visibility external
+//<
+
+//>    @attr tree.linkData (List of Record : null : IR)
+// For a +link{multiLinkTree,multi-link tree}, this property specifies the parent-child
+// relationships between the nodes.  The nodes themselves are provided in +link{tree.data}.
+// Note that multi-link trees must specify a +link{tree.modelType,modelType} of "parent".
+// <p>
+// For a regular, non-multiLink tree, the <code>linkData</code> property is ignored.
+// <p>
+// Minimally, the link data should include a node id, parent id and optionally the position of
+// the child within that parent
+
+// To describe this multi-link tree:<pre>
+//   foo
+//     bar
+//       baz
+//     zoo
+//       bar
+//         baz
+// </pre>
+// you would provide node information in the <code>data</code> property like this:<pre>
+//   [
+//     {id: "foo"},
+//     {id: "bar"},
+//     {id: "baz"},
+//     {id: "zoo"}
+//   ]
+// </pre>
+// and link information in <code>linkData</code> like this:<pre>
+//   [
+//     {id: "bar", parentId: "foo"},
+//     {id: "baz", parentId: "bar"},
+//     {id: "zoo", parentId: "foo"},
+//     {id: "bar", parentId: "zoo"}
+//   ]
+// </pre>
+// For information on databinding multi-link trees, and further discussion on multi-link trees
+// generally, see +link{ResultTree.linkDataSource}
+//
+// @see ResultTree.linkDataSource
+// @group multiLinkTree
+// @visibility external
+//<
+
+//>    @attr tree.allowDuplicateChildren (Boolean : null : IR)
+// For +link{tree.isMultiLinkTree(),multi-link trees}, indicates that duplicate children are
+// allowed within the same parent.  This is a special case of allowing duplicate nodes, and
+// one with fewer obvious use cases than the ability to show the same node as a child of two
+// different parents.  It also adds a technical difficulty: if a parent can directly contain
+// the exact same child twice, the full path from the root to the child node is no longer
+// sufficient to unambiguously identify the node occurence.
+// <p>
+// Therefore, if you choose to allow duplicate children within a parent by setting this flag,
+// you <b>must</b> also ensure that your +link{tree.linkData} specifies a
+// +link{tree.linkPositionField,position} for every node in the tree (note, this is position
+// within parent, not some kind of unique position within the tree).  If any node does not
+// contain a position property, node linking will fail.  Also note that position values will be
+// treated like array indexes internally, because this is the only way to derive missing
+// information in various circumstances (for example, dragging a node into a new parent).
+// Therefore, in addition to the requirement that every node must have a position value, you
+// must also ensure that the position values of siblings below a given parent are consecutive
+// integers starting at 0.  Again, this is only a requirement if you choose to set
+// <code>allowDuplicateChildren</code>
+// <p>
+// Also see +link{resultTree.linkDataSource} for further details of multiLink trees.
+// @group multiLinkTree
+// @visibility internal for now - this property works correctly for the most part, but there
+// are issues with some edge cases    NO_ALLOW_DUP
+//<
+
+//>    @attr tree.allowFilterOnLinkFields (Boolean : null : IR)
+// For a +link{Tree.isMultiLinkTree(),multi-link tree}, indicates whether client-side filtering
+// is allowed on the fields of the +link{resultTree.linkDataSource,linkDataSource}.  When this
+// property is true, filtering operations involving link fields work as expected (ie, as if those
+// fields were present on the main +link{resultTree.dataSource,dataSource}); when this value is
+// not true, criterions involving link fields are simply ignored.
+// <p>
+// Note, setting this property true causes filtering operations to perform an additional record
+// duplication per node in the dataset to be filtered.  This adds some overhead, so you should
+// consider likely data volumes before enabling it (though in fact, client-side filtering of
+// trees is relatively expensive anyway, so acceptable use cases probably already involve quite
+// low data volumes)
+// <p>
+// This property has no effect for regular, non-multiLink trees.
+// @group multiLinkTree
+// @visibility external
+//<
+
+//>    @attr tree.linkPositionField (String : "position" : IR)
+// The name of the "position" field in this +link{tree.linkData,multi-link tree}'s link data.
+// Ignored if this tree is not a multi-link tree
+// @group multiLinkTree
+// @visibility external
+//<
+linkPositionField: "position"
+
+
+//> @object NodeLocator
+//
+// An object containing sufficient context to unambiguously identify a single node in the tree.
+// For normal trees, the node itself - or its ID - is sufficient for this purpose, but for
+// +link{tree.isMultiLinkTree(),multi-link trees}, we also need to know the node's parent, and its
+// position within that parent.  For cases where we need to propagate change back up the
+// node's parent chain, in order to maintain a given parent node's openList, the node, parent
+// and position are not enough context; for those cases, we need either the node's position in
+// the tree's openList, or a full path to the node.  <code>NodeLocator</code> objects contain
+// this extra context, and can be passed to APIs such as +link{tree.openFolder()}, which would
+// ordinarily accept a parameter of type +link{type:TreeNode}.
+//
+// @see Tree.getNodeLocator()
+// @treeLocation Client Reference/Grids/TreeGrid
+// @treeLocation Client Reference/System/Tree
+// @visibility external
+//<
+
+
 
 //> @object DiscoverTreeSettings
 //
@@ -33926,12 +34325,17 @@ setupProperties : function () {
     if (this.indexByLevel) this._levelNodes = [];
 
     // An auto-generated property name to store precomputed lengths of open lists
+    // Note, for multi-link trees, this information is stored in the node index, because a
+    // node has a different length depending on whereabouts in the tree it appears.  See
+    // _get/_setCachedNodeLength()
     this._cachedLengthProperty = "_cachedLength_" + this.ID;
 
     // An auto-generated property name to store a boolean flag for whether the lengths of the
     // ancestors of a node will be updated to reflect changes to the node or one of its
     // descendants.  The value of the property is actually a number (or undefined) and it
     // is said to have a true value when the number is greater than zero.
+    // Note, in multi-link trees, this property is stored in the nodeIndex, against the
+    // path entry for a given node occurence; it is not scribbled onto the actual node
     this._recursionCountProperty = "_recursionCount_" + this.ID;
 },
 
@@ -33949,7 +34353,8 @@ _knownProperties : ["autoOpenRoot", "childrenProperty", "defaultIsFolder",
                     "defaultNodeTitle", "discardParentlessNodes", "idField",
                     "isFolderProperty", "modelType", "nameProperty",
                     "parentIdField", "pathDelim", "reportCollisions", "rootValue",
-                    "showRoot", "titleProperty", "isMultiDSTree", "dataSource", "operation" ],
+                    "showRoot", "titleProperty", "isMultiDSTree", "dataSource", "operation",
+                    "multiLinkTree", "linkPositionField", "allowFilterOnLinkFields" ],
 _$openProperty: "openProperty",
 _copyKnownProperties : function (newTree) {
     var undef;
@@ -33969,11 +34374,13 @@ _copyKnownProperties : function (newTree) {
         newTree[this._$openProperty] = value;
     }
 },
-duplicate : function (includeData, includeLoadState) {
+duplicate : function (includeData, includeLoadState, newTree) {
 
-    // Create a new tree object
-    var newTree = isc.Tree.create();
-    this._copyKnownProperties(newTree);
+    // Create a new tree object if one was not passed in (see ResultTree.duplicate())
+    if (!newTree) {
+        newTree = isc.Tree.create();
+        this._copyKnownProperties(newTree);
+    }
 
     // Create a clean root node
     newTree.setRoot(this.getCleanNodeData(this.getRoot(), false, false, includeLoadState));
@@ -33982,7 +34389,15 @@ duplicate : function (includeData, includeLoadState) {
     if (includeData) {
         var nodes = this.getOpenList(null, isc.Tree.FOLDERS_AND_LEAVES, null, null, null, null, true);
         nodes = this.getCleanNodeData(nodes, false, false, includeLoadState);
-        newTree._linkNodes(nodes);
+        if (this.isMultiLinkTree()) {
+            newTree.linkData = this.linkData.duplicate();
+            newTree._linkNodes(nodes, null, null, null, null, newTree.createNodeLocator(
+                                                    newTree.root,
+                                                    null, null,
+                                                    this.pathDelim), true, null, true);
+        } else {
+            newTree._linkNodes(nodes);
+        }
     }
 
     return newTree;
@@ -34014,7 +34429,13 @@ makeRoot : function () {
 // Convert a node to a folder and return any change in the length of the node's parent
 // resulting from that conversion.  Callers are expected to add the change in length to all
 // parents of the node.
-convertToFolder : function (node) {
+convertToFolder : function (node, path) {
+    var nodeLocator;
+    if (this.isANodeLocator(node)) {
+        nodeLocator = node;
+        node = node.node;
+    }
+
 
     var pagedResultTree = (
             isc.ResultTree != null && isc.isA.ResultTree(this) && this.isPaged()),
@@ -34023,10 +34444,15 @@ convertToFolder : function (node) {
         changesParentLength = !wasFolder && node != this.root,
         origLength, parent;
     if (changesParentLength) {
-        parent = this.getParent(node);
+        if (path) {
+            parent = this._getParentFromIndexByPath(node, path);
+        } else {
+            parent = this.getParent(nodeLocator || node);
+        }
         changesParentLength = (parent != null);
         if (changesParentLength) {
-            origLength = this._getNodeLengthToParent(node, parent);
+            var parentPath = this._deriveParentPath(path);
+            origLength = this._getNodeLengthToParent(node, parent, path, parentPath);
         }
     }
 
@@ -34054,15 +34480,15 @@ convertToFolder : function (node) {
     }
 
     // Update the length of the node.
-    var cachedLength = node[this._cachedLengthProperty];
+    var cachedLength = this._getCachedNodeLength(node, path);
     if (cachedLength == null) cachedLength = 0;
-    node[this._cachedLengthProperty] = cachedLength + this._getDeltaLength(node, wasFolder, true);
+    this._setCachedNodeLength(node, cachedLength + this._getDeltaLength(node, wasFolder, true), path);
 
 
     // Return any change in the length of the parent caused by converting the node to
     // a folder.
     if (changesParentLength) {
-        return this._getNodeLengthToParent(node, parent) - origLength;
+        return this._getNodeLengthToParent(node, parent, path, parentPath) - origLength;
     } else {
         return 0;
     }
@@ -34080,6 +34506,9 @@ convertToFolder : function (node) {
 // only be the folder foo regardless of the makeNode() call order.
 //
 makeNode : function (path, autoConvertParents) {
+
+    isc.Tree._assert(!this.isMultiLinkTree(), "makeNode() must not be called for a " +
+                        "multi-link tree; linkNodes() is the only supported approach!");
 
     // first try to find the node -- if we can find it, just return it
     var node = this.find(path);
@@ -34201,8 +34630,8 @@ setupParentLinks : function (node) {
 _traverse : function (node, setupParentLinks, assignCachedLengths, canonicalizeChildren, recurse) {
 
 
-    if (setupParentLinks && node[this.idField] != null) {
-        this.nodeIndex[node[this.idField]] = node;
+    if (setupParentLinks && node[this.idField] != null && !this.isMultiLinkTree()) {
+        this._addNodeToIndex(node[this.idField], node);
     }
 
     // get the children array of the node
@@ -34249,13 +34678,14 @@ _traverse : function (node, setupParentLinks, assignCachedLengths, canonicalizeC
             if (this.isFolder(child)) {
                 this._traverse(
                     child, setupParentLinks, assignCachedLengths, canonicalizeChildren, true);
-            } else if (setupParentLinks && child[this.idField] != null) {
-                this.nodeIndex[child[this.idField]] = child; // link into the nodeIndex
+            } else if (setupParentLinks && child[this.idField] != null && !this.isMultiLinkTree()) {
+                this._addNodeToIndex(child[this.idField],  child); // link into the nodeIndex
             }
 
             // Assign the _cachedLengthProperty on the child.  This is done after the recursive
             // call as the child's length can depend on the node lengths of its children.
             if (assignCachedLengths) {
+
                 child[this._cachedLengthProperty] = this._getNodeLength(child);
             }
         }
@@ -34274,7 +34704,7 @@ _traverse : function (node, setupParentLinks, assignCachedLengths, canonicalizeC
     // If this is the top level of the recursion, then the _cachedLengthProperty has been set
     // on all nodes except for the original node.  Set node[this._cachedLengthProperty] here.
     if (assignCachedLengths && !recurse) {
-        node[this._cachedLengthProperty] = this._getNodeLength(node);
+        this._setCachedNodeLength(node, this._getNodeLength(node));
     }
 },
 
@@ -34306,13 +34736,31 @@ connectByParentId : function (records, idProperty, parentIdProperty, rootValue, 
 
 
 // NOTE: this does not handle multi-column (multi-property) primary keys
-linkNodes : function (records, idProperty, parentIdProperty, rootValue, isFolderProperty, contextNode, suppressDataChanged) {
-    return this._linkNodes(records, idProperty, parentIdProperty, rootValue, isFolderProperty, contextNode, suppressDataChanged);
+linkNodes : function (records, idProperty, parentIdProperty, rootValue, isFolderProperty,
+                        contextNode, suppressDataChanged, linkData)
+{
+    return this._linkNodes(records, idProperty, parentIdProperty, rootValue,
+                            isFolderProperty, contextNode, suppressDataChanged, linkData);
 },
-_linkNodes : function (records, idProperty, parentIdProperty, rootValue, isFolderProperty, contextNode, suppressDataChanged) {
+_linkNodes : function (records, idProperty, parentIdProperty, rootValue, isFolderProperty,
+                        contextNode, suppressDataChanged, linkData, linkSubTreeOnly)
+{
 
     if (this.modelType == "fields") {
         this.connectByFields(records);
+        return;
+    }
+
+    var contextNodeLocator;
+    if (this.isANodeLocator(contextNode)) {
+        contextNodeLocator = contextNode;
+        contextNode = contextNode.node;
+    }
+
+    if (this.isMultiLinkTree()) {
+        this._multiLinkNodes(records, idProperty, parentIdProperty, null, rootValue,
+                                isFolderProperty, contextNodeLocator || contextNode,
+                                suppressDataChanged, linkData, linkSubTreeOnly);
         return;
     }
 
@@ -34320,6 +34768,7 @@ _linkNodes : function (records, idProperty, parentIdProperty, rootValue, isFolde
     idProperty = (idProperty != null) ? idProperty : this.idField;
     parentIdProperty = (parentIdProperty != null) ? parentIdProperty : this.parentIdField;
     rootValue = (rootValue != null) ? rootValue : this.rootValue;
+    linkData = linkData || this.linkData;
 
     var newNodes = [];
     newNodes.addList(records);
@@ -34337,7 +34786,7 @@ _linkNodes : function (records, idProperty, parentIdProperty, rootValue, isFolde
 
         // We look up parent chains and add interlinked nodes in parent order
         // so if we already have this node in the tree, skip it
-        if (this.nodeIndex[node[idProperty]] == node) continue;
+        if (this._compareNodeInIndex(node[idProperty], node)) continue;
         if (node == null) continue;
 
         // Our parentId property may point to another node passed in (potentially in a chain)
@@ -34379,6 +34828,235 @@ _linkNodes : function (records, idProperty, parentIdProperty, rootValue, isFolde
     if (!suppressDataChanged) this.dataChanged();
 },
 
+NULL_PARENT_IDENTIFIER: "_$_null_parent_$_",
+_multiLinkNodes : function (records, idProperty, parentIdProperty, positionProperty, rootValue,
+                                isFolderProperty, contextNode, suppressDataChanged, linkData,
+                                linkSubTreeOnly)
+{
+
+    records = records || this.data;
+    this._assert(records != null);
+
+    idProperty = (idProperty != null) ? idProperty : this.idField;
+    parentIdProperty = (parentIdProperty != null) ? parentIdProperty : this.parentIdField;
+    positionProperty = (positionProperty != null) ? positionProperty : this.linkPositionField;
+    rootValue = (rootValue != null) ? rootValue : this.rootValue;
+    linkData = linkData || this.linkData;
+
+    var newNodes = [];
+    newNodes.addList(records);
+
+    this._multiLinking = true;
+
+    // build a local index of the nodes passed in. this will allow us to find parents within the
+    // tree without having to do multiple array.finds (so it'll be linear time lookup)
+    var localNodeIndex = {};
+    for (var i = 0; i < records.length; i++) {
+        var id = records[i][idProperty];
+        if (id != null) {
+            // Get the node from the current nodeIndex if possible - this is necessary when we
+            // have the same child in multiple places in the tree, and we are loading on demand,
+            // and the server is sending back only the direct children of the parent we just
+            // opened (as opposed to a subtree of that parent's descendants)
+            localNodeIndex[id] = this._getNodeFromIndex(newNodes[i]);
+            if (!localNodeIndex[id]) {
+                localNodeIndex[id] = newNodes[i];
+            }
+        }
+    }
+    var localChildToParentIndex = {},
+        localParentToChildIndex = {};
+    var topLevel = [], parents;
+    for (var i = 0; i < linkData.length; i++) {
+        var id = linkData[i][idProperty],
+            pid = linkData[i][parentIdProperty];
+        if (id == null) {
+            this.logWarn("Found null child ID in linkData.  Skipping link record: " +
+                                    isc.echoAll(linkData[i]));
+            continue;
+        }
+        if (!localChildToParentIndex[id]) {
+            localChildToParentIndex[id] = [];
+        }
+        localChildToParentIndex[id].add(localNodeIndex[pid]);
+
+        if (pid == null) {
+            // The presence of a link record with a null parent ID means the child node is a
+            // top-level node.  We don't require an explicit link record for this if the node
+            // has children, but we have no other way to specify a random top-level leaf
+            topLevel.add({
+                node: localNodeIndex[id],
+                linkRecord: linkData[i]
+            });
+        } else {
+            if (!localParentToChildIndex[pid]) {
+                localParentToChildIndex[pid] = [];
+            }
+            localParentToChildIndex[pid].add({
+                node: localNodeIndex[id],
+                linkRecord: linkData[i]
+            });
+        }
+    }
+
+    if (linkSubTreeOnly) {
+
+        // This means we are being asked to link in just the children of the contextNode, so
+        // limit "topLevel" to just that node.  This is an important optimization for databound
+        // trees, even if they are loaded entirely upfront, because:
+        // - With linkData and node data being provided separately, it is common that a fetch
+        //   against the node dataSource will return all the nodes in the tree
+        // - By default, databound trees treat nodes with no children as folders with unknown
+        //   contents, until a fetch for the node's children has been attempted.  Therefore,
+        //   a fetch is issued when the user tries to open a node with no children, even in the
+        //   mainstream case that the node has no children because it is genuinely a leaf
+        if (contextNode.node == this.root) {
+            if (this.rootValue) {
+                var explicitChildren = localParentToChildIndex[contextNode.node[idProperty]];
+                if (explicitChildren) {
+                    topLevel.addAll(explicitChildren);
+                }
+            } else {
+                for (var parentId in localParentToChildIndex) {
+                    if (!isc.propertyDefined(localChildToParentIndex, parentId)) {
+                        topLevel.add({
+                            node: localNodeIndex[parentId],
+                            linkRecord: null
+                        });
+                    }
+                }
+            }
+            localParentToChildIndex[this.NULL_PARENT_IDENTIFIER] = topLevel;
+            parents = [{id: this.NULL_PARENT_IDENTIFIER, path: this.pathDelim}];
+        } else {
+            var children = localParentToChildIndex[contextNode.node[idProperty]];
+            if (children) {
+                topLevel = children;
+            } else {
+                // Otherwise, the parent whose children we have been asked to link in, does not
+                // have any children, so there is nothing to do except mark the parent node loaded
+                this.setLoadState(contextNode.node, isc.Tree.LOADED);
+            }
+            parents = [{id: contextNode.node[idProperty], path: contextNode.path}];
+        }
+    } else {
+
+        // Any key in the parent-to-child index that is not in the child-to-parent index is a
+        // direct child of root, but only if this tree has no root value.  If there is a
+        // rootValue, top-level is the children of that key
+        if (rootValue) {
+            topLevel = localParentToChildIndex[rootValue];
+        } else {
+            for (var parentId in localParentToChildIndex) {
+                if (!rootValue && !isc.propertyDefined(localChildToParentIndex, parentId)) {
+                    topLevel.add({
+                        node: localNodeIndex[parentId],
+                        linkRecord: null
+                    });
+                }
+            }
+        }
+
+        localParentToChildIndex[this.NULL_PARENT_IDENTIFIER] = topLevel;
+        parents = [{id: this.NULL_PARENT_IDENTIFIER, path: this.pathDelim}];
+    }
+
+    // And any key that is in neither PtC or CtP index is an unlinked node - we may add those
+    // as top-level leaf nodes later, depending on the setting of discardParentlessNodes
+
+    // Now, start with the children of "_$_null_parent" in localParentToChildIndex.  Hook up
+    // those nodes, and build a list of their children.  Hook up those child nodes, and build
+    // a list of *their* children.  Rinse and repeat until there are no more children
+    while (parents.length > 0) {
+        var thisLevelNodes = [];
+        for (var j = 0; j < parents.length; j++) {
+            var parentId = parents[j].id,
+                parentPath = parents[j].path,
+                parent = localNodeIndex[parentId] || this._getNodeFromIndex(parentId),
+                nodes = localParentToChildIndex[parentId];
+
+            if (!nodes) continue;  // Leaf node
+
+            nodes.sortByProperty("node", true, function(item, propertyName, context) {
+                return item.linkRecord ? item.linkRecord[positionProperty] : null;
+            });
+
+            var dupChildren = {};
+            if (!this.allowDuplicateChildren) {
+                for (var p = 0; p < nodes.length; p++) {
+                    for (var q = p+1; q < nodes.length; q++) {
+                        if (!nodes[p].node || !nodes[q].node) continue;
+                        if (nodes[p].node[idProperty] == nodes[q].node[idProperty]) {
+                            this.logWarn("Node with ID " + nodes[p].node[idProperty] +
+                                " appears more than once amongst the children of " +
+                                parentPath +
+                                //", but allowDuplicateChildren is not set for this multi-link tree" +
+                                ".  We will ignore all but the first of these duplicates.");
+                            dupChildren[q] = true;
+                        }
+                    }
+                }
+            }
+
+            for (var i = 0; i < nodes.length; i++) {
+                if (dupChildren[i]) continue;
+                var node = nodes[i].node,
+                    path = parentPath + (parentPath.endsWith(this.pathDelim) ? "" : this.pathDelim);
+
+                if (!node) {
+                    // It could be that we have link data for a node we know nothing about.  One
+                    // possibility is a broken fetch; another is that we are re-linking the tree
+                    // after a filter operation that has filtered out the node in question; yet
+                    // another is that we are duplicating a tree that has not yet had any nodes
+                    // linked into it
+                    continue;
+                }
+
+                path += node[idProperty];
+                // If allowDuplicateChildren is set, position is mandatory because we use it to
+                // disambiguate duplicate parent/child combinations.  If autoUpdateSiblingNodesOnDrag
+                // is set, position is mandatory because it is presumably important to you
+                // and because otherwise we will end up applying deltas to null values)
+                if ((this.allowDuplicateChildren || this.autoUpdateSiblingNodesOnDrag) &&
+                      (nodes[i].linkRecord == null || nodes[i].linkRecord[positionProperty] == null))
+                {
+                    this.logWarn("Node at path " + path + " does not specify a position " +
+                            "in the linkData.  If you specify allowDuplicateChildren:true " +
+                            "or autoUpdateSiblingNodesOnDrag:true " +
+                            "for a multi-link tree, you MUST provide a position attribute " +
+                            "for every node.  Cannot continue");
+                    return;
+                }
+                if (this.allowDuplicateChildren) {
+                    path +=  this.pathDelim + nodes[i].linkRecord[positionProperty];
+                }
+                var parentNodeLocator = this.createNodeLocator(
+                    parent,   // node
+                    parents[j].parent ? parents[j].parent[this.idField] : null,  // parentId
+                    parents[j].position,  // position
+                    parentPath,  // path
+                    null,  // openListIndex - not applicable here
+                    true  // Force creation of a nodeLocator object even if some of the
+                          // elements are null or undefined
+                );
+                this._linkNode(node, idProperty, parentNodeLocator, contextNode, rootValue, nodes[i].linkRecord, path);
+                thisLevelNodes.add({
+                    id: node[idProperty],
+                    parent: parent,
+                    position: nodes[i].linkRecord ? nodes[i].linkRecord[positionProperty] : null,
+                    path: path
+                });
+            }
+        }
+        parents = thisLevelNodes;
+    }
+
+    delete this._multiLinking;
+
+    this._clearNodeCache(true);
+    if (!suppressDataChanged) this.dataChanged();
+},
+
 // old synonyms for backcompat
 connectByParentID : function (records, idProperty, parentIdProperty, rootValue, isFolderProperty) {
     this._linkNodes(records, idProperty, parentIdProperty, rootValue, isFolderProperty);
@@ -34390,32 +35068,59 @@ connectByParentId : function (records, idProperty, parentIdProperty, rootValue, 
 // _linkNode - helper to actually attach a node to our tree - called from the for-loop in _linkNodes()
 // returns true if the node was successfully added to the tree.
 _$treeLinking:"treeLinking",
-_linkNode : function (node, idProperty, parentIdProperty, contextNode, rootValue) {
+_linkNode : function (node, idProperty, parentIdProperty, contextNode, rootValue, linkRecord, path) {
 
     var logDebugEnabled = this.logIsDebugEnabled(this._$treeLinking);
 
     var id = node[idProperty],
-        parentId = node[parentIdProperty],
         undef,
-        nullRootValue = (rootValue == null),
+        nullRootValue = (rootValue == null);
+
+    // Although the parameter is called "parentIdProperty", multiLink trees must be linked up
+    // by reference to the actual parent object - IDs don't cut it.  So in some flows, this
+    // parameter is actually the parent object, or a NodeLocator representing a particular
+    // occurence of the parent object, rather than the name of the parent ID field on the child
+    // record
+    var parentNodeLocator, parent, parentId;
+    if (this.isANodeLocator(parentIdProperty)) {
+        parentNodeLocator = parentIdProperty;
+        parent = parentNodeLocator.node;
+        parentId = parent ? parent[idProperty] : null;
+    } else if (isc.isAn.Object(parentIdProperty)) {
+        parent = parentIdProperty,
+        parentId = parent[idProperty];
+    } else {
+        parentId = node[parentIdProperty];
+        parent = this._getNodeFromIndex(parentId);
         // Note explicit === for emptyString comparison necessary as
-        // 0 == "", but zero is a valid identifier
-        nullParent = (parentId == null || parentId == -1 || parentId === isc.emptyString),
-        parent = this.nodeIndex[parentId];
+            // 0 == "", but zero is a valid identifier
+        var nullParent = (parentId == null || parentId == -1 || parentId === isc.emptyString);
+    }
+
+    // Ensure that the parent we use for linking is the actual parent object we have in the tree,
+    // as opposed to a feesh copy of the same thing we have just received from the server
+    if (this.isMultiLinkTree()) {
+        parent = this._getNodeFromIndex(parentId);
+        if (parentNodeLocator) {
+            parentNodeLocator.node = parent;
+        }
+    }
+
+    var position = linkRecord ? linkRecord[this.linkPositionField] : null;
 
     if (parent) {
         if (logDebugEnabled) {
             this.logDebug("found parent " + parent[idProperty] +
                          " for child " + node[idProperty], this._$treeLinking);
         }
-        this.__add(node, parent);
+        this.__add(node, parentNodeLocator || parent, position, linkRecord, path);
     } else if (!nullRootValue && parentId == rootValue) {
 
         if (logDebugEnabled) {
             this.logDebug("root node: " + node[idProperty], this._$treeLinking);
         }
         // this is a root node
-        this.__add(node, this.root);
+        this.__add(node, this.root, position, linkRecord, path);
 
     } else {
         // Drop nodes with an explicit parent we can't find if discardParentlessNodes is true
@@ -34435,10 +35140,1050 @@ _linkNode : function (node, idProperty, parentIdProperty, contextNode, rootValue
                               "- linking to default node " +
                               defaultParent[idProperty], this._$treeLinking);
             }
-            this.__add(node, defaultParent);
+            this.__add(node, defaultParent, position, linkRecord, path);
         }
     }
 },
+
+//> @method tree.isMultiLinkTree()
+// Returns true if this is a <i>multi-link</i> tree - ie, one that can contain the same node in
+// more than one place.  Otherwise, returns false.
+// <smartclient>The default implementation simply returns the value of the
+// <code>multiLinkTree</code> flag</smartclient>
+// <p>
+// See +link{tree.linkData} and +link{resultTree.linkDataSource} for further details of
+// multiLink trees.
+//
+// @visibility external
+//<
+isMultiLinkTree : function() {
+    return !!this.multiLinkTree
+},
+
+getNodeLocator : function(recordIndex) {
+    if (recordIndex == -2) {  // This indicates "over an empty part of the body", and in a regular
+                              // TreeGrid results in a drop on root.  So let's do the same
+        return this.createNodeLocator(this.root, null, null, this.pathDelim);
+    }
+    return this.recordNumberToNodeLocatorIndex[recordIndex];
+},
+
+getPathForOpenListIndex : function(recordIndex) {
+    var nodeLocator = this.getNodeLocator(recordIndex);
+    if (nodeLocator == null) {
+        return null;
+    } else {
+        return nodeLocator.path;
+    }
+},
+
+
+//> @method tree.createNodeLocator()
+// Returns a +link{object:NodeLocator} object suitable for passing to methods, such as
+// +link{tree.getParent()}, which require a <code>NodeLocator</code> when the tree is
+// +link{tree.isMultiLinkTree(),multi-linked}.  Note, <code>NodeLocator</code>s are specific to
+// multiLink trees; they are never required for regular trees.
+//
+// @param node (TreeNode) the child node
+// @param parent (TreeNode) the parent node
+// @param [position] (Integer) the child node's position within the parent
+// @param path (String) the full path to the child node
+// @param [openListIndex] (Integer) the index of the node occurence in the tree's current openList.
+//                                This is the same as the record index of the node in an
+//                                associated +link{class:TreeGrid}
+//
+// @visibility external
+//<
+createNodeLocator : function(node, parent, position, path, openListIndex, alwaysCreate) {
+
+    var parentId;
+    if (!isc.isAn.Object(node)) {
+        node = this._getNodeFromIndex(node);
+    }
+    if (isc.isA.String(parent)) {
+        parentId = parent;
+    } else {
+        parentId = parent ? parent[this.idField] : null;
+    }
+    if (!alwaysCreate) {
+        if (!node) {
+            return null;
+        }
+        if (parentId == null && path == null && openListIndex == null) {
+            return null;
+        }
+    }
+    if (parentId == null || (position == null && this.allowDuplicateChildren)) {
+        var info = this._deriveParentChildPositionFromPath(path);
+        parentId = parentId || info.parentId;
+        position = (position != null ? position : info.position);
+    }
+    var nodeLocator =  {
+        node: node,
+        parentId: parentId,
+        position: this.allowDuplicateChildren ? position : null,
+        path: path,
+        openListIndex: openListIndex
+    };
+    return nodeLocator;
+},
+
+createNodeLocatorWithRelativePosition : function(node, parent, relPos, path) {
+
+    var parentId;
+    if (node == null) {
+        return null;
+    }
+    if (isc.isA.String(parent)) {
+        parentId = parent;
+    } else {
+        parentId = parent ? parent[this.idField] : null;
+    }
+    var entry = this._getNodeIndexEntry(node);
+    if (!entry) return null;
+    if (isc.isAn.Object(parentId)) {
+        parentId = parentId[this.idField];
+    }
+
+    var matching = entry.positions.findAll("parentId", parentId);
+
+    var position;
+    if (!matching || matching.length < 1) {
+        position = relPos;
+    } else if (matching.length == 1) {
+        position = matching[0].position;
+    } else {
+        matching.sortByProperty("position", true);
+        position = matching[relPos].position;
+    }
+
+    var nodeLocator =  {
+        node: isc.isAn.Object(node) ? node : this._getNodeFromIndex(node),
+        parentId: parentId,
+        position: position,
+        path: path,
+        openListIndex: null
+    };
+    return nodeLocator;
+},
+
+isANodeLocator : function(obj) {
+    return isc.Tree.isANodeLocator(obj);
+},
+
+// nodeIndex API - nothing else should read or write nodeIndex directly
+_getNodeIndexEntry : function (nodeId) {
+    if (!this.nodeIndex) return null;
+    if (this.isANodeLocator(nodeId)) {
+        nodeId = nodeId.node;
+    }
+
+    if (isc.isAn.Object(nodeId) && nodeId[this.idField] != null) {
+        nodeId = nodeId[(this.idField)];
+    }
+    if (nodeId == null) {
+        nodeId = "";
+    }
+    return this.nodeIndex[nodeId];
+},
+
+_getNodeFromIndex : function (nodeId) {
+    var indexEntry = this._getNodeIndexEntry(nodeId);
+    if (this.isMultiLinkTree()) {
+        return indexEntry == null ? null : indexEntry.node;
+    } else {
+        return indexEntry;
+    }
+},
+
+_isNodeInIndex : function (nodeId) {
+    return !(this._getNodeIndexEntry(nodeId) == null);
+},
+
+_getPathEntryFromIndex : function (nodeLocator) {
+
+    var indexEntry = this._getNodeIndexEntry(nodeLocator.node);
+    if (!indexEntry) {
+        return null;
+    }
+
+    return indexEntry.paths[nodeLocator.path];
+},
+
+_getPositionEntryFromIndex : function (nodeOrNodeLocator, parentId, position) {
+
+    var node = nodeOrNodeLocator;
+    if (this.isANodeLocator(nodeOrNodeLocator)) {
+        node = nodeOrNodeLocator.node;
+        parentId = nodeOrNodeLocator.parentId;
+        position = nodeOrNodeLocator.position;
+    }
+    var indexEntry = this._getNodeIndexEntry(node);
+    if (!indexEntry) {
+        return null;
+    }
+
+    var pos = indexEntry.positions;
+    for (var i = 0; i < pos.length; i++) {
+        if (pos[i].parentId == parentId &&
+                (!this.allowDuplicateChildren || (pos[i].position == position)))
+        {
+            return pos[i];
+        }
+    }
+    return null;
+},
+
+_isParentLinkInIndex : function (nodeLocator) {
+
+
+    return this._getPositionEntryFromIndex(nodeLocator) != null;
+},
+
+_getFirstParentFromIndex : function (nodeId) {
+
+    if (this.isANodeLocator(nodeId)) {
+        nodeId = nodeId.node;
+    }
+    if (isc.isAn.Object(nodeId)) {
+        nodeId = nodeId[this.idField];
+    }
+    var indexEntry = this._getNodeIndexEntry(nodeId);
+    if (!indexEntry || !indexEntry.positions || indexEntry.positions.length == 0 ||
+                            indexEntry.node == this.getRoot())
+    {
+        return null;
+    } else {
+        if (indexEntry.positions[0].parentId == null) {
+            // XXX: Is this a valid assumption???
+            return this.getRoot();
+        } else {
+            return this._getNodeFromIndex(indexEntry.positions[0].parentId);
+        }
+    }
+},
+
+_getParentsFromIndex : function (nodeId) {
+
+    if (this.isANodeLocator(nodeId)) {
+        nodeId = nodeId.node;
+    }
+    if (isc.isAn.Object(nodeId)) {
+        nodeId = nodeId[this.idField];
+    }
+    var indexEntry = this._getNodeIndexEntry(nodeId);
+
+    if (indexEntry.node == this.root) return null;
+
+    if (!indexEntry || !indexEntry.positions || indexEntry.positions.length == 0) {
+        return [];
+    } else {
+        var parents = [];
+        for (var i = 0; i < indexEntry.positions.length; i++) {
+            if (indexEntry.positions[i].parentId == null) {
+                // XXX: Is this a valid assumption???
+                parents.add(this.getRoot());
+            } else {
+                parents.add(this._getNodeFromIndex(indexEntry.positions[i].parentId));
+            }
+        }
+        return parents;
+    }
+},
+
+_getPositionsFromIndex : function (nodeId) {
+
+    if (this.isANodeLocator(nodeId)) {
+        nodeId = nodeId.node;
+    }
+    if (isc.isAn.Object(nodeId)) {
+        nodeId = nodeId[this.idField];
+    }
+    var indexEntry = this._getNodeIndexEntry(nodeId);
+    if (!indexEntry || !indexEntry.positions || indexEntry.positions.length == 0) {
+        return [];
+    } else {
+        return indexEntry.positions;
+    }
+},
+
+_getParentFromIndexByPath : function(nodeId, path) {
+
+    if (path == this.pathDelim) return null;  // Root doesn't have any parents, obviously...
+    if (isc.isAn.Object(nodeId)) {
+        nodeId = nodeId[this.idField];
+    }
+    if (nodeId == null) return null;
+    var indexEntry = this._getNodeIndexEntry(nodeId);
+
+    var parentPath = this._deriveParentPath(path);
+    if (parentPath == this.pathDelim) {
+        return this.root;
+    } else {
+        var parentInfo = this._deriveIdAndPositionFromPath(parentPath);
+        if (!parentInfo || !parentInfo.id) {
+            return null;
+        }
+        return this._getNodeFromIndex(parentInfo.id);
+    }
+},
+
+_compareNodeInIndex : function (nodeId, node, parentId, position) {
+    if (!this.nodeIndex) return false;
+    if (this.isMultiLinkTree()) {
+        if (!this.nodeIndex[nodeId]) {
+            return node == null;
+        }
+        var same = this.nodeIndex[nodeId].node == node;
+        if (same && parentId) {
+            same = false;
+            var pos = this.nodeIndex[nodeId].positions;
+            for (var i = 0; i < pos.length; i++) {
+                if (pos[i].parentId == parentId && pos[i].position == position) {
+                    same = true;
+                    break;
+                }
+            }
+        }
+        return same;
+    } else {
+        return this.nodeIndex[nodeId] == node;
+    }
+},
+
+_addNodeToIndex : function (nodeId, node, parentId, position, path) {
+    // Check parameters
+    var undef;
+    if (!this.isMultiLinkTree()) {
+        if (node == undef) {
+            node = nodeId;
+            this.nodeIndex[node[this.idField]] = node;
+        } else {
+            this.nodeIndex[nodeId] = node;
+        }
+        return;
+    }
+
+    // multiLinkTree from this point
+
+    if (!node) {
+        // Note, null parentId is OK: at this point, it means either that this is a top-level
+        // node, or that it is an unlinked node, and we have elected not to drop unlinked nodes
+        // (we drop them in as top-level nodes instead)
+        this.logWarn("_addNodeToIndex was passed a null node");
+        return;
+    }
+
+    if (!this.nodeIndex) this.nodeIndex = {};
+    var entry = this.nodeIndex[nodeId]
+    if (!entry) {
+        entry = this.nodeIndex[nodeId] = {};
+    }
+
+    // For one particular use case, we must adjust any sibling nodes *before* we attempt to add
+    // the new node to the index - this is specifically when we have two occurences of the same
+    // node under the same parent, and we have just dragged one of those nodes into the position
+    // that the other is currently occupying.  In this case, if we try to add the dragged node
+    // back into the tree without first shifting the other one out of the way, we will not be
+    // able to distinguish between the two occurences - they are the same (pointer-equal) node,
+    // under the same parent, at the same position - so we will assume this is an attempt to
+    // add a node to the tree that we have already linked in.
+    //
+    // For other use cases where the node already exists in the tree, it isn't important
+    // whether we shift sibling nodes before or after adding the new node, but it is safer to
+    // shift them early, in case we do have the specific situation described above.  However,
+    // if we are adding a node that does not already exist in the tree, we cannot shift siblings
+    // early because we cannot create a nodeLocator to pass to the updateSiblingNodePaths()
+    // function (and if we change things so that we could create a special nodeLocator that
+    // doesn't require the node to be in the index, that would likely break all sorts of
+    // downstream code)
+    delete this._runningNodePathUpdatesEarly;
+    if (this.allowDuplicateChildren && !this._multiLinking && !this._addingDescendants) {
+        if (this._getNodeFromIndex(nodeId)) {
+            var nodeLocator = this.createNodeLocator(nodeId, parentId, position, path);
+            if (nodeLocator) {
+                this._runningNodePathUpdatesEarly = true;
+                this.updateSiblingNodePaths(nodeLocator, 1);
+            }
+        }
+    }
+
+
+    if (!entry.node) {
+        // Only set the node if it is not already set.  Doing this means we don't clobber the
+        // real node with a fresh copy from the server if a databound fetch happens to return
+        // nodes we already know about - if we allow that, the nodeIndex will become detached
+        // from the actual tree data, and things will quickly fall apart...
+        entry.node = node;
+    }
+    var pos = entry.positions;
+    if (!pos) {
+        pos = entry.positions = [];
+    }
+    var thePosition;
+    for (var i = 0; i < pos.length; i++) {
+        if (pos[i].parentId == parentId && (pos[i].position == position || !this.allowDuplicateChildren)) {
+            thePosition = pos[i];
+            break;
+        }
+    }
+    if (!thePosition) {
+        thePosition = {
+            parentId: parentId,
+            position: position
+        };
+        pos.add(thePosition);
+    }
+    if (!entry.paths) {
+        entry.paths = {};
+    }
+    // Paths should be subsidiary to positions, but sometimes we have only a path (eg, when all
+    // we started with was an index into the openList), so store the paths alongside positions
+    /*var pathAndPosition;
+    if (!this.allowDuplicateChildren || path == this.pathDelim) {
+        pathAndPosition = path;
+    } else {
+        pathAndPosition = path + (path.endsWith(this.pathDelim) ? "" : this.pathDelim) + position;
+    }
+    this._assert(!pathAndPosition.startsWith("/undefined"));
+    // DELETEME - temporary debug code
+    if (pathAndPosition.endsWith("/0/0")) debugger;
+    if (!entry.paths[pathAndPosition]) {
+        entry.paths[pathAndPosition] = {};
+    }*/
+    entry.paths[path] = {};
+
+    // Since this is a multi-link tree, we need to propagate the insertion of this node back up
+    // to the parent node, so that we have correct path entries for all cases where this node's
+    // parent appears in the tree.  This is because, in multi-link trees, adding node X as a
+    // child of node Y only adds X to the underlying graph once, but it has to add occurences
+    // of it to the pseudo-tree in every place that Y appears
+    if (node != this.root) {
+        var isFolder = this.isFolder(node);
+        var parentIndexEntry = this._getNodeIndexEntry(parentId),
+            paths = parentIndexEntry ? parentIndexEntry.paths : null;
+        if (paths) {
+            for (var pathEntry in paths) {
+                var childPath = this._constructChildPath(pathEntry, node, position);
+
+                // Note, here "entry" is the nodeIndex entry for the *child*
+                if (!entry.paths[childPath]) {
+                    entry.paths[childPath] = {};
+                    // We must set the default nodeLength when we add this path entry, because
+                    // nothing else is going to do it on this codepath
+                    var nodeLength = 0;
+                    if ((isFolder && this.openDisplayNodeType != isc.Tree.LEAVES_ONLY) ||
+                        (!isFolder && this.openDisplayNodeType != isc.Tree.FOLDERS_ONLY))
+                    {
+                        nodeLength++;
+                    }
+                    this._setCachedNodeLengthInIndex(node, childPath, nodeLength);
+                    // We also need to propagate the default nodeLength back up the parent chain
+                    // but only if the node is open in the parent
+                    if (this._includeNodeLengthInParent(node, parentIndexEntry.node, pathEntry)) {
+                        if (nodeLength > 0) {
+                            this._updateParentLengths(parentIndexEntry.node, nodeLength, pathEntry);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (!this._runningNodePathUpdatesEarly && this.allowDuplicateChildren &&
+        !this._multiLinking && !this._addingDescendants)
+    {
+        var nodeLocator = this.createNodeLocator(nodeId, parentId, position, path);
+        if (nodeLocator) {
+            this.updateSiblingNodePaths(nodeLocator, 1);
+        }
+    }
+
+    delete this._runningNodePathUpdatesEarly;
+
+},
+
+_removeNodeFromIndex : function (nodeId) {
+    if (!this.isMultiLinkTree()) {
+        if (this.nodeIndex) {
+            if (isc.isAn.Object(nodeId)) {
+                nodeId = nodeId[this.idField];
+            }
+            delete this.nodeIndex[nodeId];
+        }
+    } else {
+
+        var nodeLocator = nodeId,
+            node = nodeLocator.node,
+            path = nodeLocator.path,
+            parentId = nodeLocator.parentId,
+            position = nodeLocator.position;
+        if (parentId == null || position == null) {
+            var info = this._deriveParentChildPositionFromPath(path);
+            parentId = parentId == null ? info.parentId : parentId;
+            position = position == null ? info.position : position;
+            nodeLocator.parentId = parentId;
+            nodeLocator.position = position;
+        }
+        nodeId = node[this.idField];
+
+
+
+        var indexEntry = this._getNodeIndexEntry(nodeId);
+
+        // We are about to delete the relationship between this node and its parent (and
+        // position if allowDuplicateChildren is set), so we need to delete any path entries
+        // that terminate in that relationship.  There is a special case of this: when the
+        // pathTerminator and the path are the same, it means that the parent is the root node.
+        // In this case, ALL occurences of the child node in the tree will end with the
+        // path terminator (because it is just '/{node-id}'), and we absolutely do not want to
+        // delete all those links...
+        for (var pathEntry in indexEntry.paths) {
+            if (this.parentChildPositionMatch(path, pathEntry)) {
+                var pathInfo = indexEntry.paths[pathEntry];
+                if (pathInfo.openListIndex != null) {
+                    this.deleteRecordNumberToNodeLocatorIndexEntry(pathInfo.openListIndex);
+                }
+                if (pathEntry != nodeLocator.path) {
+                    // We are deleting an occurence of the node at a path other than the path
+                    // that the user actually deleted.  This is going to leave the ancestor
+                    // nodeLengths out of kilter, so we need to fix them up now
+                    var parent = this._getNodeFromIndex(nodeLocator.parentId),
+                        parentPath = this._deriveParentPath(pathEntry);
+                    var delta = this._getNodeLengthToParent(node, parent, pathEntry, parentPath);
+                    // Delta on remove is negative, obviously...
+                    delta *= -1;
+                    this._updateParentLengths(parent, delta, parentPath);
+
+                    this._removeDescendantsFromIndex(nodeLocator.node, pathEntry);
+                    this._removeNodeFromLinkDataIndex(isc.addProperties({}, nodeLocator, {path:pathEntry}));
+                }
+                delete indexEntry.paths[pathEntry];
+            }
+        }
+
+        for (var i = 0; i < indexEntry.positions.length; i++) {
+            var pos = indexEntry.positions[i];
+            if (pos.parentId == parentId && (pos.position == position || !this.allowDuplicateChildren))
+            {
+                indexEntry.positions.removeAt(i);
+                break;
+            }
+        }
+
+        // Now remove descendants from the subtree rooted at this path
+        this._removeDescendantsFromIndex(node, path);
+
+        this._removeNodeFromLinkDataIndex(nodeLocator);
+
+        // If we have completely cleaned out the positions and paths structures, the node is
+        // no longer linked into the tree, so we can get rid of the nodeIndex entry
+        if (indexEntry.positions.length == 0 && isc.isAn.emptyObject(indexEntry.paths)) {
+            delete this.nodeIndex[nodeId];
+        }
+
+
+        if (this.allowDuplicateChildren) {
+            this.updateSiblingNodePaths(nodeLocator, -1);
+        }
+    }
+},
+
+_removeDescendantsFromIndex : function(node, path) {
+    // NOTE: This method must be called with the correct, position-qualified path if
+    // allowDuplicateChildren is true.  Having established that correct start point for the
+    // descent, the recursive calls here will yield correct results even, because we recurse
+    // with actual qualified paths obtained from the nodeIndex
+    var children = this.getChildren(node, null, null, null, null, null, true);
+    if (!children) return;
+    var length = (isc.isA.ResultSet(children) ?
+            children._getCachedLength() : children.getLength());
+    for (var i = 0; i < length; ++i) {
+        var child = children.getCachedRow(i);
+        var indexEntry = this._getNodeIndexEntry(child[this.idField]);
+        for (var pathEntry in indexEntry.paths) {
+            if (pathEntry.startsWith(path)) {
+                delete indexEntry.paths[pathEntry];
+                this._removeNodeFromLinkDataIndex(child, pathEntry);
+                this._removeDescendantsFromIndex(child, pathEntry);
+                // Remove the "positions" entry if there are no more paths ending with the same
+                // parent/child combo
+                var deletePosition = true;
+                for (var pe2 in indexEntry.paths) {
+                    if (this.parentChildPositionMatch(pathEntry, pe2)) {
+                        deletePosition = false;
+                        break;
+                    }
+                }
+
+                if (deletePosition) {
+                    var info = this._deriveParentChildPositionFromPath(pathEntry);
+                    for (var j = 0; j < indexEntry.positions.length; j++) {
+                        var pos = indexEntry.positions[j];
+                        if (pos.parentId == info.parentId &&
+                                (pos.position == info.position || !this.allowDuplicateChildren))
+                        {
+                            indexEntry.positions.removeAt(j);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        // WRWRWR - this may need to be put back as it was...
+        //this._removeDescendantsFromIndex(child, this._constructChildPath(path, child));
+    }
+
+},
+
+
+updateNodeIdInIndex : function (oldID, newID) {
+    if (this.findById(newID)) {
+        this.logWarn("Attempt to update an ID to an existing value. Ignored.");
+        return;
+    }
+    var node = this.findById(oldID);
+    if (!node) {
+        this.logWarn("Attempt to update an ID that does not exist in the tree. Ignored.");
+        return;
+    }
+    this.nodeIndex[newID] = this.nodeIndex[oldID];
+    delete this.nodeIndex[oldID];
+},
+
+parentChildPositionMatch : function(path1, path2) {
+    var info1 = this._deriveParentChildPositionFromPath(path1),
+        info2 = this._deriveParentChildPositionFromPath(path2);
+    return info1.parentId == info2.parentId &&
+            info1.childId  == info2.childId  &&
+            (!this.allowDuplicateChildren ||
+            // We can end up with a position of "not-important" when syncing updates from a
+            // sub-tree across to a parent tree.  In that case, it doesn't make sense to
+            // consider that the sub-tree is rooted at a particualr occurence of the node in
+            // the parent tree; that node is the same thing wherever it appears in the
+            // parent tree, the only occurence-level differences are transient visual things
+            // like open state, and that is obviously unimportant for real data changes.  So
+            // in this case, it doesn't matter whuch occurence of the node in the parent tree
+            // we are comparing against here - they should all be synchronized
+            (info1.position == info2.position || info2.position == "not-important"));
+},
+
+updateSiblingNodePaths : function(nodeLocator, delta) {
+    this.logWarn("In updateSiblingNodes with delta " + delta + " for nodeLocator " + isc.echoAll(nodeLocator));
+    if (!this.allowDuplicateChildren) return;
+    var adding = (delta > 0);
+    var parent = this._getNodeFromIndex(nodeLocator.parentId);
+    var children = this.getChildren(parent);
+    if (!children) return;
+    for (var i = nodeLocator.position; i < children.length; i++) {
+        var indexEntry = this._getNodeIndexEntry(children[i]);
+        // If we are trying to update siblings because we have removed a node, and that removal
+        // has meant that the node no longer occurs anywhere in the tree, indexEntry will be
+        // null here.  This is OK, because we don't need to update the paths on a node that no
+        // longer exists
+        if (!indexEntry) continue;
+        for (var j = 0; j < indexEntry.positions.length; j++) {
+            var pos = indexEntry.positions[j];
+            if (pos.parentId == nodeLocator.parentId) {
+
+                // Avoid picking up occurences of the same node we are removing, that appear earlier
+                // under the same parent
+                if (!adding && indexEntry.node == nodeLocator.node && pos.position < nodeLocator.position) {
+                    continue;
+                }
+
+                // If we are adding a node, and we are not running sibling updates early, that
+                // means that no occurences of the node we just added existed before.  Therefore,
+                // any occurence we find now must be the newly-added node itself, and we don't
+                // want to shift that.  On the other hand, if this logic is running early, that
+                // means we had at least one occurence of the node already in the tree, and
+                // since we are running before the addition, any occurences we find are different
+                // occurences and should be shifted like any other sibling node
+                if (adding && !this._runningNodePathUpdatesEarly &&
+                    indexEntry.node == nodeLocator.node && pos.position == nodeLocator.position) {
+                    continue;
+                }
+
+                var nodeId = indexEntry.node[this.idField];
+                var originalPosition = pos.position;
+                pos.position += delta;
+                var existingPaths = [];
+                for (var pathEntry in indexEntry.paths) {
+                    existingPaths[existingPaths.length] = pathEntry;
+                }
+                for (var k = 0; k < existingPaths.length; k++) {
+                    var pathEntry = existingPaths[k];
+                    var info = this._deriveParentChildPositionFromPath(pathEntry);
+                    //this.logDebug("updateSiblingNodes: Considering pathEntry " + pathEntry)
+                    if (info.parentId == nodeLocator.parentId) {
+                        //this.logDebug("updateSiblingNodes: parentIds match for " + pathEntry)
+                        var newPathEntry = pathEntry.substring(0, pathEntry.lastIndexOf(this.pathDelim)+1);
+                        newPathEntry += pos.position;
+                        indexEntry.paths[newPathEntry] = indexEntry.paths[pathEntry];
+                        delete indexEntry.paths[pathEntry];
+                        //this.logDebug("updateSiblingNodes: updated " + pathEntry + " to " + newPathEntry);
+                        var openListIndex = indexEntry.paths[newPathEntry].openListIndex;
+                        if (openListIndex != null) {
+                            //this.logDebug("updateSiblingNodes: updating openListIndex " + openListIndex + " to newPathEntry " + newPathEntry);
+                            this.recordNumberToNodeLocatorIndex[openListIndex].position = pos.position;
+                            this.recordNumberToNodeLocatorIndex[openListIndex].path = newPathEntry;
+                        } else {
+                            //this.logDebug("updateSiblingNodes: not updating openListIndex - "+ pathEntry + " is not in the openList");
+                        }
+                        var linkRecord = this.getLinkRecord(pos.parentId, nodeId, originalPosition);
+                        // Note, the original linkRecord may have already been deleted by a
+                        // previous pass through this loop for a different path.  In that case,
+                        // the update to the new position in the linkData has already happened,
+                        // so there is nothing to do
+                        if (linkRecord) {
+                            //this.logDebug("updateSiblingNodes: Updating link record for " + pathEntry);
+                            this._addNodeToLinkDataIndex(pos.parentId, nodeId, pos.position,
+                                                                linkRecord);
+                            this._removeNodeFromLinkDataIndex(nodeId, pathEntry);
+                        } else {
+                            //this.logDebug("updateSiblingNodes: not updating linkRecord - the old entry for " + pathEntry + " does not exist");
+                        }
+
+                        this.propagateNodePathChange(indexEntry.node, pathEntry, newPathEntry);
+                    }
+                }
+            }
+        }
+    }
+},
+
+propagateNodePathChange : function(parentNode, oldParentPath, newParentPath) {
+    // This is pretty straighforward - go through descendants and replace all occurences of the
+    // old parent path with the new one
+    var children = this.getChildren(parentNode);
+    if (!children) return;
+    for (var i = 0; i < children.length; i++) {
+        var indexEntry = this._getNodeIndexEntry(children[i]);
+        var existingPaths = [];
+        for (var oldPath in indexEntry.paths) {
+            existingPaths[existingPaths.length] = oldPath;
+        }
+        for (var k = 0; k < existingPaths.length; k++) {
+            var oldPath = existingPaths[k];
+            if (oldPath.startsWith(oldParentPath)) {
+                var newPath = oldPath.substring(oldParentPath.length)
+                newPath = newParentPath + newPath;
+                indexEntry.paths[newPath] = indexEntry.paths[oldPath];
+                delete indexEntry.paths[oldPath];
+                var openListIndex = indexEntry.paths[newPath].openListIndex;
+                if (openListIndex != null) {
+                    this.recordNumberToNodeLocatorIndex[openListIndex].path = newPath;
+                }
+                this.propagateNodePathChange(children[i], oldPath, newPath);
+            }
+        }
+    }
+},
+
+deleteRecordNumberToNodeLocatorIndexEntry : function(index) {
+    this.recordNumberToNodeLocatorIndex.splice(index, 1);
+    // This is a potential performance nightmare, but I don't think we have a choice...
+    this._updateOpenListIndexInNodeLocators(index, false);
+},
+
+addRecordNumberToNodeLocatorIndexEntry : function(index, entry) {
+
+    this.recordNumberToNodeLocatorIndex.splice(index, 0, entry);
+    this._updateOpenListIndexInNodeLocators(index, true);
+},
+
+_getNodeOpenStateFromIndex : function(nodeLocator, path) {
+    return this._getNodeStateFromIndex(nodeLocator, path, "isOpen");
+},
+
+_setNodeOpenStateInIndex : function(nodeLocator, state) {
+    this._setNodeStateInIndex(nodeLocator, "isOpen", state);
+},
+
+_getNodeSelectedStateFromIndex : function(nodeLocator, path) {
+    return this._getNodeStateFromIndex(nodeLocator, path, "isSelected");
+},
+
+_setNodeSelectedStateInIndex : function(nodeLocator, state) {
+    this._setNodeStateInIndex(nodeLocator, "isSelected", state);
+},
+
+_getNodePartiallySelectedStateFromIndex : function(nodeLocator, path) {
+    return this._getNodeStateFromIndex(nodeLocator, path, "isPartiallySelected");
+},
+
+_setNodePartiallySelectedStateInIndex : function(nodeLocator, state) {
+    this._setNodeStateInIndex(nodeLocator, "isPartiallySelected", state);
+},
+
+_getNodeStateFromIndex : function(nodeLocator, path, stateName) {
+
+    var nodeId, parentId, position;
+    if (this.isANodeLocator(nodeLocator)) {
+        nodeId = nodeLocator.node[this.idField];
+        parentId = nodeLocator.parentId;
+        position = nodeLocator.position;
+        if (path && path != nodeLocator.path) {
+            this.logWarn("_getNodeStateFlagFromIndex was passed both a nodeLocator and a path; " +
+                     "ignoring the separately-passed path '" + path + "' in favor of the " +
+                     "nodeLocator.path '" + nodeLocator.path + "'");
+        }
+        path = nodeLocator.path;
+    } else if (path == this.pathDelim) {
+        // Root node is in index with empty ID
+        nodeId = "";
+        parentId = null;
+        position = null;  // WRWRWR - this may need to change
+    }
+
+    if (!this.isANodeLocator(nodeLocator)) {
+        nodeId = nodeLocator[this.idField];
+
+    }
+    var entry = this._getNodeIndexEntry(nodeId);
+    return entry && entry.paths && entry.paths[path] ? !!entry.paths[path][stateName] : false;
+
+},
+
+_setNodeStateInIndex : function(nodeLocator, stateName, state) {
+
+    var nodeId = nodeLocator.node[this.idField],
+        path = nodeLocator.path;
+    var entry = this._getNodeIndexEntry(nodeId);
+
+    entry.paths[path][stateName] = state;
+},
+
+_getCachedNodeLengthFromIndex : function(nodeId, path) {
+    if (!this.isMultiLinkTree()) {
+        this.logWarn("Tree._getCachedNodeLengthFromIndex() called, but this is not a multiLink tree!");
+        return null;
+    }
+    // Convert node to nodeId if necessary
+    if (isc.isAn.Object(nodeId)) nodeId = nodeId[this.idField];
+    if (nodeId == null) nodeId = '';
+    var entry = this._getNodeIndexEntry(nodeId);
+
+    return entry.paths[path].nodeLength;
+},
+
+_setCachedNodeLengthInIndex : function(nodeId, path, length) {
+    if (!this.isMultiLinkTree()) {
+        this.logWarn("Tree._setCachedNodeLengthInIndex() called, but this is not a multiLink tree!");
+        return null;
+    }
+    // Convert node to nodeId if necessary
+    if (isc.isAn.Object(nodeId)) nodeId = nodeId[this.idField];
+    if (nodeId == null) nodeId = '';
+    var entry = this._getNodeIndexEntry(nodeId);
+
+    entry.paths[path].nodeLength = length;
+},
+
+_getOpenListIndexFromIndex : function(nodeLocator) {
+
+    var indexEntry = this._getNodeIndexEntry(nodeLocator.node[this.idField]);
+
+    return indexEntry.paths[nodeLocator.path].openListIndex;
+},
+_setOpenListIndexInIndex : function(nodeLocator, index) {
+
+    var indexEntry = this._getNodeIndexEntry(nodeLocator.node[this.idField]);
+
+    indexEntry.paths[nodeLocator.path].openListIndex = index;
+},
+_updateOpenListIndexInNodeLocators : function(startingIndex, added) {
+
+    for (var i = startingIndex; i < this.recordNumberToNodeLocatorIndex.length; i++) {
+        this.recordNumberToNodeLocatorIndex[i].openListIndex = i;
+        var pathEntry = this._getPathEntryFromIndex(this.recordNumberToNodeLocatorIndex[i]);
+
+        pathEntry.openListIndex = i;
+    }
+},
+
+_getRecursionCountFromIndex : function(node, path) {
+
+    var indexEntry = this._getNodeIndexEntry(node[this.idField]);
+
+    return indexEntry.paths[path][this._recursionCountProperty] || 0;
+},
+
+_adjustRecursionCountInIndex : function(node, path, delta) {
+
+    var indexEntry = this._getNodeIndexEntry(node[this.idField]);
+
+    var newValue = indexEntry.paths[path][this._recursionCountProperty] || 0;
+    newValue += delta;
+    if (newValue == 0) {
+        delete indexEntry.paths[path][this._recursionCountProperty]
+    } else {
+        indexEntry.paths[path][this._recursionCountProperty] = newValue;
+    }
+},
+
+
+// This method derives a parent path from a child path by simply trimming off the last element
+// (or the last two elements if allowDuplicateChildren is true); it is just a macro, to avoid
+// repeating the same derivation code all over the place.  It is very different from the public
+// getParentPath() method, which constructs a path by walking up the parent chain.  This method
+// is for use with multi-link trees, where walking up the parent chain is is not possible because
+// we don't have a parent chain - we have a branching ancestor hierarchy
+_deriveParentPath : function(childPath) {
+    if (!childPath || childPath == this.pathDelim || childPath == "") {
+        return null;
+    }
+    var pathElements = childPath.split(this.pathDelim);
+
+    var parentPath = "";
+    for (var i = 1; i < pathElements.length - (this.allowDuplicateChildren ? 2 : 1); i++) {
+        parentPath += this.pathDelim + pathElements[i];
+    }
+    if (parentPath == "") parentPath = this.pathDelim;
+    return parentPath;
+},
+
+// Derive the "path terminator" - ie, the end bit of a path that identifies a unique combination
+// of node, parent and position (if allowDuplicateChildren is on) in a multi-link tree.  This
+// is not the full path - if node O1 has a child O2, and O1 appears in the tree beneath nodes
+// P1 and P2, there are legitimately two paths to O2 - P1/O1/O2 and P2/O1/O2 - and we must track
+// them both.  But if O2 is moved out of O1, then obviously this must affect both of these
+// paths, because O1 is a single thing in multiple places
+_derivePathTerminator : function(path) {
+    if (!path || path == this.pathDelim || path == "") {
+        return null;
+    }
+    var tokens = [];
+    var length = this.allowDuplicateChildren ? 4 : 2;
+    for (var i = 0; i < length; i++) {
+        tokens[i] = path.substring(path.lastIndexOf(this.pathDelim) + 1);
+        path = path.substring(0, path.lastIndexOf(this.pathDelim));
+    }
+
+    var pathTerminator = "";
+    if (this.allowDuplicateChildren) {
+        pathTerminator = tokens[3] + this.pathDelim + tokens[2] + this.pathDelim;
+    }
+    pathTerminator += tokens[1] + this.pathDelim + tokens[0];
+
+    return pathTerminator
+},
+_constructChildPath : function(parentPath, child, position) {
+    if (!parentPath) return null;
+    var childPath = parentPath;
+    if (childPath == "") childPath = this.pathDelim;
+    childPath += (childPath.endsWith(this.pathDelim) ? "" : this.pathDelim) + child[this.idField];
+    if (this.allowDuplicateChildren) {
+
+        childPath += this.pathDelim + position;
+    }
+    return childPath;
+},
+_deriveIdAndPositionFromPath : function(path) {
+    if (!path || path == this.pathDelim || path == "") {
+        return {};
+    }
+    var token1 = path.substring(path.lastIndexOf(this.pathDelim) + 1);
+    if (!this.allowDuplicateChildren) {
+        return {id: token1};
+    }
+    var stripped = path.substring(0, path.lastIndexOf(this.pathDelim));
+    var token2 = stripped.substring(stripped.lastIndexOf(this.pathDelim) + 1);
+    return {id: token2, position: token1};
+},
+_deriveParentChildPositionFromPath : function(path) {
+    if (!path || path == this.pathDelim || path == "") {
+        return {childId: this.rootValue};
+    }
+    if (!this.allowDuplicateChildren) {
+        var childId = path.substring(path.lastIndexOf(this.pathDelim) + 1);
+        var stripped = path.substring(0, path.lastIndexOf(this.pathDelim));
+        var parentId = stripped.substring(stripped.lastIndexOf(this.pathDelim) + 1);
+        if (parentId == "") {
+            parentId = this.rootValue;
+        }
+        return {childId: childId, parentId: parentId};
+    } else {
+        var parentId;
+        var position = path.substring(path.lastIndexOf(this.pathDelim) + 1);
+        var stripped = path.substring(0, path.lastIndexOf(this.pathDelim));
+        var childId = stripped.substring(stripped.lastIndexOf(this.pathDelim) + 1);
+        stripped = stripped.substring(0, stripped.lastIndexOf(this.pathDelim));
+        if (stripped == "") {
+            parentId = this.rootValue;
+        } else {
+            stripped = stripped.substring(0, stripped.lastIndexOf(this.pathDelim));
+            parentId = stripped.substring(stripped.lastIndexOf(this.pathDelim) + 1);
+        }
+        return {childId: childId, parentId: parentId, position: position};
+    }
+},
+
+
+_getOpenStateRecursively : function(nodeList, newParent, position, openStateObject, propagateParentChange) {
+    openStateObject = openStateObject || {};
+    for (var i = 0; i < nodeList.length; i++) {
+
+        var nodeLocator = nodeList[i],
+            node = nodeLocator.node,
+            pathTerminator = this._derivePathTerminator(nodeLocator.path),
+            indexEntry = this._getNodeIndexEntry(node);
+        for (var pathEntry in indexEntry.paths) {
+            if (pathEntry.endsWith(pathTerminator)) {
+                var newPath = pathEntry;
+                if ((newParent && newParent.node[this.idField] != nodeLocator.parentId) ||
+                            propagateParentChange)
+                {
+                    var parentPath = this._deriveParentPath(pathEntry);
+                    newPath = newParent.path +
+                                (newParent.path == this.pathDelim ? "" : this.pathDelim) +
+                                pathEntry.substring(parentPath.length+(parentPath == this.pathDelim ? 0 : 1));
+                    propagateParentChange = true;
+                }
+                // Wherever they are coming from, the nodes are going to end up positioned
+                // sequentially under the new parent, starting at the dropped position
+                if (this.allowDuplicateChildren) {
+                    newPath = newPath.substring(0, newPath.lastIndexOf(this.pathDelim)+1);
+                    newPath += (position + i);
+                }
+                var workLocator = this.createNodeLocator(node, indexEntry.parentId,
+                                                         indexEntry.position, newPath);
+                openStateObject[newPath] = {
+                    nodeLocator: workLocator,
+                    openState: this.isOpen(node, pathEntry)
+                }
+            }
+        }
+        var children = this.getChildren(nodeLocator);
+        if (children) {
+            var childLocators = [],
+                indexByChild = {};
+
+            for (var j = 0; j < children.length; j++) {
+                var child = children.getCachedRow(j),
+                    childId = child[this.idField];
+                indexByChild[childId] = indexByChild[childId] == null ? 0 : indexByChild[childId] + 1;
+                childLocators[j] = this.createNodeLocatorWithRelativePosition(
+                    child,
+                    nodeLocator.node[this.idField],
+                    indexByChild[childId]
+                );
+                childLocators[j].path = this._constructChildPath(nodeLocator.path, child,
+                                                                    childLocators[j].position);
+            }
+            var newChildParent;
+            if (newParent) {
+                newChildParent = workLocator;
+            }
+            this._getOpenStateRecursively(childLocators, newChildParent, position, openStateObject,
+                                                propagateParentChange);
+        }
+    }
+    return openStateObject;
+},
+
+// END - nodeIndex API
 
 connectByFields : function (data) {
     if (!data) data = this.data;
@@ -34453,6 +36198,8 @@ addNodeByFields : function (node) {
     // hierarchy as necessary
 
 
+    isc.Tree._assert(!this.isMultiLinkTree(), "addNodeByFields() must not be called for a " +
+                            "multi-link tree; linkNodes() is the only supported approach!");
     var parent = this.root;
     for (var i = 0; i < this.fieldOrder.length; i++) {
         var fieldName = this.fieldOrder[i],
@@ -34514,8 +36261,20 @@ setRoot : function (newRoot, autoOpen) {
     var newRootFromSameTree = (newRoot && isc.endsWith(this.parentProperty, this.ID));
     if (newRootFromSameTree) newRoot[this.parentProperty] = null;
 
+    var newRootNodeLocator;
+    if (this.isMultiLinkTree()) {
+        newRootNodeLocator = this.createNodeLocator(newRoot, null, null, this.pathDelim);
+    }
 
-    var calcLength = !(newRootFromSameTree && this.root[this._cachedLengthProperty] != null);
+    // NOTE: this index is permanent, staying with this Tree instance so that additional sets of
+    // nodes can be incrementally linked into the existing structure.
+    this.nodeIndex = {};
+    this.recordNumberToNodeLocatorIndex = [];
+
+    this._addNodeToIndex(this.root[this.idField] || "", this.root, null, 0, this.pathDelim);
+
+
+    var calcLength = !(newRootFromSameTree && this._getCachedNodeLength(this.root) != null);
 
     // make sure root points to us as its tree
     this.root[this.treeProperty] = this.ID;
@@ -34531,18 +36290,20 @@ setRoot : function (newRoot, autoOpen) {
         this.root[this.nameProperty] = this.pathDelim;
         // Setting the name can change the folderness of the node so update the root node's
         // length.
+
         if (!calcLength) {
-            this.root[this._cachedLengthProperty] += this._getDeltaLength(
-                this.root, wasFolder, this.isFolder(this.root));
+            var cachedLength = this._getCachedNodeLength(this.root);
+            this._setCachedNodeLength(this.root, cachedLength + this._getDeltaLength(
+                this.root, wasFolder, this.isFolder(this.root)));
         }
     }
 
     // Set the initial cached length of the new root node.
     if (calcLength) {
         var isFolder = this.isFolder(this.root);
-        this.root[this._cachedLengthProperty] = (
+        this._setCachedNodeLength(this.root, (
             (isFolder && this.openDisplayNodeType != isc.Tree.LEAVES_ONLY) ||
-            (!isFolder && this.openDisplayNodeType != isc.Tree.FOLDERS_ONLY) ? 1 : 0);
+            (!isFolder && this.openDisplayNodeType != isc.Tree.FOLDERS_ONLY) ? 1 : 0));
     }
 
     var pagedResultTree = (
@@ -34559,10 +36320,6 @@ setRoot : function (newRoot, autoOpen) {
         this.convertToFolder(this.root);
     }
 
-    // NOTE: this index is permanent, staying with this Tree instance so that additional sets of
-    // nodes can be incrementally linked into the existing structure.
-    this.nodeIndex = {};
-
     // (re)create the structure of the Tree according to the model type
     if ("parent" == this.modelType) {
         // nodes provided as flat list (this.data); each record is expected to have a property
@@ -34573,7 +36330,11 @@ setRoot : function (newRoot, autoOpen) {
         // Pass in the param to suppress dataChanged since we'll fire that below
         if (this.data) {
             this._linkingNodes = true;
-            this._linkNodes(null, null, null, null, null, null, true);
+            var rootLocator;
+            if (this.isMultiLinkTree()) {
+                rootLocator = this.createNodeLocator(newRoot, null, null, this.pathDelim);
+            }
+            this._linkNodes(null, null, null, null, null, rootLocator || newRoot, true);
             delete this._linkingNodes;
         }
     } else if ("fields" == this.modelType) {
@@ -34605,7 +36366,7 @@ setRoot : function (newRoot, autoOpen) {
     if (this.autoOpen == "root" && !this.autoOpenRoot && autoOpen != false) autoOpen = true;
     if (autoOpen !== false && (this.autoOpenRoot || autoOpen)) {
         var _this = this;
-        this.openFolder(newRoot, function (node) {
+        this.openFolder(newRootNodeLocator || newRoot, function (node) {
             var shouldOpen = _this.autoOpen;
             if (shouldOpen != null && shouldOpen != "none") {
                 if (_this.loadDataOnDemand) {
@@ -34653,6 +36414,33 @@ getCleanNodeData : function (nodeList, includeChildren, cleanChildren, includeLo
     return isc.Tree.getCleanNodeData(nodeList, includeChildren, true, includeLoadState, this);
 },
 
+
+clearProperties : function (nodeList, properties, cleanChildren) {
+    if (nodeList == null) return null;
+
+    if (!isc.isAn.Array(nodeList))   nodeList   = [nodeList];
+    if (!isc.isAn.Array(properties)) properties = [properties];
+
+    for (var i = 0; i < nodeList.length; i++) {
+        var nodeLocator,
+            treeNode = nodeList[i];
+        if (this.isANodeLocator(treeNode)) {
+            nodeLocator = treeNode;
+            treeNode = treeNode.node;
+        }
+
+        for (var j = 0; j < properties.length; j++) {
+            delete treeNode[properties[j]];
+        }
+
+        if (!cleanChildren) continue;
+
+        var children = treeNode[this.childrenProperty];
+        if (!isc.isAn.Array(children)) continue;
+        this.clearProperties(children, properties, cleanChildren);
+    }
+},
+
 //
 // identity methods -- override these for your custom trees
 //
@@ -34660,11 +36448,12 @@ getCleanNodeData : function (nodeList, includeChildren, cleanChildren, includeLo
 //>    @method    tree.getName()
 //
 // Get the 'name' of a node.  This is node[+link{Tree.nameProperty}].  If that value has not
-// been set on the node, a unique value (within this parent) will be auto-generated and
-// returned.
+// been set on the node, the node's 'ID' value will be tried (this is
+// node[+link{Tree.idField}]).  If that value is not present on the node, a unique value
+// (within this parent) will be auto-generated and returned.
 //
-// @param    node    (TreeNode)    node in question
-// @return            (String)    name of the node
+// @param    node    (TreeNode | NodeLocator) node in question, or a suitable +link{object:NodeLocator}
+// @return            (String)                 name of the node
 //
 // @visibility external
 //<
@@ -34673,6 +36462,10 @@ getName : function (node) {
     var ns = isc._emptyString;
 
     if (!node) return ns;
+
+    if (this.isANodeLocator(node)) {
+        node = node.node;
+    }
 
     var name = node[this.nameProperty];
     if (name == null) name = node[this.idField];
@@ -34755,8 +36548,21 @@ getTitle : function (node) {
 // <br><br>
 // Once you have a path to a node, you can call find(path) to retrieve a reference to the node
 // later.
+// <p>
+// <b>Note: </b>Nodes in +link{tree.isMultiLinkTree(),multi-link trees} do not have a single path,
+// because a given node can occur in multiple places in the tree.  Therefore, if you pass a
+// <code>TreeNode</code> instance to this method, it returns the path to one occurence of the
+// node; which particualr occurence it chooses is not predictable, and there may be other paths
+// to other occurences of the same node in the tree.  The only way to obtain an unambiguous
+// path for a particular occurence of a node is to call +link{tree.getPathForOpenListIndex()},
+// passing in the position of the node occurence in the tree's openList (which will be the same
+// as the record number of the node's visual occurence in a +link{class:TreeGrid,treeGrid}); if
+// the node occurence is not yet in the tree's openList - either because its parent has not yet
+// been opened, or because the tree is in the process of being built - the tree is not able to
+// provide a path to the node occurence.  In this case, you would have to obtain the path
+// in application code, by reference to the original +link{tree.data} and +link{tree.linkData}
 //
-// @param    node    (TreeNode)    node in question
+// @param    node    (TreeNode)  node in question
 // @return            (String)    path to the node
 //
 // @see method:Tree.getParentPath
@@ -34794,22 +36600,104 @@ getParentPath : function (node) {
 
 //>    @method    tree.getParent()
 //
-// Returns the parent of this node.
+// Returns the parent of this node.  For +link{tree.isMultiLinkTree(),multiLink trees}, you must
+// pass in a +link{object:NodeLocator} rather than a node, otherwise it will just return
+// the first parent, which is unlikely to be useful unless you know that this node only has
+// one parent, or you just want to know whether the node has at least one parent.  See also
+// +link{tree.getMultiLinkParents}.
 //
-// @param   node    (TreeNode)    node in question
+// @param   node    (TreeNode | String | Integer | NodeLocator) the node in question, or its ID,
+//                                                              or a NodeLocator object
 // @return  (Node)              parent of this node
 //
 // @visibility external
 //<
 getParent : function (node) {
+    var nodeLocator, nodeId;
+    if (this.isANodeLocator(node)) {
+        nodeLocator = node;
+        node = node.node;
+    } else if (!isc.isAn.Object(node)) {
+        node = this._getNodeFromIndex(node);
+    }
     if (node == null) return null;
-    return node[this.parentProperty];
+    if (!this.isMultiLinkTree()) {
+        return node[this.parentProperty];
+    } else {
+        if (nodeLocator != null) {
+            if (nodeLocator.parentId) {
+                return this._getNodeFromIndex(nodeLocator.parentId);
+            } else {
+                return this._getParentFromIndexByPath(node[this.idField], nodeLocator.path);
+            }
+        }
+        // If no nodeLocator, just return the first parent
+        return this._getFirstParentFromIndex(node);
+    }
+},
+
+_getParentNodeLocator : function (nodeLocator) {
+
+    var parentPath = this._deriveParentPath(nodeLocator.path);
+    var grandParentPath = this._deriveParentPath(parentPath);
+    var grandParentInfo = this._deriveIdAndPositionFromPath(grandParentPath);
+    return this.createNodeLocator(
+        this._getNodeFromIndex(nodeLocator.parentId || (parentPath == this.pathDelim ? "" : null)),
+        grandParentInfo ? grandParentInfo.id : null,
+        grandParentInfo ? grandParentInfo.position : null,
+        parentPath
+    );
+},
+
+//>    @method    tree.isParent()
+//
+// Returns true if "parent" is the parent of "node".  This is straightforward and definitive
+// for ordinary trees, because nodes can only have one parent.  In
+// +link{tree.isMultiLinkTree(),multiLink trees}, however, nodes can have multiple parents, so
+// this method returning true only means that "parent" is <i>a</i> parent of "node" - there may
+// or may not be others.
+//
+// @param   node    (TreeNode)  the node in question
+// @param   parent  (TreeNode)  the node to query to see if is a parent of the other node
+// @return  (Boolean)           true if "parent" is a parent of "node"; otherwise false
+//
+// @visibility external
+//<
+isParent : function (node, parent) {
+    if (node == null || parent == null) return false;
+    if (!this.isMultiLinkTree()) {
+        return parent == this.getParent(node);
+    } else {
+        var parents = this._getParentsFromIndex(node);
+        return parents.contains(parent);
+    }
+},
+
+//>    @method    tree.getMultiLinkParents()
+//
+// For +link{tree.isMultiLinkTree(),multiLink trees}, returns the array of this node's direct
+// parents (the actual node objects, not the IDs).  For non-multiLink trees, returns an array
+// containing the single parent of this node.  See also +link{tree.getParentsAndPositions}.
+//
+// @param   node    (TreeNode)    node in question
+// @return  (Array of TreeNode)   the parents of this node
+//
+// @visibility external
+//<
+getMultiLinkParents : function (node) {
+    if (node == null) return null;
+    if (!this.isMultiLinkTree()) {
+        return [node[this.parentProperty]];
+    } else {
+        return this._getParentsFromIndex(node);
+    }
 },
 
 //>    @method    tree.getParents()
 //
-// Given a node, return an array of the node's parents with the immediate parent first.  The
-// node itself is not included in the result.  For example, for the following tree:
+// Given a node, return an array of the node's ancestors, with the immediate parent first, then
+// the grandparent, and so on.  The node itself is not included in the result.  For example,
+// for the following tree:
 // <pre>
 // root
 //   foo
@@ -34817,28 +36705,90 @@ getParent : function (node) {
 // </pre>
 // Calling <code>tree.getParents(bar)</code> would return: <code>[foo, root]</code>.  Note that
 // the returned array will contain references to the nodes, not the names.
+// <p>
+// Note, for reasons of backwards compatibility, if you pass this method a <code>TreeNode</code>
+// instance on a +link{tree.isMultiLinkTree(),multi-link tree}, it will return an array
+// representing one path through the node's ancestors, which is unlikely to be useful.  To get
+// the ancestor chain of a specific node occurence, you must pass a +link{object:NodeLocator}
+// that specifies the full ID-based path to that occurence.  If what you actually want is a
+// list of the node's direct parents, see +link{tree.getMultiLinkParents}.
+
 //
-// @param   node    (TreeNode)            node in question
-// @return          (Array)             array of node's parents
+// @param   node    (TreeNode | NodeLocator) node in question, or a NodeLocator
+// @return          (Array)                  array of node's parents
 //
 // @visibility external
 //<
-getParents : function (node) {
-    var list = [],
-        parent = this.getParent(node);
-    // while parents exist
-    while (parent) {
-        // add them to the list
-        list.add(parent);
 
-        // if the parent is the root, jump out!
-        //    this lets us handle subTrees of other trees
-        if (parent == this.root) break;
-
-        // and get the next parent in the chain
-        parent = this.getParent(parent);
+getParents : function (node, rowNum) {
+    var list = [];
+    var nodeLocator;
+    if (this.isANodeLocator(node)) {
+        nodeLocator = node;
+        node = node.node;
+    } else {
+        if (this.isMultiLinkTree() && isc.isA.Number(rowNum)) {
+            nodeLocator = this.getNodeLocator(rowNum);
+        }
     }
-    // return the list of parents
+
+    if (!this.isMultiLinkTree() || !nodeLocator) {
+        var parent = this.getParent(node);
+        // while parents exist
+        while (parent) {
+            // add them to the list
+            list.add(parent);
+
+            // if the parent is the root, jump out!
+            //    this lets us handle subTrees of other trees
+            if (parent == this.root) break;
+
+            // and get the next parent in the chain
+            parent = this.getParent(parent);
+        }
+    } else {
+        var path = nodeLocator.path,
+            parent = null;
+        while (path && path != this.pathDelim && parent != this.root) {
+            path = this._deriveParentPath(path);
+            var parentInfo = this._deriveIdAndPositionFromPath(path);
+            parent = this._getNodeFromIndex(parentInfo.id);
+            list.add(parent);
+        }
+
+    }
+    return list;
+},
+
+//>    @method    tree.getParentsAndPositions()
+//
+// For +link{tree.isMultiLinkTree(),multiLink trees}, returns the array of this node's direct
+// parents and the node's position within each parent.  Each entry is a record like this:
+// <pre>
+// [
+//     {parent: [reference-to-parent-node], position: [this-node's-position-within-the-parent]},
+//     {parent: [reference-to-parent-node], position: [this-node's-position-within-the-parent]}
+// ]
+// </pre>
+// For non-multiLink trees, returns null (calling this method makes no sense for non-multiLink
+// trees).
+//
+// @param   node    (TreeNode)    node in question
+// @return  (Array of Record)     the parents and positions of this node
+//
+// @visibility external
+//<
+
+getParentsAndPositions : function (node) {
+    if (node == null || !this.isMultiLinkTree()) return null;
+    var positions = this._getPositionsFromIndex(node);
+    var list = [];
+    for (var i = 0; i < positions.length; i++) {
+        list.add({
+            parent: this._getNodeFromIndex(positions[i].parentId),
+            position: positions[i].position
+        });
+    }
     return list;
 },
 
@@ -34855,14 +36805,22 @@ getParents : function (node) {
 // Note +link{showRoot} defaults to false so that multiple nodes can be shown at top level.  In
 // this case, the top-level nodes still have root as a parent, so have level 1, even though
 // they have no visible parents.
+// <p>
+// For +link{tree.isMultiLinkTree(),multi-link trees}, passing a <code>TreeNode</code> to this
+// method will return the level of one of that node's occurences; it is not predictable which
+// occurence will be used.  For multi-link trees, therefore, you should pass a
+// +link{object:NodeLocator} with a path that unambiguously identifies the node occurence you
+// are interested in
 //
-// @param   node    (TreeNode)    node in question
+// @param   node    (TreeNode | NodeLocator)    node in question, or a suitable
+//                                              <code>NodeLocator</code>
 // @return          (number)    number of parents the node has
 //
 // @visibility external
 //<
-getLevel : function (node) {
-    return this.getParents(node).length;
+
+getLevel : function (node, rowNum) {
+    return this.getParents(node, rowNum).length;
 },
 
 // Given a node, iterate up the parent chain and return an array containing each level for
@@ -35095,7 +37053,7 @@ find : function (fieldName, value) {
 
     if (value !== undef) {
         // constant time lookup when we have nodeIndex
-        if (fieldName == this.idField) return this.nodeIndex[value];
+        if (fieldName == this.idField) return this._getNodeFromIndex(value);
         // special-case root, which may not appear in getDescendants() depending on this.showRoot
         if (this.root[fieldName] == value) return this.root;
         // Use 'getDescendants()' to retrieve both open and closed nodes.
@@ -35327,6 +37285,12 @@ getChildren : function (parentNode, displayNodeType, normalizer, sortDirection, 
                         context, returnNulls, treatEmptyFoldersAsLeaves, dontUseNormalizer) {
 
 
+    var nodeLocator;
+    if (this.isANodeLocator(parentNode)) {
+        nodeLocator = parentNode;
+        parentNode = parentNode.node;
+    }
+
     // If separateFolders is true, we need to have an openNormalizer so we can sort/separate
     // leaves and folders
     // This will not actually mark the tree as sorted by any property since we're not setting up
@@ -35508,7 +37472,23 @@ getChildren : function (parentNode, displayNodeType, normalizer, sortDirection, 
                 // back afterwards, so they're always at the end of the subset
                 var summaryRows = subset.findAll(this._summaryRecordFlag, true) || [];
                 if (summaryRows.length > 0) subset.removeList(summaryRows);
+
+                if (this.isMultiLinkTree()) {
+                    for (var ss = 0; ss < this._sortSpecifiers.length; ss++) {
+                        if (!this._sortSpecifiers[ss].context) {
+                            this._sortSpecifiers[ss].context = {};
+                        }
+                        this._sortSpecifiers[ss].context._currentParentForSort = parentNode;
+                    }
+                }
+
                 subset.setSort(this._sortSpecifiers);
+
+                if (this.isMultiLinkTree()) {
+                    for (var ss = 0; ss < this._sortSpecifiers.length; ss++) {
+                        delete this._sortSpecifiers[ss].context._currentParentForSort;
+                    }
+                }
                 this.markSubsetAsSorted(subset);
 
                 // Summary rows may be implemented as children or siblings of the
@@ -35703,12 +37683,25 @@ hasLeaves : function (node) {
 //<
 isDescendantOf : function (child, parent) {
     if (child == parent) return false;
-    var nextParent = child;
-    while (nextParent != null) {
-        if (nextParent == parent) return true;
-        nextParent = nextParent[this.parentProperty];
+    if (!this.isMultiLinkTree()) {
+        var nextParent = child;
+        while (nextParent != null) {
+            if (nextParent == parent) return true;
+            nextParent = nextParent[this.parentProperty];
+        }
+        return false;
+    } else {
+        var parents = this.getMultiLinkParents(child);
+        if (parents && parents.length > 0) {
+            if (parents.contains(parent)) return true;
+            for (var i = 0; i < parents.length; i++) {
+                if (this.isDescendantOf(parents[i], parent)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
-    return false;
 },
 
 //>    @method    tree.getDescendants()
@@ -35728,6 +37721,7 @@ isDescendantOf : function (child, parent) {
 //<
 
 getDescendants : function (node, displayNodeType, condition, dontSkipUnloadedFolders) {
+
     if (!node) node = this.root;
 
     // create an array to hold the descendants
@@ -35786,6 +37780,89 @@ getDescendants : function (node, displayNodeType, condition, dontSkipUnloadedFol
     return list;
 },
 
+//>    @method    tree.getDescendantNodeLocators()
+//
+// Returns a list of link{type:NodeLocator)s identifying all descendants of a node (identified
+// by the parameter <code>NodeLocator</code>).  This method
+// is the equivalent of +link{Tree.getDescendants(),getDescendants()}, but for
+// +link{Tree.isMultiLinkTree(),multi-link trees}.  The list of descendant nodes returned from
+// both methods is identical - a node's descendants are the same regardless of where or how
+// many times that node appears in the tree - but the <code>NodeLocator</code>s returned by this
+// method provide additional context that allows you to determine particular occurences of
+// descendant nodes.  This is necessary for some use cases - for example, when trying to
+// determine if a particualr node occurence is open, or selected.
+//
+// @param   [node]  (TreeNode)    node in question (the root node is assumed if none is specified)
+// @return  (List)              List of descendants of the node.
+//
+// @visibility external
+//<
+
+getDescendantNodeLocators : function (nodeLocator, displayNodeType, condition, dontSkipUnloadedFolders) {
+
+
+
+    // create an array to hold the descendants locators
+    var list = [],
+        node = nodeLocator.node;
+
+    // if condition wasn't passed in, set it to an always true condition
+    // XXX convert this to a function if a string, similar to getChildren()
+    if (!condition) condition = isc.Class.RET_TRUE;
+
+    // if the node is a leaf, return the empty list
+    if (this.isLeaf(node)) return list;
+
+    // skip unloaded folders
+    if (!dontSkipUnloadedFolders && this.getLoadState(node) != isc.Tree.LOADED) {
+        return list;
+    }
+    // iterate through all the children of the node
+    // Note that this can't depend on getChildren() to subset the nodes,
+    //    because a folder may have children that meet the criteria but not meet the criteria itself.
+
+    var children = this.getChildren(node);
+    if (!children) {
+        return list;
+    }
+
+
+
+    // for each child
+    var length = (isc.isA.ResultSet(children) ?
+            children._getCachedLength() : children.getLength());
+    for (var i = 0; i < length; ++i) {
+        // get a pointer to the child
+        var child = children.getCachedRow(i);
+
+        if (child == null) {
+            // Do nothing.
+        } else if (this.isFolder(child)) { // if that child is a folder
+            // if we're not exluding folders, add the child
+            if (displayNodeType != isc.Tree.LEAVES_ONLY && condition(child)) {
+                var childNodeLocator = this.createNodeLocator(child, null, null,
+                        this._constructChildPath(nodeLocator.path, child, i));
+                list[list.length] = childNodeLocator;
+            }
+
+            // now concatenate the list with the descendants of the child
+            list = list.concat(
+                this.getDescendantNodeLocators(
+                    childNodeLocator, displayNodeType, condition, dontSkipUnloadedFolders));
+
+        } else {
+            // if we're not excluding leaves, add the leaf to the list
+            if (displayNodeType != isc.Tree.FOLDERS_ONLY && condition(child)) {
+                var childNodeLocator = this.createNodeLocator(child, null, null,
+                    this._constructChildPath(nodeLocator.path, child, i));
+                list[list.length] = childNodeLocator;
+            }
+        }
+    }
+    // finally, return the entire list
+    return list;
+},
+
 //>    @method    tree.getDescendantFolders()
 //
 // Returns the list of all descendants of a node that are folders.  This works just like
@@ -35830,13 +37907,24 @@ getDescendantLeaves : function (node, condition) {
 
 //>    @method    tree.dataChanged()    (A)
 //
-// Called when the structure of this tree is changed in any way.  Intended to be observed.
-// <br><br>
+// Called when the structure of this tree is changed in any way. <smartclient>Intended to be observed.
+// </smartclient><br><br>
 // Note that on a big change (many items being added or deleted) this may be called multiple times
 //
 // @visibility external
 //<
 dataChanged : function () {},
+
+//>    @method    tree.linkDataChanged()    (A)
+//
+// For +link{tree.isMultiLinkTree(),multi-link tree}s only, called when links are added to or removed
+// form the tree. <smartclient>Intended to be observed.</smartclient>
+// <br><br>
+// Note that on a big change (many items being added or deleted) this may be called multiple times
+//
+// @visibility external
+//<
+linkDataChanged : function () {},
 
 
 //
@@ -35891,6 +37979,10 @@ dataChanged : function () {},
 //                                            the node.
 // @param    [position]    (number)    Position of the new node in the children list. If not
 //                                    specified, the node will be added at the end of the list.
+// @param    [linkRecord] (Record)    Optional record containing attributes associated with the
+//                                    link between the nodes, rather than either of the nodes
+//                                  themselves.  Only applicable to
+//                                  +link{multiLinkTree,multi-link trees}
 // @return (TreeNode) The added node. Will return null if the node was not added (typically
 //    because the specified <code>parent</code> could not be found in the tree).
 //
@@ -35901,10 +37993,10 @@ dataChanged : function () {},
 // Note: the node passed in is directly integrated into the tree, so you will see properties
 // written onto it, etc. We may want to duplicate it before adding, then return a pointer
 // to the node as added.
-add : function (node, parent, position) {
-    return this._add(node, parent, position);
+add : function (node, parent, position, linkRecord) {
+    return this._add(node, parent, position, linkRecord);
 },
-_add : function (node, parent, position) {
+_add : function (node, parent, position, linkRecord) {
     if (parent == null && this.modelType == isc.Tree.PARENT) {
         var parentId = node[this.parentIdField];
         if (parentId != null) parent = this.findById(parentId);
@@ -35918,6 +38010,8 @@ _add : function (node, parent, position) {
                     ' is not in the tree, returning');
         return null;
     }
+    this.logDebug("Adding node " + node[this.idField] + " to parent " +
+                        (parent == null ? "null" : parent[this.idField]));
     // if the parent wasn't found, return null
     // XXX note that we could actually add to the root, but that's probably not what you want
     if (! parent) {
@@ -35931,7 +38025,7 @@ _add : function (node, parent, position) {
     var children = parent[this.childrenProperty];
     if (children) this.markSubsetSortDirty(children);
 
-    this.__add(node, parent, position);
+    this.__add(node, parent, position, linkRecord);
 
     this._clearNodeCache(true);
 
@@ -35954,32 +38048,58 @@ _reportCollision : function (ID) {
 // batch of new nodes to the Tree.  This implementation doesn't call _clearNodeCache() or
 // dataChanged() and assumes you passed in the parent node as a node object, not a string.
 
-__add : function (node, parent, position) {
+__add : function (node, parent, position, linkRecord, path) {
     var pagedResultTree = (
             isc.ResultTree != null && isc.isA.ResultTree(this) && this.isPaged());
 
+    var parentNodeLocator;
+    if (this.isANodeLocator(parent)) {
+        parentNodeLocator = parent;
+        parent = parent.node;
+    }
 
-    var info = {};
-    parent[this._recursionCountProperty] = 1 + (parent[this._recursionCountProperty] || 0);
-    this._preAdd(node, parent, true, info);
+    var nodeLocator
+    if (this.isMultiLinkTree()) {
+        if (this.isANodeLocator(node)) {
+            nodeLocator = node;
+            node = nodeLocator.node;
+            path = nodeLocator.path;
+        } else {
+            if (parent == this.getRoot()) {
+                path = this.pathDelim;
+            }
+            nodeLocator = this.createNodeLocator(node, parent[this.idField], position, path);
+        }
+    }
+
+    var info = {path:path};
+    this._incrementRecursionCount(parentNodeLocator || parent);
+    this._preAdd(nodeLocator || node, parentNodeLocator || parent, position, true, info);
+
     var deltaParentLength = info.deltaParentLength,
         grandParent = info.grandParent,
+        grandParentPath = info.grandParentPath,
         origParentLength = info.origParentLength,
         children = info.children;
 
 
+    //
+
     // If position wasn't specified, set it as the last item.
     // NOTE: Specifying position > children.length is technically wrong but happens easily
     // with a remove followed by an add.
-    if (position == null || position > children.length) {
-        children.add(node);
-    } else {
-        // add the node to the parent - addAt is slower, so only do this if your position was
-        // passed in
-        children.addAt(node, position);
+    if (!this.isMultiLinkTree() || !(info.alreadyInTree || this._addingDescendants)) {
+        if (position == null || position > children.length) {
+            children.add(node);
+        } else {
+            // add the node to the parent - addAt is slower, so only do this if your position was
+            // passed in
+            children.addAt(node, position);
+        }
     }
 
-    this._postAdd(node, parent, position, info);
+    info.linkRecord = linkRecord;
+    this._postAdd(node, parentNodeLocator || parent, position, info);
     var grandChildren = (pagedResultTree
             ? this._canonicalizeChildren(node, info.grandChildren, false) : info.grandChildren);
 
@@ -35987,9 +38107,12 @@ __add : function (node, parent, position) {
         var fromParent = (parent[this.canReturnOpenSubfoldersProperty] != null),
             openSubfoldersAllowed = (fromParent ?
                 parent[this.canReturnOpenSubfoldersProperty] : this.canReturnOpenFolders);
-
+        var nodeLocator;
+        if (this.isMultiLinkTree()) {
+            nodeLocator = this.createNodeLocator(node, parent, position);
+        }
         if (!openSubfoldersAllowed &&
-            this.isOpen(node) &&
+            this.isOpen(nodeLocator || node) &&
             grandChildren != null && !grandChildren.isEmpty())
         {
             this.logWarn(
@@ -36011,27 +38134,67 @@ __add : function (node, parent, position) {
 
         // Handle children being specified as a single element recursively.
         // _add will slot the element into the new children array.
-        if (!isc.isAn.Array(grandChildren)) {
-            this.__add(grandChildren, node);
-        } else if (grandChildren.length > 0) {
-            this.__addList(grandChildren, node);
+
+        var newParentLocator;
+        if (this.isMultiLinkTree()) {
+            if (!isc.isAn.Array(grandChildren)) {
+                grandChildren = [grandChildren];
+            }
+            this._assert(!!parentNodeLocator);
+            newParentLocator =
+                    this.createNodeLocator(node, parentNodeLocator.node[this.idField],
+                            parentNodeLocator.position,
+                            this._constructChildPath(parentNodeLocator.path, node, position));
+            var locators = [],
+                indexByChild = {};
+            for (var j = 0; j < grandChildren.length; j++) {
+                var grandChild = grandChildren[j],
+                    grandChildId = grandChild[this.idField];
+                indexByChild[grandChildId] = indexByChild[grandChildId] == null ? 0 :
+                                                indexByChild[grandChildId] + 1;
+                locators[j] = this.createNodeLocatorWithRelativePosition(
+                    grandChild,
+                    node[this.idField],
+                    indexByChild[grandChildId]
+                );
+                locators[j].path = this._constructChildPath(newParentLocator.path, grandChild,
+                                                                    locators[j].position);
+
+            }
+            grandChildren = locators;
         }
+
+        // We are adding all the children of a newly-added node here - start point is always 0
+        var addingDescendants = this._addingDescendants;
+        if (this.isMultiLinkTree()) {
+            this._addingDescendants = true;
+        }
+        if (!isc.isAn.Array(grandChildren)) {
+            this.__add(grandChildren, node, 0);
+        } else if (grandChildren.length > 0) {
+            this.__addList(grandChildren, newParentLocator || nodeLocator || node, 0);
+        }
+        if (this.isMultiLinkTree() && !addingDescendants) {
+            delete this._addingDescendants;
+        }
+
 
         // if a children array is present, mark the node as loaded even if the children array
         // is empty - this is a way of indicating an empty folder in XML or JSON results
         this.setLoadState(node, isc.Tree.LOADED);
     }
 
+    var recursionCount = this._getRecursionCount(parentNodeLocator || parent);
 
-    if ((--parent[this._recursionCountProperty]) == 0) {
-        delete parent[this._recursionCountProperty];
-
+    this._decrementRecursionCount(parentNodeLocator || parent);
+    if (this._getRecursionCount(parentNodeLocator || parent) == 0) {
         if (grandParent) {
             // Check if changes in the length of the parent affect the length of the grandParent.
-            deltaParentLength += (this._getNodeLengthToParent(parent, grandParent) - origParentLength);
+            deltaParentLength += (this._getNodeLengthToParent(parent, grandParent,
+                                    info.parentPath, grandParentPath) - origParentLength);
 
-            // Update the lengths of some of the ancestors.
-            this._updateParentLengths(grandParent, deltaParentLength);
+            // Update ancestor lengths
+            this._updateParentLengths(grandParent, deltaParentLength, grandParentPath);
         }
     }
 },
@@ -36059,22 +38222,45 @@ _removeCollision : function (collision) {
 },
 
 _findCollision : function (node) {
+    var nodeLocator;
+    if (this.isANodeLocator(node)) {
+        nodeLocator = node;
+        node = node.node;
+    }
 
     var ID = node[this.idField];
     if (ID != null && this.modelType == isc.Tree.PARENT) {
-        // note: in modelType:"children", while we do maintain a nodeIndex, an idField is not
-        // required and the tree does not depend on globally unique ids
-        var collision = this.findById(ID);
-        if (collision) {
-            return collision;
+        if (!this.isMultiLinkTree()) {
+            // note: in modelType:"children", while we do maintain a nodeIndex, an idField is not
+            // required and the tree does not depend on globally unique ids
+            // Further note: with multi-link trees, we do not support duplicate global IDs, but we
+            // do support the same node appearing in multiple places in the tree.  SO it is not a
+            // collision if the "colliding" node is the same as the node we were called with
+            var collision = this.findById(ID);
+            if (collision) {
+                return collision;
+            }
+        } else {
+            if (this._isParentLinkInIndex(nodeLocator)) {
+                return nodeLocator;
+            }
         }
     }
     return null;
 },
 
 
-_preAdd : function (node, parent, removeCollisions, info) {
+_preAdd : function (node, parent, position, removeCollisions, info) {
 
+    var nodeLocator, parentNodeLocator;
+    if (this.isANodeLocator(node)) {
+        nodeLocator = node;
+        node = node.node;
+    }
+    if (this.isANodeLocator(parent)) {
+        parentNodeLocator = parent;
+        parent = parent.node;
+    }
 
     // convert name to a string - we rely on this fact in getTitle() and possibly other
     // places.  Also, ultimately getName() will convert it to a string anyway and at that
@@ -36082,21 +38268,43 @@ _preAdd : function (node, parent, removeCollisions, info) {
     // non-strings will be segregated from the strings).
     this.getName(node);
 
-    // convert the parent node to a folder if necessary
-    var deltaParentLength = info.deltaParentLength = this.convertToFolder(parent);
-
-    var grandParent = info.grandParent = (parent != this.root && this.getParent(parent)),
-        origParentLength = info.origParentLength = (
-            grandParent && this._getNodeLengthToParent(parent, grandParent));
-
-    var collision = this._findCollision(node);
+    var collision = this._findCollision(nodeLocator || node);
     if (collision) {
-        var ID = collision[this.idField];
-        this._reportCollision(ID);
-        if (removeCollisions) {
-            this._removeCollision(collision);
+        // Collisions are a mainstream case in multi-link trees - it just tells us this node
+        // has already been linked in so we don't add it to the tree again.  However, we do
+        // (possibly) need to add a nodeIndex entry for this particular path, and keep node
+        // length maintained, so we will proceed with the majority of the add work; we just
+        // don't actually add the node to the parent's children collection
+        if (this.isMultiLinkTree()) {
+            info.alreadyInTree = true;
+        } else {
+            var ID = collision[this.idField];
+            this._reportCollision(ID);
+            if (removeCollisions) {
+                this._removeCollision(collision);
+            }
         }
     }
+
+    // convert the parent node to a folder if necessary
+    var parentPath = info.parentPath = parentNodeLocator ? parentNodeLocator.path
+                                                         : this._deriveParentPath(info.path);
+    var deltaParentLength = info.deltaParentLength =
+                                this.convertToFolder(parentNodeLocator || parent, parentPath);
+
+    var grandParent = info.grandParent = (parent != this.root && this.getParent(parentNodeLocator || parent));
+    var grandParentPath = null;
+    if (grandParent) {
+        grandParentPath = this._deriveParentPath(parentPath);
+    } else {
+        // WRWRWR - is this assumption warranted?
+        grandParentPath = this.pathDelim;
+    }
+
+    info.grandParentPath = grandParentPath;
+
+    var origParentLength = info.origParentLength = (
+            grandParent && this._getNodeLengthToParent(parent, grandParent, parentPath, grandParentPath));
 
     var children = parent[this.childrenProperty];
     if (!children) children = parent[this.childrenProperty] = [];
@@ -36128,6 +38336,12 @@ _preAdd : function (node, parent, removeCollisions, info) {
 _postAdd : function (node, parent, position, info) {
     var idField = this.idField;
 
+    var parentNodeLocator;
+    if (this.isANodeLocator(parent)) {
+        parentNodeLocator = parent;
+        parent = parent.node;
+    }
+
     // Link to the Tree (by String ID, not direct pointer).
     node[this.treeProperty] = this.ID;
 
@@ -36135,7 +38349,26 @@ _postAdd : function (node, parent, position, info) {
     // If we don't do a null check there are cases where null values get added into the
     // nodeIndex and children get added to the wrong parent, i.e. when using autoFetch and
     // modeltype 'children' within a treegrid.
-    if (node[idField] != null) this.nodeIndex[node[idField]] = node;
+    if (node[idField] != null) {
+        if (this.isMultiLinkTree() && parentNodeLocator) {
+            // This is necessary for the drag-move case: "info.path" will still contain the
+            // path to node's original place in the tree, but we have removed it from there and
+            // are now re-adding it in the new location
+            info.path = this._constructChildPath(parentNodeLocator.path, node, position);
+        }
+        this._addNodeToIndex(node[idField], node, parent[idField], position, info.path);
+        if (this.isMultiLinkTree() && !info.alreadyInTree) {
+            // _currentLinkRecord is set up by the callback of the linkData add operations in
+            // TreeGrid.transferNodes() (actually defined in TreeCells.js)
+            var linkRecord;
+            if (this._addingDescendants) {
+                linkRecord = this.getLinkRecordFromLinkData(parent[idField], node[idField], position);
+            } else {
+                linkRecord = this._currentLinkRecord ? this._currentLinkRecord : info.linkRecord;
+            }
+            this._addNodeToLinkDataIndex(parent[idField], node[idField], position, linkRecord);
+        }
+    }
 
     if (!info.childrenResultSet) {
         // Current assumption whenever loading subtrees is that if any
@@ -36147,16 +38380,30 @@ _postAdd : function (node, parent, position, info) {
 
     // Set the cached length of the node.
     var nodeIsFolder = this.isFolder(node);
-    node[this._cachedLengthProperty] = (
-        this.openDisplayNodeType != (nodeIsFolder ? isc.Tree.LEAVES_ONLY : isc.Tree.FOLDERS_ONLY) ? 1 : 0);
+    this._setCachedNodeLength(node, (
+        this.openDisplayNodeType != (nodeIsFolder ? isc.Tree.LEAVES_ONLY : isc.Tree.FOLDERS_ONLY) ? 1 : 0),
+        info.path);
 
     var grandChildren = info.grandChildren = node[this.childrenProperty],
-        deltaLength;
+        deltaLength,
+        parentPath = parentNodeLocator && parentNodeLocator.path ? parentNodeLocator.path
+                                                                 : this._deriveParentPath(info.path);
     if (grandChildren != null) {
-        node[this.childrenProperty] = [];
-        deltaLength = this._getNodeLengthToParent(node, parent);
+        // This is clearing out any existing children because we are about to re-add them via
+        // the _add() mechanism, to ensure that everything is correctly linked up, inserted into
+        // the nodeIndex, etc.  However, this can cause problems with multi-link trees: because
+        // nodes are not unique in the tree, it is possible that we are about to zap the children
+        // of a node that exists elsewhere.  If this happens, the re-add of the children at
+        // this particular path will discover existing entries in the nodeIndex (for another
+        // path) and assume that the actual references via the parent's [childrenProperty]
+        // collection are already in place.  So it goes ahead and does everything EXCEPT adding
+        // the child to the parent's [childrenProperty] collection.
+        if (!this.isMultiLinkTree()) {
+            node[this.childrenProperty] = [];
+        }
+        deltaLength = this._getNodeLengthToParent(node, parentNodeLocator || parent, info.path, parentPath);
     } else {
-        deltaLength = this._getNodeLengthToParent(node, parent);
+        deltaLength = this._getNodeLengthToParent(node, parentNodeLocator || parent, info.path, parentPath);
 
         // canonicalize the isFolder flag on the node
         var wasFolder = this.isFolder(node),
@@ -36172,14 +38419,100 @@ _postAdd : function (node, parent, position, info) {
         if (isFolder == null && this.defaultIsFolder) isFolder = true;
 
         if (isFolder && !wasFolder) {
-            deltaLength += this.convertToFolder(node);
+            deltaLength += this.convertToFolder(node, info.path);
         }
         node[this.isFolderProperty] = isFolder;
     }
 
     // Add deltaLength to the length of the parent.
 
-    parent[this._cachedLengthProperty] += deltaLength;
+    var cachedLength = this._getCachedNodeLength(parent, parentPath);
+    this._setCachedNodeLength(parent, cachedLength + deltaLength, parentPath);
+},
+
+_addNodeToLinkDataIndex : function(parentId, childId, position, linkRecord) {
+    if (this.isANodeLocator(parentId)) {
+        linkRecord = childId;
+        childId = parentId.node[this.idField];
+        position = parentId.position;
+        parentId = parentId.parentId;
+    }
+
+    if (!this.linkDataIndex) this.linkDataIndex = {};
+    if (!this.linkDataIndex[parentId]) this.linkDataIndex[parentId] = {};
+    if (!this.linkDataIndex[parentId][childId]) this.linkDataIndex[parentId][childId] = {};
+
+    position = this.allowDuplicateChildren ? position : 0;
+    this.linkDataIndex[parentId][childId][position] = linkRecord;
+},
+
+_removeNodeFromLinkDataIndex : function(childId, path) {
+
+    var nodeLocator, parentId, position;
+    if (this.isANodeLocator(childId)) {
+        nodeLocator = childId;
+        childId = nodeLocator.node[this.idField];
+        path = nodeLocator.path;
+        parentId = nodeLocator.parentId;
+        position = nodeLocator.position;
+    } else {
+        if (isc.isAn.Object(childId)) {
+            childId = childId[this.idField];
+        }
+        var info = this._deriveParentChildPositionFromPath(path);
+        if (info) {
+            parentId = info.parentId;
+            if (this.allowDuplicateChildren) {
+                position = info.position;
+            }
+        }
+    }
+    if (this.linkDataIndex &&
+        this.linkDataIndex[parentId] &&
+        this.linkDataIndex[parentId][childId])
+    {
+        if (!this.allowDuplicateChildren) {
+            for (var pos in this.linkDataIndex[parentId][childId]) {
+                position = pos;
+                break;
+            }
+        }
+        delete this.linkDataIndex[parentId][childId][position];
+    }
+},
+getLinkRecordFromLinkData : function(parentId, childId, position) {
+    // This method returns a link record from the source data; it is used when linking dragged
+    // nodes back into the tree, when no linkDataIndex entry will be present
+    for (var i = 0; i < this.linkData.length; i++) {
+        var link = this.linkData[i];
+        if (link[this.parentIdField] == parentId && link[this.idField] == childId) {
+            if (!this.allowDuplicateChildren || link[this.linkPositionField] == position) {
+                return link;
+            }
+        }
+    }
+},
+
+getLinkRecord : function(parentId, childId, position) {
+
+    if (this.isANodeLocator(parentId)) {
+        var nodeLocator = parentId;
+        parentId = nodeLocator.parentId;
+        childId = nodeLocator.node[this.idField];
+        position = nodeLocator.position;
+    }
+    if (!this.linkDataIndex || !this.linkDataIndex[parentId] || !this.linkDataIndex[parentId][childId])
+    {
+        return null;
+    }
+    if (!this.allowDuplicateChildren) {
+        for (var pos in this.linkDataIndex[parentId][childId]) {
+            position = pos;
+            break;
+        }
+    }
+    if (position == null) return null;
+    return this.linkDataIndex[parentId][childId][position];
 },
 
 _addToLevelCache : function (nodes, parent, position) {
@@ -36268,6 +38601,13 @@ addList : function (nodeList, parent, position) {
     return this._addList(nodeList, parent, position);
 },
 _addList : function (nodeList, parent, position) {
+
+    var parentNodeLocator;
+    if (this.isANodeLocator(parent)) {
+        parentNodeLocator = parent;
+        parent = parent.node;
+    }
+
     // normalize the parent property into a node
     if (isc.isA.String(parent)) parent = this.find(parent);
 
@@ -36278,7 +38618,7 @@ _addList : function (nodeList, parent, position) {
     var children = parent[this.childrenProperty];
     if (children) this.markSubsetSortDirty(children);
 
-    this.__addList(nodeList, parent, position);
+    this.__addList(nodeList, parentNodeLocator || parent, position);
 
     if (!this._deferDataChanged) {
         this._clearNodeCache(true);
@@ -36294,9 +38634,18 @@ __addList : function (nodeList, parent, position) {
             isc.isA.ResultSet(nodeList) ? nodeList._getCachedLength() : nodeList.getLength());
     for (var i = 0; i < length; ++i) {
         var node = nodeList.getCachedRow(i);
+        if (this.isMultiLinkTree()) {
+            if (isc.isAn.Array(this._draggedLinkRecords)) {
+                this._currentLinkRecord = this._draggedLinkRecords[i];
+            }
+        }
         if (node != null) {
             this.__add(node, parent, position != null ? (position + i) : null);
         }
+    }
+    if (this.isMultiLinkTree()) {
+        delete this._currentLinkRecord;
+        delete this._draggedLinkRecords;
     }
 },
 
@@ -36329,11 +38678,20 @@ _move : function (node, newParent, position) {
 moveBefore : function (node, nextNode) {
     this.moveListBefore([node], nextNode);
 },
-moveListBefore : function (nodes, nextNode) {
-    var parentNode = this.getParent(nextNode);
+moveListBefore : function (nodes, nextNode, folder) {
+    var parentNode = folder || this.getParent(nextNode);
     var siblings = this.getChildren(parentNode),
         position = siblings.indexOf(nextNode),
         offset = 0;
+
+    var nodeLocators;
+    if (nodes.length > 0 && this.isANodeLocator(nodes[0])) {
+        nodeLocators = [];
+        for (var i = 0; i < nodes.length; i++) {
+            nodeLocators[nodeLocators.length] = nodes[i];
+            nodes[i] = nodes[i].node
+        }
+    }
 
     // adjust the target position to account for nodes which are currently
     // before the target position and will be shifted forward.
@@ -36342,7 +38700,7 @@ moveListBefore : function (nodes, nextNode) {
             offset += 1;
         }
     }
-    this.moveList(nodes, parentNode, position-offset);
+    this.moveList(nodeLocators || nodes, parentNode, position-offset);
 },
 
 
@@ -36357,6 +38715,24 @@ moveListBefore : function (nodes, nextNode) {
 //                                        If not specified, it'll go at the end
 //<
 moveList : function (nodeList, newParent, position) {
+    /* Redundant
+    if (this.isMultiLinkTree()) {
+        // If we are trying to drag-move a node that appears in the tree more than once, the
+        // incoming nodeList will contain that node multiple times (once per instance in the
+        // tree).  So cull the dups
+        for (var i = 0; i < nodeList.length; i++) {
+            for (var j = i+1; j < nodeList.length; ) {
+                if (nodeList[j] == nodeList[i]) {
+                    nodeList.removeAt(j);
+                } else {
+                    j++;
+                }
+            }
+        }
+    }
+    */
+
+
 
     for (var i = nodeList.length, duplicated = false; i--; ) {
         var node = nodeList[i];
@@ -36384,6 +38760,16 @@ moveList : function (nodeList, newParent, position) {
     // remove/add calls, and then at the end of this method)
     this._deferDataChanged = true;
 
+    // Multilink trees store open state in the nodeIndex rather than on the nodes themselves,
+    // because a node can appear in multiple places in the tree.  This causes us a problem
+    // here: when the nodes are removed and re-added, the nodeIndex entries are deleted and
+    // recreated, so we lose the open state.  So we need to remember it and reapply it after
+    // the move, AND we have to do this recursively because we might have just dragged the root
+    // of a subtree which has open nodes at multiple levels
+    if (this.isMultiLinkTree()) {
+        var oldOpenState = this._getOpenStateRecursively(nodeList, newParent, position);
+    }
+
     // remove the nodes from their old parents
     this._removeList(nodeList);
 
@@ -36403,39 +38789,91 @@ moveList : function (nodeList, newParent, position) {
 
     // add the nodes to the new parent
     this._addList(nodeList, newParent, position);
-    // call the dataChanged method to notify anyone who's observing it
+
     delete this._deferDataChanged;
     this._clearNodeCache(true);
+
+    // Reopen any nodes that were previously open, if this is a multilink tree (unnecessary for
+    // regular trees because nodes in regular trees carry their open state around with them)
+
+    if (this.isMultiLinkTree()) {
+        for (var path in oldOpenState) {
+            if (oldOpenState[path].openState) {
+                this.changeDataVisibility(oldOpenState[path].nodeLocator, true);
+            }
+        }
+    }
+
+    // call the dataChanged method to notify anyone who's observing it
     this.dataChanged();
+
 },
 
 //>    @method    tree.remove()
 //
 // Removes a node, along with all its children.  See +link{ResultTree,"Modifying ResultTrees"}
-// when working with a <code>ResultTree</code> for limitations.
+// when working with a <code>ResultTree</code> for limitations.  Note, if this is a
+// +link{tree.isMultiLinkTree(),multi-link tree}, you must pass in a +link{NodeLocator} rather than
+// a node or id.
 //
-// @param    node    (TreeNode)    node to remove
+// @param    node    (TreeNode | String | Integer | NodeLocator)    node to remove, or the node's ID,
+//                                                              or a NodeLocator
 // @return            (Boolean)    true if the tree was changed as a result of this call
 //
 // @visibility external
 //<
-remove : function (node, noDataChanged) {
-    return this._remove(node, noDataChanged);
+remove : function (node, noDataChanged, parent) {
+    return this._remove(node, noDataChanged, parent);
 },
-_remove : function (node, noDataChanged) {
+_remove : function (node, noDataChanged, parent) {
+
+    var nodeLocator;
+    if (this.isANodeLocator(node)) {
+        nodeLocator = node;
+        node = node.node;
+    }
+
     // get the parent of the node
-    var parent = this.getParent(node);
+    var parent = parent || this.getParent(nodeLocator || node);
     if (! parent) return false;
+
+    var parentNodeLocator;
+    if (this.isMultiLinkTree()) {
+        parentNodeLocator = this._getParentNodeLocator(nodeLocator);
+    }
+
+    this.logDebug("Removing node " + node[this.idField] + " from parent " +
+                    (parent == null ? "null" : parent[this.idField]));
 
 //    this.logWarn("removing: " + isc.Log.echoAll(node) + " from: " + isc.Log.echoAll(parent));
 
     // get the children list of the parent and the name of the node
     var children = this.getChildren(parent);
+    var position = null;
     if (children) {
         // Figure out the child number.
-        var position = children.indexOf(node);
+
+        if (this.isMultiLinkTree()) {
+            node = this._getNodeFromIndex(node);
+            var info = this._deriveIdAndPositionFromPath(nodeLocator.path);
+            if (info && info.position != null && children[info.position] == node) {
+                position = info.position;
+            }
+        }
+        if (position == null) {
+            position = children.indexOf(node);
+            // We didn't find this node amongst the parent's children, but that might be because we
+            // used pointer-equality, and if we are removing because we are drag-moving, the
+            // orignal node was cloned (this seems always to have been the case, but presumably it
+            // can't have been or drag-moving would never have worked).  So, reset it to the original
+            // node by fetching from the index by ID, and then look again
+            if (position == -1) {
+                node = this._getNodeFromIndex(node);
+                position = children.indexOf(node);
+            }
+        }
         if (position != -1) {
-            this.__remove(node, parent, children, position);
+            this.__remove(nodeLocator || node, parentNodeLocator || parent, children, position);
 
             // This can be expensive if we're called iteratively for a large set of nodes  -
             // e.g. via _removeList(), so consult noDataChanged flag.
@@ -36454,22 +38892,33 @@ _remove : function (node, noDataChanged) {
 
 
 __remove : function (node, parent, children, position) {
+
+    var nodeLocator, parentNodeLocator;
+    if (this.isANodeLocator(node)) {
+        nodeLocator = node;
+        node = node.node;
+    }
+    if (this.isANodeLocator(parent)) {
+        parentNodeLocator = parent;
+        parent = parent.node;
+    }
+
     var pagedResultTree = (
             isc.ResultTree != null && isc.isA.ResultTree(this) && this.isPaged());
 
 
-    parent[this._recursionCountProperty] = 1 + (parent[this._recursionCountProperty] || 0);
+    this._incrementRecursionCount(parentNodeLocator || parent);
 
     var info = {};
-    this._preRemove(node, parent, info);
+    this._preRemove(nodeLocator || node, parent, info);
     var deltaLength = info.deltaLength,
         grandParent = info.grandParent,
         origParentLength = info.origParentLength;
 
     // Remove the node
-    children.remove(node);
+    children.removeAt(position);
 
-    this._postRemove(node, parent, info);
+    this._postRemove(nodeLocator || node, parentNodeLocator || parent, info);
 
     // Update the length of the ancestors according to the removal of the child node.
     // If the removed node was the last of the parent's children, then the parent will look
@@ -36477,25 +38926,51 @@ __remove : function (node, parent, children, position) {
     // more distant ancestors.
     var grandParent = info.grandParent;
 
-    if ((--parent[this._recursionCountProperty]) == 0) {
-        delete parent[this._recursionCountProperty];
+    var recursionCount = this._getRecursionCount(parentNodeLocator || parent);
+
+    this._decrementRecursionCount(parentNodeLocator || parent);
+    if (this._getRecursionCount(parentNodeLocator || parent) == 0) {
         if (grandParent) {
-            var deltaParentLength = (
-                    this._getNodeLengthToParent(parent, grandParent) - origParentLength);
-            this._updateParentLengths(grandParent, deltaParentLength);
+            // Check if changes in the length of the parent affect the length of the grandParent.
+            var deltaParentLength = (this._getNodeLengthToParent(parent, grandParent,
+                                     info.parentPath, info.grandParentPath) - origParentLength);
+
+            this._updateParentLengths(grandParent, deltaParentLength, info.grandParentPath);
         }
     }
 },
 
 _preRemove : function (node, parent, info) {
+
+    var nodeLocator, nodePath, parentNodeLocator, parentPath;
+    if (this.isANodeLocator(node)) {
+        nodeLocator = node;
+        node = node.node;
+        nodePath = nodeLocator.path;
+        parentPath = this._deriveParentPath(nodeLocator.path);
+        parentNodeLocator = this._getParentNodeLocator(nodeLocator);
+    }
+
+    var grandParent = info.grandParent = (parent != this.root && this.getParent(parentNodeLocator || parent));
+    var grandParentPath;
+    if (grandParent) {
+        grandParentPath = this._deriveParentPath(parentPath);
+    }
+
+    info.parentPath = parentPath;
+    info.grandParentPath = grandParentPath;
+    info.deltaLength = this._getNodeLengthToParent(node, parentNodeLocator || parent, nodePath, parentPath);
+    // Delta on remove is negative, obviously...
+    info.deltaLength *= -1;
+
     // Recursively remove the node and its children from the node index.  We do this rather
     // than call _remove() because we don't want to remove the children from the node
     // itself, just from the tree's cache
-    this._removeFromNodeIndex(node);
+    this._removeFromNodeIndex(nodeLocator || node);
 
-    info.deltaLength = -this._getNodeLengthToParent(node, parent);
-    var grandParent = info.grandParent = (parent != this.root && this.getParent(parent));
-    info.origParentLength = grandParent && this._getNodeLengthToParent(parent, grandParent);
+    info.origParentLength = grandParent &&
+                                this._getNodeLengthToParent(parent, grandParent, parentPath,
+                                                                grandParentPath);
 
     this._removeFromLevelCache(node);
 
@@ -36508,11 +38983,29 @@ _postRemove : function (node, parent, info) {
     // Update the length of the parent according to the removal of the child node.
     var deltaLength = info.deltaLength;
 
-    parent[this._cachedLengthProperty] += deltaLength;
+    var parentNodeLocator;
+    if (this.isANodeLocator(parent)) {
+        parentNodeLocator = parent;
+        parent = parent.node;
+    }
+    var parentPath = parentNodeLocator ? parentNodeLocator.path : this._deriveParentPath(info.path);
+    var cachedLength = this._getCachedNodeLength(parent, parentPath);
+    this._setCachedNodeLength(parent, cachedLength + deltaLength, parentPath);
 },
 
 _removeFromNodeIndex : function (node) {
-    delete this.nodeIndex[node[this.idField]];
+
+    var nodeLocator;
+    if (this.isANodeLocator(node)) {
+        nodeLocator = node;
+        node = node.node;
+    }
+
+    this._removeNodeFromIndex(nodeLocator || node);
+
+    // In the case of a multiLink tree, the call to _removeNodeFromIndex() also removes all
+    // descendants of the removed node occurence, so we're done
+    if (this.isMultiLinkTree()) return;
     var children = this.getChildren(node, null, null, null, null, null, true);
     if (!children) return;
     var length = (isc.isA.ResultSet(children) ?
@@ -36712,15 +39205,20 @@ loadRootChildren : function (callback) {
 // @visibility external
 //<
 loadChildren : function (node, callback) {
+    var nodeLocator;
+    if (this.isANodeLocator(node)) {
+        nodeLocator = node;
+        node = node.node;
+    }
     if (!node) {
         node = this.root;
     }
     var pagedResultTree = (
             isc.ResultTree != null && isc.isA.ResultTree(this) && this.isPaged());
     if (pagedResultTree) {
-        this._loadChildren(node, 0, this.resultSize, callback);
+        this._loadChildren(nodeLocator || node, 0, this.resultSize, callback);
     } else {
-        this._loadChildren(node, null, null, callback);
+        this._loadChildren(nodeLocator || node, null, null, callback);
     }
 },
 
@@ -36783,6 +39281,7 @@ unloadChildren : function (node, displayNodeType, markAsLoaded) {
             // discarding cache, whereas calling _remove() in a dataBound tree would actually kick off a
             // DataSource "remove" operation
             this._removeFromNodeIndex(droppedChild);
+
 
 
             node[this._cachedLengthProperty] -= this._getNodeLengthToParent(droppedChild, node);
@@ -36872,17 +39371,58 @@ _clearNodeCache : function (allNodes) {
     this._openListCache = null;
 },
 
+//>    @method    tree.setOpen()
+//
+// Mark a particular node as open or closed (works for leaves and folders).  Note, this method
+// simply encapsulates the setting of the state, so we don't have code directly acessing state
+// scattered throughout this class.  openFolder(), closeFolder() and toggleFolder() are the APIs
+// that should be used (both by application code and internally) to actually open or close a
+// folder
+//
+// @param    node    (TreeNode | String | Integer | NodeLocator)    the node in question, or the
+//                                                              the node's ID, or a NodeLocator
+//                                                              object
+// @param   state   (Boolean)  the new state
+// @visibility internal
+//<
+setOpen : function (node, state) {
+    var nodeLocator;
+    if (this.isANodeLocator(node)) {
+        nodeLocator = node;
+        node = node.node;
+    }
+    if (!this.isMultiLinkTree()) {
+        if (node != null) node[this.openProperty] = !!state;
+    } else {
+        this._setNodeOpenStateInIndex(nodeLocator || node, !!state);
+    }
+},
+
 //>    @method    tree.isOpen()
 //
-// Whether a particular node is open or closed (works for leaves and folders).
+// Whether a particular node is open or closed (works for leaves and folders).  Note, for
+// +link{tree.isMultiLinkTree(),multi-link tree}s, passing a <code>NodeLocator</code> is the only
+// unambiguous way to specify the node.
 //
-// @param    node    (TreeNode)    node in question
+// @param    node    (TreeNode | String | Integer | NodeLocator)    the node in question, or the
+//                                                              the node's ID, or a NodeLocator
+//                                                              object
 // @return  (Boolean)           true if the node is open
 //
 // @visibility external
 //<
-isOpen : function (node) {
-    return node != null && !!node[this.openProperty];
+isOpen : function (node, path) {
+    var nodeLocator;
+    if (this.isANodeLocator(node)) {
+        nodeLocator = node;
+        node = node.node;
+    }
+
+    if (!this.isMultiLinkTree()) {
+        return node != null && !!node[this.openProperty];
+    } else {
+        return this._getNodeOpenStateFromIndex(nodeLocator || node, path);
+    }
 },
 
 
@@ -36892,15 +39432,29 @@ isOpen : function (node) {
 //            and this will return nodes that are open even if their parent is not open.
 //        @group    openList
 //
-//        @param    node    (TreeNode)    node to start with.  If not passed, this.root will be used.
+//        @param    node    (TreeNode | String | Integer | NodeLocator)    the node to start with, or the
+//                                                              the node's ID, or a NodeLocator
+//                                                              object. If not passed,
+//                                                              this.root will be used.
 //<
-getOpenFolders : function (node) {
+getOpenFolders : function (node, parent, position) {
     if (node == null) node = this.root;
+    var nodeLocator;
+    if (this.isANodeLocator(node)) {
+        nodeLocator = node;
+        node = node.node;
+    } else if (this.isMultiLinkTree()) {
+        nodeLocator = this.createNodeLocator(node, parent, position);
+    }
     var openProperty = this.openProperty;
+    var _this = this;
     var openNodes = this.getDescendantFolders(node, function (node) {
         return node[openProperty];
+
     });
-    if (this.isOpen(node)) openNodes.add(node);
+    if (this.isOpen(nodeLocator || node)) {
+        openNodes.add(node);
+    }
     return openNodes;
 },
 
@@ -36927,14 +39481,32 @@ getOpenFolderPaths : function (node) {
 //
 //        @group    openList
 //
-//        @param    node        (TreeNode)    node in question
+//        @param    node        (TreeNode | String | Integer | NodeLocator)    the node in question, or
+//                                                                      its ID, or a NodeLocator
+//                                                                      object
 //        @param    newState    (boolean)    true == open, false == close
 //      @param  [callback] (Callback) Optional callback (stringMethod) to fire when loading
 //                      completes. Has a single param <code>node</code> - the node whose
 //                      children have been loaded, and is fired in the scope of the Tree.
 //<
-changeDataVisibility : function (node, newState, callback) {
+changeDataVisibility : function (node, newState, callback, path) {
 //!DONTOBFUSCATE  (obfuscation breaks the inline function definitions)
+
+    var nodeLocator, nodeId;
+    if (this.isANodeLocator(node)) {
+        nodeLocator = node;
+        node = node.node;
+        if (!path) {
+            path = nodeLocator.path;
+        }
+    } else if (this.isMultiLinkTree()) {
+        nodeLocator = this.createNodeLocator(node, null, null, path);
+    }
+    if (!isc.isAn.Object(node)) {
+        node = this._getNodeFromIndex(node);
+    }
+
+
 
     // if they're trying to open a leaf return false
     if (this.isLeaf(node)) {
@@ -36946,17 +39518,18 @@ changeDataVisibility : function (node, newState, callback) {
     }
 
     // mark the node as open or closed
-    var state = node[this.openProperty],
+    var state = this.isOpen(nodeLocator || node),
         closedToOpen = !state && newState,
         openToClosed = state && !newState;
 
     // If the node's openness has changed then its cached length may also have changed.
     if (closedToOpen || openToClosed) {
-        var parent = (node != this.root && this.getParent(node)) || null,
-            prevLength = parent && this._getNodeLengthToParent(node, parent),
+        var parent = (node != this.root && this.getParent(nodeLocator || node)) || null,
+            parentPath = this._deriveParentPath(path),
+            prevLength = parent && this._getNodeLengthToParent(node, parent, path, parentPath),
             newLength = (this.openDisplayNodeType != isc.Tree.LEAVES_ONLY ? 1 : 0);
 
-        node[this.openProperty] = newState;
+        this.setOpen(nodeLocator || node, newState);
 
         if (closedToOpen) {
             // node went from closed to open so its length includes the lengths of the children.
@@ -36986,10 +39559,22 @@ changeDataVisibility : function (node, newState, callback) {
                 knownLengthNulls = !(openSubfoldersAllowed || defaultChildLength == 0);
             }
 
+            var indexByChild = {};
             while (i--) {
                 var child = childrenInOpenList.getCachedRow(i);
                 if (child != null && child != loadingMarker) {
-                    newLength += this._getNodeLengthToParent(child, node);
+                    var childId = child[this.idField],
+                        childPath;
+                    if (this.isMultiLinkTree()) {
+                        indexByChild[childId] = indexByChild[childId] == null ? 0 : indexByChild[childId] + 1;
+                        var childLocator = this.createNodeLocatorWithRelativePosition(
+                            child,
+                            nodeLocator.node[this.idField],
+                            indexByChild[childId]
+                        );
+                        childPath = this._constructChildPath(path, child, childLocator.position);
+                    }
+                    newLength += this._getNodeLengthToParent(child, node, childPath, path);
                 } else if (knownLengthNulls) {
                     ++newLength;
                 }
@@ -36997,13 +39582,17 @@ changeDataVisibility : function (node, newState, callback) {
         }
 
 
-        var prevCachedLength = node[this._cachedLengthProperty];
-        node[this._cachedLengthProperty] = newLength;
+        var prevCachedLength = this._getCachedNodeLength(node, path);
+        this._setCachedNodeLength(node, newLength, path);
 
-        // Add the change in length to all ancestors.
+        // Add the change in length to all ancestors
         if (parent) {
-            var deltaLength = this._getNodeLengthToParent(node, parent) - prevLength;
-            this._updateParentLengths(parent, deltaLength);
+            var deltaLength = this._getNodeLengthToParent(node, parent, path, parentPath) - prevLength;
+            var grandParentPath;
+            if (this.isMultiLinkTree()) {
+                grandParentPath = this._deriveParentPath(nodeLocator.path);
+            }
+            this._updateParentLengths(parent, deltaLength, grandParentPath);
         }
 
         // Incrementally add/remove the node to/from the _openListCache array.
@@ -37019,11 +39608,16 @@ changeDataVisibility : function (node, newState, callback) {
                 this.openDisplayNodeType != isc.Tree.LEAVES_ONLY &&
                 // Skip if there are no nodes to add/remove from the open list.
                 (closedToOpen ? newLength > prevCachedLength : newLength < prevCachedLength) &&
-                this._includeNodeLengthInParent(node, parent));
-        for (var n = node, p = parent; p != null && affectsOpenListCache; ) {
+                this._includeNodeLengthInParent(node, parent, parentPath));
+        for (var n = node, p = parent, np = path; p != null && affectsOpenListCache; ) {
             n = p;
-            p = this.getParent(p);
-            affectsOpenListCache = (p == null || this._includeNodeLengthInParent(n, p));
+            np = this._deriveParentPath(np);
+            if (np) {
+                p = this._getParentFromIndexByPath(n, np);
+            } else {
+                p = this.getParent(p);
+            }
+            affectsOpenListCache = (p == null || this._includeNodeLengthInParent(n, p, this._deriveParentPath(np)));
         }
         if (parent == null) {
             this._clearNodeCache(false);
@@ -37041,7 +39635,7 @@ changeDataVisibility : function (node, newState, callback) {
                     this.openDisplayNodeType == isc.Tree.FOLDERS_ONLY
                         ? isc.Tree.FOLDERS_ONLY : isc.Tree.FOLDERS_AND_LEAVES),
                 openListIndex = (foldersInOpenList && this.showRoot ? 1 : 0);
-            for (var n = node, p = parent; p != null; ) {
+            for (var n = node, p = parent, np = path; p != null; ) {
                 var children = this.getChildren(
                         p, displayNodeType, this._openNormalizer, this.sortDirection,
                         this.openListCriteria, this._sortContext, true);
@@ -37051,28 +39645,64 @@ changeDataVisibility : function (node, newState, callback) {
                         children._getCachedLength() : children.getLength());
 
 
+                var indexByChild = {};
                 for (var i = 0; i < length; ++i) {
                     var child = children.getCachedRow(i);
+                    var childId = child[this.idField];
+                    indexByChild[childId] = indexByChild[childId] == null ? 0 : indexByChild[childId] + 1;
+                    var foundThisNode = false;
+                    var thisChildPath;
                     if (child == n) {
-                        if (foldersInOpenList) {
-                            ++openListIndex;
+                        if (this.isMultiLinkTree()) {
+                            var thisParentPath = this._deriveParentPath(np),
+                                locator = this.createNodeLocatorWithRelativePosition(
+                                    child,
+                                    p,
+                                    indexByChild[childId]
+                                ),
+                                thisChildPath = this._constructChildPath(thisParentPath, child, locator.position);
                         }
-                        // Break from the loop.
-                        i = length;
-                    } else if (!(child == null || child == loadingMarker)) {
-                        openListIndex += this._getNodeLengthToParent(child, p);
+                        if (!this.isMultiLinkTree() || thisChildPath == np) {
+                            if (foldersInOpenList) {
+                                ++openListIndex;
+                            }
+                            // Break from the loop.
+                            foundThisNode = true;
+                            i = length;
+                        }
+                    }
+                    if (!foundThisNode && !(child == null || child == loadingMarker)) {
+                        var thisParentPath;
+                        if (this.isMultiLinkTree()) {
+                            thisParentPath =  this._deriveParentPath(np);
+                            var locator = this.createNodeLocatorWithRelativePosition(
+                                child,
+                                p,
+                                indexByChild[childId]
+                            );
+                            thisChildPath = this._constructChildPath(thisParentPath, child, locator.position);
+                        }
+                        openListIndex += this._getNodeLengthToParent(child, p, thisChildPath, thisParentPath);
                     }
                 }
 
                 n = p;
-                p = this.getParent(p);
+                np = this._deriveParentPath(np);
+                if (np) {
+                    p = this._getParentFromIndexByPath(p, np);
+                } else {
+                    p = this.getParent(p);
+                }
             }
 
 
             if (closedToOpen) {
+                var partialRowNumIndex = [];
                 var args = this.getOpenList(
-                        node, this.openDisplayNodeType, this._openNormalizer,
-                        this.sortDirection, this.openListCriteria, this._sortContext, false);
+                        nodeLocator || node, this.openDisplayNodeType, this._openNormalizer,
+                        this.sortDirection, this.openListCriteria, this._sortContext, false,
+                        null, partialRowNumIndex);
+
 
 
                 // Set the first two arguments so that no nodes are removed from the
@@ -37080,22 +39710,36 @@ changeDataVisibility : function (node, newState, callback) {
                 if (foldersInOpenList) {
                     args[0] = 0;
                     args.unshift(openListIndex);
+                    partialRowNumIndex[0] = 0;
+                    partialRowNumIndex.unshift(openListIndex);
                 } else {
                     args.unshift(openListIndex, 0);
+                    partialRowNumIndex.unshift(openListIndex, 0);
                 }
 
                 this._openListCache.splice.apply(this._openListCache, args);
+                if (this.isMultiLinkTree()) {
+                    this.recordNumberToNodeLocatorIndex.splice.apply(this.recordNumberToNodeLocatorIndex, partialRowNumIndex);
+                    partialRowNumIndex.shift();
+                    if (foldersInOpenList) partialRowNumIndex.shift();
+                    this._updateOpenListIndexInNodeLocators(openListIndex, true);
+                }
+
             } else { // openToClosed
                 this._openListCache.splice(openListIndex, prevCachedLength - newLength);
+                if (this.isMultiLinkTree()) {
+                    this.recordNumberToNodeLocatorIndex.splice(openListIndex, prevCachedLength - newLength);
+                    this._updateOpenListIndexInNodeLocators(openListIndex, false);
+                }
             }
         }
     } else {
-        node[this.openProperty] = newState;
+        this.setOpen(nodeLocator || node, newState);
     }
 
     // if the node is not loaded, load it!
     if (newState && !this.isLoaded(node)) {
-        this.loadChildren(node, callback);
+        this.loadChildren(nodeLocator || node, callback);
     } else if (callback) {
         // Fire the callback in the scope of this tree
         this.fireCallback(callback, "node", [node], this);
@@ -37103,21 +39747,26 @@ changeDataVisibility : function (node, newState, callback) {
 },
 
 //>    @method    tree.toggleFolder()
-//            Toggle the open state for a particular node
+//            Toggle the open state for a particular node.  Note, for
+// +link{tree.isMultiLinkTree(),multi-link tree}s, passing a <code>NodeLocator</code> is the only
+// unambiguous way to specify the node.
 //        @group    openList
 //
-//        @param    node    (TreeNode)    node in question
+//        @param    node    (TreeNode | String | Integer | NodeLocator)    the node in question, or its
+//                                                                  ID, or a NodeLocator object
 //<
 toggleFolder : function (node) {
-    this.changeDataVisibility(node, !this.isOpen(node));
+    this.changeDataVisibility(node, !this.isOpen(node), null);
 },
 
 
 //>    @method    tree.openFolder()
 //
-// Open a particular node
+// Open a particular node.  Note, for +link{tree.isMultiLinkTree(),multi-link tree}s, passing a
+// <code>NodeLocator</code> is the only unambiguous way to specify the node.
 //
-// @param    node    (TreeNode)    node to open
+//        @param    node    (TreeNode | String | Integer | NodeLocator)    the node to open, or its
+//                                                                  ID, or a NodeLocator object
 // @param  [callback] (Callback) Optional callback (stringMethod) to fire when loading
 //                      completes. Has a single param <code>node</code> - the node whose
 //                      children have been loaded, and is fired in the scope of the Tree.
@@ -37125,12 +39774,17 @@ toggleFolder : function (node) {
 // @visibility external
 //<
 openFolder : function (node, callback) {
-    if (node == null) node = this.root;
+    var nodeLocator;
+    if (this.isANodeLocator(node)) {
+        nodeLocator = node;
+        node = node.node;
+    }
 
+    if (node == null) node = this.root;
     // if the node is not already set to the newState
-    if (!this.isOpen(node)) {
+    if (!this.isOpen(nodeLocator || node)) {
         // call the dataChanged method to notify anyone who's observing it
-        this.changeDataVisibility(node, true, callback);
+        this.changeDataVisibility(nodeLocator || node, true, callback);
     } else if (callback) {
         // Fire the callback in the scope of this tree
         this.fireCallback(callback, "node", [node], this);
@@ -37142,7 +39796,7 @@ openFolder : function (node, callback) {
 //
 // Open a set of folders, specified by path or as pointers to nodes.
 //
-// @param    nodeList    (List of TreeNode)        List of nodes or node paths.
+// @param    nodeList    (List of TreeNode)        List of nodes or node paths or NodeLocators
 //
 // @see ResultTree.dataArrived
 // @visibility external
@@ -37150,27 +39804,40 @@ openFolder : function (node, callback) {
 openFolders : function (nodeList) {
     for (var i = 0; i < nodeList.length; i++) {
         var node = nodeList[i];
+        var nodeLocator;
+        if (this.isANodeLocator(node)) {
+            nodeLocator = node;
+            node = node.node;
+        }
         if (node == null) continue;
         if (isc.isA.String(node)) node = this.find(node);
         if (node != null) {
-            this.openFolder(node);
+            this.openFolder(nodeLocator || node);
         }
     }
 },
 
 //>    @method    tree.closeFolder()
 //
-// Closes a folder
+// Closes a folder.  Note, for +link{tree.isMultiLinkTree(),multi-link tree}s, passing a
+// <code>NodeLocator</code> is the only unambiguous way to specify the node.
 //
-// @param    node    (TreeNode)    folder to close
+//        @param    node    (TreeNode | String | Integer | NodeLocator)    the node to open, or its
+//                                                                  ID, or a NodeLocator object
 //
 // @visibility external
 //<
 closeFolder : function (node) {
+    var nodeLocator;
+    if (this.isANodeLocator(node)) {
+        nodeLocator = node;
+        node = node.node;
+    }
+
     // if the node is not already set to the newState
-    if (this.isOpen(node)) {
+    if (this.isOpen(nodeLocator || node)) {
         // call the dataChanged method to notify anyone who's observing it
-        this.changeDataVisibility(node, false);
+        this.changeDataVisibility(nodeLocator || node, false, null);
     }
 },
 
@@ -37178,17 +39845,22 @@ closeFolder : function (node) {
 //
 // Close a set of folders, specified by path or as pointers to nodes.
 //
-// @param    nodeList    (List of TreeNode)        List of nodes or node paths.
+// @param    nodeList    (List of TreeNode)        List of nodes or node paths or NodeLocators
 //
 // @visibility external
 //<
 closeFolders : function (nodeList) {
     for (var i = 0; i < nodeList.length; i++) {
         var node = nodeList[i];
+        var nodeLocator;
+        if (this.isANodeLocator(node)) {
+            nodeLocator = node;
+            node = node.node;
+        }
         if (node == null) continue;
         if (isc.isA.String(node)) node = this.find(node);
         if (node != null) {
-            this.closeFolder(node);
+            this.closeFolder(nodeLocator || node);
         }
     }
 },
@@ -37197,20 +39869,39 @@ closeFolders : function (nodeList) {
 //
 // Open all nodes under a particular node.
 //
-// @param    [node]    (TreeNode)    node from which to open folders (if not specified, the root
-//                              node is used)
+// @param    [node]    (TreeNode | String | Integer | NodeLocator)    node from which to open folders,
+//                                                              or the node's ID, or a
+//                                                              NodeLocator object (if not
+//                                                              specified, the root node is used)
 // @visibility external
 // @example parentLinking
 //<
 openAll : function (node) {
+    var nodeLocator;
+    if (this.isANodeLocator(node)) {
+        nodeLocator = node;
+        node = node.node;
+    }
+    if (!isc.isAn.Object(node)) {
+        node = this._getNodeFromIndex(node);
+    }
     if (!node) node = this.root;
     if (node == this.root) {
         // Mark the open node list as dirty.  This avoids an optimization to incrementally
         // maintain the _openListCache array that would not work very well for a bulk operation
         // like this.
         this._clearNodeCache(false);
+        if (this.isMultiLinkTree()) {
+            nodeLocator = this.createNodeLocator(node, null, null, this.pathDelim);
+        }
     }
-    var nodeList = this.getDescendants(node, isc.Tree.FOLDERS_ONLY);
+
+    var nodeList;
+    if (this.isMultiLinkTree()) {
+        nodeList = this.getDescendantNodeLocators(nodeLocator, isc.Tree.FOLDERS_ONLY);
+    } else {
+        nodeList = this.getDescendants(node, isc.Tree.FOLDERS_ONLY);
+    }
     for (var i = 0, length = nodeList.length; i < length; i++) {
         // if the node is not already set to the newState
         if (!this.isOpen(nodeList[i])) {
@@ -37219,26 +39910,46 @@ openAll : function (node) {
         }
     }
     // make the node itself open
-    this.changeDataVisibility(node, true);
+    this.changeDataVisibility(nodeLocator || node, true);
 },
 
 //>    @method    tree.closeAll()
 // Close all nodes under a particular node
 //
-// @param    [node]    (TreeNode)    node from which to close folders (if not specified, the root
-//                              node is used)
+// @param    [node]    (TreeNode | NodeLocator) node from which to close folders (if not specified,
+//                                           the root node is used).  If this is a
+//                                           +link{isMultiLinkTree(),multi-link tree}, you must
+//                                           provide a +link{type:NodeLocator} for any node other
+//                                           than the root node
 //
 // @visibility external
 //<
 closeAll : function (node) {
-    if (!node) node = this.root;
+    var nodeLocator;
+    if (!node) {
+        node = this.root;
+    }
+    if (this.isMultiLinkTree()) {
+        if (this.isANodeLocator(node)) {
+            nodeLocator = node;
+            node = node.node;
+        } else {
+
+            nodeLocator = this.createNodeLocator(node, null, null, this.pathDelim);
+        }
+    }
     if (node == this.root) {
         // Mark the open node list as dirty.  This avoids an optimization to incrementally
         // maintain the _openListCache array that would not work very well for a bulk operation
         // like this.
         this._clearNodeCache(false);
     }
-    var nodeList = this.getDescendants(node, isc.Tree.FOLDERS_ONLY);
+    var nodeList;
+    if (!this.isMultiLinkTree()) {
+        nodeList = this.getDescendants(node, isc.Tree.FOLDERS_ONLY);
+    } else {
+        nodeList = this.getDescendantNodeLocators(nodeLocator, isc.Tree.FOLDERS_ONLY);
+    }
     for (var i = 0, length = nodeList.length; i < length; i++) {
         // if the node is not already set to the newState
         if (this.isOpen(nodeList[i])) {
@@ -37351,17 +40062,34 @@ setSortFoldersBeforeLeaves : function (sortFoldersBeforeLeaves) {
 // <p>
 // If the passed in node is a leaf, this method returns null.
 //
-// @param [node]            (TreeNode)            node in question
+// @param    node    (TreeNode | String | Integer | NodeLocator)    the node in question, or the
+//                                                              the node's ID, or a NodeLocator
+//                                                              object.  Defaults to the root node
 // @return                    (List of TreeNode)              flattened list of open nodes
 //
 // @visibility external
 //<
 
 getOpenList : function (node, displayNodeType, normalizer, sortDirection, criteria, context,
-                        getAll, dontUseNormalizer)
+                        getAll, dontUseNormalizer, partialRowNumIndex)
 {
+
+    var nodeLocator;
+    if (this.isANodeLocator(node)) {
+        nodeLocator = node;
+        node = node.node;
+    }
+
+
+
     // default to the tree root
-    if (! node) node = this.root;
+    if (!node) {
+        node = this.root;
+    }
+    if (node == this.root && !nodeLocator && this.isMultiLinkTree()) {
+        nodeLocator = this.createNodeLocator(node, null, null, this.pathDelim);
+    }
+
 
     // default the normalizer to this._openNormalizer and sortDirection to this.sortDirection
     if (dontUseNormalizer) normalizer = null;
@@ -37378,13 +40106,19 @@ getOpenList : function (node, displayNodeType, normalizer, sortDirection, criter
     // create an array to hold the descendants
     var list = [];
 
+    partialRowNumIndex = partialRowNumIndex || [];
+
     // add the node if we're not skipping folders (except if the node is the root and showRoot is false)
     if (displayNodeType != isc.Tree.LEAVES_ONLY && (node != this.root || this.showRoot)) {
         list[list.length] = node;
+        if (this.isMultiLinkTree()) {
+
+            partialRowNumIndex[partialRowNumIndex.length] = nodeLocator;
+        }
     }
 
     // if this node is closed or loading, just return the list and don't look for children
-    if (!getAll && !this.isOpen(node) || this.hideLoadingNodes && this.isLoading(node)) {
+    if (!getAll && !this.isOpen(nodeLocator || node) || this.hideLoadingNodes && this.isLoading(node)) {
         return list;
     }
 
@@ -37395,15 +40129,32 @@ getOpenList : function (node, displayNodeType, normalizer, sortDirection, criter
     var loadingMarker = (isc.ResultSet != null ? isc.ResultSet.getLoadingMarker() : null),
         length = (isc.ResultSet != null && isc.isA.ResultSet(children) ?
             children._getCachedLength() : children.getLength());
+
+    var indexByChild = {};
     for (var i = 0; i < length; ++i) {
         // get a pointer to the child
         var child = children.getCachedRow(i);
         if (child == null || child == loadingMarker) {
-            //>DEBUG
-            //alert("getOpenList: child # " + i + " of folder " + node.path + " is null!");
-            //<DEBUG
+
             continue;
         }
+
+        var childId = child[this.idField];
+
+        var childNodeLocator;
+        if (this.isMultiLinkTree()) {
+            indexByChild[childId] = indexByChild[childId] == null ? 0 : indexByChild[childId] + 1;
+            childNodeLocator = this.createNodeLocatorWithRelativePosition(
+                child,
+                node[this.idField],
+                indexByChild[childId]
+            );
+            childNodeLocator.path = this._constructChildPath(nodeLocator.path, child,
+                                                                childNodeLocator.position);
+
+        }
+
+
 
         // if the child is a folder, recurse, but check that it actually has children -
         // otherwise we eat a function call, array alloc, empty concat, and a bunch of other
@@ -37413,14 +40164,17 @@ getOpenList : function (node, displayNodeType, normalizer, sortDirection, criter
         var grandChildren = child[this.childrenProperty];
         if (grandChildren && !grandChildren.isEmpty()) {
             // now concatenate the list with the descendants of the child
-            list = list.concat(this.getOpenList(child, displayNodeType, normalizer,
+            list = list.concat(this.getOpenList(childNodeLocator || child, displayNodeType, normalizer,
                                                 sortDirection, criteria, context, getAll,
-                                                dontUseNormalizer));
+                                                dontUseNormalizer, partialRowNumIndex));
         } else {
             // if we're not excluding leaves, add the leaf to the list
 
             if (displayNodeType != isc.Tree.FOLDERS_ONLY) {
                 list[list.length] = child;
+                if (this.isMultiLinkTree()) {
+                    partialRowNumIndex[partialRowNumIndex.length] = childNodeLocator;
+                }
             }
         }
     }
@@ -37430,7 +40184,16 @@ getOpenList : function (node, displayNodeType, normalizer, sortDirection, criter
 },
 // _getOpenListAsync() is an asynchronous method equivalent to getOpenList().
 _getOpenListAsync : function (node, displayNodeType, normalizer, sortDirection, criteria, context, getAll,
-            thisArg, timerEventProp, batchSize, callback, state) {
+            thisArg, timerEventProp, batchSize, callback, state, partialRowNumIndex)
+    {
+
+    var nodeLocator;
+    if (this.isANodeLocator(node)) {
+        nodeLocator = node;
+        node = node.node;
+    }
+
+
 
     var node0 = node,
         done = false,
@@ -37462,6 +40225,7 @@ _getOpenListAsync : function (node, displayNodeType, normalizer, sortDirection, 
         state = {
             list: list,
             node: node,
+            nodeLocator: nodeLocator,
             indexStack: indexStack,
             childrenStack: childrenStack
         };
@@ -37472,6 +40236,7 @@ _getOpenListAsync : function (node, displayNodeType, normalizer, sortDirection, 
         childrenStack = state.childrenStack;
         i = indexStack.last();
         children = childrenStack.last();
+        nodeLocator = state.nodeLocator;
     }
 
     for (var count = 0; !done && count < batchSize; ++count) {
@@ -37485,10 +40250,13 @@ _getOpenListAsync : function (node, displayNodeType, normalizer, sortDirection, 
             // add the node if we're not skipping folders (except if the node is the root and showRoot is false)
             if (displayNodeType != isc.Tree.LEAVES_ONLY && (node != this.root || this.showRoot)) {
                 list[list.length] = node;
+                if (this.isMultiLinkTree()) {
+                    partialRowNumIndex[partialRowNumIndex.length] = nodeLocator;
+                }
             }
 
             // if this node is closed, return the list
-            if (!getAll && !this.isOpen(node)) {
+            if (!getAll && !this.isOpen(nodeLocator || node)) {
                 node = null;
                 continue;
             }
@@ -37514,9 +40282,7 @@ _getOpenListAsync : function (node, displayNodeType, normalizer, sortDirection, 
             // get a pointer to the child
             var child = children.getCachedRow(i);
             if (child == null) {
-                //>DEBUG
-                //alert"getOpenList: child # " + i + " of folder " + node.path + " is null!");
-                //<DEBUG
+
                 continue;
             }
 
@@ -37529,6 +40295,8 @@ _getOpenListAsync : function (node, displayNodeType, normalizer, sortDirection, 
             if (grandChildren && !grandChildren.isEmpty()) {
                 // now concatenate the list with the descendants of the child
                 escapeToOuterLoop = true;
+                state.parent = node;
+                state.position = i;
                 node = state.node = child;
                 continue;
             } else {
@@ -37536,6 +40304,16 @@ _getOpenListAsync : function (node, displayNodeType, normalizer, sortDirection, 
 
                 if (displayNodeType != isc.Tree.FOLDERS_ONLY) {
                     list[list.length] = child;
+                    // Pretty sure this logic will never run for a multi-link tree...
+                    if (this.isMultiLinkTree()) {
+                        var childNodeLocator = this.createNodeLocator(
+                            child,
+                            node[this.idField],
+                            i,
+                            nodeLocator.path ? this._constructChildPath(nodeLocator.path, child) : null
+                        );
+                        partialRowNumIndex[partialRowNumIndex.length] = childNodeLocator;
+                    }
                 }
                 ++count;
             }
@@ -37563,7 +40341,7 @@ _getOpenListAsync : function (node, displayNodeType, normalizer, sortDirection, 
         thisArg[timerEventProp] = this.delayCall(
             "_getOpenListAsync",
             [node0, displayNodeType, normalizer, sortDirection, criteria, context, getAll,
-             thisArg, timerEventProp, batchSize, callback, state], 0);
+             thisArg, timerEventProp, batchSize, callback, state, partialRowNumIndex], 0);
     }
 },
 
@@ -37576,9 +40354,14 @@ _getOpenList : function () {
     //        or we're not supposed to cache the openList
     if (!this._openListCache || !this.cacheOpenList) {
         // recalculate the open list
+        var index = this.recordNumberToNodeLocatorIndex = [];
         this._openListCache = this.getOpenList(this.root, this.openDisplayNodeType,
                                                this._openNormalizer, this.sortDirection,
-                                               this.openListCriteria);
+                                               this.openListCriteria, null, null, null, index);
+
+        if (this.isMultiLinkTree()) {
+            this._updateOpenListIndexInNodeLocators(0);
+        }
     }
     return this._openListCache;
 },
@@ -37657,7 +40440,7 @@ _getAllNodesAsync : function (node, thisArg, timerEventProp, batchSize, callback
 //<
 getLength : function () {
 
-    var length = (this.root[this._cachedLengthProperty] - (
+    var length = (this._getCachedNodeLength(this.root) - (
         !this.showRoot && this.openDisplayNodeType != isc.Tree.LEAVES_ONLY ? 1 : 0));
 
     // assert (length == this._getOpenList().length);
@@ -37702,6 +40485,14 @@ getRange : function (start, end) {
 // @include list.indexOf
 //<
 indexOf : function (node, pos, endPos) {
+    var nodeLocator;
+    if (this.isANodeLocator(node)) {
+        nodeLocator = node;
+        node = node.node;
+    }
+    if (this.isMultiLinkTree() && nodeLocator) {
+        return this._getOpenListIndexFromIndex(nodeLocator);
+    }
     var list = this._getOpenList(),
         // use fastIndexOf to make this more efficient for critical path code.
         index = list.fastIndexOf(node,pos);
@@ -37883,7 +40674,7 @@ _makeOpenNormalizer : function () {
         propNames.add(titleProperty);
     }
 
-    this._openNormalizer = function (obj, property) {
+    this._openNormalizer = function (obj, property, context) {
         if (tree == null || tree.destroyed) {
             tree = null;
             return;
@@ -37902,6 +40693,26 @@ _makeOpenNormalizer : function () {
             var isTitle = innerProp == titleProperty;
 
             var prop = isTitle ? tree.getTitle(obj) : obj[innerProp];
+            // We are trying to sort by a property that is not actually in the record passed to
+            // use, that could be because we are trying to sort the children of a node in a
+            // multilink tree by default sequence field, which is a property of the link record,
+            // not the data record.  If this is the case, the call into sort logic will have
+            // set up a _currentParentForSort property on the context TreeGrid
+            if (prop == null && context && context._currentParentForSort) {
+                var parent = context._currentParentForSort;
+                if (tree.isANodeLocator(parent)) parent = parent.node;
+                // NOTE: this cannot work for trees with allowDuplicateChildren set.  Because
+                // the node's position within its parent is the only thing that allows
+                // SmartClient to disambiguate between two occurences of the same node within a
+                // single parent, sorting them into a different order inherently breaks the
+                // tree.  If you sort an allowDuplicateChildren tree by anything other than the
+                // linkPositionField, the only way of regaining the tree's integrity is to
+                // clear the sort state and then clear and reload the nodes
+                var linkRecord = tree.getLinkRecord(parent[tree.idField], obj[tree.idField]);
+                if (linkRecord) {
+                    prop = linkRecord[innerProp];
+                }
+            }
             if (prop == null) continue;
 
 
@@ -38157,7 +40968,11 @@ getFilteredTree : function (criteria, filterMode, dataSource, context) {
     if (isc.ResultTree && isc.isA.ResultTree(tree) && tree.isPaged()) {
         tree.setCriteria(isc.DataSource.combineCriteria(criteria, tree.criteria));
     }
-    tree._filterChildren(criteria, filterMode, dataSource, tree.getRoot(), context);
+    var nodeLocator;
+    if (tree.isMultiLinkTree()) {
+        nodeLocator = tree.createNodeLocator(tree.getRoot(), null, null, this.pathDelim);
+    }
+    tree._filterChildren(criteria, filterMode, dataSource, nodeLocator || tree.getRoot(), context);
     return tree;
 },
 
@@ -38166,6 +40981,12 @@ _filterChildren : function (criteria, filterMode, dataSource, parent, context) {
 
     var strict = (filterMode == isc.Tree.STRICT),
         keepParents = !strict;
+
+    var parentNodeLocator;
+    if (this.isANodeLocator(parent)) {
+        parentNodeLocator = parent;
+        parent = parent.node;
+    }
 
     var children = parent[this.childrenProperty];
     if (children == null || children.isEmpty()) return false;
@@ -38183,11 +41004,18 @@ _filterChildren : function (criteria, filterMode, dataSource, parent, context) {
         var node = children.getCachedRow(i);
         if (node != null) {
             var hasImmediateMatches = false,
-                nodeChildren = node[this.childrenProperty];
-
+                nodeChildren = node[this.childrenProperty],
+                childNodeLocator;
+            if (this.isMultiLinkTree() && parentNodeLocator) {
+                var childPath = this._constructChildPath(parentNodeLocator.path, node,
+                                    this.allowDuplicateChildren ? i : null);
+                childNodeLocator = this.createNodeLocator(node, parent,
+                            this.allowDuplicateChildren ? i : null, childPath);
+            }
             if (keepParents) {
                 if (nodeChildren != null && !nodeChildren.isEmpty()) {
-                    hasImmediateMatches = this._filterChildren(criteria, filterMode, dataSource, node, context);
+                    hasImmediateMatches = this._filterChildren(criteria, filterMode, dataSource,
+                                            childNodeLocator || node, context);
                 }
                 haveMatchingNodes = haveMatchingNodes || hasImmediateMatches;
             }
@@ -38196,15 +41024,27 @@ _filterChildren : function (criteria, filterMode, dataSource, parent, context) {
             // and there are matching children.
             if (!hasImmediateMatches || strict) {
 
-                var matches = dataSource.applyFilter([node], criteria, context);
+
+                var compareNode = node;
+                if (this.isMultiLinkTree() && this.allowFilterOnLinkFields) {
+                    var linkRecord = this.getLinkRecord(parent[this.idField], node[this.idField], i);
+                    compareNode = isc.addProperties({}, linkRecord, node);
+                    context.allowFilterOnLinkFields = true;
+                    context.linkDataSource = this.linkDataSource;
+                }
+
+                var matches = dataSource.applyFilter([compareNode], criteria, context);
+
                 if (matches != null && matches.length > 0) {
                     haveMatchingNodes = true;
 
                     if (strict && nodeChildren != null && !nodeChildren.isEmpty()) {
-                        this._filterChildren(criteria, filterMode, dataSource, node, context);
+                        this._filterChildren(criteria, filterMode, dataSource,
+                                    childNodeLocator || node, context);
                     }
                 } else {
-                    this._remove(node, parent, children, i);
+
+                    this._remove(childNodeLocator || node, false, parent);
                 }
             }
         }
@@ -38213,15 +41053,25 @@ _filterChildren : function (criteria, filterMode, dataSource, parent, context) {
 },
 
 
-_includeNodeLengthInParent : function (node, parent) {
+_includeNodeLengthInParent : function (node, parent, parentPath) {
+    var parentNodeLocator;
+    if (this.isANodeLocator(parent)) {
+        parentNodeLocator = parent;
+        parent = parent.node;
+    }
 
     // The parent must be open.
-    return this.isOpen(parent);
+    return this.isOpen(parentNodeLocator || parent, parentPath);
 },
 
 
 _isNodeVisibleToParent : function (node, parent) {
-    if (!this._includeNodeLengthInParent(node, parent)) {
+    var parentNodeLocator;
+    if (this.isANodeLocator(parent)) {
+        parentNodeLocator = parent;
+        parent = parent.node;
+    }
+    if (!this._includeNodeLengthInParent(node, parentNodeLocator || parent)) {
         return false;
     } else {
         // Even if the node is technically a folder, if it has no children then, at this point,
@@ -38233,15 +41083,20 @@ _isNodeVisibleToParent : function (node, parent) {
 },
 
 
-_getNodeLengthToParent : function (node, parent) {
+_getNodeLengthToParent : function (node, parent, path, parentPath) {
+    var parentNodeLocator;
+    if (this.isANodeLocator(parent)) {
+        parentNodeLocator = parent;
+        parent = parent.node;
+    }
 
 
-    if (this._includeNodeLengthInParent(node, parent)) {
+    if (this._includeNodeLengthInParent(node, parentNodeLocator || parent, parentPath)) {
 
-        var length = node[this._cachedLengthProperty],
+        var length = this._getCachedNodeLength(node, path),
             grandChildren = node[this.childrenProperty],
             isFolder = this.isFolder(node),
-            treatAsFolder = (grandChildren && grandChildren.length);
+            treatAsFolder = (grandChildren && grandChildren.length > 0);
 
         // Even if the node is technically a folder, if it has no children then, at this point,
         // it is treated as a leaf.  This can result in a difference of +/-1 in the length of
@@ -38258,7 +41113,7 @@ _getNodeLengthToParent : function (node, parent) {
     }
 },
 
-_getNodeLength : function (node) {
+_getNodeLength : function (node, path) {
     var isFolder = this.isFolder(node),
         isOpen = isFolder && this.isOpen(node),
         length = (this.openDisplayNodeType != (isFolder ? isc.Tree.LEAVES_ONLY :
@@ -38285,10 +41140,22 @@ _getNodeLength : function (node) {
             knownLengthNulls = !(openSubfoldersAllowed || defaultChildLength == 0);
         }
 
+        var indexByChild = {};
         while (i--) {
             var child = childrenInOpenList.getCachedRow(i);
             if (child != null && child != loadingMarker) {
-                length += this._getNodeLengthToParent(child, node);
+                var childId = child[this.idField];
+                var childPath;
+                if (this.isMultiLinkTree()) {
+                    indexByChild[childId] = indexByChild[childId] == null ? 0 : indexByChild[childId] + 1;
+                    var childLocator = this.createNodeLocatorWithRelativePosition(
+                        child,
+                        node[this.idField],
+                        indexByChild[childId]
+                    );
+                    childPath = this._constructChildPath(path, child, childLocator.position);
+                }
+                length += this._getNodeLengthToParent(child, node, childPath, path);
             } else if (knownLengthNulls) {
                 ++length;
             }
@@ -38296,6 +41163,97 @@ _getNodeLength : function (node) {
     }
 
     return length;
+},
+
+_getCachedNodeLength : function(node, path) {
+    if (!this.isMultiLinkTree()) {
+        return node[this._cachedLengthProperty];
+    }
+    var nodeLocator;
+    if (this.isANodeLocator(node)) {
+        nodeLocator = node;
+        node = node.node;
+        if (!path) path = nodeLocator.path;
+    }
+    if (!path) {
+        if (node == this.root) {
+            path = this.pathDelim;
+        } else {
+            this.logWarn("_getCachedNodeLength() on a multi-link tree called without supplying a path");
+            return 0;
+        }
+    }
+    return this._getCachedNodeLengthFromIndex(node, path);
+},
+
+_setCachedNodeLength : function(node, length, path) {
+    if (!this.isMultiLinkTree()) {
+        node[this._cachedLengthProperty] = length;
+    } else {
+        var nodeLocator;
+        if (this.isANodeLocator(node)) {
+            nodeLocator = node;
+            node = node.node;
+            if (!path) path = nodeLocator.path;
+        }
+        if (!path) {
+            if (node == this.root) {
+                path = this.pathDelim;
+            } else {
+                this.logWarn("_setCachedNodeLength() on a multi-link tree called without supplying a path");
+                return;
+            }
+        }
+        this._setCachedNodeLengthInIndex(node, path, length);
+    }
+},
+
+_getRecursionCount : function(node, path) {
+    if (!this.isMultiLinkTree()) {
+        return node[this._recursionCountProperty] || 0;
+    } else {
+        var nodeLocator;
+        if (this.isANodeLocator(node)) {
+            nodeLocator = node;
+            node = node.node;
+            if (!path) path = nodeLocator.path;
+        }
+        if (!path) {
+            this._assert(node == this.root);
+            path = this.pathDelim;
+        }
+        return this._getRecursionCountFromIndex(node, path);
+    }
+},
+
+_incrementRecursionCount : function(node, path) {
+    this._adjustRecursionCount(node, path, 1);
+},
+_decrementRecursionCount : function(node, path) {
+    this._adjustRecursionCount(node, path, -1);
+},
+_adjustRecursionCount : function(node, path, delta) {
+    if (!this.isMultiLinkTree()) {
+        var prop = this._recursionCountProperty;
+        node[prop] = (node[prop] || 0) + delta;
+        if (node[prop] == 0) {
+            delete node[prop];
+        }
+    } else {
+        var nodeLocator;
+        if (this.isANodeLocator(node)) {
+            nodeLocator = node;
+            node = node.node;
+            // If a path is provided, use it - if we are in the "add" part of a "move" flow,
+            // the path on the nodeLocator will be where the node used to be
+            if (!path) path = nodeLocator.path;
+        }
+        if (!path) {
+            this._assert(node == this.root);
+            path = this.pathDelim;
+        }
+        this._adjustRecursionCountInIndex(node, path, delta);
+    }
 },
 
 
@@ -38323,24 +41281,43 @@ _getDeltaLength : function (node, wasFolder, isFolder) {
 },
 
 
-_updateParentLengths : function (parent, deltaLength) {
+_updateParentLengths : function (parent, deltaLength, parentPath) {
 
+    this.logDebug("Ready to adjust cached length on ancestor hierarchy beginning with " +
+                    isc.echoLeaf(parent) + ".  Current cached length is " +
+                    this._getCachedNodeLength(parent, parentPath) +
+                    ", deltaLength is " + deltaLength);
     if (deltaLength != 0) {
         for (;;) {
+            var cachedLength = this._getCachedNodeLength(parent, parentPath)
 
-            parent[this._cachedLengthProperty] += deltaLength;
-            var recursionFlag = ((parent[this._recursionCountProperty] || 0) > 0);
+            this._setCachedNodeLength(parent, cachedLength + deltaLength, parentPath);
+            var recursionFlag = (this._getRecursionCount(parent, parentPath) > 0);
             if (!(parent == this.root || recursionFlag)) {
-                var grandParent = this.getParent(parent);
-                if (this._includeNodeLengthInParent(parent, grandParent)) {
+                var parentNodeLocator;
+                if (this.isMultiLinkTree()) {
+                    parentNodeLocator = this.createNodeLocator(parent, null, null, parentPath);
+                }
+                var grandParent = this.getParent(parentNodeLocator || parent);
+                var grandParentPath = this._deriveParentPath(parentPath);
+                if (this._includeNodeLengthInParent(parent, grandParent, grandParentPath)) {
                     parent = grandParent;
+                    parentPath = grandParentPath;
                     continue;
                 }
             }
             break;
         }
     }
+},
+
+getNewSelection : function (initParams) {
+    if (!this.isMultiLinkTree()) {
+        return null;  // Fall back to default selectionManager creation
+    }
+    return isc.MultiLinkSelection.create(initParams);
 }
+
 });    // END isc.Tree.addMethods()
 
 isc.Tree.addClassMethods({
@@ -38559,6 +41536,11 @@ isc.Tree.addClassMethods({
         for (var i = 0; i < nodeList.length; i++) {
             var treeNode = nodeList[i],
                 node = {};
+            var nodeLocator;
+            if (this.isANodeLocator(treeNode)) {
+                nodeLocator = treeNode;
+                treeNode = treeNode.node;
+            }
             if (tree == null) {
                 var treeID = treeNode._isc_tree;
                 if (treeID) tree = window[treeID];
@@ -38628,11 +41610,14 @@ isc.Tree.addClassMethods({
             // shared nodes may have parentProperty from other trees
             propName.startsWith("_parent_") ||
 
-            // from selection model
             propName.startsWith("_selection_") ||
+            // from selection model
 
             // from grouped grid
             propName.startsWith("_groupTree_") ||
+
+            // embedded components for grid
+            propName.startsWith("_embeddedComponents_") ||
 
             // Do not copy the precalculated length of the tree node.
             propName.startsWith("_cachedLength_") ||
@@ -38657,7 +41642,7 @@ isc.Tree.addClassMethods({
     },
 
     // Remove tree metaData properties from nodes.
-    // Same as getCleaNodeData but performs operation in-place.
+    // Same as getCleanNodeData but performs operation in-place.
     removeNodeMetaData : function (nodeList, includeChildren, includeLoadState, tree) {
         if (nodeList == null) return null;
 
@@ -38680,6 +41665,14 @@ isc.Tree.addClassMethods({
                 }
             }
         }
+    },
+
+    isANodeLocator : function(obj) {
+        return obj && isc.propertyDefined(obj, "node") &&
+                      isc.propertyDefined(obj, "parentId") &&
+                      isc.propertyDefined(obj, "position") &&
+                      isc.propertyDefined(obj, "path") &&
+                      isc.propertyDefined(obj, "openListIndex");
     }
 });
 
@@ -39385,8 +42378,15 @@ isc.PubSub.addClassMethods({
 // allows a developer to take an appropriate action (such as programmatically focussing
 // in some DOM element).
 // <P>
-// See the +link{group:tabOrderOverview,tab order overview} topic for more information on
-// tab order management for components in SmartClient.
+// For standard SmartClient components (focusable +link{canvas,canvases}
+// and +link{formItem,formItems}), developers will typically use APIs directly on the widget
+// to customize tab sequence behavior rather than interacting with the TabIndexManager
+// class. See the +link{group:tabOrderOverview,tab order overview} topic for more
+// information on tab order management for components in SmartClient.<br>
+// Developers wishing to embed focusable components into a page which are not
+// SmartClient components (native HTML elements and third party widgets), may use
+// TabIndexManager APIs to do so. This process is described in
+// +link{group:customTabElements}.
 //
 // @treeLocation Client Reference/Foundation
 // @visibility external
@@ -39509,7 +42509,7 @@ _moveInTree : function (IDs, newParentID, position) {
 //    may also be updated to make space for unrelated entries being added to the
 //    TabIndexManager. This notification is typically used to update the appropriate element
 //    in the DOM to reflect a new tab index.
-// @param [shiftFocusCallback] (ShiftFocusCallback) This notification method will be
+// @param [shiftFocusCallback] (ShiftFocusCallback) This notification method will be fired
 //    when the special +link{TabIndexManager.shiftFocus()} method is called to
 //    programmatically move focus through the registered targets (simulating the user tabbing
 //    through elements in the tab index chain). The implementation should attempt to update
@@ -39523,9 +42523,16 @@ _moveInTree : function (IDs, newParentID, position) {
 //
 // @visibility external
 //<
+// @param [groupExitCallback] (GroupExitCallback) This notification method will be fired
+//    when +link{TabIndexManager.shiftFocus()} attempts to move focus from a node registered
+//    as a descendant of this entry to another node registered outside this entry.
+//    This allows a component to have special handling when a user attempts to tab beyond
+//    a group. The framework makes use of this in listGrid editing - attempting to tab
+//    past the last focusable entry in the edit form will potentially start editing on a
+//    new cell.
 _callbackMap:{},
 addTarget : function (ID, canFocus, parentID, position,
-                        tabIndexUpdatedCallback, shiftFocusCallback)
+                        tabIndexUpdatedCallback, shiftFocusCallback, groupExitCallback)
 {
     if (this._getNode(ID) == null) {
         this._addToTree(ID, parentID, position);
@@ -39548,7 +42555,8 @@ addTarget : function (ID, canFocus, parentID, position,
 
 
     this._callbackMap[ID] = {tabIndexUpdatedCallback:tabIndexUpdatedCallback,
-                             shiftFocusCallback:shiftFocusCallback};
+                             shiftFocusCallback:shiftFocusCallback,
+                             groupExitCallback:groupExitCallback};
 
    // Extremely spammy log option: Show the whole chain here:
     if (this.logIsDebugEnabled("TabIndexManagerFullTree")) {
@@ -39725,7 +42733,6 @@ resumeCallbacks : function (targets) {
         delete this._suppressedCallbacks[targets[i]];
     }
 },
-
 //> @classMethod TabIndexManager.removeTarget()
 // Removes a target from this TabIndexManager.
 // Any children of this target will also be removed - developers wishing to preserve
@@ -40233,17 +43240,22 @@ focusInTarget : function (ID) {
 
 
 _nullMarker:{isNullMarker:true},
-shiftFocus : function (ID, forward, withinParent, originalID) {
+shiftFocus : function (ID, forward, withinParent, originalNode) {
 
     // This is a recursive method - if shiftFocusCallback fails for some node we'll
     // call the method again, moving to the next node.
     // The originalID param contains the ID (String) on which the method was first called.
-    var isRecursive = (originalID != null)
-    if (originalID == null) {
-        if (ID == null) originalID = this._nullMarker;
+    var isRecursive = (originalNode != null)
+
+    var originalID;
+    if (originalNode == null || isc.isA.String(originalNode)) {
+        if (ID == null && originalNode == null) originalID = this._nullMarker;
         else {
-            originalID = ID;
+            originalID = (originalNode || ID);
+            originalNode = this._getNode(originalID);
         }
+    } else {
+        originalID = originalNode.nodeID;
     }
 
     // If we're logging stack traces on attempted shift-focus calls, log once
@@ -40256,7 +43268,8 @@ shiftFocus : function (ID, forward, withinParent, originalID) {
             "syntheticTabIndexTrace");
     }
 
-    var currentNode;
+    var currentNode,
+        prevNode;
     if (ID == null) {
         if (forward) {
             currentNode = this._tabTree.get(0);
@@ -40269,7 +43282,7 @@ shiftFocus : function (ID, forward, withinParent, originalID) {
     } else {
         // When we get called recursively we pass the node, rather than the string into
         // this method to save a lookup.
-        var prevNode = ID;
+        prevNode = ID;
         if (!isc.isAn.Object(prevNode)) {
             prevNode = this._getNode(ID);
         }
@@ -40317,6 +43330,63 @@ shiftFocus : function (ID, forward, withinParent, originalID) {
         return false;
     }
 
+    // If we're not siblings, give ancestors (up to our common parent) a chance to
+    // fire special 'tabGroupExit' handling.
+    if (prevNode != null) {
+
+        var parents = this._tabTree.getParents(prevNode);
+        parents.addAt(prevNode, 0);
+        for (var i=0; i < parents.length; i++) {
+            // If the new target (currentNode) shares a parent with the old target
+            // (prevNode) we don't need to fire a group-exit handler on that parent -
+            // just break out of this loop
+            // Also if the new target *is* the parent we're looking at, we're attempting
+            // to focus on [IE, not outside of] it, so again, break out of the loop
+            // syntax: tree.isDescendantOf(child, parent)
+            if (this._tabTree.isDescendantOf(currentNode, parents[i])
+                 || currentNode == parents[i])
+            {
+                break;
+            }
+
+            // If we're still going, the new target isn't in this parent so we may need
+            // to fire a group-exit handler
+
+            // If the parent isn't a common parent of the node we're moving from ("prevNode")
+            // and the original node the user started on, ignore it.
+
+            if (isRecursive && (originalNode != parents[i])
+                && !this._tabTree.isDescendantOf(originalNode, parents[i])) {
+                continue; // look at the ancestor in this case
+            }
+            // If we're still going, the node we're shifting from (and the node we started
+            // from) are children of parents[i], but the node we're shifting to is not.
+            // In this case we want to fire the groupExitCallback on that parent, since
+            // we're leaving that "tab group"
+            var callbackMap = this._callbackMap[parents[i].nodeID],
+                groupExitCallback = callbackMap && callbackMap.groupExitCallback;
+                if (groupExitCallback != null) {
+                var callbackResult =
+                    this.fireCallback(groupExitCallback, "forward", [forward]);
+                // Let advanced users know that the groupExitCallback fired, and whether
+                // it interrupted our standard navigation behavior
+                if (this.logIsDebugEnabled("syntheticTabIndex")) {
+                    this.logDebug("TabIndexManager.shiftFocus(): group exit callback node:"
+                         + parents[i].nodeID +
+                         (callbackResult == false ? " cancelled TabIndexManager navigation."
+                            : " allowed TabIndexManager navigation to proceed."),
+                         "syntheticTabIndex"
+                    );
+                }
+
+                // If the callback explicitly returned false
+                // assume it is handling any shifting of focus (if necessary)
+                if (callbackResult == false) {
+                    return false;
+                }
+            }
+         }
+    }
 
     var shiftFocusCallback = currentNode && this._callbackMap[currentNode.nodeID].shiftFocusCallback,
         shifted = false;
@@ -40340,7 +43410,7 @@ shiftFocus : function (ID, forward, withinParent, originalID) {
 
     if (!shifted) {
         // Go recursive - find the *next* target and call the callback on that
-        return this.shiftFocus(currentNode, forward, withinParent, originalID);
+        return this.shiftFocus(currentNode, forward, withinParent, originalNode);
     } else {
         this.logInfo("shiftFocus(): Put focus into target with ID:" + currentNode.nodeID,
              "syntheticTabIndex");
@@ -40348,6 +43418,10 @@ shiftFocus : function (ID, forward, withinParent, originalID) {
     }
 },
 
+getCurrentTargetID : function() {
+    var currentNode = this._tabTree.get(0);
+    return currentNode ? currentNode.ID : null;
+},
 
 //> @classMethod TabIndexManager.shiftFocusWithinGroup()
 // Method to shift focus to the next registered focusable target within some group.
@@ -40430,7 +43504,16 @@ shiftFocusAfterGroup : function (targetGroup, forward) {
             this.getLastFocusTargetInGroup(targetGroup) || targetGroup :
             targetGroup;
 
-    return this.shiftFocus(currentTarget, forward);
+    if (this.logIsDebugEnabled("syntheticTabIndexTrace")) {
+        this.logDebug("Attempt to synthetically shift focus after group " +
+            (isc.isA.String(targetGroup) ? targetGroup : targetGroup.nodeID) +
+            "\n" + this.getStackTrace(),
+            "syntheticTabIndexTrace");
+    }
+    // By passing in 'targetGroup' as the "originalNode" parameter for shiftFocus
+    // we essentially tell shiftFocus that the last-focus-target-in-group never actually
+    // had focus, and avoid firing the 'groupExitCallback' for it
+    return this.shiftFocus(currentTarget, forward, null, targetGroup);
 },
 
 // Helper to get the next canFocus:true node
@@ -40498,6 +43581,93 @@ getLastFocusTargetInGroup : function (ID) {
     if (node.canFocus) return node.nodeID;
 },
 
+// ----
+// Should a Tab KeyPress cause explicit focus navigation?
+
+
+
+//> @classMethod TabIndexManager.useExplicitFocusNavigation()
+// Should focus navigation be achieved by explicitly calling the TabIndexManager
+// +link{TabIndexManager.shiftFocus(),shiftFocus()} method for the specified node?
+// <P>
+// Developers integrating custom focusable element's into a SmartClient based application
+// can use this method to ensure the elements in question interact correctly with
+// +link{Canvas.showClickMask(),click masks} and +link{listGrid.canEdit,grid editing}.
+// See the +link{group:tabOrderOverview,tab order overview} topic for more information on
+// integrating custom focusable UI into a SmartClient application.
+// <P>
+// This method will return true if the +link{TabIndexManager.setAlwaysUseExplicitFocusNavigation()}
+// has been set to true (typically because a +link{Canvas.showClickMask(),click mask} is
+// showing), or if the entry or some ancestor has been marked as
+// +link{TabIndexManager.setUseExplicitFocusNavigation(),useExplicitFocusNavigation:true}.
+// Note that this is the case for entries registered under a canvas
+// with +link{canvas.alwaysManageFocusNavigation} set to true.
+//
+// @param ID (String) TabIndexManager registered target ID
+// @return (boolean) true if explicit focus navigation should be used
+// @visibility external
+//<
+useExplicitFocusNavigation : function (ID) {
+    if (this.alwaysUseExplicitFocusNavigation) return true;
+
+    var node = this._getNode(ID);
+    while (node != null)
+    {
+        if (node.useExplicitFocusNavigation != null) {
+            return node.useExplicitFocusNavigation
+        }
+        node = this._tabTree.getParent(node);
+    }
+    // By default we don't need to interfere with native focus navigation
+    return false;
+},
+
+// Flag is undocumented - correct usage is to call the setter rather than set the
+// flag directly
+alwaysUseExplicitFocusNavigation:false,
+
+
+//> @classMethod TabIndexManager.setAlwaysUseExplicitFocusNavigation()
+// Should +link{TabIndexManager.useExplicitFocusNavigation} to always return true?
+// @param newValue (boolean) whether we should always use explicit focus navigation
+// @visibility external
+//<
+// Use an (optional) ID to track who's called the method to turn global
+// explicit focus navigation on and off.
+// This allows a dev to use the public ID to enable explicit focus navigation and
+// ensures that showing, then hiding a hard clickMask won't clobber the user's setting.
+// (Currently undocumented as we don't have a likely public use case for this feature)
+_unspecifiedExplicitFocusNavigationID:"**unspecified**",
+_activeFocusNavigationCalls:{},
+
+setAlwaysUseExplicitFocusNavigation : function (newValue, ID) {
+    if (ID== null) ID = "**unspecified";
+    if (newValue) {
+        this._activeFocusNavigationCalls[ID] = true;
+        this.alwaysUseExplicitFocusNavigation = true;
+    } else {
+        delete this._activeFocusNavigationCalls[ID];
+        if (isc.isAn.emptyObject(this._activeFocusNavigationCalls)) {
+            this.alwaysUseExplicitFocusNavigation = false;
+        }
+    }
+},
+
+//> @classMethod TabIndexManager.setUseExplicitFocusNavigation ()
+// Mark the specified node (and its descendents) as using explicit focus navigation
+// rather than relying on native browser Tab event handling behavior. See
+// +link{TabIndexManager.useExplicitFocusNavigation()} for more information.
+// @param ID (String) registered TabIndexManager target
+// @param newValue (boolean) should explicit focus navigation be used for the specified
+//   target and its descendents
+// @visibility external
+//<
+setUseExplicitFocusNavigation : function (ID, newValue) {
+    var node = this._getNode(ID);
+    if (node != null) {
+        node.useExplicitFocusNavigation = newValue;
+    }
+},
 
 //> @classMethod TabIndexManager.showAllocatedTabChain()
 // Show the current hierarchy of targets passed to +link{TabIndexManager.addTarget()} together with
@@ -40597,7 +43767,7 @@ isc.Page.addClassProperties({
     // The SmartClient framework supports all major browsers, and will always support the
     // current versions at release-time.
     // <P>
-    // The full list of SmartClient browser support (at the time of the initial v12.0p_2018-09-15/LGPL Deployment release)
+    // The full list of SmartClient browser support (at the time of the initial SNAPSHOT_v12.1d_2019-05-29/LGPL Deployment release)
     // is listed below. Note that support for some framework features may be implemented using
     // different native approaches - or in rare cases, may be unavailable - in some older browser
     // versions. Such cases are covered in documentation where they occur. For example, see the
@@ -40621,7 +43791,7 @@ isc.Page.addClassProperties({
     // Every distributed SmartClient skin contains an "Unsupported Browser" page. This is an optional
     // placeholder for an application to state its browser support policies.
     // <P>
-    // <b>The following browser versions were supported as of the original v12.0p_2018-09-15/LGPL Deployment release</b>:
+    // <b>The following browser versions were supported as of the original SNAPSHOT_v12.1d_2019-05-29/LGPL Deployment release</b>:
     //    <table class="normal" cellPadding=5>
     //
     //    <tr><td width=40></td><td width=200>
@@ -40643,25 +43813,25 @@ isc.Page.addClassProperties({
     //    </td></tr>
     //
     //    <tr><td></td><td>
-    //    <i>Firefox 3.6.x-59.x</i>
+    //    <i>Firefox 3.6.x-64.x</i>
     //    </td><td>
     //    Windows/MacOS/Linux
     //    </td></tr>
     //
     //    <tr><td></td><td>
-    //    <i>Safari 5.0-11.x</i>
+    //    <i>Safari 5.0-12.x</i>
     //    </td><td>
     //    MacOS/Windows
     //    </td></tr>
     //
     //    <tr><td></td><td>
-    //    <i>Chrome 10.x-65.x</i>
+    //    <i>Chrome 10.x-71.x</i>
     //    </td><td>
     //    Windows/MacOS/Linux/ChromeOS
     //    </td></tr>
     //
     //    <tr><td></td><td>
-    //    <i>Opera 11.x-52.x</i>
+    //    <i>Opera 11.x-57.x</i>
     //    </td><td>
     //    Windows/MacOS
     //    </td></tr>
@@ -40729,11 +43899,12 @@ isc.Page.addClassProperties({
     // "data:" allows base64 encoded images to be specified directly, in recent browsers
     protocolURLs : window.isc_protocolURLs || ["http://","https://","file://","mailto:", "app-resource:", "data:"],
 
-    //>    @classAttr Page.textDirection    (TextDirection : (null) : IRW)
-    //        What direction is text supposed to run?
-    //            LTR (left to right, eg: English) or RTL (right to left, eg: Arabic)
-    //        @group    textDirection
-    //        @platformNotes    IE only
+    //> @classAttr Page.textDirection (TextDirection : (null) : IRW)
+    // What direction is text supposed to run?  LTR (left to right, eg: English) or RTL
+    // (right to left, eg: Arabic)
+    // @group textDirection
+    // @group appearance
+    // @platformNotes IE only
     //<
     textDirection:null, // don't remove: initalized to null so we will look up the value set in
                         // the body tag if it hasn't been set in our framework.
@@ -40748,15 +43919,16 @@ isc.Page.addClassProperties({
     // in MobileWebKit browsers
 
 
-    //> @type  TextDirection
+    //> @type TextDirection
     // Specifies RTL or LTR direction for text -- IE5+ and FF1.5+ only
     //
     // Specify this to have your text show up "right to left" (rtl), eg: in Arabic or Hebrew
     // Note: more efficient to leave blank for default of "left to right" (ltr)
     //
-    // @value  isc.Page.LTR        Show text left-to-right (eg: English)
-    // @value  isc.Page.RTL        Show text right-to-left (eg: Arabic)
-    // @group  appearance
+    // @value isc.Page.LTR      Show text left-to-right (eg: English)
+    // @value isc.Page.RTL      Show text right-to-left (eg: Arabic)
+    // @group textDirection
+    // @group appearance
     //<
 
     //> @classAttr Page.LTR (Constant : "ltr" : [R])
@@ -41120,6 +44292,8 @@ getIsomorphicDir : function () {
 setIsomorphicToolsDir : function (URL) {
     this._directoryCache.TOOLS =
             this.combineURLs(this.getIsomorphicDir(), URL != null ? URL : "../tools/");
+    // store the tools images directory
+    this._directoryCache.TOOLSIMG = this._directoryCache.TOOLS + "images/";
 },
 
 //>    @classMethod    Page.getIsomorphicToolsDir()
@@ -41131,6 +44305,17 @@ setIsomorphicToolsDir : function (URL) {
 //<
 getIsomorphicToolsDir : function () {
     return this._directoryCache.TOOLS;
+},
+
+//> @classMethod Page.getToolsImgDir()
+// Return the images directory used by Isomorphic-supplied tools.
+//
+// @return (String) ToolsImgDir URL.
+// @group files
+// @visibility external
+//<
+getToolsImgDir : function () {
+    return this._directoryCache.TOOLSIMG;
 },
 
 // Note skins groupDef is in Canvas.js
@@ -41492,18 +44677,20 @@ isXHTML : function () {
 // false.
 //
 // @return (Boolean) true if Page text direction is RTL, false otherwise
-// @group RTL
+// @group textDirection
+// @group appearance
 // @visibility external
 //<
 
 isRTL : function () { return this.getTextDirection() == isc.Canvas.RTL },
 
-//>    @classMethod    Page.getTextDirection()
-//        @group    textDirection
-//        Return the text direction of the page for right-to-left
-//        language support.  Returned value will be:
-//                * Page.LTR (left to right, eg: English), or
-//                * Page.RTL (right to left, eg: Arabic)
+//> @classMethod Page.getTextDirection()
+// Return the text direction of the page for right-to-left language support.
+// Returned value will be:
+//      * Page.LTR (left to right, eg: English), or
+//      * Page.RTL (right to left, eg: Arabic)
+// @group textDirection
+// @group appearance
 //<
 _$body:"body", _$html:"html", _$direction:"direction",
 getTextDirection : function () {
@@ -42126,6 +45313,15 @@ updateViewport : function (scale, width, height, scalable, extraVpProps) {
     }
 },
 
+//> @groupDef textDirection
+// The direction in which text is expected to flow.  Since the browser is responsible for
+// reversing much of the native content, it is necessary to set the dir attribute in the
+// BODY tag.  See +link{page.isRTL}.
+// @title Text Direction
+// @treeLocation Client Reference/System
+// @visibility external
+//<
+//<
 //> @groupDef browserZoom
 // Native browser zooming, that is, the ability in most browsers to enlarge or shrink the entire
 // web page, is currently only partly supported in specific browsers due to intractable browser
@@ -42404,44 +45600,55 @@ _shouldAllowZoom : function (scale) {
     return scale == null ? true : scale < 1;
 },
 
-//>    @classMethod    Page.getScrollWidth()
-//        Get the width of the window contents as they have been drawn.
-//        If the page scrolls, this may be larger than the page.getWidth().
-//        @group    sizing
+//> @classMethod Page.getScrollWidth()
+// Get the width of the window contents as they have been drawn.  If the page scrolls, this may
+// be larger than the +link{page.getWidth()}.
 //
-//        @return    (number)    width of the page as drawn
+// @return  (number)  width of the page as drawn
+//
+// @group sizing
 // @visibility external
 //<
 
 getScrollWidth : function (theDoc) {
     var theDoc = theDoc || document;
     if (theDoc == null || theDoc.body == null) return 500;
-    if (isc.Browser.isIE && isc.Browser.version >= 6) {
+
+
+    var scrollWidth = theDoc.body.scrollWidth;
+    if (isc.Browser.isStrict) {
+        var docElement = theDoc.documentElement;
+        if (docElement) {
+            var docScrollWidth = docElement.scrollWidth;
+            if (!isc.isA.Number(docElement.scrollWidth)) {
+                docScrollWidth = Math.max(docElement.offsetWidth, docElement.clientWidth);
+            }
+            if (docScrollWidth && docScrollWidth > scrollWidth) {
+                scrollWidth = docScrollWidth;
+            }
+        }
+
+    } else if (isc.Browser.isIE && isc.Browser.version >= 6) {
         // in IE6 in standards compliant mode (DOCTYPE HTML 4 Transitional/Strict), IE hides the
         // window viewport size in window.document.documentElement, and document.body only
         // reports the size of the drawn content.
-        var width = Math.max(Math.max(theDoc.body.scrollWidth, theDoc.documentElement.clientWidth))
-
-        // In IE9 with HTML5 doctype, in RTL mode the scroll width is reported under
-        // documentElement.scrollWidth.
-
-        if (isc.Browser.isStrict) width = Math.max(width, theDoc.documentElement.scrollWidth);
-        return width;
+        return Math.max(theDoc.body.scrollWidth, theDoc.documentElement.clientWidth);
     }
-    return theDoc.body.scrollWidth;
+
+    return scrollWidth;
 },
 
-//>    @classMethod    Page.getScrollHeight()
-//        Get the height of the window contents as they have been drawn.
-//        If the page scrolls, this may be larger than the page.getHeight().
-//        @group    sizing
+//> @classMethod Page.getScrollHeight()
+// Get the height of the window contents as they have been drawn.  If the page scrolls, this may
+// be larger than the +link{page.getHeight()}.
 //
-//        @return    (number)    height of the page as drawn
+// @return  (number)  height of the page as drawn
+//
+// @group sizing
 // @visibility external
 //<
 getScrollHeight : function (theDoc) {
-        var theDoc = theDoc || document;
-
+    var theDoc = theDoc || document;
     if (theDoc == null || theDoc.body == null) {
 
         return this.getHeight();
@@ -42450,18 +45657,18 @@ getScrollHeight : function (theDoc) {
     // In most cases we can use document.body.scrollHeight
     // however in strict mode we have to look at document.documentElement instead.
 
-        var scrollHeight = theDoc.body.scrollHeight;
+    var scrollHeight = theDoc.body.scrollHeight;
     if (isc.Browser.isStrict) {
         var docElement = theDoc.documentElement;
         if (docElement) {
             var docScrollHeight = docElement.scrollHeight;
             if (!isc.isA.Number(docElement.scrollHeight)) {
                 docScrollHeight = Math.max(docElement.offsetHeight, docElement.clientHeight);
-    }
+            }
             if (docScrollHeight && docScrollHeight > scrollHeight) {
                 scrollHeight = docScrollHeight;
+            }
         }
-    }
     }
     return scrollHeight;
 },
@@ -42597,11 +45804,124 @@ goBack : function () {
 
 // --------------------------------------------------------------------------------------------
 
-// Observation from static scope; for comments, see class.observe
+//> @classMethod Page.observe()
+// Method to set up a static +link{Class.observe(),observation} on some target object.
+// This allows developers to perform some action every time a particular method is invoked
+// on a target object.
+// <P>
+// This method returns a unique observation identifier string. To cancel the observation,
+// pass this identifier to +link{isc.Page.ignore()}.
+// <P>
+// If multiple observations are set up for the same target object and method, the
+// notification actions will be fired in the order in which they were registered.
+// <P>
+// This method is available as <code>isc.Page.observe()</code> or just <code>isc.observe()</code>
+// <P>
+// Note <i>[potential memory leak]</i>: If the target object is a simple JavaScript object
+// (not an instance of a SmartClient class), developers should always call
+// +link{isc.Page.ignore()} to stop observing the object if an observation is no longer necessary.
+// <br>
+// This ensures that if the object is subsequently allowed to go out of scope by application
+// code, the Page level observation system will not retain a reference to it (so the browser
+// can reclaim the allocated memory).<br>
+// While cleaning up observations that are no longer required is always good practice, this
+// memory leak concern is not an issue if the target object is an instance of a SmartClient
+// class. In that case the observation is automatically released when the
+// target is +link{class.destroy(),destroyed}.
+//
+// @param object (Object) Object to observe. This may be any JavaScript object with the specified
+//   target method, including native arrays, and instances of SmartClient classes such as
+//   +link{class:canvas}.
+// @param methodName (String) Name of the method to observe. Every time this method is invoked
+//   on the target object the specified action will fire
+//   (after the default implementation completes).
+// @param action (Function | String) Action to take when the observed method is invoked.<br>
+//   If <code>action</code> is a string to execute, certain keywords are available for context:
+//   <ul>
+//   <li><code>observed</code> is the target object being observed (on which the method was invoked).</li>
+//   <li><code>returnVal</code> is the return value from the observed method (if there is one)</li>
+//   <li>For functions defined with explicit parameters, these will also be available as keywords within
+//       the action string</li>
+//   </ul>
+//   If <code>action</code> is a function, the arguments for the original method will also be
+//   passed to this action function as arguments. If developers need to access the target
+//   object being observed from the action function they may use native javascript techniques
+//   such as
+//   +externalLink{https://developer.mozilla.org/en-US/docs/Web/JavaScript/Closures,javascript closure}
+//   to do so. The return value from the observed method is not available to the action function.
+// @return (String) Identifier for the observation. Pass this to +link{isc.Page.ignore()} to
+//   stop observing the method in question.
+//
+// @visibility external
+//<
+// We create individual instances to actually set up these static observations. The
+// action method will be invoked in the scope of these instances, and the "observer" keyword
+// for string-actions will refer to the instance. Undocumented as this is an implementation detail
+// with little value to devs and could change in the future.
+_observerCount:0,
+_staticObservers:{},
 observe : function (object, methodName, action) {
     // create a dummy instance of Class so we can use it for calling "observe" statically
-    var observer = isc.Class.create();
-    return observer.observe(object, methodName, action);
+    var observerID = "_" + this._observerCount++,
+        observer = isc.Class.create({
+            observerID:observerID,
+            // Override ignore - if 'ignore()' is called on the observer for the
+            // object/method we were set up to observe, the observer itself can be dropped so
+            // we don't leak memory
+            // 2 expected cases for this:
+            // - explicit call to isc.Page.ignore() (below)
+            // - destroy() on the observation target automatically calls 'ignore' on all its
+            //   observers
+            ignore:function (object, methodName) {
+                this.Super("ignore", arguments);
+                isc.Page._ignoreFiredOnObserver(this, object, methodName);
+            }
+        });
+
+    observer.observe(object, methodName, action);
+
+    this._staticObservers[observerID] = {
+        observer:observer,
+        methodName:methodName,
+        target:object
+    };
+
+    return observerID;
+},
+
+//> @classMethod Page.ignore()
+// Clear an observation set up by +link{isc.Page.observe()}.
+// <P>
+// This method is available as <code>isc.Page.ignore()</code> or just <code>isc.ignore()</code>
+//
+// @param observerID (String) ID returned from +link{isc.Page.observe()} call we want to clear
+//
+// @visibility external
+//<
+ignore : function (observerID) {
+    var entry = this._staticObservers[observerID];
+    if (entry == null) {
+        this.logWarn("isc.Page.ignore(): Unable to find active observation with ID:" + observerID);
+        return;
+    }
+    // Calling ignore() will fall through to _ignoreFiredOnObserver which will clean up the
+    // entry in this._staticObservers
+    entry.observer.ignore(entry.target, entry.methodName);
+},
+
+// Clean up static observers when observation is ignore()'d
+_ignoreFiredOnObserver : function (observer, object, methodName) {
+    var observerID = observer.observerID,
+        entry = this._staticObservers[observerID];
+
+
+    if (entry.target == object && entry.methodName == methodName) {
+        // destroy() not strictly necessary - the observer has no global ID so will go out of
+        // scope when we remove it from the staticObservers object, and be eligable for gc
+        observer.destroy();
+        delete this._staticObservers[observerID];
+
+    }
 },
 
 //> @classMethod Page.waitFor()
@@ -42878,6 +46198,118 @@ if (isc.Browser.isAndroid) {
 // aliases
 isc.Page.getToolsDir = isc.Page.getIsomorphicToolsDir;
 isc.Page.setToolsDir = isc.Page.setIsomorphicToolsDir;
+
+isc._$toolSkinNames = ["ToolSkin","ToolSkinNative"];
+
+isc.setCurrentSkin = function isc_setCurrentSkin(arg1, arg2) {
+
+    var skinName, seriesName, skinProps;
+    if (isc.isA.String(arg1)) {
+        // backcompat
+        skinName = arg1;
+        seriesName = arg2;
+        skinProps = {
+            name: skinName,
+            series: seriesName
+        }
+    } else {
+        skinProps = isc.addProperties({}, arg1);
+        skinName = skinProps.name;
+        seriesName = skinProps.name;
+    }
+
+    var skinName = skinProps.name;
+    var seriesName = skinProps.series;
+    if (skinName == null || skinName == "autoDetect") {
+        // auto-detect based on containing directory
+        var s = isc.getCurrentScriptSrc();
+
+        if (s == null || !s.contains("/")) {
+            // post-script load execution.  Have to assume FileLoader
+            if (isc.FileLoader && isc.FileLoader._lastSkinJS) {
+                s = isc.FileLoader._lastSkinJS;
+            } else {
+                isc.Page.logWarn("Unable to autoDetect skin - please either directly load load_skin.js"
+                                +" for your skin, use the FileLoader, or the JSP tags (if applicable)."
+                                +" You may also explicitly specify the skin name in the isc.setCurrentSkin()"
+                                +" call in your load_skin.js");
+                return;
+            }
+        }
+
+        // strip query params
+        if (s.contains("?")) s = s.substring(0, s.indexOf("?"));
+        // strip everything after last slash
+        s = s.substring(0, s.lastIndexOf("/"));
+
+        // name is the stuff before the remaining last slash
+        var lastSlashIndex = s.lastIndexOf("/")
+        skinName = s.substring(lastSlashIndex+1);
+        var skinPath = s.substring(0, lastSlashIndex);
+        skinProps.name = skinName;
+        skinProps.path = skinPath;
+    }
+
+    // store the current skin so we can detect multiple skins being loaded
+    if (isc.currentSkin && !isc._$toolSkinNames.contains(skinName)) {
+        isc.Page.logWarn("Detected loading of more than one skin - '" + skinName + "' was loaded " +
+            "when '" + isc.currentSkin.name + "' was already loaded.  See the QuickStart Guide " +
+            "for instructions on correctly changing the current skin");
+    }
+    // make isc.currentSkin an object so we can hang the "series" name and other skinning
+    // details onto it, for use with upcoming skinning improvements
+    isc.currentSkin = skinProps;
+
+    if (skinProps.path) {
+        isc.Page.setSkinDir(skinProps.path+"/"+skinName+"/");
+    } else {
+        isc.Page.setSkinDir("[ISOMORPHIC]/skins/"+skinName+"/");
+    }
+
+    isc.Page.logInfo("Loaded skin: "+skinName);
+
+    return isc.getCurrentSkin();
+}
+
+isc.getCurrentSkin = function isc_getCurrentSkin() {
+    return isc.currentSkin;
+}
+
+isc.getCurrentSkinName = function isc_getCurrentSkinName() {
+    return isc.currentSkin && isc.currentSkin.name;
+}
+
+isc.parseSkinURLParams = function isc_parseSkinURLParams(defaultSizeIncrease, defaultFontIncrease) {
+    // apply the sizeIncrease
+    var sizeInc = parseInt(isc.params.sizeIncrease);
+    if (isNaN(sizeInc)) sizeInc = defaultSizeIncrease;
+    isc.Canvas.resizeControls(sizeInc);
+
+    // apply the fontIncrease
+    var fontInc = parseInt(isc.params.fontIncrease);
+    if (isNaN(fontInc)) fontInc = defaultFontIncrease;
+    isc.Canvas.resizeFonts(fontInc, null, true);
+
+    // store
+    isc.currentSkin.sizeIncrease = sizeInc;
+    isc.currentSkin.fontIncrease = fontInc;
+}
+
+//> @staticMethod isc.observe()
+// @include isc.Page.observe()
+// @visibility external
+//<
+isc.observe = function isc_observe(object, methodName, action) {
+    return isc.Page.observe(object, methodName, action);
+}
+
+//> @staticMethod isc.ignore()
+// @include isc.Page.ignore()
+// @visibility external
+//<
+isc.ignore = function isc_ignore(observationID) {
+    return isc.Page.ignore(observationID);
+}
 
 
 
@@ -44351,10 +47783,8 @@ setTimeout : function (action, delay, units, frequentTimer) {
     delay = delay * units;
 
 
-    if (isc.Browser.isMobileSafari) {
-        if (isc.isA.String(action) || action._fireTime != null) action = {_action: action};
-        action._fireTime = delay + isc.timeStamp();
-    }
+    if (isc.isA.String(action) || action._fireTime != null) action = {_action: action};
+    action._fireTime = delay + isc.timeStamp();
 
     var ID = "_timeout" + this._timeoutCount++;
     this[ID] = action;
@@ -44489,6 +47919,13 @@ clear : function (tmrID) {
 
 clearTimeout : function (tmrID) {
     return this.clear(tmrID);
+},
+
+// returns scheduled event fire time for TimerEvent
+getTimeoutFireTime : function(tmrID) {
+    var ID = this._tmrIDMap[tmrID];
+    if (ID == null) return null;
+    return this._getTimeoutFireTime(ID);
 },
 
 _getTimeoutFireTime : function (ID) {
@@ -45467,6 +48904,12 @@ isc.EventHandler.addClassProperties(
         FONT_LOADING_FAILED: "fontLoadingFailed"
     },
 
+
+    CONTEXT_MENU: "contextMenu",
+    DRAG_SELECT_START: "dragSelectStart",
+    DRAG_SELECT_MOVE: "dragSelectMove",
+    DRAG_SELECT_STOP: "dragSelectStop",
+
     // Map used by getMouseEventProperties to convert from native mouse event names to
     // canonicalized versions (available as constants on the EH class).
     _nativeMouseEventMap: {
@@ -45543,6 +48986,7 @@ isc.EventHandler.addClassProperties(
     // @value  isc.EventHandler.DRAG_REPOSITION  Repositioning by dragging
     // @value  isc.EventHandler.DRAG_SCROLL      Scroll/pan by drag
     // @value  isc.EventHandler.DRAG_SELECT      Select content via drag
+    // @value  isc.EventHandler.DRAG_SELECTION_MOVE Native drag of content selected via DRAG_SELECT
     // @value  isc.EventHandler.DRAG             General drag (custom implementation)
     //<
 
@@ -45572,7 +49016,11 @@ isc.EventHandler.addClassProperties(
     // +link{type:DragOperation,DragOperation}.
     // @constant
     //<
+
     DRAG_SELECT : "dragSelect",
+
+
+    DRAG_SELECTION_MOVE : "dragSelectionMove",
 
     //> @classAttr EventHandler.DRAG (Constant : "drag" : [R])
     // A declared value of the enum type
@@ -45655,6 +49103,7 @@ isc.EventHandler.addClassProperties(
         OPTION : true
     },
     _labelString : "LABEL",
+    _objectString : "OBJECT",
 
     // native event name to camelCase name
     _nativeKeyEventMap : {
@@ -46257,6 +49706,8 @@ handleEvent : function (target, eventType, eventInfo, eventItem) {
 
         var EH = isc.EH;
 
+
+
     // process the event globally
     var returnVal;
       if (isc.Page.handleEvent(target, eventType, eventInfo, eventItem) == false) {
@@ -46286,6 +49737,11 @@ handleLoad : function (DOMevent) {
     // kick SA_Page here.
     if (isc.SA_Page) isc.SA_Page._firePageLoadCallbacks();
 
+    // add the page load event for those ClickStreams that want it
+    if (isc.ClickStream.streams) {
+        isc.ClickStream.addPageEvent(isc.ClickStream.getEventProperties(DOMevent), isc.EH.LOAD);
+    }
+
     if (!isc.Browser.isMoz) {
 
         if (isc.EH._useEventListenerForUnload() && document && document.body) {
@@ -46311,6 +49767,11 @@ handleLoad : function (DOMevent) {
 handleUnload : function (DOMevent) {
 
         var EH = isc.EH;
+
+    // add the page unload event for those ClickStreams that want it
+    if (isc.ClickStream.streams) {
+        isc.ClickStream.addPageEvent(isc.ClickStream.getEventProperties(DOMevent), EH.UNLOAD);
+    }
 
     var result = (isc.Page.handleEvent(null, EH.UNLOAD) != false);
 
@@ -46487,6 +49948,10 @@ _fireKeypressOnKeyDown : function (keyName) { return false; },
 
 // Mozilla
 _mozFireKeypressOnKeyDown : function (keyName) {
+    // In FF 65 we have to cancel tab focus navigation on keyDown rather than keyPress
+    if (isc.Browser.isMoz && isc.Browser.version >= 65) {
+        if (keyName == this._$Tab) return true;
+    }
     return keyName == this._$f10 && this.shiftKeyDown();
 },
 
@@ -46573,6 +50038,10 @@ handleKeyDown : function (nativeEvent, scEventProperties) {
     if (handledNatively) returnVal = EH._handledNativelyReturnVal;
 
     if (scEventProperties != null) isc.addProperties(lastEvent, scEventProperties);
+
+    // add the keyDown event for those ClickStreams that want it
+    if (isc.ClickStream.streams) isc.ClickStream.addKeyEvent(lastEvent, EH.KEY_DOWN);
+
     if (!handledNatively) {
 
         var eventInfo = [lastEvent, lastEvent.target, lastEvent.keyName];
@@ -46631,6 +50100,9 @@ handleKeyUp : function (nativeEvent, scEventProperties) {
         lastEvent = EH.lastEvent,
         eventInfo = [lastEvent,  lastEvent.target, lastEvent.keyName];
 
+    // add the keyUp event for those ClickStreams that want it
+    if (isc.ClickStream.streams) isc.ClickStream.addKeyEvent(lastEvent, EH.KEY_UP);
+
     // If the event is handled natively, return true to allow native processing
     if (EH.eventHandledNatively(lastEvent.eventType, lastEvent.nativeKeyTarget)) {
         // Log.logWarn("keyup event handled natively - bailing");
@@ -46648,8 +50120,9 @@ handleKeyUp : function (nativeEvent, scEventProperties) {
     if (target == null) target = this.getEventTargetCanvas(nativeEvent,
                                                            lastEvent.nativeKeyTarget);
 
-    if (EH.targetIsEnabled(target))
+    if (EH.targetIsEnabled(target)) {
         returnVal = (EH.bubbleEvent(target, EH.KEY_UP, eventInfo) != false);
+    }
 
 
     // On Shift+f10 to show a SmartClient context menu, return false to cancel the keyUp event.
@@ -46775,8 +50248,14 @@ handleKeyPress : function (nativeEvent, scEventProperties) {
     var eventInfo = {keyName:lastEvent.keyName, characterValue:lastEvent.characterValue};
 
     // update the eventType since this may be a synthetically generated keyPress event (from
-    // keyUp or repeated keyDown events).
+    // keyUp or repeated keyDown events); save original eventType if originalType isn't set
+    if (!lastEvent.originalType && lastEvent.eventType != eventType) {
+        lastEvent.originalType = lastEvent.eventType;
+    }
     lastEvent.eventType = eventType;
+
+    // add the keyPress event for those ClickStreams that want it
+    if (isc.ClickStream.streams) isc.ClickStream.addKeyEvent(lastEvent);
 
 
     EH._keyDownKeyNames.removeAt(0);
@@ -46813,50 +50292,43 @@ handleKeyPress : function (nativeEvent, scEventProperties) {
     if (handlerReturn != EH.STOP_BUBBLING
         && isc.Page.handleKeyPress() == false) return false;
 
+    // In some cases we want to intercept tab / shift-tab keypress and handle focus
+    // navigation ourselves.
+    // This is determined by figuring out the appropriate TabIndexManager entry ID, from
+    // the focused canvas and seeing if the 'useExplicitFocusNavigation' method returns true.
+    // Cases where this does return true are
+    // 1) a hard mask is showing
 
-    // If we got a tab or shift-tab keypress, and we're showing a hard mask, explicitly stick
-    // focus into the next widget in the page's tab order that isn't masked.
+    // 2) an ancestor of the canvas has the 'alwaysManageFocusNavigation' flag set to true.
+    //   We do this for the grid edit form, allowing us to handle shifting from cell to cell
+    //   appropriately (handled by the 'groupExit' notification we'll get from TabIndexManager
+    //   when the user tabs past the end of a formItem)
 
-
+    // Note: custom focusable UI such as native HTML elements or third party widgets can
+    // participate in the page's tabOrder by registering an entry for them on the
+    // TabIndexManager. However this logic will not typically execute for such elements
+    // as we'll detect them as handling events natively.
+    // For such elements to participate in the page's tab order when useExplicitFocusNavigation
+    // is active (EG when a mask is up), developers are expected to implement their own
+    // logic to capture the native tab key events. This pattern is described in the
+    // public tabOrderOverview doc.
     if (lastEvent.keyName == this._$Tab) {
-        var topHardMask,
-            registry = this.clickMaskRegistry;
-        if (this.clickMaskUp()) {
-            for (var i = registry.length-1; i >=0; i--) {
-                if (this.isHardMask(registry[i])) {
-                    topHardMask = registry[i];
-                    break;
-                }
-            }
-        }
 
-        var focusCanvas = EH._focusCanvas;
+        var focusCanvas = EH._focusCanvas,
+            tabIndexEntry = focusCanvas ? focusCanvas.getFocusedTabIndexEntry() : null;
 
-        var useSyntheticTabIndex = topHardMask != null ||
-                                (focusCanvas && focusCanvas.useExplicitFocusNavigation())
-
+        var useSyntheticTabIndex = (tabIndexEntry != null) ?
+                isc.TabIndexManager.useExplicitFocusNavigation(tabIndexEntry) : false;
         if (useSyntheticTabIndex) {
 
-            if (focusCanvas != null) {
+            var forward = !this.shiftKeyDown();
+            //>DEBUG
+            this.logInfo("Event handler intercepting " + (forward ? "Tab" : "Shift+tab") +
+                " keydown event and explicitly shifting focus for:" + tabIndexEntry,
+                        "syntheticTabIndex");
+            //<DEBUG
+            isc.TabIndexManager.shiftFocus(tabIndexEntry, forward);
 
-                //>DEBUG
-                this.logInfo("Telling focus canvas:" + focusCanvas + " to shift focus",
-                            "syntheticTabIndex")
-                //<DEBUG
-
-                focusCanvas._focusInNextTabElement(!this.shiftKeyDown(), topHardMask);
-            } else {
-
-                // TabIndexManager can handle shifting focus - it'll start at the
-                // beginning or end of the page.
-                var forward = !this.shiftKeyDown();
-                //>DEBUG
-                this.logInfo("Putting focus into " + (forward ? "first" : "last") +
-                             " widget in response to Tab keydown",
-                            "syntheticTabIndex");
-                //<DEBUG
-                isc.TabIndexManager.shiftFocus(null, forward);
-            }
             // Always return false natively in this case - we don't want the focus to shift again
             return false;
         }
@@ -46973,6 +50445,11 @@ doHandleMouseDown : function (DOMevent, syntheticEvent) {
 
     var event = syntheticEvent || EH.getMouseEventProperties(DOMevent);
 
+    // add the mouseDown event for those ClickStreams that want it
+    if (isc.ClickStream.streams) {
+        isc.ClickStream.addClickEvent(event, null, syntheticEvent !=  null);
+    }
+
     // if we switched event target, get rid of the focus
 
     var focusCanvas = EH._focusCanvas,
@@ -47063,8 +50540,9 @@ doHandleMouseDown : function (DOMevent, syntheticEvent) {
     }
 
     // see if we shouldn't pass this event on to DOM object, and return true if we should
-    if (EH.eventHandledNatively(eventType, event.nativeTarget))
+    if (EH.eventHandledNatively(eventType, event.nativeTarget)) {
         return EH._handledNativelyReturnVal;
+    }
 
     // if the target is not enabled, we shouldn't continue
     if (!EH.targetIsEnabled(target)) return false;
@@ -47218,7 +50696,6 @@ stillWithinMouseDownTarget : function () {
 //<
 // called directly by DOM
 handleMouseMove : function (DOMevent) {
-
     // Some browsers (like Mac IE) have problems dealing with events fired before the page
     // finishes loading.  Just skip mouse event processing if the page hasn't loaded yet.
     if (!isc.Page.isLoaded()) return false;
@@ -47241,6 +50718,9 @@ handleMouseMove : function (DOMevent) {
     if (EH._handlingMouseDown || EH._handlingMouseUp) return;
 
     var event = EH.getMouseEventProperties(DOMevent);
+
+    // add the mouseMove event for those ClickStreams that want it
+    if (isc.ClickStream.streams) isc.ClickStream.addMoveEvent(event);
 
 
     if (EH._needMissedMouseupOutsideWindowWorkAround &&
@@ -47313,7 +50793,6 @@ enableMouseMoveBackCompat: false,
 
 __handleMouseMove : function (DOMevent, event) {
     var EH = this;
-
     var mouseDown = EH.mouseIsDown();
 
     // We might start dragging if:
@@ -47448,8 +50927,9 @@ __handleMouseMove : function (DOMevent, event) {
         //<DEBUG
         // send the mouseOut event to the last mover object
         var lastMoveTarget = EH.lastMoveTarget,
+            lastHoverTarget = EH.lastHoverTarget,
             hoverTarget,
-            lastHoverTarget = EH.lastHoverTarget;
+            hoverHasFocus = isc.Hover._hoverHasFocus;
 
         if (lastMoveTarget) {
             delete EH.lastMoveTarget;
@@ -47458,24 +50938,41 @@ __handleMouseMove : function (DOMevent, event) {
 
         // send the mouseOver event to the target
         if (target) {
+            // If the mouseOver event returns false, take that as an indication
+            // we don't want do standard widget level Hover
 
             var hoverResult = EH.handleEvent(target, EH.MOUSE_OVER);
+
+            // If the user has hit the key to give focus to the hover we don't want to hide
+            // the hover on mouse move (whether the user shifts off the target or over a new hover target)
+            // As such suppress logic to update the 'hoverTarget' altogether
+
             // use 'getHoverTarget()' to determine which widget should receive a hover event.
-            if (hoverResult != false) hoverTarget = target.getHoverTarget(event);
+            if (!hoverHasFocus && hoverResult != false) {
+                hoverTarget = target.getHoverTarget(event);
+            }
+
+            // If the mouseOver event showed a Hover associated with a new widget
+            // (not the 'lastHoverTarget'), clear out that var so we don't
+            // hide the Hover below
+
+            if (lastHoverTarget != null && lastHoverTarget != isc.Hover.lastHoverCanvas) {
+                lastHoverTarget = null;
+            }
         }
+
+        // remember that we're the last move object
+
+        EH.lastMoveTarget = target;
 
         // Send hover events to the hover target/last hover target.
         // The Canvas level implementation handles actually setting up timers to fire
         // user-visible hover handlers.
-        if (hoverTarget != lastHoverTarget) {
+        if (!hoverHasFocus && (hoverTarget != lastHoverTarget)) {
             if (lastHoverTarget) lastHoverTarget.stopHover();
             if (hoverTarget) hoverTarget.startHover();
-
             EH.lastHoverTarget = hoverTarget;
         }
-
-        // remember that we're the last move object
-        EH.lastMoveTarget = target;
 
         // remember the associated FormItem (if any)
         EH.lastMoveTargetItem = isc.DynamicForm && isc.isA.DynamicForm(target) ?
@@ -47571,6 +51068,12 @@ handleNativeMouseOut : function (DOMevent) {
 
         EH._updateMouseOutEventProperties(event);
         delete EH.lastMoveTarget;
+
+        // add mouseOut event (leaving browser window) for those ClickStreams that want it
+        if (isc.ClickStream.streams) {
+            isc.ClickStream.addMoveEvent(EH.lastEvent, EH.MOUSE_OUT, false);
+        }
+
         EH.handleEvent(lastMoveTarget, EH.MOUSE_OUT, null, EH.lastMoveTargetItem);
         if (EH.lastHoverTarget) {
             EH.lastHoverTarget.stopHover();
@@ -47714,6 +51217,10 @@ _handleMouseUp : function (DOMevent, fakeEvent) {
         // get the properties of the event
         event = (!fakeEvent ? EH.getMouseEventProperties(DOMevent) : EH.lastEvent),
         isNative = false;
+
+    // add the mouseUp event for those ClickStreams that want it
+    if (isc.ClickStream.streams) isc.ClickStream.addClickEvent(event, null, fakeEvent);
+
 
     EH._mouseIsDown = false;
     delete EH.__handleClickReturnValue;
@@ -47900,6 +51407,9 @@ clearDragProperties : function () {
         delete EH._crossFrameDragCleanupTmrID;
     }
 
+    // clear any drag-specific cursor cached on the dragTarget
+    if (EH.dragTarget) delete EH.dragTarget._lastEdgeCursor;
+
     delete EH.dragTarget;
     delete EH.dragTargetStartRect;
     delete EH.dragTargetLink;
@@ -47963,6 +51473,11 @@ _handleContextMenu : function (DOMEvent, synthetic) {
     if (!fromMouseEvent) {
         event.x = target ? target.getPageLeft() : 0;
         event.y = target ? target.getPageTop() : 0;
+    }
+
+    // add the contextMenu event for those ClickStreams that want it
+    if (isc.ClickStream.streams) {
+        isc.ClickStream.addMenuEvent(event, EH.CONTEXT_MENU, synthetic);
     }
 
 
@@ -48116,6 +51631,9 @@ handleClick : function (target, eventType) {
     //             ", stillWithinTarget: " + EH.stillWithinMouseDownTarget() +
     //             ", native target: " + this.echoLeaf(event.nativeTarget));
 
+    // add the synthetic click event for those ClickStreams that want it
+    if (isc.ClickStream.streams) isc.ClickStream.addClickEvent(event, eventType);
+
     // call the Page-level click handler.  Note we will fire page-level click even if there is
     // no Canvas target
     if (isc.Page.handleEvent(target, eventType) == false) {
@@ -48127,6 +51645,13 @@ handleClick : function (target, eventType) {
 
     // if we have an enabled target, bubble the event
     } else if (!EH.targetIsEnabled(target)) {
+        returnVal = false;
+
+    // in UIWebView, drop the click if we've set _scrollHandled on the target
+
+    } else if ((isc.Browser.isUIWebView || isc.Browser.isAndroidWebView) &&
+               event.target && event.target._scrollHandled)
+    {
         returnVal = false;
 
     // don't fire click if the Canvas target changed between mouseDown and mouseUp
@@ -48329,7 +51854,10 @@ _handlePointerUp : function (DOMevent) {
     } else {
         EH.DOMevent = DOMevent;
         var event = EH.getMouseEventProperties(DOMevent);
-        if (EH.eventHandledNatively(DOMevent.type, DOMevent.target)) return EH._handledNativelyReturnVal;
+        if (EH.eventHandledNatively(DOMevent.type, DOMevent.target)) {
+            if (isc.ClickStream.streams) isc.ClickStream.addClickEvent(event);
+            return EH._handledNativelyReturnVal;
+        }
         event.originalType = event.eventType;
         event.eventType = EH.MOUSE_UP;
         return EH._handleMouseUp(DOMevent, true);
@@ -48344,7 +51872,10 @@ _handlePointerCancel : function (DOMevent) {
     } else {
         EH.DOMevent = DOMevent;
         var event = EH.getMouseEventProperties(DOMevent);
-        if (EH.eventHandledNatively(DOMevent.type, DOMevent.target)) return EH._handledNativelyReturnVal;
+        if (EH.eventHandledNatively(DOMevent.type, DOMevent.target)) {
+            if (isc.ClickStream.streams) isc.ClickStream.addClickEvent(event);
+            return EH._handledNativelyReturnVal;
+        }
         event.originalType = event.eventType;
         event.eventType = EH.MOUSE_UP;
         return EH._handleMouseUp(DOMevent, true);
@@ -48381,7 +51912,16 @@ _handleTouchStart : function (DOMevent) {
     EH.DOMevent = DOMevent;
     var    event = EH.getMouseEventProperties(DOMevent);
 
+    // add the touchStart event for those ClickStreams that want it
+    if (isc.ClickStream.streams) isc.ClickStream.addClickEvent(event);
+
     if (EH.eventHandledNatively(DOMevent.type, DOMevent.target)) return EH._handledNativelyReturnVal;
+
+    // arm scroll detection so it can be tripped in Canvas._handleCSSSCroll()
+
+    if (isc.Browser.isUIWebView || isc.Browser.isAndroidWebView) {
+        if (event.target) event.target._scrollHandled = false;
+    }
 
 
     delete event.touchStartReturnValue;
@@ -48459,6 +51999,12 @@ _handleTouchMove : function (DOMevent) {
     EH.DOMevent = DOMevent;
 
     var    event = EH.getMouseEventProperties(DOMevent);
+
+    // disarm scroll detection here since a touchMove automatically prevents firing a click
+
+    if (isc.Browser.isUIWebView || isc.Browser.isAndroidWebView) {
+        if (event.target) delete event.target._scrollHandled;
+    }
 
     if (EH.eventHandledNatively(DOMevent.type, DOMevent.target)) return EH._handledNativelyReturnVal;
 
@@ -48571,6 +52117,9 @@ _handleTouchEnd : function (DOMevent) {
     EH.DOMevent = DOMevent;
     var    event = EH.getMouseEventProperties(DOMevent);
 
+    // add the touchEnd event for those ClickStreams that want it
+    if (isc.ClickStream.streams) isc.ClickStream.addClickEvent(event);
+
     if (EH.eventHandledNatively(DOMevent.type, DOMevent.target)) return EH._handledNativelyReturnVal;
 
     // maintain touch state for synthetic mouseDown/mouseUp
@@ -48597,12 +52146,15 @@ _handleTouchEnd : function (DOMevent) {
 
     var targetElem = DOMevent.target && (DOMevent.target.nodeType == 1 ?
                                          DOMevent.target : DOMevent.target.parentElement);
-    if (!EH._shouldIgnoreTargetElem(targetElem)) {
+    if (!EH._shouldIgnoreTargetElem(targetElem) && DOMevent instanceof window.Event) {
 
         if (isc.DynamicForm && isc.isA.DynamicForm(this._focusCanvas)) {
             var form = this._focusCanvas,
                 focusItem = form.getFocusItem();
-            if (focusItem && !focusItem.getOuterElement().contains(targetElem)) {
+            if (focusItem && !focusItem.getOuterElement().contains(targetElem) &&
+                (!focusItem.pickList || !focusItem.pickList.contains(event.target)) &&
+               !focusItem._isDisabledEventMaskElement(targetElem))
+            {
                 form.blurFocusItem();
             }
 
@@ -48622,6 +52174,15 @@ _handleTouchCancel : function (DOMevent) {
 
     EH.DOMevent = DOMevent;
     var    event = EH.getMouseEventProperties(DOMevent);
+
+    // add the touchCancel event for those ClickStreams that want it
+    if (isc.ClickStream.streams) isc.ClickStream.addClickEvent(event);
+
+    // disarm scroll detection here since a touchCancel automatically prevents firing a click
+
+    if (isc.Browser.isUIWebView || isc.Browser.isAndroidWebView) {
+        if (event.target) delete event.target._scrollHandled;
+    }
 
     if (EH.eventHandledNatively(DOMevent.type, DOMevent.target)) return EH._handledNativelyReturnVal;
 
@@ -48974,6 +52535,7 @@ prepareForDragging : function (target) {
 // Fires Canvas.dragStart() on the target (which may cancel the event) and sets up the visual
 // appearance of dragging.
 handleDragStart : function (nativeDragging) {
+
     var EH = this,
         event = EH.lastEvent;
 
@@ -48985,6 +52547,7 @@ handleDragStart : function (nativeDragging) {
     // reset the dragOffsetX and dragOffsetY in case somebody set it before
     // these properties indicate the offset of the last event coordinates (typically this is
     // the position of the mouse) from the drag target
+
     EH.dragOffsetX = -10;
     EH.dragOffsetY = -10;
 
@@ -49003,7 +52566,8 @@ handleDragStart : function (nativeDragging) {
     // We're not checking for the lastHoverCanvas matching the drag target etc since dragging could
     // be delegated from one drag target to another and there are no obvious cases where we'd
     // want the hover to be visible during dragging
-    if (isc.Hover) isc.Hover.clear();
+
+    if (isc.Hover && !isc.Hover._hoverHasFocus) isc.Hover.clear();
 
     // remember the drag offset; this is the distance between the point where the mouse went
     // down to start D&D and the top/left corner of the element being dragged.  We want to
@@ -49018,34 +52582,42 @@ handleDragStart : function (nativeDragging) {
     // the target.  This is an opportunity to set EH.dragAppearance
     var eventType = EH.dragOperation + "Start";
 
-    if (EH.handleEvent(EH.dragTarget, eventType) == false) {
-        //>DEBUG
-        this.logInfo("drag cancelled by false return from: " +
-                      eventType + " on " + EH.dragTarget,
-                      "dragDrop");
-        //<DEBUG
+    // add the dragStart event for those ClickStreams that want it
+    if (isc.ClickStream.streams) isc.ClickStream.addDragEvent(event, eventType);
 
-        // if it returns false, cancel dragging
-        delete EH.dragTarget;
-        delete EH.dragTargetLink;
+    try {
+        if (EH.handleEvent(EH.dragTarget, eventType) == false) {
+            //>DEBUG
+            this.logInfo("drag cancelled by false return from: " +
+                         eventType + " on " + EH.dragTarget,
+                         "dragDrop");
+            //<DEBUG
 
-        // send the drag object a mouseOver since we sent it mouse out when dragging began
-        EH.handleEvent(EH.dragTarget, EH.MOUSE_OVER);
+            // if it returns false, cancel dragging
+            delete EH.dragTarget;
+            delete EH.dragTargetLink;
 
-        return false;
-    }
+            // send the drag object a mouseOver since we sent it mouse out when dragging began
+            EH.handleEvent(EH.dragTarget, EH.MOUSE_OVER);
 
-    // clear the lastMoveTarget since we've sent a mouseOut with no mouseOver
-    delete EH.lastMoveTarget;
+            return false;
+        }
 
+        // clear the lastMoveTarget since we've sent a mouseOut with no mouseOver
+        delete EH.lastMoveTarget;
 
-    // if we're dragRepositioning, and the dragAppearance is not the tracker,
-    // set the isc.EventHandler.dragOffsetX and .dragOffsetY to the offset from the drag target
-    var dragAppearance = EH.dragTarget.getDragAppearance(EH.dragOperation);
-    if (dragAppearance != EH.TRACKER)
-    {
-        EH.dragOffsetX = EH.dragStartOffsetX;
-        EH.dragOffsetY = EH.dragStartOffsetY;
+        // if we're dragRepositioning, and the dragAppearance is not the tracker, set the
+        // isc.EventHandler.dragOffsetX and .dragOffsetY to the offset from the drag target
+        var dragAppearance = EH.dragTarget.getDragAppearance(EH.dragOperation);
+        if (dragAppearance != EH.TRACKER) {
+            EH.dragOffsetX = EH._dragOffsetX != null ? EH._dragOffsetX : EH.dragStartOffsetX;
+            EH.dragOffsetY = EH._dragOffsetY != null ? EH._dragOffsetY : EH.dragStartOffsetY;
+        }
+
+    } finally {
+        // clear custom offset
+        delete EH._dragOffsetX;
+        delete EH._dragOffsetY;
     }
 
     // dragAppearance
@@ -49324,10 +52896,12 @@ handleDragMove : function () {
     EH.dropTarget = EH.getDropTarget(event);
     isc._useBoxShortcut = false;
 
-    // if "showNoDropIndicator" is true we need to update cursor to potentially display
-    // the no-drop indicator.
+    // if "showNoDropIndicator" is true we need to update cursor to potentially display the
+    // no-drop indicator, or for a drag resize we need to update to the edge-specific cursor
 
-    if (this.showNoDropIndicator && event.target) event.target._updateCursor();
+    if ((this.showNoDropIndicator || EH.dragOperation == EH.DRAG_RESIZE) && event.target) {
+        event.target._updateCursor();
+    }
 
     //>PluginBridges
 
@@ -49366,12 +52940,17 @@ handleDragMove : function () {
     // if a dragMoveAction has been set, call it now
     if (EH.dragMoveAction) EH.dragMoveAction();
 
-    // send the appropriate [dragMove, dragResizeMove, dragRepositionMove] event to the
-    // dragTarget and bail if it returns false.  This is another way for your handler to stop
-    // drop processing if you don't like what you're about to be dropped over.
+    // set the appropriate [dragMove, dragResizeMove, dragRepositionMove] event
+    var eventType = this._getDragMoveEventName(EH.dragOperation);
+
+    // add the dragMove event for those ClickStreams that want it
+    if (isc.ClickStream.streams) isc.ClickStream.addDragEvent(event, eventType);
+
+    // Send event to the dragTarget and bail if it returns false.  This is another way for your
+    // handler to stop drop processing if you don't like what you're about to be dropped over.
     // NOTE: this cancels drop events being sent to the candidate drop target, not the
     // dragMoveAction, which eg moves the dragTracker with the mouse.
-    if (EH.handleEvent(EH.dragTarget, this._getDragMoveEventName(EH.dragOperation)) == false) {
+    if (EH.handleEvent(EH.dragTarget, eventType) == false) {
         delete EH.dropTarget;
         return false;
     }
@@ -49440,6 +53019,7 @@ _handleDragScroll : function () {
     if (canvasList == null || canvasList.length == 0) return;
 
     for (var i = 0; i < canvasList.length; i++) {
+
         if (canvasList[i].isDrawn() && canvasList[i].isVisible() &&
             canvasList[i].shouldDragScroll()
         ) {
@@ -49559,9 +53139,14 @@ handleDragStop : function () {
     // determine if we were dragging something other than the dragTarget (eg an outline)
     var wasDraggingTarget = (dragTarget == dragMoveTarget);
 
-    // send the dragTarget the [ dragStop | dragRepositionStop | dragResizeStop ] event so it can
-    // reset its visual state
-    if (EH.handleEvent(dragTarget, dragOperation+"Stop") != false) {
+    // [ dragStop | dragRepositionStop | dragResizeStop ] event
+    var eventType = dragOperation + "Stop";
+
+    // add the dragStop event for those ClickStreams that want it
+    if (isc.ClickStream.streams) isc.ClickStream.addDragEvent(event, eventType);
+
+    // send the dragTarget the event so it can reset its visual state
+    if (EH.handleEvent(dragTarget, dragOperation + "Stop") != false) {
 
         successfulDrag = true;
 
@@ -49629,6 +53214,9 @@ handleDragStop : function () {
     // drag[Reposition|Resize]Stop returned explicit "false", indicating cancel -
     // if we were moving the dragTarget, put it back the way we found it
     } else {
+
+        if (isc.ClickStream.streams) isc.ClickStream.markDragCanceled(eventType);
+
         if (dragOperation == EH.DRAG_RESIZE) {
             // if we were actually resizing the original target
             if (wasDraggingTarget) {
@@ -49671,10 +53259,12 @@ handleDragStop : function () {
             isc.DynamicForm._getEventTargetItem() : null;
     }
 
-    // if "showNoDropIndicator" is true we need to update cursor to potentially clear
-    // the no-drop indicator.
-    // Otherwise it'll stick around til the next mouseMove
-    if (this.showNoDropIndicator && event.target) event.target._updateCursor();
+    // if "showNoDropIndicator" is true we need to update cursor to potentially clear the
+    // no-drop indicator, or for a drag resize we need to clear the edge-specific cursor
+    // Otherwise we'll be showing an invalid cursor until the next mouseMove
+    if ((this.showNoDropIndicator || dragOperation == EH.DRAG_RESIZE) && event.target) {
+        event.target._updateCursor();
+    }
 
     // return whether the drag was successful
     return successfulDrag;
@@ -50295,8 +53885,11 @@ _eventHandledNatively : function (eventType, nativeTarget, checkTargetOnly) {
         // elements that will want to handle their own events.
 
         if (handleNativeEvents == null) {
+            var DOMevent = event.DOMevent;
 
             isNative = (!testTarget.focusProxy &&
+
+                            !(DOMevent && DOMevent._forwarded) &&
 
                            ((testTarget.form != null && tagName != EH._labelString) ||
 
@@ -51511,6 +55104,11 @@ _effectAllowedMap: {
 // mouseMove.
 
 handleNativeDragStart : function (DOMevent) {
+    // add the native dragStart event for those ClickStreams that want it
+
+    if (isc.ClickStream.streams) {
+        isc.ClickStream.addDragEvent(isc.ClickStream.getEventProperties(DOMevent));
+    }
 
     // Check if the widget has useNativeDrag:true.
     if (isc.Browser.hasNativeDrag && DOMevent.dataTransfer) {
@@ -51530,7 +55128,8 @@ handleNativeDragStart : function (DOMevent) {
                     return false;
                 }
 
-                var crossFrameDrag = isc.Canvas.getCrossFrameDragByDragType && isc.Canvas.getCrossFrameDragByDragType(target.dragType);
+                var crossFrameDrag = isc.Canvas.getCrossFrameDragByDragType &&
+                                     isc.Canvas.getCrossFrameDragByDragType(target.dragType);
                 if (crossFrameDrag == null) {
                     this.logWarn("No cross-frame drag settings have been registered for dragType:'" +
                                  target.dragType + "'. Canvas.registerCrossFrameDrags() must be " +
@@ -51561,20 +55160,26 @@ handleNativeDragStart : function (DOMevent) {
         }
     }
 
-    // If an ISC drag is occurring, return false to suppress the native drag so we can
-    // continue to get mouse-moves and respond to the drag.
-    if (isc.EH.dragTarget) return false;
+    // If an ISC drag is occurring, we typically want to suppress the "native" drag.
+    // We can do this by returning false to suppress the native drag behavior. This also
+    // means we continue to recieve normal mouse-moves etc
+    // Exception: If the user has selected some text in a canSelectText:true target we
+    // want to allow them to drag-move or copy the text within the app.
+    // In this case we'll have "dragOperation" set to DRAG_SELECT
+    // Allow the native drag to proceed (and react to the native dragover event notifications
+    // as the user drags the selected content around).
+    if (isc.EH.dragTarget) {
+        return (EH.dragOperation == EH.DRAG_SELECT);
+    }
 
 
     var target = isc.EH.mouseDownTarget();
-
     // if within a Canvas, allow the drag if you can select text within the Canvas.
     // This will allow the user to drag out a selected chunk of text to a text editor, etc.
     // This setting also allows some other native drag behaviors, such as dragging selected text from
     // a TextItem, which allows a native drop-copy into a target (another TextItem, the URL bar, etc)
 
     if (target) return !!(target._allowNativeDrag());
-
     // call any native handler that we may have clobbered (manually for speed)
     if (this._documentDragStart) return this._documentDragStart();
     if (this._windowDragStart) return this._windowDragStart();
@@ -51597,7 +55202,7 @@ _crossFrameDragCleanupAction : function () {
     if (EH.crossFrameDragging) {
         EH.artificialDragTarget.dragType = null;
 
-        EH._handleNativeDragEnd(EH.lastEvent.DOMevent);
+        EH._handleNativeDragEnd(EH.lastEvent.DOMevent, true);
     } else if (EH.nativeDragging) {
         if (EH.dragMoveTarget) EH.dragMoveTarget.hide();
     }
@@ -51617,6 +55222,8 @@ _dropEffectsByEffectAllowed: {
     "move": "move"
 },
 _$none: "none",
+
+
 _handleNativeDragOver : function (DOMevent) {
 
     var dt = DOMevent.dataTransfer,
@@ -51643,8 +55250,28 @@ _handleNativeDragOver : function (DOMevent) {
         effectAllowed = dt.effectAllowed;
     }
 
-    // This might be a cross-frame drag.
+
+    // If we're not aware of active native dragging, two possibilities:
+    // - This might be a new cross-frame drag
+    // - This might be a native drag of selected text etc which didn't explicitly go
+    //   through our "native drag" mechanism.
     if (!EH.nativeDragging) {
+
+        // Catch the case where the user is dragging selected text
+        if (EH.dragging) {
+
+            if (EH.dragOperation == EH.DRAG_SELECT) EH.dragOperation = EH.DRAG_SELECTION_MOVE;
+
+            // Fire drag move so we scroll the current drop target if appropriate
+            if (EH.dragOperation == EH.DRAG_SELECTION_MOVE) {
+                var event = EH.getMouseEventProperties(DOMevent);
+                EH._mouseIsDown = true;
+                EH.handleDragMove();
+                return;
+            }
+        }
+
+        // Assume this is a new cross-frame native drag
         var dragType = null;
 
         if (isc.Browser.isIE || isc.Browser.isEdge) {
@@ -51661,6 +55288,7 @@ _handleNativeDragOver : function (DOMevent) {
 
             dragType = crossFrameDrag.dragType;
 
+
         } else {
             dragType = this._getDragType(dt);
             if (dragType == null) return;
@@ -51675,7 +55303,8 @@ _handleNativeDragOver : function (DOMevent) {
         // Create an artificial dragTarget.
         if (EH.artificialDragTarget) EH.artificialDragTarget.destroy();
         // faux createAutoChild
-        var artificialDragTargetConstructor = EH.artificialDragTargetConstructor || EH.artificialDragTargetDefaults._constructor;
+        var artificialDragTargetConstructor = EH.artificialDragTargetConstructor ||
+                                              EH.artificialDragTargetDefaults._constructor;
         EH.dragTarget = EH.artificialDragTarget = isc[artificialDragTargetConstructor].create(
             {
                 autoDraw: false,
@@ -51686,19 +55315,20 @@ _handleNativeDragOver : function (DOMevent) {
                 dragType: dragType
             }
         );
-
         var event = EH.getMouseEventProperties(DOMevent);
         event.target = EH.dragTarget;
 
         EH.dragOperation = "drag";
         EH._mouseIsDown = true;
         EH.mouseDownEvent = isc.addProperties({}, event);
+
         EH.handleDragStart(true);
         EH.crossFrameDragging = true;
 
 
         if (EH._useCrossFrameDragCleanupTimer) EH._setCrossFrameDragCleanupTimer();
     } else {
+
         if (EH._useCrossFrameDragCleanupTimer) EH._setCrossFrameDragCleanupTimer();
 
         // If a native drag is in progress, initialize the dropEffect to "none".
@@ -51716,7 +55346,6 @@ _handleNativeDragOver : function (DOMevent) {
             return lastEvent._lastDragOverReturnVal;
         }
     }
-
     EH.handleMouseMove(DOMevent);
 
 
@@ -51743,6 +55372,11 @@ _handleNativeDragOver : function (DOMevent) {
 _handleNativeDragEnter : function (DOMevent) {
 
     var EH = isc.EH;
+
+    // add the native dropOver event for those ClickStreams that want it
+    if (isc.ClickStream.streams) {
+        isc.ClickStream.addDragEvent(isc.ClickStream.getEventProperties(DOMevent));
+    }
 
 
     EH._lastDragEnterTarget = (DOMevent.srcElement || DOMevent.target);
@@ -51777,12 +55411,17 @@ _handleNativeDragLeave : function (DOMevent) {
     if (EH._lastDragEnterTarget == (DOMevent.srcElement || DOMevent.target)) {
         EH._lastDragEnterTarget = null;
 
+        // add the native dropOut event for those ClickStreams that want it
+        if (isc.ClickStream.streams) {
+            isc.ClickStream.addDragEvent(isc.ClickStream.getEventProperties(DOMevent));
+        }
+
         if (!EH._useCrossFrameDragCleanupTimer) {
             if (EH.crossFrameDragging) {
 
                 EH.artificialDragTarget.dragType = null;
 
-                EH._handleNativeDragEnd(DOMevent);
+                EH._handleNativeDragEnd(DOMevent, true);
             } else if (EH.nativeDragging) {
                 if (EH.dragMoveTarget) EH.dragMoveTarget.hide();
 
@@ -51795,15 +55434,27 @@ _handleNativeDragLeave : function (DOMevent) {
     }
 },
 
-_handleNativeDragEnd : function (DOMevent) {
-
+_handleNativeDragEnd : function (DOMevent, synthetic) {
     var EH = isc.EH;
+
+    // add the native dragStop event for those ClickStreams that want it
+    if (isc.ClickStream.streams && !synthetic) {
+        isc.ClickStream.addDragEvent(isc.ClickStream.getEventProperties(DOMevent));
+    }
+
     EH.handleMouseUp(DOMevent);
 },
 
 _handleNativeDrop : function (DOMevent) {
     var EH = isc.EH,
-        wasNativeDragging = EH.nativeDragging;
+        wasNativeDragging = EH.nativeDragging
+    ;
+
+    // add the drop event for those ClickStreams that want it
+    if (isc.ClickStream.streams) {
+        isc.ClickStream.addDragEvent(isc.ClickStream.getEventProperties(DOMevent));
+    }
+
     EH.handleMouseUp(DOMevent);
     // Only return false if EH.nativeDragging was true. Otherwise, returning false here might disable
     // a drag and drop of files (for example, onto a file input).
@@ -51832,11 +55483,18 @@ _handleTransitionEnd : function (DOMevent) {
 
 // Handle a page-level resize event.
 handleResize : function (DOMevent) {
+    var EH = isc.EH;
+
+    // add the page resize event for those ClickStreams that want it
+    if (isc.ClickStream.streams) {
+        isc.ClickStream.addPageEvent(isc.ClickStream.getEventProperties(DOMevent), EH.RESIZE);
+    }
+
     //Log.logWarn("page-level resize event");
     // delay briefly to avoid getting flooded by page-level resize events during drag resize on
     // Windows IE
-    if (isc.EH.resizeTimer == null) {
-        isc.EH.resizeTimer = isc.Timer.setTimeout("isc.EH._pageResize()", 0);
+    if (EH.resizeTimer == null) {
+        EH.resizeTimer = isc.Timer.setTimeout("isc.EH._pageResize()", 0);
     }
     // Always return true. This will allow any 'window.onresize' handlers set up before
     // ISC was loaded to fire.
@@ -51928,6 +55586,9 @@ handleMouseWheel : function (DOMevent) {
     if (EH.eventHandledNatively(DOMevent.type, nativeTarget)) return EH._handledNativelyReturnVal;
 
     EH.getMouseEventProperties(DOMevent);
+
+    // add the mouseWheel event for those ClickStreams that want it
+    if (isc.ClickStream.streams) isc.ClickStream.addWheelEvent(EH.lastEvent);
 
     // Pass to the appropriate widget, and stop if this returns false.
     var target = EH.lastEvent.target;
@@ -52041,6 +55702,33 @@ prepareForLinkDrag : function (dragTarget, linkID) {
     return false;
 },
 
+//>    @classMethod EventHandler.setDragOffset()
+// Sets the initial coordinate offset of the last event, typically a mouseDown or touchStart,
+// from the drag target.  For example, when grabbing and dragging a +link{scrollbar} thumb with
+// the mouse, you'd expect positive coordinates that reflect your position relative to the top,
+// left corner of the thumb.  If a drag tracker will be used, call +link{setDragTracker()}
+// instead, which takes optional arguments <code>offsetX</code> and <code>offsetY</code> that
+// act similarly to those passed to this method.
+// <P>
+// Your canvas can call this method to set the initial drag offset to whatever you want like so:
+// <pre>
+//    dragStart : function () {
+//        isc.EventHandler.setDragOffset(5, 20);
+//    }</pre>
+//
+// @param offsetX (int) initial x-offset for the drag
+// @param offsetY (int) initial y-offset for the drag
+// @see canvas.dragStart
+// @group dragdrop
+// @visibility external
+//<
+
+setDragOffset : function (offsetX, offsetY) {
+
+    isc.EH._dragOffsetX = offsetX;
+    isc.EH._dragOffsetY = offsetY;
+},
+
 
 // Drag Tracker
 // ----------------------------------------------------------------------------------------
@@ -52080,8 +55768,8 @@ setDragTracker : function (html, newWidth, newHeight, offsetX, offsetY, properti
     dragTracker.redrawIfDirty("setDragTracker");
 
     // apply drag offset if specified
-    if (offsetX) dragTracker.offsetX = offsetX;
-    if (offsetY) dragTracker.offsetY = offsetY;
+    if (offsetX != null) dragTracker.offsetX = offsetX;
+    if (offsetY != null) dragTracker.offsetY = offsetY;
 
     // we don't want these new settings to stick globally - require the user to call
     // setDragTracker() every time they want to deviate from the defaults only.  Otherwise any
@@ -52359,6 +56047,9 @@ dispatch : function (handler, event) {
     }
 
 
+    this._lastDispatchedEvent = event;
+
+
     this._setThread(this._threadCodes[event.type] || event.type);
 
 
@@ -52433,16 +56124,16 @@ _nativeEventName_TypeMap:{
 _documentEventHandlers:{},
 
 
+
 _useEventListeners: isc.Browser.isMobileIE ||
         isc.Browser.isMobileSafari && isc.Browser.iOSMinorVersion >= 11.3 ||
-//        isc.Browser.isChrome && (isc.Browser.supportsDualInput || isc.Browser.isAndroid),
-        isc.Browser.isChrome && isc.Browser.supportsDualInput,
+        isc.Browser.isChrome,
 
 
-captureEvent : function (object, nativeEventName, eventName, handler) {
+captureEvent : function (object, nativeEventName, eventName, handler, useEventListeners) {
 
-    var wd = this.getWindow(),
-        useEventListeners = this._useEventListeners;
+    var wd = this.getWindow();
+    if (useEventListeners == null) useEventListeners = this._useEventListeners;
 
 
     //var indirect = new Function(this._$event, this._$funcBody);
@@ -52464,8 +56155,10 @@ captureEvent : function (object, nativeEventName, eventName, handler) {
 
         object[nativeEventName] = indirect;
 
+
     //    Using addEventListener / attachEvent rather than assigning directly to
     //    document.onXXX:
+
     // By default we assign handlers directly to document.onXXX [or window.onXXX].
     // This means that we overwrite any previously defined handlers, and if code executed
     // after the framework loads could also clobber us.
@@ -52537,7 +56230,6 @@ captureEvent : function (object, nativeEventName, eventName, handler) {
         } else if (isc.Browser.isDOM) {
             nativeEventType = this._nativeEventName_TypeMap[nativeEventName] ||
                                     nativeEventName.substring(2);
-
             // if there's a handler already present on the target, then wrap it with a
             // function that will bail out if the event got canceled before it was called.
             var originalHandler = object[nativeEventName];
@@ -52640,11 +56332,12 @@ captureEvents : function (wd) {
     // scroll-gesture interactions.
     // Back off to the older onmousewheel event where this isn't supported.
 
-    var supportsWheelEvent = (isc.Browser.isIE && isc.Browser.isIE9) || isc.Browser.isMoz;
+    var supportsWheelEvent = !isc.Browser.isIE || isc.Browser.isIE9;
     if (!supportsWheelEvent) {
         this.captureEvent(document, "onmousewheel", EH.MOUSE_WHEEL, EH.handleMouseWheel);
     } else {
-        wd.addEventListener("wheel", EH.handleWheel, true);
+
+        this.captureEvent(document, "onwheel", EH.MOUSE_WHEEL, EH.handleWheel, true);
     }
 
 
@@ -53226,11 +56919,12 @@ _matchesKeyIdentifier : function (key, event) {
 //      @visibility internal
 //<
 getMouseEventProperties : (isc.Browser.isIE ?
-    function (e) {
-        var scEvent = this.lastEvent;
-    if (!e) e = this.getWindow().event;
+    function (e, lastEvent) {
+        var scEvent = lastEvent || this.lastEvent;
+        if (!e) e = this.getWindow().event;
 
         scEvent.DOMevent = e;
+        scEvent._mouse = true;
 
         scEvent.eventType = this._nativeMouseEventMap[e.type];
 
@@ -53315,12 +57009,18 @@ getMouseEventProperties : (isc.Browser.isIE ?
         }));
         */
 
+        // clear any synthetic marker
+        delete scEvent.originalType;
+
         return scEvent;
     }
 :   // isc.Browser.isDOM
-    function (e) {
-        var scEvent = this.lastEvent;
+    function (e, lastEvent) {
+        var scEvent = lastEvent || this.lastEvent;
+
         scEvent.DOMevent = e;
+        scEvent._mouse = true;
+
         scEvent.eventType = this._nativeMouseEventMap[e.type];
         var ignoreCoordinates = false;
 
@@ -53451,6 +57151,9 @@ getMouseEventProperties : (isc.Browser.isIE ?
         }));
         */
 
+        // clear any synthetic marker
+        delete scEvent.originalType;
+
         //this.logWarn("event: " + e.type + "\r\n" + this.echoEvent(e));
         return scEvent;
     }
@@ -53510,6 +57213,11 @@ getWheelDeltaFromEvent : function (e, scEvent) {
     }
 },
 
+_getDOMevent : function (event) {
+    if (!event) event = this.lastEvent;
+    return event._mouse ? event.DOMevent : event.keyDOMevent;
+},
+
 //>    @classMethod EventHandler.getKeyEventProperties()
 //        Record the characteristics of a keyboard event
 //
@@ -53533,11 +57241,14 @@ getWheelDeltaFromEvent : function (e, scEvent) {
 //  @visibility internal
 //<
 
-getKeyEventProperties : function (e) {
+getKeyEventProperties : function (e, lastEvent) {
 
+    var scEvent = lastEvent || this.lastEvent;
     if (e == null) e = this.getWindow().event;
 
-    var scEvent = this.lastEvent;
+
+    scEvent.keyDOMevent = e;
+    scEvent._mouse = false;
 
 
     scEvent.nativeKeyTarget = (e.target || e.srcElement);
@@ -53581,6 +57292,8 @@ getKeyEventProperties : function (e) {
     //              ", shiftKey: " + scEvent.shiftKey +
     //              ", altKey: " + scEvent.altKey);
 
+    // clear any synthetic marker
+    delete scEvent.originalType;
 },
 
 
@@ -53894,7 +57607,6 @@ SOFT:"soft",
 // @visibility external
 //<
 
-SOFT_CANCEL:"softCancel",
 
 
 //>    @classMethod    EventHandler.showClickMask()    (A)
@@ -53964,6 +57676,9 @@ showClickMask : function (clickAction, mode, unmaskedTargets, maskID) {
 
     if (unmaskedTargets == null) unmaskedTargets = [];
     else if (!isc.isAn.Array(unmaskedTargets)) unmaskedTargets = [unmaskedTargets]
+
+    // any visible Notify messages must be unmasked
+    isc.Notify._addMessageWidgets(unmaskedTargets);
 
     var EH = this,
         registry = EH.clickMaskRegistry,
@@ -54039,6 +57754,7 @@ showClickMask : function (clickAction, mode, unmaskedTargets, maskID) {
     // - If we're already showing a screenSpan, push masked top level elements behind it
 
     if (isHardMask) {
+        this.setAlwaysUseExplicitFocusNavigationForMask(true);
 
         var startTime = isc.timeStamp();
 
@@ -54104,7 +57820,6 @@ showClickMask : function (clickAction, mode, unmaskedTargets, maskID) {
     // updateEventMasks()
     // Shows / Clears individual event masks over canvii if necessary
     this.updateEventMasks();
-
 
     return mask.ID;
 },
@@ -54416,7 +58131,7 @@ hideClickMask : function (ID) {
     if (ID == null) {
 
         // Hide the first CM in the array
-        this.hideClickMask(registry[0].ID)
+        this.hideClickMask(registry[0].ID);
 
         // call this method with no ID again (will hide the next item in the array, and so on)
         if (registry.length > 0) {
@@ -54502,6 +58217,8 @@ hideClickMask : function (ID) {
         // if this is the only mask showing, hide the screenspan
         // True whether soft or hard
         if (isTopMask && nextMaskDown == null) {
+            this.setAlwaysUseExplicitFocusNavigationForMask(false);
+
 
             if (isc.Browser.isIE) {
                 isc.Timer.setTimeout({target:this._screenSpan, methodName:"hide"}, 0);
@@ -54604,6 +58321,29 @@ hideClickMask : function (ID) {
         }
     }
 
+    if (mask.mode == isc.EH.SOFT_CANCEL) {
+        // for "softCancel" clickMasks, send a mouseMove to whatever's under the mouse
+        var overTarget = isc.EH.lastEvent.target;
+        if (overTarget) {
+            if (isc.DynamicForm && isc.isA.DynamicForm(overTarget)) {
+                // overTarget is a form - if over an item, remember it and send it a mouseMove
+                isc.EH.lastMoveTargetItem = isc.DynamicForm._getEventTargetItem();
+                if (isc.EH.lastMoveTargetItem) {
+                    isc.EH.handleEvent(isc.EH.lastMoveTargetItem, isc.EH.MOUSE_MOVE);
+                } else {
+                    // not over a formItem - send the mouseMove to the parent form
+                    isc.EH.handleEvent(overTarget, isc.EH.MOUSE_MOVE);
+                }
+            } else {
+                // not over a DynamicForm - send the mouseMove to the overTarget
+                isc.EH.handleEvent(overTarget, isc.EH.MOUSE_MOVE);
+                isc.EH.lastMoveTargetItem = null;
+            }
+        }
+        // remember the last move object
+        isc.EH.lastMoveTarget = overTarget;
+    }
+
     // updateEventMasks()
     // Shows / Clears individual event masks over canvii if necessary
     this.updateEventMasks();
@@ -54615,6 +58355,10 @@ hideClickMask : function (ID) {
     // We passed the 'maskedFocusCanvas' from up to the masks above it when we showed them (when
     // appropriate), so it should not matter that we're dropping the masked focus canvas for the
     // bottom mask.
+},
+
+setAlwaysUseExplicitFocusNavigationForMask : function (enable) {
+    isc.TabIndexManager.setAlwaysUseExplicitFocusNavigation(enable, "clickMask");
 },
 
 // Given a clickMask in the registry determine the index of the next hard mask above or below
@@ -55202,6 +58946,117 @@ _clickMaskClick : function (mask) {
     // Fire the action if there is one.
     // Note: we don't care about the return value from the clickAction.
     if (clickAction != null) this.fireCallback(clickAction);
+},
+
+//////////////////////////////////////////////////////
+// Event forwarding for SVG written inside object tags
+//////////////////////////////////////////////////////
+
+
+_forwardSVGeventsToObject : function (object) {
+    var EH = this;
+
+    // verify that object's content document exists
+    var contentDocument = object.contentDocument;
+    if (!contentDocument) {
+        var canvas = this.getEventTargetCanvas(null, object);
+        EH.logWarn("No document found for SVG container object " + object.id + " in canvas " +
+            (canvas ? canvas.ID : "???") + ".  If the URL is valid and no network error was " +
+            "reported, this may indicatee a cross-domain security issue.  Consider setting " +
+            "forwardSVGeventsToObject:false or useImageForSVG:true on the canvas (or canvas " +
+            "prototype if no canvas ID is listed).  See docs for exactly what limitations " +
+            "those properties may impose on SVG appearance and interaction.", "SVGevents");
+        return;
+    }
+    // verify SVG element at the top of the document
+    var svg = contentDocument.documentElement;
+    if (!svg || !svg.tagName == "svg") {
+        var canvas = this.getEventTargetCanvas(null, object) || {};
+        EH.logWarn("Document in SVG container object " + object.id + " in canvas " +
+                   (canvas ? canvas.ID : "???") + " has no top-level SVG", "SVGevents");
+        return;
+    }
+
+
+
+    if (isc.Browser.pointerEnabled) { // IE, MS Edge
+        this._forwardSVGeventToObject(svg, object, "pointerdown",   EH._handlePointerDown);
+        this._forwardSVGeventToObject(svg, object, "pointermove",   EH._handlePointerMove);
+        this._forwardSVGeventToObject(svg, object, "pointerup",     EH._handlePointerUp);
+        this._forwardSVGeventToObject(svg, object, "pointercancel", EH._handlePointerCancel);
+    } else {
+        // capture click event where touch events are possible - forward as touchStart/touchEnd
+        if (isc.Browser.supportsDualInput || isc.Browser.isTouch) {
+            svg.addEventListener("touchstart", function () {
+                object._lastEventHandlerTimeStamp = EH._getLastEventTimeStamp();
+            }, false);
+            svg.addEventListener("click", function (DOMevent) {
+                var lastTimeStamp = EH._getLastEventTimeStamp();
+                if (lastTimeStamp == object._lastEventHandlerTimeStamp) {
+                    DOMevent = EH._updateSVGeventForObject(DOMevent, object);
+                    // send a touchStart/touchEnd
+                    EH._handleTouchStart(DOMevent);
+                    EH._handleTouchEnd(DOMevent);
+                }
+            }, false);
+        }
+        // mouse events seems to be stable across SVG reloading, so simply forward them
+        if (isc.Browser.supportsDualInput || !isc.Browser.isTouch) {
+            this._forwardSVGeventToObject(svg, object, "mousedown", EH.handleMouseDown);
+            this._forwardSVGeventToObject(svg, object, "mousemove", EH.handleMouseMove);
+            this._forwardSVGeventToObject(svg, object, "mouseup",   EH.handleMouseUp);
+        }
+    }
+
+    if (EH.logIsInfoEnabled("SVGevents")) {
+        var canvas = this.getEventTargetCanvas(null, object);
+        EH.logInfo("Handlers attached to SVG container object " + object.id + " in canvas " +
+                   (canvas ? canvas.ID : "???"), "SVGevents");
+    }
+},
+
+
+_getLastEventTimeStamp : function () {
+    var DOMevent = this.lastEvent.DOMevent;
+    return DOMevent ? DOMevent.timeStamp : null;
+},
+
+// capture and forward named event from svg element to parent object
+_forwardSVGeventToObject : function (svg, object, eventName, handler) {
+    var EH = this;
+    svg.addEventListener(eventName, function (DOMevent) {
+        return handler.call(EH, EH._updateSVGeventForObject(DOMevent, object));
+    }, false);
+},
+
+// copy and modify event to retarget it at the object
+_updateSVGeventForObject : function (DOMevent, object) {
+
+
+
+    DOMevent = isc.addProperties({}, DOMevent);
+
+
+    var eventTarget = object;
+    if (isc.Browser.isIE) DOMevent.srcElement = eventTarget;
+    else                  DOMevent.target     = eventTarget;
+
+
+    DOMevent._forwarded = true;
+
+    // remap viewport event coordinates for parent document
+
+    var rect = object.getBoundingClientRect();
+    if (rect) {
+        // adjust the horizontal offset from the viewport origin
+        if (DOMevent.clientX != null) DOMevent.clientX += rect.left;
+        if (DOMevent.x       != null) DOMevent.x       += rect.left;
+        // adjust the vertical offset from the viewport origin
+        if (DOMevent.clientY != null) DOMevent.clientY += rect.top;
+        if (DOMevent.y       != null) DOMevent.y       += rect.top;
+    }
+
+    return DOMevent;
 }
 
 });    // END isc.EventHandler.addClassMethods()
@@ -55209,6 +59064,1492 @@ _clickMaskClick : function (mask) {
 // call captureEvents now to set things up for our event handling.
 isc.EventHandler.captureEvents();
 
+
+
+
+
+//> @class ClickStream
+// A <code>ClickStream</code> captures event details in JSON format as they are handled by the
+// +link{EventHandler}.  The event target +link{canvas,canvas} ID and
+// +link{class.getClassName(),class name} as well the +link{AutoTestLocator,locator} are
+// included, as available.  Event-specific data (for example, the +link{KeyName} for keyboard
+// events) are also included where appropriate.  See +link{CSEvent} for more information.
+// <P>
+// You can configure the stream to capture most DOM event types and other useful events,
+// such as +link{group:relogin,relogins} and JavaScript errors that are triggered by events:
+// <table border="1"><thead><tr><th>Event Category</th><th>Includes (source DOM
+// <span style="font-family:courier">eventType(s)</span> or description)</th>
+// <th>Controlling Attribute</th><th>From DOM Event?</tr><thead><tbody>
+// <tr><td>click events</td><td><code>mouseDown</code>, <code>mouseUp</code>,
+// <code>click</code>, <code>dblClick</code></td><td>+link{clickStream.captureClickEvents,
+// captureClickEvents}</td><td>Y</td></tr>
+// <tr><td>move events</td><td><code>mouseMove</code>, <code>mouseOut</code>
+// </td><td>+link{clickStream.captureMoveEvents,captureMoveEvents}</td><td>Y</td></tr>
+// <tr><td>key events</td><td><code>keyDown</code>, <code>keyPress</code>,
+// <code>keyUp</code></td><td>+link{clickStream.captureKeyEvents,captureKeyEvents}</td>
+// <td>Y</td></tr>
+// <tr><td>drag events</td><td><code>dragStart</code>, <code>dragMove</code>,
+// <code>dragStop</code></td><td>+link{clickStream.captureDragEvents,captureDragEvents}</td>
+// <td>Y</td></tr>
+// <tr><td>context menu events</td><td><code>contextMenu</code></td><td>
+// +link{clickStream.captureMenuEvents,captureMenuEvents}</td><td>Y</td></tr>
+// <tr><td>mouse wheel events</td><td><code>mouseWheel</code></td><td>
+// +link{clickStream.captureWheelEvents,captureWheelEvents}</td><td>Y</td></tr>
+// <tr><td>page events</td><td><code>load</code>, <code>unload</code>, <code>resize</code></td>
+// <td>+link{clickStream.capturePageEvents,capturePageEvents}</td><td>Y</td></tr>
+// <tr><td>login events</td><td>Successful +link{group:relogin,relogin} via the
+// +link{RPCManager}</td><td>+link{clickStream.captureLoginEvents,captureLoginEvents}</td>
+// <td>N</td></tr>
+// <tr><td>+link{group:visualBuilder,VisualBuilder} file events</td>
+// <td>Project and screen (auto)saves and loads</td><td>+link{clickStream.captureDSFileEvents,
+// captureDSFileEvents}</td><td>N</td></tr>
+// <tr><td>event errors</td><td>JavaScript exceptions</td><td>
+// +link{clickStream.captureEventErrors,captureEventErrors}</td><td>N</td></tr>
+// </tbody></table>
+// (Pointer and touch equivalents to mouse events have not been listed above.  See the
+// associated attribute for a more inclusive list.)
+// <P>
+// Note that several types of DOM events can be collapsed so that one event is reported instead
+// of many if they occur over the same target.  You can enable collapsing for
+// +link{clickStream.collapseMoveEvents,move and drag events},
+// +link{clickStream.collapseKeyEvents,key events},
+// +link{clickStream.collapseWheelEvents,wheel events}, and
+// +link{clickStream.collapsePageEvents,page events}.  A +link{clickStream.maxSize,
+// stream capture limit} is also supported via circular buffering, so that only the most recent
+// events are preserved.  All available events can be returned as an array of +link{CSEvent} via
+// +link{clickStream.getEvents(),getEvents()}.
+// <P>
+// A <code>ClickStream</code> will start capturing events as soon as it's created by default,
+// but if you set +link{clickStream.autoStart,autoStart}: false, you can start capturing
+// manually by calling +link{clickStream.start(),start()}.  Calling +link{clickStream.end(),
+// end()} will end capturing and return the +link{ClickStreamData}.
+// @see EventHandler
+// @see RPCManager
+// @see group:visualBuilder
+// @visibility tools
+//<
+
+isc.ClassFactory.defineClass("ClickStream").addClassProperties({
+
+    // constants for event filters
+    _$click: "captureClickEvents",
+    _$move:  "captureMoveEvents",
+    _$key:   "captureKeyEvents",
+    _$drag:  "captureDragEvents",
+    _$menu:  "captureMenuEvents",
+    _$wheel: "captureWheelEvents",
+    _$page:  "capturePageEvents",
+    _$login: "captureLoginEvents",
+    _$file:  "captureDSFileEvents",
+    _$error: "captureEventErrors",
+
+
+    RELOGIN: "relogin",
+    FILE_LOAD: "fileLoad",
+    FILE_SAVE: "fileSave",
+
+
+    ////////////////////////////////////////////////////////////////////////////////
+    // Dedicated, per-eventType APIs for EventHandler
+
+
+
+    // mouseDown, mouseUp, click, dblClick,
+    // pointerDown, pointerUp, pointerCancel,
+    // touchStart, touchEnd, touchCancel
+    addClickEvent : function (event, eventType, synthetic) {
+        this._addEvent(event, this._$click, eventType, synthetic);
+    },
+
+    // mouseMove, mouseOut
+    addMoveEvent : function (event, eventType, synthetic) {
+        this._addEvent(event, this._$move, eventType, synthetic);
+    },
+
+    // keyDown, keyPress, keyUp
+    addKeyEvent : function (event, eventType) {
+        this._addEvent(event, this._$key, eventType);
+    },
+
+    // dragStart, dragRepositionStart, dragResizeStart, dragSelectStart
+    // dragMove, dragRepositionMove, dragResizeMove, dragSelectMove
+    // dragStop, dragRepositionStop, dragResizeStop, dragSelectStop
+    // dropOver, dragLeave, drop
+    addDragEvent : function (event, eventType, synthetic) {
+        this._addEvent(event, this._$drag, eventType, synthetic);
+    },
+
+    // contextMenu
+    addMenuEvent : function (event, eventType, synthetic) {
+        this._addEvent(event, this._$menu, eventType, synthetic);
+    },
+
+    // mouseWheel
+    addWheelEvent : function (event) {
+        this._addEvent(event, this._$wheel);
+    },
+
+    // load, unload, resize
+    addPageEvent : function (event, eventType) {
+        this._addEvent(event, this._$page, eventType);
+    },
+
+
+    ////////////////////////////////////////////////////////////////////////////////
+    // Build an EventHandler event from a DOM event without touching EH.lastEvent
+
+    getEventProperties : function (DOMevent, isKeyEvent) {
+        var EH = isc.EH;
+        if (!this.lastEvent) this.lastEvent = {};
+        if (isKeyEvent) EH.getKeyEventProperties(DOMevent, this.lastEvent);
+        else          EH.getMouseEventProperties(DOMevent, this.lastEvent);
+        return this.lastEvent;
+    },
+
+
+    ////////////////////////////////////////////////////////////////////////////////
+    // APIs to capture certain non-DOM events ordered with events from EventHandler
+
+
+
+    addLoginEvent : function (transaction, eventType) {
+        this._addEvent({
+            eventType: eventType,
+            URL: transaction && transaction.URL | isc.RPCManager.actionURL
+        }, this._$login);
+    },
+
+
+    addDSFileEvent : function (dataSource, dsResponse, eventType) {
+        var event = {
+            eventType: eventType,
+            dataSource: dataSource.ID,
+            status: dsResponse.status
+        };
+
+        var CS = isc.ClickStream,
+            data = dsResponse.data ? dsResponse.data[0] : null;
+        if (data) {
+            var versionField = dataSource.fileVersionField || "fileLastModified",
+                fileVersion = data[versionField],
+                context = dsResponse.context
+            ;
+            // report the version as a String since CSEvent must be JSON
+            if (isc.isA.Date(fileVersion)) fileVersion = fileVersion.toString();
+
+            event.fileName = data.fileName;
+            event.fileVersion = fileVersion;
+            event.fileType = data.fileType == "proj" ? "project" : "screen";
+
+            // capture whether a save was an autosave
+            if (eventType == CS.FILE_SAVE) {
+                var fileSpec = context.data ? context.data.values : null,
+                    autoSaved = fileSpec ? fileSpec.fileAutoSaved : null;
+                if (autoSaved != null) event.autoSaved = autoSaved;
+            }
+        }
+
+        this._addEvent(event, this._$file);
+    },
+
+
+    addEventError : function (errorTrace) {
+        var streams = this.streams;
+        if (!streams) return;
+
+        var DOMevent = isc.EH._lastDispatchedEvent;
+
+        // wrap inner handling so calling addEventError() never itself throws an error
+        try {
+
+            // iterate across each stream capturing event errors
+            for (var i = 0; i < streams.length; i++) {
+                var stream = streams[i];
+                if (stream.capturing && stream[this._$error]) {
+                    stream.addEventError(DOMevent, errorTrace);
+                }
+            }
+
+        } catch (e) {
+
+            var errorReport = (e.stack || e).toString();
+            this.logWarn("exception while handling a JS error: " + errorReport, "clickStream");
+        }
+    },
+
+
+    ////////////////////////////////////////////////////////////////////////////////
+    // Support annotating events already captured with info not originally available
+
+    markDragCanceled : function (eventType) {
+        this._modifyEvent(this._$drag, eventType, function (record) {
+            record.dragCanceled = true;
+        });
+    },
+
+    _modifyEvent : function (filterProp, eventType, modifyFunc) {
+        var streams = this.streams;
+        if (!streams) return;
+
+        for (var i = 0; i < streams.length; i++) {
+            var stream = streams[i];
+            if (stream._shouldProcessEvent(eventType, filterProp)) {
+                stream.modifyEvent(filterProp, eventType, modifyFunc);
+            }
+        }
+    },
+
+
+    ////////////////////////////////////////////////////////////////////////////////
+    // Main class-level event handling logic; forward the event if needed per-stream
+
+    _addEvent : function(event, filterProp, eventType, synthetic) {
+        var streams = this.streams;
+        if (!streams) return;
+
+        var EH = isc.EH,
+            coords, locator,
+            target, initialized,
+            dispatchEventType = eventType || event.eventType
+        ;
+
+        // wrap inner handling so calling addXXXEvent() never itself throws an error
+        try {
+
+            // iterate across each stream capturing event errors
+            for (var i = 0; i < streams.length; i++) {
+                var stream = streams[i];
+                if (!stream._shouldProcessEvent(dispatchEventType, filterProp)) {
+                    continue;
+                }
+                // initialize coordinates and locator on demand as needed
+                if (!initialized) {
+                    initialized = true;
+                    coords = [EH.getX(event), EH.getY(event)];
+                    var nativeTarget = event._mouse ? event.nativeTarget :
+                                                      event.nativeKeyTarget;
+                    locator = isc.AutoTest.getLocator(nativeTarget, true, coords);
+                }
+
+                switch (dispatchEventType) {
+                    // if we've already prepared a record (non-DOM events), add it as an event
+                case this.RELOGIN:
+                case this.FILE_LOAD:
+                case this.FILE_SAVE:
+                    event.timeOffset = new Date() - stream.startTime;
+                    delete stream.lastDOMevent;
+                    stream._addEvent(event);
+                    break;
+                    // otherwise, for all DOM events, run standard instance logic in addEvent()
+                default:
+                    stream.addEvent(event, filterProp, coords, locator, eventType, synthetic);
+                    break;
+                }
+            }
+
+        } catch (e) {
+            var errorReport = (e.stack || e).toString();
+            this.logWarn("exception while handling " + dispatchEventType + " event: " +
+                         errorReport, "clickStream");
+        }
+    }
+
+});
+
+isc.ClickStream.addMethods({
+
+    init : function () {
+        var CS = isc.ClickStream,
+            streams = CS.streams;
+        if (streams) streams.add(this);
+        else {
+
+            CS.streams = [this];
+            CS.observe(isc.Log, "_reportJSErrorStack", "observer.addEventError(arguments[0])");
+        }
+
+        // initialize circular buffer
+        this.events = [];
+        this.nEvents = 0;
+
+        // Using Infinity minimizes the logic paths needed
+        if (this.maxSize == null) this.maxSize = Infinity;
+
+        if (this.autoStart) this.start();
+    },
+
+    //> @attr clickStream.autoStart (boolean : true : IR)
+    // Whether the stream should automatically begin capturing events.  If false, the steam
+    // won't start capturing events until +link{start} is called.
+    // @visibility tools
+    //<
+    autoStart: true,
+
+    //> @method clickStream.start()
+    // Starts capturing all enabled events.  See the overview of +link{ClickStream} for a list
+    // of filter properties you can configure to control which events are captured.
+    // @see autoStart
+    // @see end
+    // @visibility tools
+    //<
+    start : function () {
+        if (this.endTime) {
+            this.logWarn("Capturing has ended and stream unregistered; cannot restart",
+                         "clickStream");
+            return;
+        }
+        if (this.capturing) return;
+        this.capturing = true;
+        this.startTime = new Date();
+        this.logInfo("Starting to capture all configured events");
+        return true;
+    },
+
+    //> @method clickStream.end()
+    // Ends capturing events and returns the +link{ClickStreamData}.  Once ended, Capturing
+    // cannot be restarted.
+    // @return (ClickStreamData)
+    // @see autoStart
+    // @see start
+    // @visibility tools
+    //<
+    end : function () {
+        if (!this.endTime) {
+            this.capturing = false;
+            this.endTime = new Date();
+            isc.ClickStream.streams.remove(this);
+        }
+        var data = {
+            startTime: this.startTime.toString(),
+            endTime:   this.endTime.toString(),
+            events: this.getEvents()
+        };
+        return data;
+    },
+
+    //> @method clickStream.getStartTime()
+    // Returns when this stream started capturing events (i.e. when +link{start()} got called).
+    // @return (Date)
+    // @see start()
+    // @see autoStart
+    // @visibility tools
+    //<
+    getStartTime : function () {
+        return this.startTime;
+    },
+
+    //> @method clickStream.getEvents()
+    // Returns all available captured events, oldest first.  At most +link{maxSize} events will
+    // be returned.
+    // @return (Array of CSEvent)
+    // @see end
+    // @visibility tools
+    //<
+
+    getEvents : function (length) {
+        var maxSize = this.maxSize;
+        // default length to maxSize so that we return all CSEvents
+        if (length == null || length > maxSize) length = maxSize;
+        else if (length < 1)                    length = 1;
+
+        var events = this.events,
+            nEvents = this.nEvents
+        ;
+        // if we've wrapped around, we must extract a properly-ordered array
+        if (nEvents > maxSize) {
+            events = []; // add maxSize below to ensure modulo is non-negative
+            for (var i = (nEvents + maxSize - length) % maxSize, j = 0; j < length;
+                     i = i < maxSize - 1 ? i + 1 : 0, j++)
+            {
+                events[j] = this.events[i];
+            }
+
+
+        } else {
+            events = events.slice(-length);
+        }
+
+
+        var deleteScribbling = !isc.isA.Function(Object.defineProperty);
+        for (var i = 0; i < events.length; i++) {
+            var event = events[i];
+            if (deleteScribbling) delete event._dupError;
+            else Object.defineProperty(event, "_dupError", {enumerable:false});
+        }
+
+        return events;
+    },
+
+    //> @method Callbacks.EventErrorCallback
+    // A +link{type:Callback} called to report +link{ClickStream.captureEventErrors,
+    // event errors} to a listener.
+    //
+    // @param events (Array of CSEvent) An array of all retained +link{CSEvent}s captured by the
+    //                                  stream since the last time the callback was invoked,
+    //                                  oldest first.  The last array element should be the
+    //                                  <code>CSEvent</code> that triggered this call and have
+    //                                  an +link{CSEvent.errorTrace,errorTrace}.
+    // @param nEvents (int)             The number of events that were captured by the stream
+    //                                  since the last time the callback was invoked.  This may
+    //                                  be more than the length of <code>events</code> if
+    //                                  +link{clickStream.maxSize} is non-null for the stream.
+    // @see clickStream.maxSize
+    // @see clickStream.setEventErrorListener()
+    // @visibility tools
+    //<
+
+    //> @method ClickStream.setEventErrorListener()
+    // Installs a callback that will be called when the ClickStream reports an
+    // +link{captureEventError,event error}, subject to the +link{minErrorReportingInterval,
+    // error reporting interval}.  The callback will be passed all retained +link{CSEvent}s
+    // captured by the stream since the last time it was called.
+    //
+    // @param callback (EventErrorCallback) Callback to fire when the stream encounters an event
+    //                                      error, subject to the reporting interval
+    // @see maxSize
+    // @see minErrorReportingInterval
+    // @visibility tools
+    //<
+    setEventErrorListener : function (callback) {
+        if (isc.isA.Function(callback) || isc.isA.String(callback) || isc.isAn.Object(callback))
+        {
+            this.errorListener = callback;
+
+        } else {
+            this.logWarn("setEventErrorListener(): failed to register for event errors; " +
+                         "a valid callback must be supplied", "clickStream");
+        }
+    },
+
+    //> @attr clickStream.maxSize (Integer : 10000 : IR)
+    // Maximum number of events that will be stored by this <code>ClickStream</code>.  After
+    // <code>maxSize</code> events are captured, the oldest events will be overwritten.
+    // Set this property to <code>null</code> to capture events without ever overwriting.
+    // @visibility tools
+    //<
+    maxSize: 10000,
+
+    //> @attr clickStream.captureClickEvents (boolean : true : IR)
+    // Whether mouse button-driven events (or their touch equivalents) should be captured by the
+    // stream.
+    // <P>
+    // Includes such +link{CSevent.eventType,eventType}s as <code>mouseDown</code>,
+    // <code>mouseUp</code>, <code>click<code>, <code>doubleClk</code>,
+    // <code>pointerDown</code>, <code>pointerUp</code>, <code>pointerCancel</code>,
+    // <code>touchStart</code>, <code>touchEnd</code>, and <code>touchCancel</code>.
+    // @visibility tools
+    //<
+    captureClickEvents: true,
+
+    //> @attr clickStream.captureMoveEvents (boolean : false : IR)
+    // Whether mouse or touch motion-related events (other than dragging) should be captured by
+    // the stream.  Multple adjacent "move events" having the same +link{CSEvent.eventType,
+    // eventType} and +link{CSEvent.targetID,targetID} will be collapsed into one if
+    // +link{collapseMoveEvents} is true.
+    // <P>
+    // Includes such +link{CSevent.eventType,eventType}s as <code>mouseMove</code>,
+    // <code>pointerMove</code>, <code>touchMove</code>, and <code>mouseOut</code>.
+    // @visibility tools
+    //<
+
+    //> @attr clickStream.collapseMoveEvents (boolean : true : IR)
+    // Whether mouse or touch-motion related events (including dragging) with the same
+    // +link{CSEvent.eventType,eventType} and +link{CSEvent.targetID,targetID} should be
+    // collapsed into a single event.
+    // <P>
+    // Note that if an error is thrown while handling an event, it won't be collapsed,
+    // but see +link{minErrorReportingInterval}.
+    // @see captureMoveEvents
+    // @visibility tools
+    //<
+    collapseMoveEvents: true,
+
+    //> @attr clickStream.captureKeyEvents (boolean : false : IR)
+    // Whether keyboard input events should be captured by the stream.  If
+    // +link{collapseKeyEvents} is true, multiple adjacent events involving the same
+    // +link{CSEvent.keyName,keyName} and +link{CSEvent.targetID,targetID} will be collapsed to
+    // eliminate keyDown and keyUp events, where possible.
+    // <P>
+    // Includes such +link{CSevent.eventType,eventType}s as <code>keyDown</code>,
+    // <code>keyPress</code>, and <code>keyUp</code>,
+    // @visibility tools
+    //<
+
+    //> @attr clickStream.collapseKeyEvents (boolean : true : IR)
+    // Whether a <i><code>keyDown</code>, <code>keyPress</code>, <code>keyUp</code></i> sequence
+    // involving the same +link{CSEvent.keyName,keyName} should be collapsed to
+    // <code>keyPress</code>, and similarly a same-+link{CSEvent.keyName,keyName}
+    // <i><code>keyDown</code>, <code>keyUp</code></i> sequence be collapsed to
+    // <code>keyDown</code>.  Collapsing may not happen for non-adjacent modifier key events.
+    // <P>
+    // Note that if an error is thrown while handling an event, it won't be collapsed,
+    // but see +link{minErrorReportingInterval}.
+    // @see captureKeyEvents
+    // @visibility tools
+    //<
+    collapseKeyEvents: true,
+
+    //> @attr clickStream.captureDragEvents (boolean : true : IR)
+    // Whether dragging-related events should be captured by the stream.  Multiple "drag move"
+    // type events that have the same +link{CSEvent.eventType,eventType} and
+    // +link{CSEvent.targetID,targetID} will be collapsed into one if +link{collapseMoveEvents}
+    // is true.
+    // <P>
+    // Includes such +link{CSevent.eventType,eventType}s as:<ul>
+    // <li><code>dragStart</code>, <code>dragRepositionStart</code>,
+    // <code>dragResizeStart</code>, <code>dragSelectStart</code>,
+    // <li> <code>dragMove</code>, <code>dragRepositionMove</code>,
+    // <code>dragResizeMove</code>, <code>dragSelectMove</code>,
+    // <li><code>dragStop</code>, <code>dragRepositionStop</code>, <code>dragResizeStop</code>,
+    // <code>dragSelectStop</code>,
+    // <li><code>drop</code>, <code>dropOver</code>, and <code>dragLeave</code>.
+    // </ul>
+    // @visibility tools
+    //<
+    captureDragEvents: true,
+
+    //> @attr clickStream.captureMenuEvents (boolean : true : IR)
+    // Whether opening a context menu should be captured by the stream.  This may occur due to
+    // mouse or keyboard interaction.
+    // <P>
+    // Includes the +link{CSevent.eventType,eventType} <code>contextMenu</code>.
+    // @visibility tools
+    //<
+    captureMenuEvents: true,
+
+    //> @attr clickStream.captureWheelEvents (boolean : true : IR)
+    // Whether mouse wheel events should be captured by the stream.  If the preceding
+    // "wheel event" has the same +link{CSEvent.targetID,targetID} and scroll directions, it
+    // will be replaced by the current one, subject to +link{collapseWheelEvents}, with the
+    // +link{CSEvent.deltaX,delta offsets} in the "collapsed" event getting adjusted to be the
+    // sum of those from all the original events.
+    // <P>
+    // Includes the +link{CSevent.eventType,eventType} <code>mouseWheel</code>.
+    // @visibility tools
+    //<
+    captureWheelEvents: true,
+
+    //> @attr clickStream.collapseWheelEvents (boolean : true : IR)
+    // Whether mouse wheel events with the same +link{CSEvent.targetID,targetID} and
+    // scroll directions should be collapsed into a single event, containing a sum of the
+    // +link{CSEvent.deltaX,delta offsets} from the original events.
+    // <P>
+    // Note that if an error is thrown while handling an event, it won't be collapsed,
+    // but see +link{minErrorReportingInterval}.
+    // @see captureWheelEvents
+    // @visibility tools
+    //<
+    collapseWheelEvents: true,
+
+    //> @attr clickStream.capturePageEvents (boolean : false : IR)
+    // Whether page-level events such as a page load or resize should be captured by the stream.
+    // Multple adjacent page events having the same eventType will be collapsed into one if
+    // +link{collapsePageEvents} is true.
+    // <P>
+    // Includes such +link{CSevent.eventType,eventType}s as <code>load</code>,
+    // <code>unload</code>, and <code>resize</code>.
+    // @visibility tools
+    //<
+
+    //> @attr clickStream.collapsePageEvents (boolean : true : IR)
+    // Whether adjacgent page events with the same +link{CSEvent.eventType,eventType} should be
+    // collapsed into a single event.
+    // <P>
+    // Note that if an error is thrown while handling an event, it won't be collapsed,
+    // but see +link{minErrorReportingInterval}.
+    // @see capturePageEvents
+    // @visibility tools
+    //<
+    collapsePageEvents: true,
+
+    //> @attr clickStream.captureLoginEvents (boolean : true : IR)
+    // Whether +link{group:relogin,relogin}s are captured by the stream.  Login events are
+    // non-DOM events originating from the +link{RPCManager} rather than the
+    // +link{EventHandler}.  Login events have a +link{CSEvent.URL,transaction URL}.
+    // <P>
+    // Includes the +link{CSevent.eventType,eventType} <code>relogin</code>.
+    // @visibility tools
+    //<
+    captureLoginEvents: true,
+
+    //> @attr clickStream.captureDSFileEvents (boolean : true : IR)
+    // Whether to capture loads and saves of projects and screens in +link{group:visualBuilder}.
+    // A +link{DataSource} file event includes the +link{CSEvent.status,response status},
+    // +link{CSEvent.dataSource,DataSource ID}, +link{CSEvent.fileName,fileName},
+    // +link{CSEvent.fileVersion,fileVersion}, +link{CSEvent.fileType,fileType},
+    // and +link{CSEvent.autoSaved,autosave status}.
+    // <P>
+    // Includes such +link{CSevent.eventType,eventType}s as <code>fileLoad</code> and
+    // <code>fileSave</code>.
+    // @visibility tools
+    //<
+    captureDSFileEvents: true,
+
+    //> @attr clickStream.captureEventErrors (boolean : true : IR)
+    // Whether to capture JavaScript errors.  If an already-captured event triggered the error,
+    // the details will attached to that event.  Otherwise, a separate event will be created,
+    // with the +link{CSEvent.eventType,eventType} of the last dispatched DOM event (i.e.,
+    // there is no special "error" +link{CSEvent.eventType,eventType}.)
+    // <P>
+    // +link{CSEvent} records annotated or specially-reported with error details will contain an
+    // +link{CSEvent.errorTrace,errorTrace} with the error stack trace, and a
+    // +link{CSEvent.threadCode,threadCode} reporting the thread ID from the +link{EventHandler}
+    // responsible for the error.
+    // @visibility tools
+    //<
+    captureEventErrors: true,
+
+    //> @attr clickStream.minErrorReportingInterval (int : 10 : IR)
+    // Number of seconds that must elapse before another event error will be reported.  This
+    // allows you to avoid the stream getting flooded with likely duplicate errors that may
+    // be rapidly and repeatedly reported, due to mouseMove or repeatedly executing code.
+    // Setting the property to zero disables it (avoiding any timestamp checking).
+    // <P>
+    // Note that when an error is reported by the Framework, this property will be ignored if
+    // the last captured event triggered the error and has no +link{CSEvent.errorTrace,
+    // errorTrace}, so that it effectively only prevents adding new events to the stream
+    // specifically to report errors.  However, an +link{CSEvent.errorTrace,errorTrace} attached
+    // to an event within the reporting interval of the previous error won't prevent that event
+    // from being +link{collapseMoveEvents,collapsed}.
+    //
+    // @see collapseMoveEvents
+    // @see collapseKeyEvents
+    // @see collapseWheelEvents
+    // @see collapsePageEvents
+    // @visibility tools
+    //<
+    minErrorReportingInterval:10,
+
+    //> @object ClickStreamData
+    // A JSON object representing all captured events retained by a +link{ClickStream}.  When
+    // +link{ClickStream.end()} is called to complete capturing, a <code>ClickStreamData</code>
+    // object is returned.
+    // @see CSEvent
+    // @visibility tools
+    //<
+
+    //> @attr clickStreamData.startTime (String : null : R)
+    // A string representation of the <code>DateTime</code> when capturing for the stream
+    // +link{ClickStream.start(),started}.
+    // @see endTime
+    // @visibility tools
+    //<
+
+    //> @attr clickStreamData.endTime (String : null : R)
+    // A string representation of the <code>DateTime</code> when capturing for the stream was
+    // +link{ClickStream.end(),completed}.
+    // @see startTime
+    // @visibility tools
+    //<
+
+    //> @attr clickStreamData.events (Array of CSEvent : null : R)
+    // An array of the captured +link{CSEvent,event records} retained by the stream.  Only the
+    // last +link{clickStream.maxSize} event records will be present, though more events may
+    // have been captured during the life of the stream.
+    // @visibility tools
+    //<
+
+    //> @object CSEvent
+    // A JSON object representing an event captured by a +link{ClickStream}.
+    // <code>CSEvent</code>s may represent DOM events (wrapped by the +link{EventHandler}),
+    // or other operations such as +link{group:relogin,relogins} or
+    // +link{group:visualBuilder,VisualBuilder} file operations on screens and projects.
+    // <P>
+    // An +link{CSEvent.eventType,eventType} should always be present, but not all properties
+    // will be present for a given <code>CSEvent</code>, since their relevance depends on the
+    // <code>eventType</code>.
+    // <P>
+    // In addition to the instance attributes documented for <code>CSEvent</code>, if
+    // we're capturing +link{ClickStream.captureMoveEvents,move events} but not
+    // +link{ClickStream.captureDragEvents,drag events}, the move event starting a drag will
+    // be tagged with the drag start <code>eventType</code> as a boolean attribute.  So for
+    // example,<pre>
+    //     dragResizeStart: true</pre>
+    // might appear in the <code>CSEvent</code> for a <code>mouseMove</code>, if it started
+    // a drag but we weren't capturing +link{ClickStream.captureDragEvents,drag events}.
+    // @visibility tools
+    //<
+
+    //> @attr CSEvent.eventType (String : null : R)
+    // The type of the +link{CSEvent}.  For DOM events, this is just the official
+    // +link{EventHandler} name for the event, such as <code>mouseDown</code>.  Otherwise, it's
+    // unique to +link{ClickStream}, but should reflect what event was captured, such as
+    // <code>fileLoad</code> or <code>relogin</code>.
+    // @visibility tools
+    //<
+
+    //> @attr CSEvent.originalType (String : null : R)
+    // For synthetic events (where the +link{EventHandler} has (re)dispatched a DOM event
+    // as a new type), the original <code>eventType</code>.
+    // @see CSEvent.synthetic
+    // @visibility tools
+    //<
+
+    //> @attr CSEvent.synthetic (boolean : null : R)
+    // True For synthetic events.  Otherwise, not present at all.  When true,
+    // +link{originalType} should be set indicating the original <code>eventType</code>.
+    // @see CSEvent.originalType
+    // @visibility tools
+    //<
+
+    //> @attr CSEvent.locator (AutoTestLocator : null : R)
+    // The locator representing the event target, if one exists.  Designed to be robust, the
+    // the locator provides a future-proof way to specify a +link{Canvas}, +link{FormItem}, or
+    // widget part such as a row of a +link{ListGrid}.
+    // @see group:usingSelenium
+    // @see AutoTest.getObject()
+    // @visibility tools
+    //<
+
+    //> @attr CSEvent.timeOffset (int : null : R)
+    // The time offset of this event from +link{ClickStreamData.startTime}, when capturing
+    // started, in milliseconds.
+    // @visibility tools
+    //<
+
+    //> @attr CSEvent.targetID (GlobalId : null : R)
+    // The +link{canvas.ID,widget ID} of the event target, if one exists.  Page-level and
+    // non-DOM events may not have any target.
+    // @see targetClass
+    // @see targetX
+    // @see targetY
+    // @visibility tools
+    //<
+
+    //> @attr CSEvent.targetClass (String : null : R)
+    // The +link{class.getClassName(),class name} of the event target, if one exists.
+    // Page-level and non-DOM events may not have any target.
+    // @see targetID
+    // @see targetX
+    // @see targetY
+    // @visibility tools
+    //<
+
+    //> @attr CSEvent.targetX (int : null : R)
+    // The horizontal offset of the event from the +link{canvas.left,left edge} of the event
+    // target, if one exists.  Keyboard, page-level, and non-DOM events may not have any target.
+    // @see targetID
+    // @see targetClass
+    // @see targetY
+    // @visibility tools
+    //<
+
+    //> @attr CSEvent.targetY (int : null : R)
+    // The vertical offset of the event from the +link{canvas.top,top edge} of the event
+    // target, if one exists.  Keyboard, page-level, and non-DOM events may not have any target.
+    // @see targetID
+    // @see targetClass
+    // @see targetY
+    // @visibility tools
+    //<
+
+    //> @attr CSEvent.X (int : null : R)
+    // The left offset of the event on the page.  This property typically won't be set unless
+    // no +link{targetID,target} is present and the event has an +link{errorTrace}.
+    // @see Y
+    // @visibility tools
+    //<
+
+    //> @attr CSEvent.Y (int : null : R)
+    // The top offset of the event on the page.  This property typically won't be set unless
+    // no +link{targetID,target} is present and the event has an +link{errorTrace}.
+    // @see X
+    // @visibility tools
+    //<
+
+    //> @attr CSEvent.dragTargetID (GlobalId : null : R)
+    // The +link{canvas.ID,widget ID} of the +link{EventHandler.getDragTarget(),drag target},
+    // present for most +link{ClickStream.captureDragEvents,drag events}.
+    // <P>
+    // Note that if drag events are not being captured, it will be populated for the
+    // <code>mouseUp</code> event terminating the drag.
+    // @see dropTargetID
+    // @see dropTargetClass
+    // @see dragTargetClass
+    // @visibility tools
+    //<
+
+    //> @attr CSEvent.dragTargetClass (String : null : R)
+    // The +link{class.getClassName(),class name} of the +link{EventHandler.getDragTarget(),
+    // drag target}, present for most +link{ClickStream.captureDragEvents,drag events}.
+    // <P>
+    // Note that if drag events are not being captured, it will be populated for the
+    // <code>mouseUp</code> event terminating the drag.
+    // @see dragTargetID
+    // @see dropTargetID
+    // @see dropTargetClass
+    // @visibility tools
+    //<
+
+    //> @attr CSEvent.dropTargetID (GlobalId : null : R)
+    // The +link{canvas.ID,widget ID} of the +link{Canvas.drop(),drop target},
+    // present for some +link{ClickStream.captureDragEvents,drag events}.
+    // <P>
+    // Note that if drag events are not being captured, it will be populated for the
+    // <code>mouseUp</code> event terminating the drag.
+    // @see dragTargetID
+    // @see dragTargetClass
+    // @see dropTargetClass
+    // @visibility tools
+    //<
+
+    //> @attr CSEvent.dropTargetClass (String : null : R)
+    // The +link{class.getClassName(),class name} of the +link{Canvas.drop(),drop target},
+    // present for some +link{ClickStream.captureDragEvents,drag events}.
+    // <P>
+    // Note that if drag events are not being captured, it will be populated for the
+    // <code>mouseUp</code> event terminating the drag.
+    // @see dropTargetID
+    // @see dragTargetID
+    // @see dragTargetClass
+    // @visibility tools
+    //<
+
+    //> @attr CSEvent.dragCanceled (boolean : null : R)
+    // Set on the event captured at the end of a drag if the drag is canceled.  This is
+    // normally an event such as <code>dragStop</code>, <code>dragRepositionStop</code>,
+    // <code>dragResizeStop</code>, or <code>dragSelectStop</code>, but if
+    // +link{ClickStream.captureDragEvents,drag events} aren't being captured, this property may
+    // be set on the <code>mouseUp</code> ending the drag.
+    // @visibility tools
+    //<
+
+    //> @attr CSEvent.keyName (KeyName : null : R)
+    // The name of the key that triggered this event, present for
+    // +link{ClickStream.captureKeyEvents,key events}.  Typically, the <code>keyName</code> will
+    // not convey the case, as that's implied by the presence of +link{shiftKey}.
+    // @see KeyName
+    // @see shiftKey
+    // @see ctrlKey
+    // @see metaKey
+    // @visibility tools
+    //<
+
+    //> @attr CSEvent.shiftKey (boolean : null : R)
+    // Present for +link{ClickStream.captureKeyEvents,key events} if the shift key was down when
+    // the event got triggered.  Otherwise, not present.
+    // @see CSEvent.keyName
+    // @see ctrlKey
+    // @see metaKey
+    // @visibility tools
+    //<
+
+    //> @attr CSEvent.ctrlKey (boolean : null : R)
+    // Present for +link{ClickStream.captureKeyEvents,key events} if the control key was down
+    // when the event got triggered.  Otherwise, not present.
+    // @see CSEvent.keyName
+    // @see shiftKey
+    // @see metaKey
+    // @visibility tools
+    //<
+
+    //> @attr CSEvent.metaKey (boolean : null : R)
+    // Present for +link{ClickStream.captureKeyEvents,key events} if the meta key was down
+    // when the event got triggered.  Otherwise, not present.
+    // @see CSEvent.keyName
+    // @see shiftKey
+    // @see ctrlKey
+    // @visibility tools
+    //<
+
+    //> @attr CSEvent.width (int : null : R)
+    // The +link{Page.getWidth(),page width}, present for page-level
+    // +link{ClickStream.capturePageEvents,resize events}.
+    // @see height
+    // @visibility tools
+    //<
+
+    //> @attr CSEvent.height (int : null : R)
+    // The +link{Page.getHeight(),page height}, present for page-level
+    // +link{ClickStream.capturePageEvents,resize events}.
+    // @see width
+    // @visibility tools
+    //<
+
+    //> @attr CSEvent.deltaX (float : null : R)
+    // The +link{Eventhandler.getWheelDeltaX(),horizontal scroll delta}, present for
+    // +link{ClickStream.captureWheelEvents,wheel events}.
+    // @see deltaY
+    // @visibility tools
+    //<
+
+    //> @attr CSEvent.deltaY (float : null : R)
+    // The +link{Eventhandler.getWheelDeltaX(),vertiacl scroll delta}, present for
+    // +link{ClickStream.captureWheelEvents,wheel events}.
+    // @see deltaX
+    // @visibility tools
+    //<
+
+    //> @attr CSEvent.errorTrace (String : null : R)
+    // The stack reported when a JavaScript error is hit processing an event.  The
+    // <code>errorTrace</code> contains an initial description of the error, and formatting
+    // whitespace and newlines to make the trace readable.
+    // @see threadCode
+    // @see errorEvent
+    // @visibility tools
+    //<
+
+    //> @attr CSEvent.threadCode (String : null : R)
+    // A symbolic thead ID useful for debugging, present when a JavaScript error is hit
+    // processing an event.
+    // @see errorTrace
+    // @see errorEvent
+    // @visibility tools
+    //<
+
+    //> @attr CSEvent.errorEvent (boolean : null : R)
+    // Present along with +link{errorTrace} and +link{threadCode} if the event triggering the
+    // error wasn't already captured, and required adding a new event.  If a stream is
+    // configured to +link{ClickStream.captureEventErrors,capture event errors}, then through
+    // error reporting it may capture +link{eventType}s not specified by the filters.
+    // @see eventType
+    // @see errorTrace
+    // @visibility tools
+    //<
+
+    //> @attr CSEvent.URL (URL : null : R)
+    // The transaction <code>URL</code> associated wtih the successful +link{group:relogin,
+    // relogin}.  Only present for +link{ClickStream.captureLoginEvents,login events}.
+    // @visibility tools
+    //<
+
+    //> @attr CSEvent.status (int : null : R)
+    // The +link{DSResponse.status,server response status} of a
+    // +link{group:visualBuilder,VisualBuilder} load or save event.  Present for
+    // +link{ClickStream.captureDSFileEvents,file events}.
+    // @see fileName
+    // @see fileType
+    // @see fileVersion
+    // @visibility tools
+    //<
+
+    //> @attr CSEvent.dataSource (GlobalId : null : R)
+    // The +link{dataSource.ID,ID} of the screen or project +link{DataSource} used for a
+    // +link{group:visualBuilder,VisualBuilder} load or save event.  Present for
+    // +link{ClickStream.captureDSFileEvents,file events}.
+    // @see fileName
+    // @see fileType
+    // @see fileVersion
+    // @visibility tools
+    //<
+
+    //> @attr CSEvent.fileName (String : null : R)
+    // The file name of the +link{group:visualBuilder,VisualBuilder} screen or project being
+    // saved or loaded.  Present for +link{ClickStream.captureDSFileEvents,file events}.
+    // @see fileType
+    // @see fileVersion
+    // @see autoSaved
+    // @see CSEvent.dataSource
+    // @visibility tools
+    //<
+
+    //> @attr CSEvent.fileVersion (String : null : R)
+    // The version of the +link{group:visualBuilder,VisualBuilder} screen or project file being
+    // saved or loaded, As +link{CSEvent} is JSON, this is typically a String representation of
+    // the file's creation <code>DateTime</code>.
+    // <P>
+    // This attribute is only present for +link{ClickStream.captureDSFileEvents,file events}.
+    // @see fileName
+    // @see fileType
+    // @see autoSaved
+    // @visibility tools
+    //<
+
+    //> @attr CSEvent.fileType (String : null : R)
+    // Whether the save or load involves a +link{group:visualBuilder,VisualBuilder}
+    // "screen" or "project".  Present for +link{ClickStream.captureDSFileEvents,file events}.
+    // @see fileName
+    // @see fileVersion
+    // @see autoSaved
+    // @visibility tools
+    //<
+
+    //> @attr CSEvent.autoSaved (boolean : null : R)
+    // Whether the +link{group:visualBuilder,VisualBuilder} screen or project file is being
+    // autosaved.  Not present for loads or manual saves.
+    // @see fileName
+    // @see fileType
+    // @see fileVersion
+    // @visibility tools
+    //<
+
+
+    ////////////////////////////////////////////////////////////////////////////////
+    // Event Collapsing Logic
+
+
+    _collapseMoveEvent : function (targetID, coords, locator, eventType) {
+        if (!this.collapseMoveEvents) return;
+
+        var EH = isc.EH,
+            events = this.events,
+            nEvents = this.nEvents,
+            maxSize = this.maxSize;
+        for (var i = nEvents - 1, j = 0; i >= 0 && j < maxSize; i--, j++) {
+            var event = events[i % maxSize];
+            switch (event.eventType) {
+            case EH.MOUSE_MOVE:
+            case EH.MOUSE_OVER:
+            case EH.MOUSE_OUT:
+            case EH.DRAG_MOVE:
+            case EH.DRAG_RESIZE_MOVE:
+            case EH.DRAG_SELECT_MOVE:
+            case EH.DRAG_REPOSITION_MOVE:
+                // if targetID differs or an (important) error is present, don't collapse events
+
+                if (event.targetID != targetID || event.errorTrace && !event._dupError) {
+                    return;
+                }
+                if (event.eventType == eventType) {
+                    // update the target coordinates
+                    if (event.targetID) {
+                        event.targetX = coords[0];
+                        event.targetY = coords[1];
+                    }
+                    event.locator = locator;
+                    return event;
+                }
+                break;
+            default:
+                return;
+            }
+        }
+    },
+
+    _collapseKeyEvent : function (targetID, keyName, eventType, originalType) {
+        if (!this.collapseKeyEvents) return;
+
+        var EH = isc.EH,
+            keyEvent = this._getLastEvent();
+        if (!keyEvent) return;
+
+
+        switch (keyEvent.eventType) {
+        case EH.KEY_PRESS:
+            // only collapse keyPress, keyUp
+            if (eventType != EH.KEY_UP) return;
+            // fall through
+        case EH.KEY_DOWN:
+            // if targetID or keyName differ, or an (important) error is present, don't collapse
+            if (keyEvent.targetID != targetID || keyEvent.errorTrace && !keyEvent._dupError ||
+                EH.getKey(keyEvent) != keyName)
+            {
+                return;
+            }
+            break;
+        default:
+            return;
+        }
+
+
+        if (eventType == EH.KEY_PRESS) {
+            keyEvent.eventType = eventType;
+
+            if (originalType) {
+                keyEvent.originalType = originalType;
+                keyEvent.synthetic = true;
+            } else {
+                delete keyEvent.originalType;
+                delete keyEvent.synthetic;
+            }
+        }
+
+        return keyEvent;
+    },
+
+    _collapseWheelEvent : function (targetID, deltaX, deltaY, locator, eventType) {
+        if (!this.collapseWheelEvents) return;
+
+        var wheelEvent = this._getLastEvent(isc.EH.MOUSE_WHEEL);
+        if (!wheelEvent) return;
+
+        // if targetID or scroll direction differ, or an (important) error is present, bail
+
+        if (wheelEvent.targetID != targetID || wheelEvent.errorTrace && !wheelEvent._dupError ||
+            wheelEvent.deltaX < 0 && deltaX >= 0 || wheelEvent.deltaX > 0 && deltaX <= 0 ||
+            wheelEvent.deltaY < 0 && deltaY >= 0 || wheelEvent.deltaY > 0 && deltaY <= 0)
+        {
+            return;
+        }
+        wheelEvent.deltaX += deltaX;
+        wheelEvent.deltaY += deltaY;
+        wheelEvent.locator = locator;
+        return wheelEvent;
+    },
+
+    _collapseResizeEvent : function () {
+        if (!this.collapsePageEvents) return;
+
+        var resizeEvent = this._getLastEvent(isc.EH.RESIZE);
+        if (!resizeEvent || resizeEvent.errorTrace && !resizeEvent._dupError) return;
+
+        this._setPageSize(resizeEvent);
+        return resizeEvent;
+    },
+
+    _getLastEvent : function (eventType, searchEvents) {
+        var events = this.events,
+            nEvents = this.nEvents,
+            maxSize = this.maxSize;
+        for (var i = nEvents - 1, j = 0; i >= 0 && j < maxSize; i--, j++) {
+            var event = events[i % maxSize];
+            if (!eventType || event.eventType == eventType) return event;
+            if (!searchEvents) return;
+        }
+    },
+
+
+    ////////////////////////////////////////////////////////////////////////////////
+    // Adding Event MetaData
+
+    _addMetaData : function (eventType) {
+        var EH = isc.EH,
+            events = this.events;
+        switch (eventType) {
+        case EH.DRAG_START:
+        case EH.DRAG_RESIZE_START:
+        case EH.DRAG_SELECT_START:
+        case EH.DRAG_REPOSITION_START:
+            var event = this._getLastEvent(EH.MOUSE_MOVE, true);
+            if (event) event[eventType] = true;
+            break;
+        case EH.DRAG_STOP:
+        case EH.DRAG_RESIZE_STOP:
+        case EH.DRAG_SELECT_STOP:
+        case EH.DRAG_REPOSITION_STOP:
+            var event = this._getLastEvent(EH.MOUSE_UP, true);
+            if (event) {
+                event[eventType] = true;
+                this._addDragInfo(event);
+            }
+            break;
+        }
+    },
+
+    _addDragInfo : function (record) {
+        var EH = isc.EH,
+            dragTarget = EH.dragTarget;
+        if (dragTarget) isc.addProperties(record, {
+            dragTargetID: dragTarget.ID,
+            dragTargetClass: dragTarget.getClassName()
+        });
+        var dropTarget = EH.dropTarget;
+        if (dropTarget) isc.addProperties(record, {
+            dropTargetID: dropTarget.ID,
+            dropTargetClass: dropTarget.getClassName()
+        });
+    },
+
+    _addKeyInfo : function (record, event) {
+        var EH = isc.EH,
+            keyName = EH.getKey(event);
+        if (!keyName) return;
+        record.keyName  = keyName;
+
+        if (EH.shiftKeyDown(event)) record.shiftKey = true;
+        if (EH.ctrlKeyDown(event))  record.ctrlKey  = true;
+        if (EH.metaKeyDown(event))  record.metaKey  = true;
+    },
+
+    _setPageSize : function (record) {
+        record.height = isc.Page.getHeight();
+        record.width  = isc.Page.getWidth();
+    },
+
+
+    ////////////////////////////////////////////////////////////////////////////////
+    // Adding an Event Error or Error Trace
+
+    // report the event error, either against the last event or by adding a new event
+    addEventError : function (DOMevent, errorTrace) {
+        var EH = isc.EH;
+
+        // check error against reporting interval; mark violations as duplicate
+        var duplicate = false,
+            interval = this.minErrorReportingInterval;
+        if (interval) {
+            var now = new Date(),
+                lastErrorTime = this._lastErrorTime;
+            if (lastErrorTime && (now - lastErrorTime < interval * 1000)) {
+                // too soon! likely duplicate
+                duplicate = true;
+            } else {
+                // interval expired; reset it
+                this._lastErrorTime = now;
+            }
+        }
+
+        // if the source event is already in the stream, just add the error details
+        if (this._canAddErrorToLastEvent(DOMevent, duplicate)) {
+            var event = this._getLastEvent();
+            event.errorTrace = errorTrace;
+            event.threadCode = EH._thread;
+            event._dupError = duplicate;
+
+        // otherwise, create a new event for the error, but only if the interval expired
+        } else if (!duplicate) {
+
+            var event = EH.lastEvent,
+                nativeType = DOMevent.type
+            ;
+            // if source DOMevent not reflected in EH.lastEvent, build our own event
+            if (EH._getDOMevent(event) != DOMevent) {
+                event = this.getEventProperties(DOMevent, nativeType.startsWith("key"));
+            }
+            var coords = [EH.getX(event), EH.getY(event)],
+                filterProp = this._getFilterPropForType(event.eventType),
+                nativeTarget = event._mouse ? event.nativeTarget : event.nativeKeyTarget,
+                locator = isc.AutoTest.getLocator(nativeTarget, true, coords)
+            ;
+            this.addEvent(event, filterProp, coords, locator, null, null, errorTrace);
+
+        // drop the error
+        } else {
+            if (this.logIsInfoEnabled("clickStream")) {
+                this.logInfo("ignoring error reported against event with nativeType: " +
+                             DOMevent.type + " due to configured reporting interval", "cliskStream");
+            }
+            return;
+        }
+
+
+
+        var lastEventNumber = this._errorEventNumber,
+            eventNumber = this._errorEventNumber = this.nEvents - 1;
+
+        if (this.errorListener) {
+
+            if (lastEventNumber == null) lastEventNumber = -1;
+
+            var nEvents = eventNumber - lastEventNumber;
+            this.fireCallback(this.errorListener, "events,count",
+                              [this.getEvents(nEvents), nEvents]);
+        }
+    },
+
+    // whether error can be added to the last event in this stream
+    _canAddErrorToLastEvent : function (DOMevent, duplicate) {
+        if (this.lastDOMevent != DOMevent) return false;
+
+        // don't reuse the event if it already reports an error
+        var event = this._getLastEvent();
+        return event && (!event.errorTrace || event._dupError && !duplicate);
+    },
+
+
+    _getFilterPropForType : function (eventType) {
+        var EH = isc.EH,
+            filterProp;
+        if      (eventType.startsWith("drag")) filterProp = this._$drag;
+        else if (eventType.startsWith("key"))  filterProp = this._$key;
+        else switch (eventType) {
+            case EH.LOAD:
+            case EH.UNLOAD:
+            case EH.RESIZE:
+            filterProp = this._$page;
+            break;
+        }
+        return filterProp;
+    },
+
+
+    ////////////////////////////////////////////////////////////////////////////////
+    // Common logic to add or modify events
+
+    addEvent : function (event, filterProp, coords, locator, eventType, synthetic, errorTrace) {
+
+        var EH = isc.EH,
+            CS = isc.ClickStream,
+            DOMevent = EH._getDOMevent(event),
+            originalType = event.originalType
+        ;
+        // set originalType from the event if an eventType is passed
+
+        if (eventType) {
+            if (!originalType && event.eventType != eventType) {
+                originalType = event.eventType;
+            }
+        } else {
+            eventType = event.eventType;
+        }
+
+
+        if (!this[filterProp] && !errorTrace) {
+            this._addMetaData(eventType);
+            return;
+        }
+
+        // update the target and add deltaX, deltaY details, as appropriate
+        var deltaX, deltaY,
+            target = event.target;
+        switch (eventType) {
+        case EH.CONTEXT_MENU:
+            if (event.keyboardContextMenu) target = event.keyTarget || event.target;
+            break;
+        case EH.KEY_DOWN:
+        case EH.KEY_PRESS:
+        case EH.KEY_UP:
+            target = event.keyTarget ? event.keyTarget :
+                EH.getEventTargetCanvas(DOMevent, event.nativeKeyTarget);
+            break;
+        case EH.MOUSE_WHEEL:
+            deltaX = event.wheelDeltaX;
+            deltaY = event.wheelDeltaY;
+        }
+
+        // if a target is present, make the coordinates target relative
+        if (target) {
+            coords[0] -= target.getPageLeft();
+            coords[1] -= target.getPageTop();
+        }
+
+        var targetID = target ? target.ID : null,
+            timeOffset = new Date() - this.startTime
+        ;
+
+        // if we're collapsing events, update old event and skip adding new event
+        var oldEvent;
+        if (!errorTrace) switch (eventType) {
+        case EH.MOUSE_MOVE:
+        case EH.MOUSE_OVER:
+        case EH.MOUSE_OUT:
+        case EH.DRAG_MOVE:
+        case EH.DRAG_RESIZE_MOVE:
+        case EH.DRAG_SELECT_MOVE:
+        case EH.DRAG_REPOSITION_MOVE:
+            oldEvent = this._collapseMoveEvent(targetID, coords, locator, eventType);
+            break;
+        case EH.MOUSE_WHEEL:
+            oldEvent = this._collapseWheelEvent(targetID, deltaX, deltaY, locator, eventType);
+            break;
+        case EH.KEY_PRESS:
+        case EH.KEY_UP:
+            oldEvent = this._collapseKeyEvent(targetID, EH.getKey(event), eventType,
+                                              originalType);
+            break;
+        case EH.RESIZE:
+            oldEvent = this._collapseResizeEvent();
+            break;
+        }
+
+        if (oldEvent) {
+            oldEvent.timeOffset = timeOffset;
+            if (filterProp != CS._$key) {
+                if (!oldEvent.count) oldEvent.count = 2;
+                else                 oldEvent.count++;
+            } else oldEvent.collapsed = true;
+            this.lastDOMevent = DOMevent;
+            return;
+        }
+
+        // create the new CSEvent record
+        var record = {
+            eventType: eventType,
+            timeOffset: timeOffset
+        };
+        if (locator) record.locator = locator;
+
+        // mark synthetic events with originalType
+        if (originalType && synthetic != false) {
+            record.originalType = originalType;
+            record.synthetic =  true;
+        }
+
+        // if a target is set, install the targetID, targetClass, and offset
+        if (targetID) {
+            record.targetID    = targetID;
+            record.targetClass = target.getClassName();
+            // targetX, targetY offset likely not useful for keyboard events
+            if (filterProp != CS._$key) {
+                record.targetX = coords[0], record.targetY = coords[1];
+            }
+
+        // no target; still add coordinates if we're reporting an error
+        } else if (errorTrace) {
+            record.X = coords[0];
+            record.Y = coords[1];
+        }
+
+        // apply event group-specific metadata
+        switch (filterProp) {
+        case CS._$drag:
+            this._addDragInfo(record);
+            break;
+        case CS._$key:
+            this._addKeyInfo(record, event);
+            break;
+        case CS._$page:
+            this._setPageSize(record);
+        }
+
+        // apply delta offsets (mouseWheel events)
+        if (deltaX != null) record.deltaX = deltaX;
+        if (deltaY != null) record.deltaY = deltaY;
+
+        // add trace and threadCode for errors
+        if (errorTrace) {
+            record.errorTrace = errorTrace;
+            record.threadCode = EH._thread;
+            record.errorEvent = true;
+        }
+
+
+        this.lastDOMevent = DOMevent;
+        this._addEvent(record);
+    },
+
+    // annotate an existing event with details not originally available
+    modifyEvent : function (filterProp, eventType, modifyFunc) {
+        var EH = isc.EH;
+        switch (eventType) {
+        case EH.DRAG_STOP:
+        case EH.DRAG_RESIZE_STOP:
+        case EH.DRAG_SELECT_STOP:
+        case EH.DRAG_REPOSITION_STOP:
+            var event = this._getLastEvent(this[filterProp] ? eventType : EH.MOUSE_UP, true);
+            if (event) {
+                modifyFunc.call(this, event);
+            }
+            return;
+        }
+    },
+
+    _addEvent : function (record) {
+        this.events[this.nEvents++ % this.maxSize] = record;
+    },
+
+
+    _shouldProcessEvent : function (eventType, filterProp) {
+        if (!this.capturing) return false;
+        if (this[filterProp]) return true;
+
+        var EH = isc.EH,
+            CS = isc.ClickStream
+        ;
+        if (filterProp == CS._$drag) {
+            switch (eventType) {
+            case EH.DRAG_START:
+            case EH.DRAG_RESIZE_START:
+            case EH.DRAG_SELECT_START:
+            case EH.DRAG_REPOSITION_START:
+                return this[CS._$move];
+            case EH.DRAG_STOP:
+            case EH.DRAG_RESIZE_STOP:
+            case EH.DRAG_SELECT_STOP:
+            case EH.DRAG_REPOSITION_STOP:
+                return this[CS._$click];
+            }
+        }
+        return false;
+    }
+
+});
+
+
+isc.ClickStream.addClassMethods({
+    observe : isc.ClickStream.getPrototype().observe,
+    ignore :  isc.ClickStream.getPrototype().ignore
+});
 
 //------------------------------------------------------------------------------------
 // full duplex RPC over Messaging
@@ -60906,6 +66247,9 @@ isc.Canvas.addClassProperties({
     // zIndex of the next item to be brought to the front
     _BIG_Z_INDEX:800000,
 
+    // ZIndex of the next message to be brought to the front
+
+    _NOTIFY_Z_INDEX:2000000,
 
     //> @classAttr Canvas.TAB_INDEX_GAP (Integer : 64 : R)
     //      Specifies the gap to leave between automatically assigned tab indices for focusable
@@ -61251,6 +66595,29 @@ isc.Canvas.addClassProperties({
             this.Super("destroy", arguments);
             delete isc.Canvas._measureContentCanvas;
         },
+
+        getInnerHTML : function () {
+            var HTML = this.Super("getInnerHTML", arguments);
+            return "<span>" + HTML + "</span>"
+        },
+        getScrollWidth : function (recalculate) {
+            var scrollWidth = this.Super("getScrollWidth", arguments);
+            if (!recalculate || !this.isDrawn()) return scrollWidth;
+
+            var spanElement = this.getHandle().firstChild;
+            if (spanElement != null && spanElement.getBoundingClientRect != null) {
+
+                var contentsBCR = spanElement.getBoundingClientRect(),
+                    bcrWidth = Math.ceil(contentsBCR.width);
+                if (bcrWidth > scrollWidth) {
+                    // Store as this._scrollWidth so it'll be returned by default
+                    // implementation if 'recalculate' param is not passed
+                    this._scrollWidth = scrollWidth = bcrWidth;
+                }
+            }
+
+            return scrollWidth;
+        },
         _generated: true,
         width: 1,
         height: 1,
@@ -61259,7 +66626,7 @@ isc.Canvas.addClassProperties({
         autoDraw: false
     },
     measureContent : function (content, styleName, returnHeight, returnOuterSize, canvasProps) {
-        styleName = styleName || "normal";
+        //styleName = styleName || "normal";
         var canvas = isc.Canvas._measureContentCanvas;
         if (!canvas) {
             canvas = isc.Canvas._measureContentCanvas =
@@ -61270,7 +66637,7 @@ isc.Canvas.addClassProperties({
             canvas.setProperties(canvasProps);
         }
         canvas.setStyleName(null);
-        canvas.setStyleName(styleName);
+        if (styleName) canvas.setStyleName(styleName);
         canvas.setContents(content);
 
         canvas.draw();
@@ -61286,7 +66653,6 @@ isc.Canvas.addClassProperties({
     _isStretchSize : function (size) {
         return size == isc.star || isc.isA.String(size) && size.endsWith(isc.percent);
     }
-
 });
 isc.Canvas._setDoublingStrings();
 
@@ -61330,7 +66696,16 @@ isc.Canvas.addProperties({
     // active - once a canvas with an automatically generated ID has been destroyed, its ID may be
     // reused for the next canvas created with no explicitly specified ID.
     //
+    // @see name
     // @group basics
+    // @visibility external
+    //<
+
+    //> @attr canvas.name (Identifier : null : IR)
+    // Optional name for the canvas, which can later be used to reference it.  Need not be
+    // globally unique, but should be unique within the +link{parentCanvas,parent} to get
+    // defined results for +link{layout.getMember()} and +link{layout.getMemberNumber()}.
+    // @see ID
     // @visibility external
     //<
 
@@ -61716,7 +67091,6 @@ isc.Canvas.addProperties({
     //  @getter getHeight
     //<
 
-
     //> @attr canvas.defaultWidth (int : 100 : IRWA)
     // For custom components, establishes a default width for the component.
     // <P>
@@ -61770,7 +67144,8 @@ isc.Canvas.addProperties({
     minWidth: null,
 
     //> @attr canvas.minHeight (number : null : IRWA)
-    // Minimum height available to this Canvas.  See +link{minWidth} for details of behavior.
+    // Minimum height available to this Canvas.  Minimum sizes do not apply to all
+    // situations.  See +link{minWidth} for details.
     //
     // @group sizing
     // @see canvas.dragMinHeight
@@ -62032,14 +67407,36 @@ isc.Canvas.addProperties({
     //<
     styleName:"normal",
 
-    //> @attr   canvas.textDirection    (TextDirection : null : IRW)
-    //          Use this to specify a text direction for the canvas:
-    //                  Canvas.LTR (left to right, eg English)
-    //                  Canvas.RTL (right to left, eg Arabic)
-    //          Leave as null to pick up the text direction automatically
-    //           from that set at the Page level, set to one of the above to override.
-    //      @group  textDirection
-    //      @platformNotes  IE only.
+    //> @attr canvas.printStyleName (CSSStyleName : null : [IRW])
+    // The CSS class to apply when printing this widget.  If unset, falls back to the
+    // +link{canvas.styleName, specified style}.
+    // @getter getPrintStyleName
+    // @group appearance
+    // @visibility external
+    //<
+    //printStyleName: null,
+
+    //> @method canvas.getPrintStyleName()
+    // Get the CSS class to apply when printing this widget.  Returns the
+    // +link{canvas.printStyleName, print style}, if specified, falling back to the
+    // +link{canvas.styleName, specified style} otherwise.
+    // @return printStyleName (CSSStyleName)
+    // @group appearance
+    // @visibility external
+    //<
+    getPrintStyleName : function () {
+        return this.printStyleName || this.styleName;
+    },
+
+    //> @attr canvas.textDirection (TextDirection : null : IRW)
+    // Use this to specify a text direction for the canvas:
+    //      Canvas.LTR (left to right, eg English)
+    //      Canvas.RTL (right to left, eg Arabic)
+    // Leave as null to pick up the text direction automatically from that set at the Page
+    // level, set to one of the above to override.
+    // @group textDirection
+    // @group appearance
+    // @platformNotes IE only.
     //<
 
     //> @attr canvas.eventProxy     (Canvas Object : null : IRWA)
@@ -62099,52 +67496,33 @@ isc.Canvas.addProperties({
 
     //> @attr canvas.dynamicContents (Boolean : false : IRWA)
     //
-    // Dynamic contents allows the contents string to be treated as a simple, but powerful
-    // template.  When this attribute is set to true, expressions of the form &#36;{arbitrary JS
-    // here} are replaced by the result of the evaluation of the JS code inside the curly
-    // brackets.  This evaluation happens at draw time.  If you want to trigger a re-evaluation
-    // of the expressions in the contents string you can call markForRedraw() on the canvas.
-    // <p>
-    // You can use this feature to build some simple custom components. For example, let's say
-    // you want to show the value of a Slider in a Canvas somewhere on the screen.  You can do
-    // this by observing the valueChanged() method on the slider and calling setContents() on
-    // your canvas with the new string or you can set the contents of the canvas to something
-    // like:
-    // <p><code>
-    // "The slider value is &#36;{sliderInstance.getValue()}."
-    // </code><p>
-    // Next you set dynamicContents: true on the canvas, observe valueChanged() on the slider
-    // and call canvas.markForRedraw() in that observation.  This approach is cleaner than
-    // setContents() when the Canvas is aggregating several values or dynamic expressions.
-    // Like so:
-    // <p>
-    // <pre>
-    // Slider.create({
-    //     ID: "mySlider"
-    // });
-    //
-    // Canvas.create({
-    //     ID: "myCanvas",
-    //     dynamicContents: true,
-    //     contents: "The slider value is &#36;{mySlider.getValue()}."
-    // });
-    //
-    // myCanvas.observe(mySlider, "valueChanged",
-    //                  "observer.markForRedraw()");
-    // </pre>
-    // You can embed an arbitrary number of dynamic expressions in the contents string.  The
-    // search and replace is optimized for speed.
-    // <p>
-    // If an error occurs during the evaluation of one of the expressions, a warning is logged
-    // to the ISC Developer Console and the error string is embedded in place of the expected
-    // value in the Canvas.
-    // <p>
-    // The value of a function is its return value.  The value of any variable is the same as
-    // that returned by its toString() representation.
-    // <p>
-    // Inside the evaluation contentext, <code>this</code> points to the canvas instance that
-    // has the dynamicContents string as its contents - in other words the canvas instance on
-    // which the template is declared.
+    // Dynamic contents allows the contents string to be treated as a simple but powerful
+    // template.  When this attribute is set to true, JavaScript expressions may be embedded
+    // within the contents string, using the format:
+    // <code>&#36;{<i>[JavaScript to evaluate]</i>}</code>.
+    // <P>
+    // For example, to include the current date in a templated message,
+    // <code>canvas.contents</code> could be set to:<br>
+    // <code>"Today's date is &lt;b&gt;&#36;{new Date().toUSShortDate()}&lt;/b&gt;"</code>
+    // <P>
+    // Embedded expressions will be evaluated when the canvas is drawn or redrawn, and
+    // the result of the evaluated expression will be displayed to the user. If the
+    // expression does not evaluate to a String, the <code>toString()</code> representation
+    // of the returned object will be displayed automatically
+    // <P>
+    // Dynamic expressions are evaluated in the scope of the canvas displaying the content,
+    // so the <code>this</code> keyword may be used within your expression to refer to the
+    // canvas. Developers may also explicitly supply values for variables to be used within
+    // the evaluation via the +link{canvas.dynamicContentsVars} property.
+    // <P>
+    // Notes:<ul>
+    // <li>Calling markForRedraw() on the canvas will evaluate any embedded expressions.</li>
+    // <li>Multiple such expressions may be embedded within the contents string for a component.</li>
+    // <li>If an error occurs during evaluation, a warning is logged
+    //     to the +link{debugging,Developer Console} and the error string will be embedded in place
+    //     of the expected value in the Canvas.
+    // </li>
+    // </ul>
     //
     // @see contents
     // @see canvas.dynamicContentsVars
@@ -62223,7 +67601,7 @@ isc.Canvas.addProperties({
     // This property applies the same border to all four sides of this component.  Different
     // per-side borders can be set in a CSS style and applied via +link{styleName}.
     // <p>
-    // If +link{canvas.isGroup} is set to true then border is derived from the
+    // If a +link{canvas.isGroup,grouping frame} is being shown then border is derived from the
     // +link{canvas.groupBorderCSS} attribute, not from the explicit border property.
     //
     // @visibility external
@@ -63218,7 +68596,7 @@ isc.Canvas.addProperties({
     dragScrollDelay:100,
 
 
-    //> @attr canvas.dragScrollThreshold (Measure : null : IRWA)
+    //> @attr canvas.dragScrollThreshold (Number | String : null : IRWA)
     // If this widget allows drag-scrolling, the <code>dragScrollThreshold</code> is the distance
     // from the edge of the widget's viewport that the user must drag-hover to be in the
     // scrolling area.  This can be specified as a percentage value like "10%" or a number for
@@ -63231,7 +68609,7 @@ isc.Canvas.addProperties({
     //<
     dragScrollThreshold:null,
 
-    //> @attr   canvas.minDragScrollIncrement (Measure : 1 : IRWA)
+    //> @attr   canvas.minDragScrollIncrement (Number | String : 1 : IRWA)
     //      If this widget allows drag-scrolling, the rate at which the widget will be scrolled
     //      while the user drag-hovers close to the edge of the widget is determined by how
     //      far the mouse pointer is from the edge.
@@ -63248,7 +68626,7 @@ isc.Canvas.addProperties({
     //<
     minDragScrollIncrement:1,
 
-    //> @attr   canvas.maxDragScrollIncrement (Measure : "5%" : IRWA)
+    //> @attr   canvas.maxDragScrollIncrement (Number | String : "5%" : IRWA)
     //      If this widget allows drag-scrolling, the rate at which the widget will be scrolled
     //      while the user drag-hovers close to the edge of the widget is determined by how
     //      far the mouse pointer is from the edge.
@@ -64273,11 +69651,6 @@ init : function (A,B,C,D,E,F,G,H,I,J,K,L,M) {
     if (this.width == null) this.width = this.defaultWidth;
     if (this.height == null) this.height = this.defaultHeight;
 
-    // copy the height property to this._height.  This is what we'll rely upon internally
-    // for sizing
-
-    this._height = this.height;
-
     // Ensure margin / padding is a numeric value
     if (isc.isA.String(this.margin)) {
         var margin = parseInt(this.margin);
@@ -64306,6 +69679,9 @@ init : function (A,B,C,D,E,F,G,H,I,J,K,L,M) {
         this.borderRadius = this._convertBorderRadiusToString(this.borderRadius);
     }
 
+    // whether to draw the grouping frame and label - depends on both isGroup and groupTitle
+    this._isGroup = this._shouldGroup();
+
     // resolve percentSource (if specified) to a widget, and observe it's inner size changing
     if (this.percentSource) this.setPercentSource(this.percentSource, true);
 
@@ -64322,7 +69698,7 @@ init : function (A,B,C,D,E,F,G,H,I,J,K,L,M) {
     // For this reason child layout code should generally run from layoutChildren(), right
     // before drawChildren().
     this._canvas_initializing = true; // HACK to allow resized() notifications to be ignored
-    this.resizeTo(this.width, this._height, undef, undef, this._$init);
+    this.resizeTo(this.width, this.height, undef, undef, this._$init);
     this.moveTo(this.left, this.top);
     this._canvas_initializing = null;
 
@@ -64587,6 +69963,34 @@ setID : function (id) {
     pointersToThis.add({ object: window, property: this.ID });
 
     this.ns.EH.changeClickMaskID(this.getID(), id);
+
+    // Update TabIndexManager to change the mapping if applicable
+    var oldID = this.getID(),
+        tabTree = isc.TabIndexManager.getTree(),
+        node = tabTree.findById(oldID)
+    ;
+    if (node && oldID != id) {
+        // Create new entry in TIM
+        var parent = isc.TabIndexManager.getParent(oldID),
+            parentID = (parent ? parent.ID : null),
+            parentNode = tabTree.getParent(node),
+            siblings = tabTree.getChildren(parentNode),
+            position = siblings.indexOf(node)
+        ;
+        this._initializeTabPosition(id, parentID, position);
+
+        // Move children from old ID to new ID
+        var children = tabTree.getChildren(node);
+        if (children) {
+            children = children.duplicate();
+            for (var i = 0; i < children.length; i++) {
+                isc.TabIndexManager.moveTarget(children[i].nodeID, id, i);
+            }
+        }
+
+        // Remove old entry from TIM
+        this._removeFromTabIndexManager();
+    }
 
     this.ID = id;
 
@@ -65100,7 +70504,7 @@ draw : function (showing) {
         this.ruleScope = this.getRuleScope();
 
         // Record this component if a DBC
-        if (isc.isA.DataBoundComponent(this)) {
+        if (this.ruleScope && isc.isA.DataBoundComponent(this)) {
             var component = this.getRuleScopeComponent();
             if (component) {
                 if (!component._ruleScopeDBCs) component._ruleScopeDBCs = [];
@@ -65133,10 +70537,10 @@ draw : function (showing) {
     }
 
     // create groupLabel now so cached margins are available for _insertHTML() below
-    var isGroup = this.isGroup;
+    var isGroup = this._isGroup;
     if (isGroup) {
-        this.isGroup = null;
-        this.setIsGroup(true, true);
+        this._isGroup = null;
+        this._setIsGroup(true, true);
     }
 
 
@@ -65346,6 +70750,8 @@ draw : function (showing) {
 
 
     this.onDraw();
+    // Drawn notification for SmartClient
+    this.drawn();
 
     //>EditMode
     if (this.editProxy && this.editingOn) {
@@ -65373,13 +70779,16 @@ draw : function (showing) {
     return this;
 },
 
+// Notification method fired when a canvas has been drawn into the page.
+// Documented under registerStringMethods
+drawn : function () {
+
+},
+
 // Add dataSource prefix to fields in advancedCriteria
 
 _globalizeWhenAdvancedCriteria : function (criteria) {
-    var fieldPrefix = (this.hasStableLocalID()
-            ? this.getLocalId() + ".values."
-            : (this.dataSource ? this.getDataSource().ID + "." : null));
-    if (!fieldPrefix) return;
+    var fieldPrefix = this.getLocalId() + ".values.";
 
     if (criteria.fieldName && !criteria.fieldName.contains(".") && !criteria.fieldName.contains("/")) {
         criteria.fieldName = fieldPrefix + criteria.fieldName;
@@ -65882,10 +71291,6 @@ _fixPNG : function () {
     return true;
 },
 
-getPrintStyleName : function () {
-    return this.printStyleName || this.styleName;
-},
-
 // getPrintTagStart / end -- returns the DIV / SPAN tags written out around our HTML in printing
 // mode.
 getPrintTagStart : function (absPos) {
@@ -65895,7 +71300,7 @@ getPrintTagStart : function (absPos) {
         className = this.getPrintStyleName();
 
     var groupTagStart;
-    if (this.isGroup) {
+    if (this._isGroup) {
         groupTagStart = this.getPrintHTMLTagStart();
     }
 
@@ -65947,12 +71352,12 @@ getPrintTagEnd : function (absPos) {
         inline = !topLevel && !absPos && props.inline;
 
     var groupTagEnd;
-    if (this.isGroup) {
+    if (this._isGroup) {
         groupTagEnd = this.getPrintHTMLTagEnd();
     }
 
     var endTag = (this.wrap == false) ? "</div>" : inline ? "</span>" : "</div>";
-    if (this.isGroup) endTag += groupTagEnd;
+    if (this._isGroup) endTag += groupTagEnd;
     return endTag;
 },
 
@@ -66227,6 +71632,8 @@ drawChildren : function () {
 
 },
 
+// Should drawChildren() actually draw some particular child?
+
 drawChildWithParent : function (child) {
 
     // if the child has a masterElement, it's a peer of another child
@@ -66261,7 +71668,6 @@ _completeChildOverflow : function (children, indirect) {
             if (child._suppressOverflow && child.children) {
                 child._completeChildOverflow(child.children, true);
             }
-
             child._deferredOverflow = null;
             child.adjustOverflow(this._$parentDrawn);
             // Call this method recursively so nested descendants' overflow gets updated
@@ -66525,7 +71931,6 @@ _insertAdjacentHTML : function (element, position, html, singleElement) {
 //  - calls adjustOverflow
 //  - calls this.drawPeers()
 _completeHTMLInit : function () {
-
     // opportunity to modify content before overflow is adjusted
     this.modifyContent();
 
@@ -66544,7 +71949,7 @@ _completeHTMLInit : function () {
     // handle
     if (this._resizeHandleOnDrawComplete) {
         // actually resize the handle by calling _setHandleRect
-        this._setHandleRect(this.left, this.top, this.width, this._height);
+        this._setHandleRect(this.left, this.top, this.width, this.height);
         // if we have a clip region set, it will have been clobbered by _setHandleRect.
         // restore it:
         // Note: already modified this._clip
@@ -66573,7 +71978,10 @@ _completeHTMLInit : function () {
 
     // adjust according to our overflow property
 
-    if (this.parentElement != null && this.parentElement._suppressOverflow) {
+    if (this.parentElement != null &&
+        this.parentElement._suppressOverflow &&
+        this.parentElement.getDrawnState() != isc.Canvas.COMPLETE)
+    {
         this._deferredOverflow = true;
     } else {
         this.adjustOverflow(this._$draw);
@@ -66890,6 +72298,7 @@ _updateHTML : function () {
     if (logInfoEnabled) this.logInfo("_updateHTML(): redrawing", "drawing");
     //<DEBUG
 
+
     // if we have any peers, call the redrawPredrawnPeers() method to check for any peers marked
     // for drawing before the master element, and redraw them first.
     // (See addPeer() and predrawPeers() methods for more info).
@@ -66914,8 +72323,10 @@ _updateHTML : function () {
         if (this.notifyAncestorsOnReflow && this.parentElement != null) {
             this.notifyAncestorsAboutToReflow();
         }
-        this._setHandleRect(null, null, this.width, this._height);
+        this._setHandleRect(null, null, this.width, this.height);
     }
+
+
 
     if (hasChildren) {
         // update the HTML that came from parent.getInnerHTML().
@@ -66926,6 +72337,14 @@ _updateHTML : function () {
         // childless - update inner HTML
         this._updateInnerHTML();
     }
+
+    // At this stage we are still marked as "dirty" but our innerHTML has been redrawn
+    // Set a flag so downstream code can detect this state if necessary. This is useful
+    // if something in modifyContent [etc] determines the HTML we just wrote out needs updating
+    // immediately
+
+    var recursive = this._innerHTMLUpdatedForRedraw;
+    this._innerHTMLUpdatedForRedraw = true;
 
     // If we're writing out a placeholder div to enforce scroll-size, and we just
     // redraw our innerHTML, reapply it now.
@@ -66947,6 +72366,11 @@ _updateHTML : function () {
     // mark this item as not dirty any more
 
     this._dirty = false;
+
+    // Clear the flag indicating that we're in the special state where we're still marked as
+    // dirty but we've already updated our innerHTML for the current redraw.
+    if (!recursive) delete this._innerHTMLUpdatedForRedraw;
+
     // adjust the overflow again
     this.adjustOverflow(this._$redraw, null, true);
 
@@ -67384,7 +72808,7 @@ clear : function (dontReport) {
     }
 
     // depeer and clear groupLabel
-    if (this.isGroup) {
+    if (this._isGroup) {
         if (this.shouldShowGroupLabel()) this._hideGroupLabel();
     }
 
@@ -67434,6 +72858,10 @@ clear : function (dontReport) {
 
     // and note that we're no longer drawn
     this.setDrawnState(isc.Canvas.UNDRAWN);
+
+    // clear adjustOverflow() state
+    delete this._currentContentWidth;
+    delete this._currentContentHeight;
 
     delete this._clearing;
 },
@@ -67625,6 +73053,9 @@ prepareForDestroy : function (indirectDestroy, b, c, d, e) {
     // Remove canvas DynamicProperty rules from rulesEngine
     this._removeDynamicPropertyRules();
 
+    // Destroy any ruleScope schemas that have been created
+    this.destroyRuleScopeSchemas();
+
     // Remove this component from the ruleScope rulesEngine
     var component = this.getRuleScopeComponent();
     if (component && component.rulesEngine) component.rulesEngine.removeMember(this);
@@ -67647,6 +73078,13 @@ prepareForDestroy : function (indirectDestroy, b, c, d, e) {
     // if this widget is showing a clickMask (eg modal Dialog), get rid of it.  This will no-op
     // if this widget is not showing a clickMask.
     this.hideClickMask();
+
+    //>EditMode
+    if (this.editingOn && this.editContext && this.contextMenu && this.contextMenu.destroy) {
+
+        this.contextMenu.destroy();
+    }
+    //<EditMode
 
     this._logDestroy(true, indirectDestroy);
 
@@ -68500,7 +73938,8 @@ getTagStart : function (dontConcat) {
                 this._getShadowCSSText(true),
 
                 (isc.Browser._supportsWebkitOverflowScrolling
-                 ? (usingNativeTouchScrolling ? ";-webkit-overflow-scrolling:touch" : ";-webkit-overflow-scrolling:auto")
+                 ? (usingNativeTouchScrolling ? ";-webkit-overflow-scrolling:touch" :
+                                                ";-webkit-overflow-scrolling:auto")
                  : null),
 
                 ";' ONSCROLL='return " + eventProxy + "._handleCSSScroll()'",
@@ -69414,6 +74853,13 @@ _getURLHandle : function () {
     return this.getDocument().getElementById(this._getIFrameID());
 },
 
+// Get the window handle of the IFrame we used to load content (when using contentsURL and
+// contentsType:"page")
+getContentWindow : function () {
+    var urlHandle = this._getURLHandle();
+    return urlHandle ? urlHandle.contentWindow : null;
+},
+
 //>FocusProxy
 //> @method canvas._getFocusProxyHandle() (I)
 // @return (DOMElement) handle for the 'focusProxy' button.  <code>null</code> if
@@ -69473,15 +74919,6 @@ getStyleHandle : function () {
 setUpEvents : function () {
     // register to receive drop events, if necessary
     if (this.canAcceptDrop) this.ns.EH.registerDroppableItem(this);
-
-
-    if (this.src && this.useClipDiv && this.fixOverflowForSVG != false &&
-        this.overflow == isc.Canvas.VISIBLE && this._isSVG(this.src))
-    {
-        // retrieve the <object> element from the DOM and install handler to update overflow
-        var object = this.getImage(this.name);
-        if (object) object.onload = new Function(this.ID + "._markForAdjustOverflow()");
-    }
 },
 
 // Creating children
@@ -69663,6 +75100,7 @@ clearEventProxy : function () {
 //                                          for advanced use)
 //  @return (Canvas)    the new child, or null if it couldn't be added
 //<
+
 addChild : function (newChild, name, autoDraw) {
     if (isc._traceMarkers) arguments.__this = this;
     if (!newChild) return null; // just to be safe
@@ -70243,13 +75681,26 @@ contains : function (canvas, testSelf) {
 
 // Is this element the parent of the child passed in, AND the child inherits its visibility from
 // this parent?
-_isVisibilityAncestorOf : function (child) {
-    var target = child;
 
+_isVisibilityAncestorOf : function (child, checkDisplayNone) {
+    var target = child,
+        tookVisibleLink
+    ;
     while (target) {
-        if (target == this) return true;
+        // hideUsingDisplayNone:true for target - return true even if we crossed "visible" link
+        if (tookVisibleLink && target._getHideUsingDisplayNone()) {
+            tookVisibleLink = false;
+        }
+        if (target == this) return !tookVisibleLink;
         var inherits = (target.visibility == isc.Canvas.INHERIT);
-        if (!inherits) return false;
+        if (!inherits) {
+            // in checkDisplayNone mode, follow the parent chain even for visibility:"visible"
+            if (checkDisplayNone && target.visibility == isc.Canvas.VISIBLE) {
+                tookVisibleLink = true;
+            } else {
+                return false;
+            }
+        }
         target = target.parentElement;
     }
     return false;
@@ -70922,7 +76373,7 @@ setWidth : function (width) {
 //      @return (Number)    height
 //<
 getHeight : function () {
-    return this._height;
+    return this.height;
 },
 
 
@@ -70961,7 +76412,7 @@ getMinWidth : function () {
 //<
 setMinWidth : function (width) {
     this.minWidth = width;
-    this.resizeBy(null, null, null, null, "setMinWidth", true);
+    this.resizeTo(this._getUnclampedWidth(), null, null, null, "setMinWidth", null, true);
 },
 
 //> @method canvas.getMinHeight()
@@ -70983,7 +76434,16 @@ getMinHeight : function () {
 //<
 setMinHeight : function (height) {
     this.minHeight = height;
-    this.resizeBy(null, null, null, null, "setMinHeight", true);
+    this.resizeTo(null, this._getUnclampedHeight(), null, null, "setMinHeight", null, true);
+},
+
+// internal APIs to pick up width and height without minWidth and minHeight clamping
+_getUnclampedWidth : function () {
+    return this._width ? this._width : this.getWidth();
+},
+
+_getUnclampedHeight : function () {
+    return this._height ? this._height : this.getHeight();
 },
 
 //> @method canvas.getMaxWidth()
@@ -71831,6 +77291,10 @@ _getKeepInParentRect : function (moving) {
     //
     // If the widget is keepInParentRect: true but it has no parent, get scrolling info
     // from the Page object
+    var leftScrollExtent = 0,
+        rightScrollExtent = 0,
+        topScrollExtent = 0,
+        bottomScrollExtent = 0;
     if (dragParent) {
         var leftScrollExtent = dragParent.getScrollLeft(),
             rightScrollExtent = dragParent.getScrollWidth() -
@@ -71838,13 +77302,6 @@ _getKeepInParentRect : function (moving) {
             topScrollExtent = dragParent.getScrollTop(),
             bottomScrollExtent = dragParent.getScrollHeight() -
                                     dragParent.getViewportHeight() - topScrollExtent;
-    } else {
-        var leftScrollExtent = isc.Page.getScrollLeft(),
-            rightScrollExtent = isc.Page.getScrollWidth() -
-                                    isc.Page.getWidth() - leftScrollExtent,
-            topScrollExtent = isc.Page.getScrollTop(),
-            bottomScrollExtent = isc.Page.getScrollHeight() -
-                                    isc.Page.getHeight() - topScrollExtent;
     }
 
     if (rightScrollExtent < 0) rightScrollExtent = 0;
@@ -73368,7 +78825,9 @@ visibleAtPoint : function (x, y, withinViewport, ignoreWidgets, upToParent) {
 //                                      If specified we'll only iterate up as far as the target.
 //<
 _$left:"left", _$top:"top", _$right:"right", _$bottom:"bottom", _$center:"center",
-scrollIntoView : function (x,y, width, height, xPosition, yPosition, animated, callback, alwaysCenter, source, target) {
+scrollIntoView : function (x, y, width, height, xPosition, yPosition, animated, callback,
+                           alwaysCenter, source, target)
+{
     // If not passed a width / height, just scroll the point into view
     if (width == null) width = 0;
     if (height == null) height = 0;
@@ -73384,72 +78843,18 @@ scrollIntoView : function (x,y, width, height, xPosition, yPosition, animated, c
         x = this._shiftScrollLeftOrigin(x, false);
     }
 
-    var synchronousCallback = true;
-
-    var desiredScrollLeft, desiredScrollTop;
+    var synchronousCallback = true,
+        desiredScrollLeft, desiredScrollTop
+    ;
 
     if (this.overflow != isc.Canvas.VISIBLE &&
-        this.overflow != isc.Canvas.IGNORE) {
+        this.overflow != isc.Canvas.IGNORE)
+    {
 
-        if (x != null) {
-            var scrollLeft = this.getScrollLeft(),
-                viewportWidth = this.getViewportWidth(),
-                scrollRight = scrollLeft + viewportWidth,
-                rightOff = false,
-                leftOff = false;
+        desiredScrollLeft = this._getDesiredScrollLeft(x, width,  xPosition, alwaysCenter);
+        desiredScrollTop  = this._getDesiredScrollTop (y, height, yPosition, alwaysCenter);
 
-            if (x + width > scrollRight) {
-                rightOff = true;
-            }
-            if (x < scrollLeft) {
-                leftOff = true;
-            }
-
-            // if the right edge is off, or the left edge is off, but not both, we need to
-            // scroll.
-            // (If they're both off, on different sides, then the rect is greater than the
-            // viewport and there's nothing we can do)
-            if (rightOff != leftOff || alwaysCenter) {
-                if (xPosition == this._$left) {
-                    desiredScrollLeft = x;
-                // Align the right edge with the right edge of the viewport
-                } else if (xPosition == this._$right) {
-                    desiredScrollLeft = (x + width) - viewportWidth;
-
-                // Centering is the default case
-                } else {
-                    desiredScrollLeft = (x + parseInt(width/2))
-                                        - parseInt(viewportWidth / 2);
-                }
-            }
-        }
-
-        if (y != null) {
-            var scrollTop = this.getScrollTop(),
-                viewportHeight = this.getViewportHeight(),
-                scrollBottom = scrollTop + viewportHeight,
-                topOff = false,
-                bottomOff = false;
-
-            if (y + height > scrollBottom) bottomOff = true;
-            if (y < scrollTop) topOff = true;
-
-            // if the top edge is off, or the bottom edge is off, but not both we need to
-            // scroll.
-            // (If they're both off, on different sides, then the rect is greater than the
-            // viewport and there's nothing we can do)
-            if (topOff != bottomOff || alwaysCenter) {
-                if (yPosition == this._$top) {
-                    desiredScrollTop = y;
-                } else if (yPosition == this._$bottom) {
-                    desiredScrollTop = (y + height) - viewportHeight;
-                } else {
-                    desiredScrollTop = (y + parseInt(height/2))
-                                         - parseInt(viewportHeight / 2);
-                }
-            }
-        }
-        // Note - if we don't have to scroll, avoid calling scrollTo, as this can take a little time
+        // if we don't have to scroll, avoid calling scrollTo, as this can take a little time
         if (desiredScrollLeft != null || desiredScrollTop != null) {
             //>Animation
             if (animated) {
@@ -73480,12 +78885,79 @@ scrollIntoView : function (x,y, width, height, xPosition, yPosition, animated, c
             parentTop += this.getOffsetTop();
         }
 
-        this.parentElement.scrollIntoView(parentLeft, parentTop, width, height, null, null, null, null, null, source, target);
+        this.parentElement.scrollIntoView(parentLeft, parentTop, width, height, null, null,
+                                          null, null, null, source, target);
     }
 
     if (callback && synchronousCallback) this.fireCallback(callback);
 },
 
+
+_getDesiredScrollLeft : function (x, width, xPosition, alwaysCenter) {
+    if (x == null) return;
+
+    var scrollLeft = this.getScrollLeft(),
+        viewportWidth = this.getViewportWidth(),
+        scrollRight = scrollLeft + viewportWidth,
+        rightOff = false,
+        leftOff = false
+    ;
+
+    if (x + width > scrollRight) {
+        rightOff = true;
+    }
+    if (x < scrollLeft) {
+        leftOff = true;
+    }
+
+    // If the right edge is off, or the left edge is off, but not both, we need to scroll.
+    // (If they're both off, on different sides, then the rect is greater than the viewport and
+    // there's nothing we can do.)
+    if (rightOff != leftOff || alwaysCenter) {
+        if (xPosition == this._$left) {
+            return x;
+
+        // align the right edge with the right edge of the viewport
+        } else if (xPosition == this._$right) {
+            return (x + width) - viewportWidth;
+
+        // centering is the default case
+        } else {
+            return (x + parseInt(width/2)) - parseInt(viewportWidth / 2);
+        }
+    }
+},
+
+_getDesiredScrollTop : function (y, height, yPosition, alwaysCenter) {
+    if (y == null) return;
+
+    var scrollTop = this.getScrollTop(),
+        viewportHeight = this.getViewportHeight(),
+        scrollBottom = scrollTop + viewportHeight,
+        topOff = false,
+        bottomOff = false
+    ;
+
+    if (y + height > scrollBottom) bottomOff = true;
+    if (y < scrollTop) topOff = true;
+
+    // If the top edge is off, or the bottom edge is off, but not both we need to scroll.
+    // (If they're both off, on different sides, then the rect is greater than the viewport and
+    // there's nothing we can do.)
+    if (topOff != bottomOff || alwaysCenter) {
+        if (yPosition == this._$top) {
+            return y;
+
+        // align the bottom edge with the bottom edge of the viewport
+        } else if (yPosition == this._$bottom) {
+            return (y + height) - viewportHeight;
+
+        // centering is the default case
+        } else {
+            return (y + parseInt(height/2)) - parseInt(viewportHeight / 2);
+        }
+    }
+},
 
 //> @method canvas.intersects() ([])
 //          Returns true if the rectangles of this widget and the specified widget overlap.
@@ -73903,8 +79375,9 @@ getInnerHeight : function(visibleHeight) {
 //<
 getInnerWidth : function (visibleWidth) {
     var width = visibleWidth ? this.getVisibleWidth() : this.getWidth();
-    if (this.vscrollOn || this.overflow == isc.Canvas.SCROLL || this.alwaysShowVScrollbar)
+    if (this.vscrollOn || this.overflow == isc.Canvas.SCROLL || this.alwaysShowVScrollbar) {
         width -= this.getScrollbarSize();
+    }
     return width - this.getHMarginBorder();
 },
 
@@ -74199,7 +79672,7 @@ moveBy : function (deltaX, deltaY, animating, resizeHandle) {
     var left = this.left,
         top = this.top,
         width = (resizeHandle && this._resizeDeltaX ? this.width : null),
-        height = (resizeHandle && this._resizeDeltaY ? this._height : null);
+        height = (resizeHandle && this._resizeDeltaY ? this.height : null);
 
     if (this.isDrawn()) {
         var clipHandle = this.getClipHandle(),
@@ -74424,7 +79897,6 @@ _$height: "height",
 _$width: "width",
 _$left: "left",
 _$top: "top",
-_$_height: "_height",
 _$percent: "%",
 _$star: "*",
 _$init: "init",
@@ -74434,6 +79906,14 @@ _percentNames: {
     width : "_percent_width",
     left : "_percent_left",
     top : "_percent_top"
+},
+_overflowNames: {
+    height: isc.Canvas.CLIP_H,
+    width: isc.Canvas.CLIP_V
+},
+_unclampedNames: {
+    height:"_height",
+    width:"_width"
 },
 _minNames: {
     height:"minHeight",
@@ -74446,10 +79926,8 @@ _maxNames: {
 getDelta : function (name, newValue, currentValue, fromSetter) {
     if (newValue == null) return null;
 
-
     var propertyName = name,
         percentName = this._percentNames[name];
-    if (name == this._$height) propertyName = this._$_height;
 
     // If we were passed a fractional number, round it and warn.
     // Note we don't need to do this with percent values, which already get rounded
@@ -74555,6 +80033,10 @@ getDelta : function (name, newValue, currentValue, fromSetter) {
 
         newValue = Math.round((parseInt(newValue, 10) / 100) * fullSize);
 
+        // clear any stored unclamped width or height
+        var unclampedName = this._unclampedNames[name];
+        if (unclampedName) delete this[unclampedName];
+
         // support minWidth / minHeight for percent sizes.
         var min = this[this._minNames[name]];
         if (min != null && newValue < min) {
@@ -74629,6 +80111,11 @@ getDelta : function (name, newValue, currentValue, fromSetter) {
         {
             currentValue = this.restoreDefaultSize(name == this._$height);
         }
+
+        // clear any stored unclamped width or height
+        var unclampedName = this._unclampedNames[name];
+        if (unclampedName) delete this[unclampedName];
+
         // Fire adjustOverflow to resize the handle to the default size, if necessary
         this.adjustOverflow();
 
@@ -74641,7 +80128,36 @@ getDelta : function (name, newValue, currentValue, fromSetter) {
     if (delta == 0 && fromSetter && (name == this._$width || name == this._$height)) {
         this.updateUserSize(newValue, name, null, true);
     }
+
+
+    if ((name == this._$width || name == this._$height) && !this.applyMinSizeAsOverflow) {
+        var minSize = this[this._minNames[name]],
+            unclampedName = this._unclampedNames[name]
+        ;
+        // if requested size falls short of minimum, use the minimum, but store requested size
+        if (minSize > newValue && (this.overflow == isc.Canvas.VISIBLE ||
+                                   this.overflow == this._overflowNames[name]))
+        {
+            this[unclampedName] = newValue;
+            newValue = minSize, delta = newValue - currentValue;
+
+        // if the minimum doesn't apply, use the requested size and delete any stored value
+
+        } else if (this[unclampedName] != null && !this._shouldKeepUnclampedSizeOnResize()) {
+            delete this[unclampedName];
+        }
+    }
+
     return delta;
+},
+
+// returns whether we're currently in the middle of a Frameowrk resizing or layout operation
+_shouldKeepUnclampedSizeOnResize : function () {
+    var parent = this.parentElement,
+        undef, canvasItem = this.canvasItem,
+        parentIsLayout = isc.Layout && isc.isA.Layout(parent);
+    return parentIsLayout && parent._layoutInProgress ||
+        canvasItem && canvasItem._resizingCanvas;
 },
 
 //> @method canvas.updateUserSize()
@@ -74703,7 +80219,6 @@ childUserSizeChanged : function () {
 },
 
 restoreDefaultSize : function (isHeight) {
-
     var propertyName = isHeight ? this._$height : this._$width,
         instanceDefault = this.getClass().getInstanceProperty(propertyName);
 
@@ -74715,9 +80230,6 @@ restoreDefaultSize : function (isHeight) {
 
     var currentValue = this[propertyName] = (isc.isA.Number(instanceDefault) ?
                                              instanceDefault : 0);
-
-    if (isHeight) this._height = currentValue;
-
     return currentValue;
 },
 
@@ -74832,7 +80344,7 @@ moveToEvent : function (offsetX, offsetY) {
     if (snapParent && snapParent.editingOn && isc.isA.Canvas(snapParent) &&
             snapToChild != true && snapToParent != true &&
             snapParent.editProxy &&
-            (!snapParent.editProxy.canAdd(snapChild.getClassName()) || !snapParent.editProxy.willAcceptDrop()) &&
+            (!snapParent.editProxy.canAddNode(snapChild.getClassName()) || !snapParent.editProxy.willAcceptDrop()) &&
             snapParent.parentElement)
     {
         if (snapParent.parentElement.containsPoint(event.x, event.y) && snapParent.parentElement.childrenSnapToGrid) {
@@ -74986,14 +80498,16 @@ getHSnapOrigin : function (snapChild) {
 //                                          "right").<br>
 //                                          This property determines how this widget will be
 //                                          aligned with the other widget on the other axis.
+//      @param [edgeOffset] (Integer) If specified, ensure this canvas will be offset from
+//        the edge of the browser viewport by at least this much
 //<
-placeNextTo : function (otherWidget, side, canOcclude, otherAxisAlign) {
+placeNextTo : function (otherWidget, side, canOcclude, otherAxisAlign, edgeOffset) {
     // Pick up defaults for side, canOcclude, otherAxisAlign from _placeRect
     var adjacentRect = otherWidget.getPeerRect(),
         thisRect = this.getPeerRect(),
         pos = isc.Canvas._placeRect(
                 thisRect[2], thisRect[3],
-                adjacentRect, side, canOcclude, otherAxisAlign
+                adjacentRect, side, canOcclude, otherAxisAlign, edgeOffset
               )
     ;
 
@@ -75117,8 +80631,7 @@ resizeBy : function (deltaX, deltaY, animating, suppressHandleUpdate, reason, fo
     }
 
     if (isc.isA.Number(deltaY)) {
-
-        this.height = this._height = oldHeight + deltaY;
+        this.height += deltaY;
         // set a marker for Layouts (not yet used)
         if (!this._canvas_initializing) this._heightSetAfterInit = true;
     } else {
@@ -75144,7 +80657,7 @@ resizeBy : function (deltaX, deltaY, animating, suppressHandleUpdate, reason, fo
 
     if (this.isDrawn() && this.logIsInfoEnabled(this._$resize)) {
         this.logInfo("resize of drawn component: " +
-                     "new width/height: " + [this.width, this._height] +
+                     "new width/height: " + [this.width, this.height] +
                      ", old width/height: " + [oldWidth, oldHeight] +
                      ", delta width/height: " + [deltaX, deltaY] +
                      (this.logIsDebugEnabled(this._$resize) ?
@@ -75170,7 +80683,7 @@ resizeBy : function (deltaX, deltaY, animating, suppressHandleUpdate, reason, fo
         var drawnState = this.getDrawnState();
         if (drawnState == isc.Canvas.COMPLETE) {
             // actually resize the handle by calling _setHandleRect
-            this._setHandleRect(this.left, this.top, this.width, this._height);
+            this._setHandleRect(this.left, this.top, this.width, this.height);
 
             if (isc.isAn.Array(clip)) this.setClip(clip);
 
@@ -75348,7 +80861,8 @@ _resized : function (deltaX, deltaY, reason) {
 _handleResized : function () {},
 
 //> @method   canvas.resized()
-//  Observable method called whenever a Canvas changes size. Note that if this canvas is
+// <smartclient>Observable method called</smartclient><smartgwt>Method called</smartgwt>
+// whenever a Canvas changes size. Note that if this canvas is
 // +link{canvas.overflow,overflow:"visible"}, and is waiting for a queued redraw (see
 // +link{canvas.isDirty()}), the value for +link{canvas.getVisibleWidth()} and
 // +link{canvas.getVisibleHeight()} will be unreliable until <code>redraw()</code> fires.
@@ -75567,7 +81081,14 @@ _equalsCurrentSize : function (width, height) {
 // @param [animating] (boolean) optional internal param passed if this is a resize occurring as
 // part of an animation
 // @param [suppressHandleUpdate] (boolean) If passed avoid actually updating the handle
-resizeTo : function (width, height, animating, suppressHandleUpdate, reason, keepPercent) {
+// @param [reason] (boolean) Why is this resize occurring?
+// @param [keepPercent] (boolean) preserves percent sizes by avoiding "setter" mode
+// @param [force] Force widget dimensions to be recalculated even if the width or height
+//  properties haven't changed.  Useful if another property that affects the width or height
+//  has changed, such as +link{minWidth} or +link{minHeight}.
+
+resizeTo : function (width, height, animating, suppressHandleUpdate, reason, keepPercent, force)
+{
     if (isc._traceMarkers) arguments.__this = this;
 
     if (width == null && height == null) return false;
@@ -75575,7 +81096,7 @@ resizeTo : function (width, height, animating, suppressHandleUpdate, reason, kee
     var deltaX = this.getDelta(this._$width,  width,  this.getWidth(),  !keepPercent),
         deltaY = this.getDelta(this._$height, height, this.getHeight(), !keepPercent);
     // now call resizeBy to do the work for us
-    return this.resizeBy(deltaX, deltaY, animating, suppressHandleUpdate, reason);
+    return this.resizeBy(deltaX, deltaY, animating, suppressHandleUpdate, reason, force);
 },
 
 //> @method canvas.resizeToEvent()
@@ -76086,6 +81607,14 @@ resizeTarget : function (target, vertical, realTime, offset, ignore, coord, targ
 finishTargetResize : function (target, vertical, realTime) {
     if (realTime) return;
     vertical ? target.setHeight(this._targetSize) : target.setWidth(this._targetSize);
+    //>EditMode
+    if (target.editingOn && target.editContext) {
+        // Save dragged size to defaults
+        var properties = {};
+        properties[vertical ? "height" : "width"] = this._targetSize;
+        target.editContext.setNodeProperties(target.editNode, properties, true);
+    }
+    //<EditMode
 },
 
 // ---------------------------------------------------------------------------------------
@@ -76177,7 +81706,6 @@ _getDragTarget : function () {
 
 prepareForDragging : function () {
     var EH = this.ns.EH;
-
     // this would indicate that a child has set itself as the dragTarget, and then
     // prepareForDragging bubbled to this Canvas.  By default, we leave this alone.
     if (EH.dragTarget) return;
@@ -76592,11 +82120,10 @@ _getHDragScrollDirection : function (offsetX) {
 _overDragThreshold : function (direction) {
     var offsetY = (this.getOffsetY() - this.getScrollTop()),
         offsetX = (this.getOffsetX() - this.getScrollLeft());
-
     if (direction != null) {
-        if (direction == isc.Canvas.VERTICAL)
+        if (direction == isc.Canvas.VERTICAL) {
             return this._getVDragScrollDirection(offsetY) != 0;
-        else
+        } else
             return this._getHDragScrollDirection(offsetX) != 0;
     }
 
@@ -76667,7 +82194,9 @@ getVDragScrollThreshold : function () {
 _setupDragScroll : function (direction, isDragSelect) {
 
     // If we're already waiting to scroll no-op
-    if (this._dragScrollTimer != null) return;
+    if (this._dragScrollTimer != null) {
+        return;
+    }
 
     var offsetY = (this.getOffsetY() - this.getScrollTop()),
         offsetX = (this.getOffsetX() - this.getScrollLeft()),
@@ -76703,7 +82232,6 @@ _performDragScroll : function (horizontal, vertical, firstScroll, direction, isD
 
     var hScrollIncrement = 0, vScrollIncrement = 0;
     var containsEvent = this.containsEvent();
-
     if (this.ns.EH.dragging && (isDragSelect || containsEvent)) {
 
         var offsetX = this.getOffsetX() - this.getScrollLeft(),
@@ -76901,17 +82429,21 @@ getScrollIncrement : function (direction, eventOffset, viewportSize, threshold, 
 // scrolling, etc
 
 
+
 hasInherentHeight : function () {
     if (this.inherentHeight != null) return this.inherentHeight;
+    if (this.neverExpandHeight) return true;
     return (this.children == null &&
             (this.overflow == isc.Canvas.VISIBLE || this.overflow == isc.Canvas.CLIP_H));
 },
 
 hasInherentWidth : function () {
     if (this.inherentWidth != null) return this.inherentWidth;
+    if (this.neverExpandWidth) return true;
     return (this.children == null &&
             (this.overflow == isc.Canvas.VISIBLE || this.overflow == isc.Canvas.CLIP_V));
 },
+
 
 canOverflowWidth : function () {
     return this.overflow == isc.Canvas.VISIBLE || this.overflow == isc.Canvas.CLIP_V;
@@ -76993,6 +82525,13 @@ setOverflow : function (newOverflow) {
             parent._decrementHideUsingDisplayNoneCounter();
             parent = parent.parentElement;
         }
+    }
+
+    // we must potentially apply minWIdth and minHeight if we're changing overflow modes
+    if (this.minHeight != null || this.minWidth != null) {
+        this.resizeTo(this.minWidth  != null ? this._getUnclampedWidth() : null,
+                      this.minHeight != null ? this._getUnclampedHeight() : null,
+                      null, null, "setOverflow", null, true);
     }
 
     // If we're drawn, we need to update the elements width, height, overflow, and
@@ -77387,6 +82926,14 @@ adjustOverflow : function (reason, delayed, fromRedraw) {
     // adjust now if size is available
     if (this._browserDoneDrawing()) return this._adjustOverflow(reason);
 
+    // bail if _browserDoneDrawing() failed due to "display:none"
+    if (this._isHiddenUsingDisplayNone()) {
+        if (this.logIsDebugEnabled("overflow")) {
+            this.logDebug("Skipping overflow since hidden with 'display:none'", "overflow");
+        }
+        return;
+    }
+
     if (this.logIsDebugEnabled("overflow")) {
         this.logDebug("browser not done drawing, deferring overflow.", "overflow");
         if (this._drewClipDiv) {
@@ -77605,7 +83152,7 @@ __adjustOverflow : function (reason) {
                     this.parentElement.childResettingHandleForAdjustOverflow();
                }
 
-                this._setHandleRect(null, null, this.width, this._height);
+                this._setHandleRect(null, null, this.width, this.height);
             }
             delete this._resetHandleOnAdjustOverflow;
         }
@@ -79013,6 +84560,12 @@ _handleCSSScroll : function (waited, fromFocus) {
     // this.scrollLeft/Top, and to cause any scrollTo overrides or observations to fire
 
 
+    // if scroll detection is armed, prevent any subsequent touchEnd from triggering a click
+
+    if (this._scrollHandled == false && !this._iosScrollFixInProgress) {
+        this._scrollHandled = true;
+    }
+
     isc.EH._setThread("SCR");
     this.scrollTo(trueScrollLeft, trueScrollTop, this._$nativeScroll);
     isc.EH._clearThread();
@@ -79412,12 +84965,11 @@ _sizeBackMask : function () {
 
 
 //> @method canvas.getTextDirection()
-//      Get the text direction of this canvas.
-//      This property is determined according to the containment hierarchy
-//       (like disabled) and is ultimately set by the page property if
-//       not defined by any widget.
+// Get the text direction of this canvas.  This property is determined according to the
+// containment hierarchy (like disabled) and is ultimately set by the page property if
+// not defined by any widget.
 //
-// @group RTL
+// @group textDirection
 // @group appearance
 // @return (TextDirection) direction -- Canvas.LTR or Canvas.RTL
 // @visibility internal
@@ -79503,7 +85055,9 @@ setVisibility : function (newVisibility) {
     // set the visible state of the object
     this.visibility = newVisibility;
 
-    var isVisible = this.isVisible();
+    var isVisible = this.isVisible(),
+        handleDisplayNone
+    ;
 
     // if we're drawn
     if (this.isDrawn()) {
@@ -79536,7 +85090,9 @@ setVisibility : function (newVisibility) {
                     // a parent in a prev iteration of this loop.
                     // Note - it's ok to leave the widget in the redraw queue, as
                     // clearRedrawQueue() will skip any widgets that are no longer dirty
-                    if (widget && widget.isDirty() && this._isVisibilityAncestorOf(widget)) {
+                    if (widget && widget.isDirty() &&
+                        this._isVisibilityAncestorOf(widget, true))
+                    {
                         widget.redraw("show() on parent while dirty");
                     }
                 }
@@ -79553,7 +85109,7 @@ setVisibility : function (newVisibility) {
 
         // Update handle.display if using hideUsingDisplayNone
 
-        this._updateHandleDisplay();
+        handleDisplayNone = this._updateHandleDisplay();
     }
 
     // if we have peers, show or hide them as well
@@ -79575,7 +85131,7 @@ setVisibility : function (newVisibility) {
 
     // notify children that visibility changed
     if (this.children) this.children.callMethod("parentVisibilityChanged", newVisibility, this,
-                                                isVisible && this._getHideUsingDisplayNone());
+                                                isVisible, this._getHideUsingDisplayNone());
 
     if (this.parentElement) this.parentElement.childVisibilityChanged(this, newVisibility);
 
@@ -79585,6 +85141,10 @@ setVisibility : function (newVisibility) {
     //<FocusProxy
 
     this._visibilityChanged();
+
+    // if canvas is configured for hideUsingDisplayNone:true, handle adjustOverflow()
+
+    if (handleDisplayNone != null) this._handleDisplayNoneOverflow(handleDisplayNone);
 },
 
 // Fires the visibilityChanged notification if appropriate
@@ -79630,37 +85190,42 @@ _testForHiddenCanvasIssue : function () {
 },
 
 // tell our children some parent's visibility changed
-parentVisibilityChanged : function (newVisibility, parent, adjustOverflow) {
 
+parentVisibilityChanged : function (newVisibility, parent, parentIsVisible, underDisplayNone) {
 
-    if (adjustOverflow && this.visibility == isc.Canvas.HIDDEN) {
-        adjustOverflow = !this._getHideUsingDisplayNone();
+    if (this.visibility == isc.Canvas.HIDDEN ||
+        this.visibility == isc.Canvas.VISIBLE && underDisplayNone == false)
+    {
+        underDisplayNone = null;
     }
 
-    // recurse so that entire the tree of descendants is notified
-    if (this.children) {
-        this.children.callMethod("parentVisibilityChanged", newVisibility, parent,
-                                 adjustOverflow);
+    // if underDisplayNone hasn't been set null, roll in this node's configuration
+    if (underDisplayNone != null) {
+        underDisplayNone = underDisplayNone || this._getHideUsingDisplayNone();
     }
 
 
     this._updateHandleDisplay();
 
+    // recurse so that entire the tree of descendants is notified
+
+    if (this.children) {
+        this.children.callMethod("parentVisibilityChanged", newVisibility, parent,
+                                 parentIsVisible, underDisplayNone);
+    }
+
     // If we have a 'focusProxy', make sure it has the appropriate visibility
     if (this._useFocusProxy) this._updateFocusProxyVisibility();
 
+    // this._visibilityChanged() verifies that this.isVisible() actually changed; minor
+    // optimization: this can only happen if the parent was a visibility ancestor of this widget
+
+    if (parent._isVisibilityAncestorOf(this)) this._visibilityChanged();
+    else if (isc.Browser.isChrome) this._testForHiddenCanvasIssue();
+
     // adjust overflow now that ancestor is visible if we were first drawn with "display:none"
 
-    if (adjustOverflow && this.isDrawn()) this._adjustOverflowForShowAfterDisplayNone();
-
-    // this._visibilityChanged() verifies that this.isVisible() actually changed
-    // minor optimization: this can only happen if the parent was a visibility ancestor of this widget
-    if (parent._isVisibilityAncestorOf(this)) this._visibilityChanged();
-
-    if (isc.Browser.isChrome) {
-        this._testForHiddenCanvasIssue();
-    }
-
+    if (underDisplayNone && this.isDrawn()) this._handleDisplayNoneOverflow(parentIsVisible);
 },
 
 // notification that a child's visibility changed
@@ -79751,6 +85316,17 @@ _getHideUsingDisplayNone : function () {
     return this.hideUsingDisplayNone || this._hideUsingDisplayNoneCounter > 0;
 },
 
+
+_isHiddenUsingDisplayNone : function () {
+    // starting with this canvas, traverse parent chain until a visible canvas is encountered
+    for (var target = this; target && !target._currentlyVisible; target = target.parentElement)
+    {
+        // was target hidden using "display:none" CSS?
+        if (target._getHideUsingDisplayNone()) return true;
+    }
+    return false;
+},
+
 //> @method canvas._setHandleVisibility()   (A)
 //          (internal) routine to set the visibility of the underlying DOM element.  Call
 //                     setVisibility instead.
@@ -79792,6 +85368,8 @@ _updateHandleDisplay : function () {
 
         this._$leftCoords = this._$topCoords = null;
 
+        return false;
+
     } else if (isVisible && this._setToDisplayNone) {
         if (isc.Browser.iOSVersion >= 7 &&
             isc.Browser._supportsWebkitOverflowScrolling && this._usingNativeTouchScrolling())
@@ -79809,17 +85387,36 @@ _updateHandleDisplay : function () {
         delete this._setToDisplayNone;
         delete this._visibleDisplayStyle;
 
-        // new scrollHeight/scrollWidth may overflow
-        this._adjustOverflowForShowAfterDisplayNone();
+        return true;
+    }
+},
+
+// call adjustOverflow() or clear its scribbling, depending on isVisible
+_handleDisplayNoneOverflow : function (isVisible) {
+    if (isVisible) this._adjustOverflowForShowAfterDisplayNone();
+    else {
+        delete this._currentContentWidth;
+        delete this._currentContentHeight;
     }
 },
 
 
 _adjustOverflowForShowAfterDisplayNone : function () {
-    if (this._currentContentWidth == null && this._currentContentHeight == null) {
-        this._currentContentWidth = this._currentContentHeight = 0;
-        this.adjustOverflow("set visible after draw with display:none")
+    var skipAdjustOverflow,
+        overflow = this.overflow
+    ;
+    // if vertical overflow visible, only call adjust overflow if no _currentContentHeight
+    if (overflow == isc.Canvas.VISIBLE || overflow == isc.Canvas.CLIP_H) {
+        if (this._currentContentHeight != null) skipAdjustOverflow = true;
+        else this._currentContentHeight = 0;
     }
+    // if horizontal overflow visible, only call adjust overflow if no _currentContentWidth
+    if (overflow == isc.Canvas.VISIBLE || overflow == isc.Canvas.CLIP_V) {
+        if (this._currentContentWidth != null) skipAdjustOverflow = true;
+        else this._currentContentWidth = 0;
+    }
+    // if no visible overflow, or it hasn't yet been initialized, adjust overflow now
+    if (!skipAdjustOverflow) this.adjustOverflow("set visible after draw with display:none");
 },
 
 // Helper method: should we draw() on a call to show()?
@@ -80467,7 +86064,7 @@ setShowFocusOutline : function (showFocusOutline, handleOnly) {
 _readyToSetFocus : function (focus) {
 
 
-    return (this.isDrawn() && this.visibleInDOM() && (!focus || !this.isDisabled()));
+    return (this.isDrawn() && this.visibleInDOM() && (!focus || !this.isDisabled()) && !window.isc_suppressFocus);
 },
 
 visibleInDOM : function () {
@@ -80908,25 +86505,73 @@ getAccessKey : function () {
 //     match up with top level draw order, or the canvas parent-child hierarchy.</li>
 // </ul>
 // Focusable elements other than SmartClient components (for example, native HTML
-// elements embedded in some canvas) can also participate in the automatically assigned
-// tab order.
-// <P>
-// To achieve this, a (unique) entry for each focusable component would be added
-// to the TabIndexManager at the desired location in the tab sequence tree.<br>
-// For example, if a focusable element is being written into some Canvas as part of
-// its contents, you might override +link{canvas.draw()} to add a new entry for the
-// element to the TabIndexManager, passing the canvas' ID as the parentID parameter. A
-// call to +link{TabIndexManager.getTabIndex()} would then retrieve a numeric index that
-// could be written into the native HTML. You'd also want to provide a callback to
-// update the element's native tabIndex when the TabIndexManager creates a new numeric
-// value for it. If you want to support
-// +link{canvas.focusInNextTabElement(),programmatically tabbing} into the element,
-// a shiftFocusCallback should also be provided to put focus into the element,
-// or return false if this is not currently possibly for some reason.
+// elements embedded in some canvas, or third party widgets)
+// can also participate in the automatically assigned
+// tab order. See +link{group:customTabElements} for details on how to achieve this.
 //
 // @title Tab Order Overview
 // @visibility external
 //<
+
+
+//> @groupDef customTabElements
+// Non-SmartClient user interface components which can receive focus, such as
+// native HTML elements or third party widgets may be included
+// the tab order of a SmartClient page.<br>
+// For example, if a native HTML <code>&lt;input&gt;</code> element is written into
+// some Canvas as part of its contents, a developer would likely want this element to be
+// included in the tab sequence for the page in its intuitive spot (between the canvas
+// it is embedded in and any subsequent canvases on the page).
+// <P>
+// To achieve this a developer needs to take several steps:
+// <ul>
+// <li>A new (unique) entry for the focusable component should be added to
+//     the TabIndexManager, at the desired location in the tab sequence tree. In the case
+//     of an <code>&lt;input&gt;</code> element written into a Canvas, the developer
+//     would choose an arbitrary identifying string for the input element, and call the
+//     +link{TabIndexManager.addTarget()} API, passing in the
+//     +link{canvas.getID(),ID of the canvas in which it is embedded}
+//     as the parentID parameter.</li>
+// <li>Once the entry has been registered, the developer may call
+//     +link{TabIndexManager.getTabIndex()} to retrieve a a numeric tabIndex to apply to the
+//     element. This can be used when generating the HTML to write out for the element.</li>
+// <li>The generated numeric tabIndex for this entry will not be static. Various actions,
+//     such as +link{canvas.addChild(),moving the canvas containing the item to a new parent}
+//     would cause this value to change. The <code>tabIndexUpdated</code> callback parameter
+//     of the +link{TabIndexManager.addTarget()} method is a notification which will be
+//     called when this occurs, and may be used to update the element's tab index if
+//     it has already been written into the DOM when the value changes.</li>
+// </ul>
+// In some situations, the SmartClient framework will intercept Tab keystroke events
+// and explicitly manage focus navigation between elements. Cases where this occurs
+// include moving between unmasked components when a +link{canvas.showClickMask(),click mask}
+// is up, using the Tab key to navigate between editors embedded in a ListGrid during
+// +link{group:editing,grid editing}, and for any focusable UI embedded in a canvas where
+// +link{canvas.alwaysManageFocusNavigation} has been explicitly set to true.<br>
+// To have focusable, non-SmartClient elements participate in this explicit tab navigation,
+// a couple of additional steps are required:
+// <ul>
+// <li>The <code>shiftFocusCallback</code> parameter should be passed to
+//     +link{TabIndexManager.addTarget()} when registering an ID for the custom element.
+//     This is a callback developers should implement to
+//     put native focus into the target (or return false if this is not currently possible
+//     for some reason). It will be invoked automatically by the system when focus is being
+//     shifted programmatically</li>
+// <li>Developers should also explicitly intercept the keydown event on the element
+//     they write out, and for Tab (or Shift+Tab) keystrokes, check whether explicit
+//     focus navigation is currently required (by calling
+//     +link{TabIndexManager.useExplicitFocusNavigation()}, passing in the ID that was
+//     registered via +link{TabIndexManager.addTarget()}), and if that returns true
+//     explicitly calling +link{isc.TabIndexManager.shiftFocus()}, and preventing default
+//     native behavior by invoking
+//     +externalLink{https://developer.mozilla.org/en-US/docs/Web/API/Event/preventDefault,preventDefault()}
+//     on the native event object.</li>
+// </ul>
+//
+// @title Including custom elements in the tab order
+// @visibility external
+//<
+
 
 
 
@@ -80938,24 +86583,35 @@ getAccessKey : function () {
 //
 // On init, associate this widget's ID with the Tab-index manager.
 initializeTabPosition : function () {
+    // put the node at the end of the page by default
+    this._initializeTabPosition(this.ID);
+},
+
+_initializeTabPosition : function (id, parentID, position) {
 
     this._shouldManageTabPosition = (this.tabIndex == null);
 
     isc.TabIndexManager.addTarget(
-        this.ID,
+        id,
         // canFocus parameter governs whether we want the manager to actually
         // create TabIndices if necessary. This doesn't exactly reflect the
         // "canFocus" state of this widget - a widget may have an auto assigned
         // tab index of either -1 or some hardcoded value and we'll never ask the
         // tab index manager for its tab index.
         (this._shouldManageTabPosition && this._canFocus()),
-        // put the node at the end of the page by default
-        null, null,
+        parentID,
+        position,
         // notification when an assigned tab index gets obsoleted
         // Recieves back an 'ID' parameter which is just this.ID
         {target:this, methodName:"autoTabIndexUpdated"},
-        {target:this, methodName:"syntheticShiftFocus"}
+        {target:this, methodName:"syntheticShiftFocus"},
+        this.tabGroupExit != null ? {target:this, methodName:"tabGroupExit"} : null
+
     );
+
+    if (this.alwaysManageFocusNavigation) {
+        isc.TabIndexManager.setUseExplicitFocusNavigation(this.getID(), true);
+    }
 },
 
 // This occurs on destroy only
@@ -81466,6 +87122,7 @@ syntheticShiftFocus : function (ID) {
     return true;
 },
 
+
 _getTopHardMask : function () {
     return isc.EH.getTopHardMask();
 },
@@ -81592,36 +87249,40 @@ focusAtEnd : function (start) {
     return isc.TabIndexManager.shiftFocusWithinGroup(this.getID(), null, start);
 },
 
+//> @attr canvas.alwaysManageFocusNavigation (Boolean : null : IR)
+// Should focus navigation for this canvas and its descendents be handled explicitly
+// by intercepting "Tab" key events and calling the +link{TabIndexManager.shiftFocus()}
+// API?
+// <P>
+// Setting this property to <code>true</code> will cause the registered TabIndexManager
+// entry for this canvas to be marked as
+// +link{TabIndexManager.setUseExplicitFocusNavigation(),useExplicitFocusNavigation:true},
+// and will cause standard event handling for the canvas and its descendents to
+// intercept Tab keystrokes and explicitly call +link{TabIndexManager.shiftFocus()}
+// rather than relying on native browser Tab navigation
+//
+// @visibility external
+//<
+//alwaysManageFocusNavigation:null,
 
-// Allow 'alwaysManageFocusNavigation' on a widget to always intercept Tab keypresses
-// and go into the 'focusInNextTabElement' flow even if we have no clickMask up.
-//alwaysManageFocusNavigation:false,
-
-
-useExplicitFocusNavigation : function () {
-    if (this.alwaysManageFocusNavigation) return true;
-    // For CanvasItem, check the containing DynamicForm [may not be the
-    // parentElement of the CanvasItem canvas due to the 'containerWidget' pattern]
-    if (isc.CanvasItem && isc.isA.CanvasItem(this.canvasItem)) {
-        var form = this.canvasItem.form;
-
-        return form.useExplicitFocusNavigationForCanvasItem(this.canvasItem);
-    } else {
-        if (!this.parentElement) return false;
-        return this.parentElement.useExplicitFocusNavigation();
-    }
+// Return the string that we registered with the TabIndexManager for the currently
+// focused element within this canvas.
+// This is used by the EventHandler to determine where to put focus when a clickMask is up
+// May be overridden by subclasses with focusable sub-elements, such as DynamicForms
+getFocusedTabIndexEntry : function () {
+    return this.getID();
 },
 
-// This method is used by EventHandler to shift focus programmatically on tab keypress
-// (for clickMask, or the special explicitFocusNaviation flag), and by the public
-// focusInNextTabElement/focusInPreviousTabElement methods.
-// Default implementation just punts to the TabIndexManager
-// Subclasses with a notion of focusable sub-elements which are not canvii (such as DF)
-// have to determine which sub-element to start with by tracking focus
-// (and then punt to the TabIndexManager)
+// _focusInNextTabElement() - implementation for public canvas.focusInNextTabElement()
+// & focusInPreviousTabElement methods() to shift focus forward or back.
+// Delegates to TIM.shiftFocus(), relying on 'getFocusedTabIndexEntery()' to determine
+// where focus currently is. That method may be overridden by subclasses to
+// return focusable sub-elements (FormItems, icons, etc).
 
 _focusInNextTabElement : function (forward) {
-    isc.TabIndexManager.shiftFocus(this.getID(), forward);
+    var focusCanvas = this.ns.EH._focusCanvas;
+    isc.TabIndexManager.shiftFocus(focusCanvas ? focusCanvas.getFocusedTabIndexEntry() : null,
+                                   forward);
 },
 
 // zIndex (stacking order)
@@ -81720,7 +87381,28 @@ _adjustSpecialPeers : function (newIndex) {
     if (this._edgesAsPeer()) this._edgedCanvas.setZIndex(newIndex-1);
     if (this._backMask) this._backMask.setZIndex(newIndex-2);
     if (this._shadow) this._shadow.setZIndex(newIndex-3);
-    if (this.modalMask) this.modalMask.setZIndex(newIndex-4);
+
+    if (this.modalMask) {
+        var modalIndex = newIndex;
+        // place the modalMask behind the lowest unmasked top-level canvas in
+        // this canvas's _unmaskedTargets block
+        var mask = isc.EH.getClickMask(this.getID());
+        if (mask) {
+            var targets = mask._unmaskedTargets;
+            if (targets) {
+                var lowestIndex = modalIndex;
+                for (var key in targets) {
+
+                    if (targets[key].parentElement || targets[key].skipModalCheck) continue;
+                    var index = targets[key].getZIndex();
+                    if (index < lowestIndex) lowestIndex = index;
+                }
+                //isc.logWarn("modalIndex: " + modalIndex + " -- lowestIndex: " + lowestIndex);
+                modalIndex = lowestIndex;
+            }
+        }
+        this.modalMask.setZIndex(modalIndex-4);
+    }
 },
 
 // zIndexChanged - notification fired if our zIndex has changed.
@@ -81762,8 +87444,10 @@ parentZIndexChanged : function () {
 bringToFront : function (skipSoftUnmask) {
     if (isc._traceMarkers) arguments.__this = this;
 
-    isc.Canvas._BIG_Z_INDEX += 18;
-    this.setZIndex(isc.Canvas._BIG_Z_INDEX);
+    // notifications are sent to a higher Z-layer so they're always in front
+    var bigZIndex = this._notifyZLayer ? "_NOTIFY_Z_INDEX" : "_BIG_Z_INDEX";
+    isc.Canvas[bigZIndex] += 18;
+    this.setZIndex(isc.Canvas[bigZIndex]);
 
     // if we're showing a groupLabel, bring that above this canvas
     if (this.groupLabel) this.groupLabel.moveAbove(this);
@@ -82207,13 +87891,12 @@ setCursor : function (newCursor) {
 _applyCursor : function (newCursor) {
     if (this._styleCursor == newCursor) return;
     if (this.isDrawn()) {
+        this._styleCursor = newCursor;
+
 
         if (newCursor == isc.Canvas.HAND && isc.Browser._usePointerCursorForHand) {
             newCursor = isc.Canvas.POINTER;
         }
-
-        this._styleCursor = newCursor;
-
         this.getStyleHandle().cursor = newCursor;
         // In double-div browsers, set the cursor of the content div.
 
@@ -82242,6 +87925,7 @@ _applyCursor : function (newCursor) {
 },
 
 _updateCursor : function() {
+
     var currentCursor = this.getCurrentCursor();
 
     // apply the appropriate cursor to the Canvas
@@ -82250,7 +87934,25 @@ _updateCursor : function() {
 },
 
 
+_getCurrentResizeCursor : function (currentCursor) {
+    // if this Canvas is resizable and there's an edgeCursorMap
+    // determine whether we're on the edge, and show the appropriate cursor
+    var edge = this.getEventEdge();
+    if (edge && this.edgeCursorMap[edge]) {
+        currentCursor = this._lastEdgeCursor = this.edgeCursorMap[edge];
+    }
+    //this.logWarn("over edge: " + edge + " with cursor: " + currentCursor);
+    return currentCursor;
+},
+
 getCurrentCursor : function () {
+
+    // Event Proxies automatically sync their _proxiers' cursors, so if "updateCursor()"
+    // runs on a _proxier, ensure we continue to show the same cursor applied by the eventProxy
+    if (this.eventProxy != null) {
+        return this.eventProxy.getCurrentCursor();
+    }
+
     // If we don't have a special cursor, we need to show the original cursor.
     var currentCursor = this.cursor;
 
@@ -82273,23 +87975,25 @@ getCurrentCursor : function () {
     // If we're disabled, let the disabled cursor show
     } else if (this.isDisabled()) currentCursor = this.disabledCursor;
 
+    // If we're resizing a canvas by dragging an edge, the cursor may not be over the canvas, so
+    // we can't just look it up using the edgeCursorMap; instead, use the last edge drag cursor.
+    else if (isc.EH.dragOperation == isc.EH.DRAG_RESIZE) {
+        var dragTarget = isc.EH.dragTarget;
+
+
+
+        currentCursor = dragTarget._lastEdgeCursor ? dragTarget._lastEdgeCursor :
+                        dragTarget._getCurrentResizeCursor(currentCursor);
+
     // Drag indicators
-    else {
-        // Edge drag resizing
-        var edgeCursor;
-        if (this.canDragResize && this.edgeCursorMap) {
-            // if this Canvas is resizable and there's an edgeCursorMap
-            // determine whether we're on the edge, and show the appropriate cursor
-            var edge = this.getEventEdge();
-            if (edge && this.edgeCursorMap[edge]) {
-                currentCursor = this.edgeCursorMap[edge];
-                edgeCursor = true;
-            }
-            //this.logWarn("over edge: " + edge + " with cursor: " + currentCursor);
-        }
-        // drag repositioning
-        if (!edgeCursor && this.canDragReposition && this.dragRepositionCursor) {
+    } else {
+        // show a drag repositioning cursor by default
+        if (this.canDragReposition && this.dragRepositionCursor) {
             currentCursor = this.dragRepositionCursor;
+        }
+        // unless we're doing an edge-drag resize
+        if (this.canDragResize && this.edgeCursorMap) {
+            currentCursor = this._getDragTarget()._getCurrentResizeCursor(currentCursor);
         }
     }
 
@@ -82459,7 +88163,7 @@ _hoverHidden : function () {
 //> @method canvas.hoverHidden() (A)
 // If +link{canvas.showHover,showHover} is true for this canvas, this notification method will be
 // fired whenever the hover shown in response to +link{canvas.handleHover(),handleHover()} is
-// hidden. This method may be observed or overridden.
+// hidden. <smartclient>This method may be observed or overridden.</smartclient>
 // @group hovers
 // @visibility external
 //<
@@ -82477,7 +88181,9 @@ _hoverPropertyMap:{
         moveWithMouse:"hoverMoveWithMouse",
         wrap:"hoverWrap",
         autoFitWidth:"hoverAutoFitWidth",
-        autoFitMaxWidth:"hoverAutoFitMaxWidth"
+        autoFitMaxWidth:"hoverAutoFitMaxWidth",
+        focusKey:"hoverFocusKey",
+        hideOnMouseDown:"hideHoverOnMouseDown"
 },
 _getHoverProperties : function () {
     var target = isc.EH.getTarget(),
@@ -82492,6 +88198,7 @@ _getHoverProperties : function () {
                                 ? parent[widgetProp]
                                 : this[widgetProp];
     }
+
     return result;
 },
 
@@ -82953,12 +88660,7 @@ handleDoubleClick : function (event, eventInfo) {
 handleTouchStart : function (event, eventInfo) {
 
 
-    if (isc.Browser.hasDualInput) {
-        if (!this._touchEnabled) {
-            this.enableTouchSupport();
-            this._touchEnabled = true;
-        }
-    }
+    if (isc.Browser.hasDualInput) this._updateTouchSupport();
 
     if ((isc.Browser.isIPhone || isc.Browser.isIPad) &&
         event.target === this &&
@@ -82967,14 +88669,17 @@ handleTouchStart : function (event, eventInfo) {
     {
 
 
-        this._iosScrollFixInProgress = true;
-
+        var skipScrollFix;
         var elem = this.getClipHandle();
         var scrollTop = elem.scrollTop;
         if (scrollTop <= 0) elem.scrollTop = 1;
         else if (scrollTop + elem.clientHeight >= elem.scrollHeight) {
             elem.scrollTop = elem.scrollHeight - elem.clientHeight - 1;
+        } else {
+            skipScrollFix = true;
         }
+        // set the iOS "scroll fix" flag if scrollTop was changed
+        if (!skipScrollFix) this._iosScrollFixInProgress = true;
 
 
         this._preventNativeScrolling = elem.scrollHeight <= elem.clientHeight;
@@ -83011,6 +88716,20 @@ enableTouchSupport : function () {
         handle.setAttribute("data-isc-overflow-style",overflowStyle);
         this.getStyleHandle().overflow = this._getHandleOverflow();
         this.adjustOverflow("touch enabled");
+    }
+
+
+    if (isc.Browser.isChrome) {
+        if (this.hscrollbar) this.hscrollbar._updateTouchSupport();
+        if (this.vscrollbar) this.vscrollbar._updateTouchSupport();
+    }
+},
+
+// enable touch support only if needed
+_updateTouchSupport : function () {
+    if (!this._touchEnabled) {
+        this.enableTouchSupport();
+        this._touchEnabled = true;
     }
 },
 
@@ -83676,11 +89395,6 @@ snapGridPaneDefaults: {
     height: "100%"
 },
 
-snapGridCrossLength: 3,
-snapGridLineDefaults: {
-    lineWidth: 1
-},
-
 
 
 //> @attr canvas.showSnapGrid  (Boolean : null : [IRW])
@@ -83729,27 +89443,9 @@ _showSnapGrid : function () {
             left: -1000
         });
 
-        // Make sure crossLength is even
-        var crossLength = Math.floor(this.snapGridCrossLength / 2) * 2,
-            halfCrossLength = crossLength / 2,
-            x = halfCrossLength,
-            y = halfCrossLength
-        ;
-
-        // Draw actual cross into tile
-        var hLineProperties = isc.addProperties({}, this.snapGridLineDefaults, {
-            drawPane: tilePane,
-            startPoint:  [x - halfCrossLength, y],
-            endPoint:    [x + halfCrossLength, y]
-        });
-        isc.DrawLine.create(hLineProperties);
-
-        var vLineProperties = isc.addProperties({}, this.snapGridLineDefaults, {
-            drawPane: tilePane,
-            startPoint:  [x, y - halfCrossLength],
-            endPoint:    [x, y + halfCrossLength]
-        });
-        isc.DrawLine.create(vLineProperties);
+        // create the drawItems that correspond to the snapGridStyle
+        var backgroundPosition = this.snapGridStyle == "crosses" ?
+            this._drawSnapCrosses(tilePane) : this._drawSnapGridLines(tilePane);
 
         // Draw the canvas now and obtain an internal URL for the bitmap image
         tilePane.draw();
@@ -83762,7 +89458,7 @@ _showSnapGrid : function () {
             isSnapAlignCandidate: false,
             backgroundImage: url,
             backgroundRepeat: "repeat",
-            backgroundPosition: (this.snapHGap - halfCrossLength) + "px " + (this.snapVGap - halfCrossLength) + "px"
+            backgroundPosition: backgroundPosition
         });
 
         // Add grid pane to canvas and make sure it is behind everything else
@@ -83770,6 +89466,90 @@ _showSnapGrid : function () {
         this.snapGridPane.sendToBack();
     }
     this.snapGridPane.show();
+},
+
+//> @type SnapGridStyle
+// @value "crosses" show array of crosses to indicate snap points
+// @value "lines" show grid of lines to indicate snap points
+// @visibility external
+//<
+
+//> @attr canvas.snapGridStyle (SnapGridStyle : "crosses" : IR)
+// Specifies indication style to use for snap points, either a grid of lines or an array of
+// crosses.  The lines can be configured using the property +link{snapGridLineProperties}.
+// @visibility external
+//<
+snapGridStyle: "crosses",
+
+snapGridCrossLength: 3,
+snapGridCrossLineProperties: {
+    lineWidth: 1
+},
+
+// draw the array of crosses used to indicate snap points
+_drawSnapCrosses : function (tilePane) {
+    // Make sure crossLength is even
+    var crossLength = Math.floor(this.snapGridCrossLength / 2) * 2,
+        halfCrossLength = crossLength / 2,
+        x = halfCrossLength,
+        y = halfCrossLength
+    ;
+
+    // Draw actual cross into tile
+    var hLineProperties = isc.addProperties({}, this.snapGridCrossLineProperties, {
+        drawPane: tilePane,
+        startPoint:  [x - halfCrossLength, y],
+        endPoint:    [x + halfCrossLength, y]
+    });
+    isc.DrawLine.create(hLineProperties);
+
+    var vLineProperties = isc.addProperties({}, this.snapGridCrossLineProperties, {
+        drawPane: tilePane,
+        startPoint:  [x, y - halfCrossLength],
+        endPoint:    [x, y + halfCrossLength]
+    });
+    isc.DrawLine.create(vLineProperties);
+
+    return (this.snapHGap - halfCrossLength) + "px " +
+           (this.snapVGap - halfCrossLength) + "px";
+},
+
+//> @attr canvas.snapGridLineProperties (DrawLine Properties : null : IR)
+// Specifies line styling to use when drawing the grid of lines for +link{snapGridStyle}:
+// "lines".
+// @visibility external
+//<
+snapGridLineProperties: {
+    lineColor: "#808080",
+    linePattern: "shortdot",
+    lineWidth: 1
+},
+
+_drawSnapGridLines : function (tilePane) {
+    var lineProps = this.snapGridLineProperties,
+        lineWidth = lineProps.lineWidth != null ? lineProps.lineWidth :
+                    isc.DrawLine.getInstanceProperty("lineWidth"),
+        halfWidth = Math.floor(lineWidth / 2),
+        snapVGap = this.snapVGap,
+        snapHGap = this.snapHGap
+    ;
+
+    var hLineProperties = isc.addProperties({}, this.snapGridLineProperties, {
+        drawPane: tilePane,
+        startPoint: [0, halfWidth],
+        endPoint: [snapHGap, halfWidth]
+    });
+    isc.DrawLine.create(hLineProperties);
+
+    var vLineProperties = isc.addProperties({}, this.snapGridLineProperties, {
+        drawPane: tilePane,
+        startPoint: [halfWidth, 0],
+        endPoint: [halfWidth, snapVGap]
+    });
+    isc.DrawLine.create(vLineProperties);
+
+    return (snapHGap - halfWidth) + "px " +
+           (snapVGap - halfWidth) + "px";
 },
 
 // SnapTo Component
@@ -84717,8 +90497,17 @@ getImgURL : function (src, imgDir) {
 
 //> @attr imgProperties.extraStuff (String : null : IRW)
 //
-// Specifies the additional attributes to write in the tag.
+// Specifies the additional attributes to write in the tag.  Event-related attributes should be
+// added to +link{eventStuff} instead to guarantee proper behavior when using SVG images.
 //
+// @visibility external
+//<
+
+//> @attr imgProperties.eventStuff (String : null : IRW)
+//
+// Specifies the additional event-related attributes to write in the tag.
+//
+// @see extraStuff
 // @visibility external
 //<
 
@@ -84757,31 +90546,42 @@ getImgURL : function (src, imgDir) {
 // @group images
 // @visibility external
 //<
-// @param [generateSpan] (boolean)  whether to generate the HTML for a &lt;span&gt; element instead
-//                                  of an &lt;img&gt; element.
-imgHTML : function (src, width, height, name, extraStuff, imgDir, activeAreaHTML, generateSpan) {
-    return isc.Canvas.imgHTML(src, width, height, name, extraStuff, imgDir, activeAreaHTML, this, false, generateSpan);
+// @param [generateSpan] (boolean)  whether to generate the HTML for a &lt;span&gt; element
+//                                  instead of an &lt;img&gt; element.
+// @param [eventstuff] (String)  additional revent-related attributes to write in the tag
+imgHTML : function (src, width, height, name, extraStuff, imgDir, activeAreaHTML, generateSpan,
+                    eventStuff)
+{
+    return isc.Canvas.imgHTML(src, width, height, name, extraStuff, imgDir, activeAreaHTML,
+                              this, false, generateSpan, null, eventStuff);
 },
 
 // returns an imgHTML template that contains an open slot for a unique name attribute
 // for the image.  Used in inner loops.
-_getImgHTMLTemplate : function (src, width, height, name, extraStuff, imgDir, activeAreaHTML, generateSpan) {
+_getImgHTMLTemplate : function (src, width, height, name, extraStuff, imgDir, activeAreaHTML,
+                                generateSpan)
+{
     isc.Canvas._getImgHTMLTemplateRunning = true;
-    var HTML = isc.Canvas.imgHTML(src, width, height, name, extraStuff, imgDir, activeAreaHTML, this, true, generateSpan);
+    var HTML = isc.Canvas.imgHTML(src, width, height, name, extraStuff, imgDir, activeAreaHTML,
+                                  this, true, generateSpan);
     isc.Canvas._getImgHTMLTemplateRunning = false;
     return HTML;
 
 },
 
 //> @attr canvas.useImageForSVG (boolean : false : IRA)
-// If set, forces the main SVG image or icon in the canvas to be rendered in an &lt;image&gt;
-// tag rather than an &lt;object&gt; tag, the default.  Typical use cases might be configuring
-// the image of an +link{Img} or +link{ImgButton}, or the icon of a +link{Button}.
+// If set, forces the main SVG image or icon in the canvas to be rendered in an image tag rather
+// than an object tag, the default.  Typical use cases might be configuring the image of an
+// +link{Img} or +link{ImgButton}, or the icon of a +link{Button}.
 // <P>
-// Rendering via &lt;object&gt; tag provides the maximum support for CSS in SVG, but may result
-// in a flicker at the browser level when changing images - either manually such as with
-// +link{setImage()} or via state change from rollover, mouseDown, etc.  Using &lt;image&gt;
-// tags to inline the images breaks CSS support but may avoid flickering.
+// Rendering via object tag provides the maximum support for CSS in SVG, but may result in a
+// flicker at the browser level when changing images - either manually such as with
+// +link{setImage()} or via state change from rollover, mouseDown, etc.  Using image tags to
+// inline the images breaks CSS support but may avoid flickering.
+// <P>
+// If this property is <i>not</i> set, then you can also control whether an SVG image is
+// rendered in an object or image tag by setting the query param "tag" on the image URL - see
+// +link{SCImgURL} for details.
 // <P>
 // Note that if multiple icons are potentially present in a canvas (e.g.
 // +link{listGrid.removeIcon, removeIcons} in the cells of a grid body), then setting this
@@ -84791,12 +90591,44 @@ _getImgHTMLTemplate : function (src, width, height, name, extraStuff, imgDir, ac
 // @see Img.src
 // @see Button.icon
 // @see Class.addProperties()
+// @see forwardSVGeventsToObject
 // @visibility external
 //<
 
 
+//> @attr canvas.forwardSVGeventsToObject (Boolean : true : IRA)
+// If true, events sent to the SVG inside an object tag are forwarded to the object itself by
+// Framework handlers.  If false, "pointer-events:none" CSS is set on the object so that events
+// are directly sent to the object by the browser, if supported.
+// <P>
+// The advantage of forwarding events is that it allows hover CSS or any other event-driven
+// logic on the SVG to work as expected.  If "pointer-events:none" is written out, no GUI
+// interaction will trigger events in the SVG, including hover CSS.  The disadvantage is that
+// only a few critical events are forwarded, such as "mouseDown", "mouseMove", and "mouseUp" for
+// non-touch platforms, and "click" for touch platforms.  Other events will be delivered to the
+// SVG, but not forwarded up to the parent document/object tag.
+// @group images
+// @see EventHandler
+// @see useImageForSVG
+// @visibility external
+//<
+forwardSVGeventsToObject: true,
+
+// should src image be rendered in an object tag to allow SVG CSS to work properly?
 _isSVG : function (src) {
     return !this.useImageForSVG && isc.Canvas._isSVG(src, true);
+},
+
+
+_SVGcontainerObjectLoaded : function (object) {
+    this._markForAdjustOverflow();
+    // if container object passed, set up event forwarding
+    if (object) isc.EH._forwardSVGeventsToObject(object);
+},
+
+_fixOverflowForSVG : function (src) {
+    return src && this.useClipDiv && this.fixOverflowForSVG != false &&
+        this.overflow == isc.Canvas.VISIBLE && this._isSVG(src);
 },
 
 //> @method canvas.getImage() (A)
@@ -85565,8 +91397,9 @@ propertyChanged : function (propName, value) {
 // Group Frame APIs
 // ---------------------------------------------------------------------------------------
 
-//> @attr canvas.isGroup (boolean : false : IR)
-// Should a grouping frame be shown around this canvas.
+//> @attr canvas.isGroup (boolean : true : IR)
+// Should a grouping frame be shown around this canvas if a non-empty string has been specified
+// for +link{groupTitle}.
 // @see canvas.groupBorderCSS
 // @see canvas.groupLabelStyleName
 // @see canvas.groupLabelBackgroundColor
@@ -85574,29 +91407,40 @@ propertyChanged : function (propName, value) {
 //<
 // isGroup - should we show a grouping frame around this canvas?
 
-isGroup:false,
+isGroup:true,
 
-setIsGroup : function (isGroup, fromDraw) {
-    if (isGroup == this.isGroup) return;
+
+_setIsGroup : function (isGroup, fromDraw) {
+    if (isGroup == this._isGroup) return;
 
     var mustClear = this.shouldShowGroupLabel() && this.isDrawn();
     if (mustClear) this.clear();
-    if (isGroup) {
+
+
+    if (!isGroup) {
+        this.setBorder(this._standardBorder || "");
+        if (this.shouldShowGroupLabel()) this._hideGroupLabel();
+
+    } else if (!mustClear) {
         this._standardBorder = this.border;
         this.setBorder(this.groupBorderCSS);
         if (this.shouldShowGroupLabel()) this._showGroupLabel(fromDraw);
-    } else {
-        this.setBorder(this._standardBorder || "");
-        if (this.shouldShowGroupLabel()) this._hideGroupLabel();
     }
-    this.isGroup = isGroup;
+
+    this._isGroup = isGroup;
     if (mustClear) this.draw();
 },
 
 
+
+_shouldGroup : function () {
+    return !!(this.isGroup && (this.groupTitle || !this.shouldShowGroupLabel()));
+},
+
+
 //> @attr canvas.groupBorderCSS (String : "2px solid black" : IR)
-// Sets the style for the grouping frame around the canvas. Only necessary when +link{canvas.isGroup}
-// is set to true.
+// Sets the style for the grouping frame around the canvas.  Only necessary when showing a
+// +link{canvas.isGroup,grouping frame}.
 // @group appearance
 // @visibility external
 //<
@@ -85610,8 +91454,8 @@ shouldShowGroupLabel : function () {
 },
 
 //> @attr canvas.groupLabelStyleName (CSSStyleName : "groupLabel" : IR)
-// Sets the style for the grouping label. Only necessary when +link{canvas.isGroup}
-// is set to true.
+// Sets the style for the grouping label.  Only necessary when showing a +link{canvas.isGroup,
+// grouping frame}.
 // <p>
 // Note that +link{groupLabelBackgroundColor} overrides any background-color of this style.
 // @group appearance
@@ -85620,12 +91464,12 @@ shouldShowGroupLabel : function () {
 groupLabelStyleName:"groupLabel",
 
 //> @attr canvas.groupLabelBackgroundColor (CSSColor : null : IRW)
-// If set, the background color of the grouping label. Only applicable when +link{isGroup}
-// is set to true.
+// If set, the background color of the grouping label. Only applicable when showing a
+// +link{canvas.isGroup,grouping frame}.
 // <p>
 // This corresponds to the CSS background-color property on the grouping label. You can set this
-// property to an RGB value (e.g. #22AAFF) or a named color (e.g. red) from a list of browser supported
-// color names.
+// property to an RGB value (e.g. #22AAFF) or a named color (e.g. red) from a list of browser
+// supported color names.
 // <smartgwt><p>
 // The getter for this attribute, {@link #getGroupLabelBackgroundColor()}, returns the color
 // that will actually be used; i.e. if groupLabelBackgroundColor is left unset or is set to
@@ -85662,7 +91506,8 @@ getGroupLabelBackgroundColor : function () {
     if (this.groupLabelBackgroundColor) return this.groupLabelBackgroundColor;
     if (this.backgroundColor) return this.backgroundColor;
     // should check this.styleName.backgroundColor too...
-    return "white";
+    // return currentSkin.backgroundColor if it's set (Flat skins), rather than assuming "white"
+    return (isc.currentSkin && isc.currentSkin.backgroundColor) || "white";
 },
 
 //> @method canvas.setGroupLabelBackgroundColor()
@@ -85765,7 +91610,9 @@ groupLabelDefaults:{
 },
 
 //> @attr canvas.groupTitle (HTMLString : null : IRW)
-// The title/label for the grouping. Only applicable when +link{Canvas.isGroup,isGroup} is set to true.
+// The title/label for the grouping. Only applicable when +link{Canvas.isGroup,isGroup} is set
+// to true.  No +link{isGroup,grouping frame} or title/label will be shown unless this property
+// is a non-empty string.
 // @setter setGroupTitle()
 // @group appearance
 // @visibility external
@@ -85779,10 +91626,20 @@ groupLabelDefaults:{
 //<
 setGroupTitle : function (newTitle) {
     this.groupTitle = newTitle;
-    if (this.groupLabel) {
-        this.groupLabel.setContents(this.groupTitle);
-    } else {
-        this._showGroupLabel();
+
+
+    var isGroup = this._shouldGroup();
+    if (isGroup != this._isGroup) {
+        // show/hide frame and title
+        this._setIsGroup(isGroup);
+
+    } else if (isGroup) {
+        // we were already showing a group title, so just update it
+        if (this.groupLabel) {
+            this.groupLabel.setContents(this.groupTitle);
+        } else {
+            this._showGroupLabel();
+        }
     }
 },
 
@@ -86007,6 +91864,8 @@ _createTriggerArea : function () {
 
 
 
+
+
 //> @attr canvas.isRuleScope (Boolean : null : IR)
 // Marks this Canvas as the +link{canvas.ruleScope} that will be discovered by any contained
 // +link{DataBoundComponent}s which do not specify an explicit <code>ruleScope</code>.
@@ -86036,7 +91895,12 @@ _createTriggerArea : function () {
 //<
 getRuleContext : function (databoundOnly) {
     var component = this.getRuleScopeComponent();
-    if (!component) return null;
+    if (!component) {
+        if (isc.disableRuleScope) {
+            isc.logWarn("Attempt to retrieve ruleContext while RuleScope has been explicitly disabled (isc.disableRuleScope=true). Nothing to return.")
+        }
+        return null;
+    }
 
     if (!component._ruleContext) component._ruleContext = {};
 
@@ -86047,6 +91911,8 @@ getRuleContext : function (databoundOnly) {
         ;
         for (var i = 0; i < dbcList.length; i++) {
             var dbc = dbcList[i];
+            if (dbc.getContributeToRuleContext() == false) continue;
+
             if (ruleContext[dbc.ID] != null) {
                 filteredContext[dbc.ID] = ruleContext[dbc.ID];
             }
@@ -86064,7 +91930,17 @@ getRuleScopeDataBoundComponents : function () {
     var component = this.getRuleScopeComponent();
     if (!component) return [];
 
-    return component._ruleScopeDBCs || [];
+    // Filter out components that don't contribute to ruleContext
+    var components = [],
+        dbcList = component._ruleScopeDBCs || []
+    ;
+    for (var i = 0; i < dbcList.length; i++) {
+        var dbc = dbcList[i];
+        if (dbc.getContributeToRuleContext() == false) continue;
+        components[components.length] = dbc;
+    }
+
+    return components;
 },
 
 //> @method canvas.ruleContextChanged()
@@ -86174,7 +92050,7 @@ provideRuleContext : function (path, data, dbc, suppressChangeEvent) {
     }
 
     // Fire change event
-    if (!suppressChangeEvent && component.ruleContextChanged) {
+    if (!suppressChangeEvent) {
         this.fireRuleContextChanged(component);
     }
 },
@@ -86191,7 +92067,7 @@ fireRuleContextChanged : function (component) {
     if (!component) return;
 
     if (component.rulesEngine) component.rulesEngine.processContextChanged(component);
-    component.ruleContextChanged(component._ruleContext);
+    if (component.ruleContextChanged) component.ruleContextChanged(component._ruleContext);
 },
 
 getRulesEngine : function () {
@@ -86222,6 +92098,14 @@ getRuleScopeComponent : function () {
 },
 
 getRuleScope : function () {
+    if (isc.disableRuleScope) {
+        // Only show message once
+        if (!isc.Canvas._loggedDisabledRuleScope) {
+            isc.logWarn("RuleScope has been explicitly disabled (isc.disableRuleScope=true). No ruleContext operations will be processed.")
+            isc.Canvas._loggedDisabledRuleScope = true;
+        }
+        return null;
+    }
     if (this.ruleScope) {
         // If Canvas was provided as ruleScope, always return ID
         return (isc.isA.Canvas(this.ruleScope) ? this.ruleScope.getID() : this.ruleScope);
@@ -86233,14 +92117,26 @@ getRuleScope : function () {
     ;
     if (parentCanvas) {
         if (this.editNode && this.editContext &&
-                (!parentCanvas.editNode || parentCanvas.editNode == this.editContext.getRootEditNode()))
+                (parentCanvas.editNode == this.editContext.getRootEditNode()))
         {
 
+            if (this.visibility == isc.Canvas.HIDDEN || this.autoDraw == false) {
+                var children = this.editContext.getEditNodeTree().getChildren();
+                for (var i = children.length-1; i >= 0; i--) {
+                    var child = children[i];
+                    if (!isc.isA.Canvas(child)) continue;
+                    if (child.visibility != isc.Canvas.HIDDEN && child.autoDraw !== false) {
+                        return child.ID;
+                    }
+                }
+            }
             return this.getID();
         }
         ruleScope = parentCanvas.getRuleScope();
     } else {
-        ruleScope = this.getID();
+        // If this global component is part of a Component XML "screen" use the screen as the ruleScope
+        // so rules can be shared between them
+        ruleScope = (this._screen ? this._screen.getID() : this.getID());
     }
 
     return ruleScope;
@@ -86267,6 +92163,21 @@ getContributeToRuleContext : function () {
 },
 
 
+registerRuleScopeSchema : function (schema) {
+    if (!this._ruleScopeSchemas) this._ruleScopeSchemas = [];
+    this._ruleScopeSchemas.add(schema);
+},
+
+destroyRuleScopeSchemas : function () {
+    if (!this._ruleScopeSchemas) return;
+    for (var i = 0; i < this._ruleScopeSchemas.length; i++) {
+        var schema = this._ruleScopeSchemas[i];
+        schema.destroy();
+    }
+    this._ruleScopeSchemas = null;
+},
+
+
 _getObjectLocatorForWhenRules : function (component) {
     var testRoot = isc.AutoTest.testRoot;
 
@@ -86283,7 +92194,10 @@ _createCanvasWhenRules : function (initialDraw, dontUseTea) {
 
 
     var component = this.getRuleScopeComponent();
-    if (!component) return;
+    if (!component && !isc.disableRuleScope) return;
+    // When component is null because isc.disableRuleScope=true,
+    // let __createCanvasWhenRules run so individual *when rules
+    // can be logged as invalid in this configuration.
 
 
     if ((isc.isAn.Object(this.visibleWhen) && !isc.isAn.emptyObject(this.visibleWhen)) ||
@@ -86322,10 +92236,18 @@ __createCanvasWhenRules : function (component) {
         var locator = this._getObjectLocatorForWhenRules(this);
 
         if (isc.isAn.Object(this.visibleWhen) && !isc.isAn.emptyObject(this.visibleWhen)) {
-            rules.add(this._createWhenRule(locator, "visibility", this.visibleWhen));
+            if (isc.disableRuleScope) {
+                this.logWarn("Attempt to define canvas visibleWhen criteria while RuleScope has been explicitly disabled (isc.disableRuleScope=true). Criteria will be ignored.")
+            } else {
+                rules.add(this._createWhenRule(locator, "visibility", this.visibleWhen));
+            }
         }
         if (isc.isAn.Object(this.enableWhen) && !isc.isAn.emptyObject(this.enableWhen)) {
-            rules.add(this._createWhenRule(locator, "enable", this.enableWhen));
+            if (isc.disableRuleScope) {
+                this.logWarn("Attempt to define canvas visibleWhen criteria while RuleScope has been explicitly disabled (isc.disableRuleScope=true). Criteria will be ignored.")
+            } else {
+                rules.add(this._createWhenRule(locator, "enable", this.enableWhen));
+            }
         }
     }
     if (rules.length > 0) {
@@ -86391,10 +92313,11 @@ _createWhenRule : function (locator, type, criteria, fieldName) {
     ;
 
     return isc.addProperties({
-        name: this._getRuleName(locator, type, fieldName),
+        name: ruleName,
         triggerEvent: "contextChanged",
         type: type,
         applyWhen: criteria,
+        internalRule: true,
         logCategory: "whenRules"
     }, target);
 },
@@ -86462,7 +92385,7 @@ stripLinkTags : function (html) {
 // @visibility external
 //<
 getById : function (sId) {
-    var canvas = window[sId] || null;
+    var canvas = sId ? (window[sId] || null) : null;
     return canvas ? (isc.isA.Canvas(canvas) ? canvas : null) : null;
 },
 
@@ -86805,7 +92728,29 @@ resizeFonts : function (sizeChange, styleSheets, resizeRelatedControls) {
     this.clearCSSCaches();
 },
 
-//  scale down padding in target styles with fontSizeChanged - baseline styles are lower limit
+//> @classMethod Canvas.resizePadding()
+// Modify the amount of padding for some CSS styles defined for the page.  Only CSS styles
+// registered by +link{registerFontScaledPaddingStyles()} are modified.
+// <p>
+// <code>resizePadding()</code> must be called after the skin has been loaded, and before any
+// components have been created.  Calling <code>resizePadding()</code> at a later time is not
+// supported (you will notice that padding is modified, however, this approach is not supported).
+// <p>
+// This method has similar browser security limitations as +link{resizeFonts()}.
+// <P>
+// The intent is that the same font size change be passed to this method as is passed to
+// +link{resizeFonts()}, so that the <code>targetSizeChange</code> in the call to
+// +link{registerFontScaledPaddingStyles()} represents the right font size for the unadjusted
+// styles being registered.
+// @param fontSizeChange (int) size change to apply to the padding of registered styles, so that
+//                             they aren't changed at all at the size change passed to
+//                             +link{registerFontScaledPaddingStyles()}, and the padding is
+//                             reduced to baseline style levels at a zero size change.
+// @param [styleSheets] (String) optional regular expression pattern for matching stylesheets
+// @see resizeFonts()
+// @see resizeControls()
+// @visibility external
+//<
 
 resizePadding : function (fontSizeChange, styleSheets) {
     var styleConfig = this._fontScaledPaddingStyles;
@@ -86892,8 +92837,38 @@ resizePadding : function (fontSizeChange, styleSheets) {
     }
 },
 
-// registers declared styles that have padding set to match fonts scaled up from default sizing;
-// in applications such as VisualBuilder, we can call resizePadding() to adjust these styles
+//> @classMethod Canvas.registerFontScaledPaddingStyles()
+// Registers one or more CSS classes to have their padding adjusted (independently on all edges)
+// according to the +link{resizePadding(),padding size change} applied to the page.  Each class
+// to be registered is provided along with a corresponding baseline class, and a single
+// <code>targetSizeChange</code> is specified for all the classes.  The padding in each
+// registered class is adjusted downward towards the baseline as the padding size change
+// approaches 0 (no resizing), and upward as it increases, so that it exactly equals the
+// declared style's padding at a padding size change of <code>targetSizeChange</code>.
+// <P>
+// Note that each call to this method replaces the registration of the previous call (if any),
+// and will have no effect until +link{resizePadding} is called.
+// <P>
+// For example:<pre>
+//    isc.Canvas.registerFontScaledPaddingStyles(
+//        [        "tabButtonTop",         "tabButtonBottom"],
+//        ["iconOnlyTabButtonTop", "iconOnlyTabButtonBottom"],
+//        3
+//    );
+// </pre>
+// In this case, the CSS style "tabButtonTop" will have its padding adjusted downward to the
+// padding from the baseline CSS style "iconOnlyTabButtonTop" style at a <code>sizeChange</code>
+// of 0, and be left unchanged at a <code>sizeChange</code> of 3.
+// @param  scaledStyles     (Array of CSSStyleName)  styles whose padding should be adjusted
+// @param  baselineStyles   (Array of CSSStyleName)  corresponding baseline reference styles
+// @param  targetSizeChange (int)  sizeChange at which scaledStyles are unchanged
+// @see resizeFonts()
+// @see resizePadding()
+// @see resizeControls()
+// @see registerIconSizingAttributes()
+// @visibility external
+//<
+
 registerFontScaledPaddingStyles : function (targetNames, baselineNames, defaultFontIncrease) {
     this._fontScaledPaddingStyles = {
         targetNames: targetNames,
@@ -87018,6 +92993,12 @@ resizeControls : function (delta) {
     this.modifyProperty(isc.Calendar, delta, "eventHeaderHeight");
     // height of day-header rows in Calendar MonthSchedule
     this.modifyProperty(isc.MonthSchedule, delta, "dayHeaderHeight");
+
+    this.modifyProperty(isc.DateChooser, delta, "navigationLayoutHeight");
+    this.modifyProperty(isc.DateGrid, delta, "headerHeight");
+    this.modifyProperty(isc.DateGrid, delta, "cellHeight");
+
+    this.modifyProperty(isc.Layout, Math.floor(delta / 3), "resizeBarSize");
 
     this.modifyProperty(isc.TabSet, delta, "tabBarThickness");
     this.modifyProperty(isc.TabBar, delta, "breadth"); // note: doesn't seem necessary given tabBarThickness
@@ -87667,8 +93648,8 @@ getImgHTML : function (src, width, height, name, extraStuff, imgDir, activeAreaH
 
 _getImgHTMLTemplate : function (src, width, height, name, extraStuff, imgDir, activeAreaHTML, generateSpan) {
     isc.Canvas._getImgHTMLTemplateRunning = true;
-    var HTML = isc.Canvas.imgHTML(src, width, height, name,
-                              extraStuff, imgDir, activeAreaHTML, null, true, generateSpan);
+    var HTML = isc.Canvas.imgHTML(src, width, height, name, extraStuff, imgDir, activeAreaHTML,
+                                  null, true, generateSpan);
     isc.Canvas._getImgHTMLTemplateRunning = false;
     return HTML;
 },
@@ -87712,8 +93693,8 @@ _$blank: "blank",
 // @visibility external
 //<
 imgHTML : function (src, width, height, name, extraStuff, imgDir, activeAreaHTML,
-                    instance, returnTemplate, generateSpan, cssClass) {
-
+                    instance, returnTemplate, generateSpan, cssClass, eventStuff)
+{
 
 
     var align,
@@ -87741,6 +93722,7 @@ imgHTML : function (src, width, height, name, extraStuff, imgDir, activeAreaHTML
         if (src.height != null)         height = src.height;
         if (src.name != null)           name = src.name;
         if (src.extraStuff != null)     extraStuff = src.extraStuff;
+        if (src.eventStuff != null)     eventStuff = src.eventStuff;
         if (src.imgDir != null)         imgDir = src.imgDir;
         if (src.align != null)          align = src.align;
         if (src.activeAreaHTML != null) activeAreaHTML = src.activeAreaHTML;
@@ -87770,7 +93752,6 @@ imgHTML : function (src, width, height, name, extraStuff, imgDir, activeAreaHTML
         spriteConfig = this._getSpriteConfig(src);
         isSprite = spriteConfig != null;
     }
-
     if (isSprite) {
 
         // If we were passed a sprite config, our 'src' currently contains that
@@ -87833,6 +93814,7 @@ imgHTML : function (src, width, height, name, extraStuff, imgDir, activeAreaHTML
 //              "Class:", cssClass]);
     }
 
+
     // dual input mode support - see comment on same property in Canvas.getTagStart()
     if (Browser._useTouchMoveImageCSS) {
         extraCSSText = (extraCSSText ? extraCSSText : "") + ";touch-action:none;";
@@ -87844,7 +93826,6 @@ imgHTML : function (src, width, height, name, extraStuff, imgDir, activeAreaHTML
     } else if (!isSprite && (src == null || isc.isAn.emptyString(src))) {
         return (returnTemplate ? [isc._emptyString] : isc._emptyString);
     }
-
     // detect an svg file extension
 
     if (instance) {
@@ -87853,14 +93834,8 @@ imgHTML : function (src, width, height, name, extraStuff, imgDir, activeAreaHTML
         isSVG = isc.Canvas._isSVG(src);
     }
 
-    // prevent SVG images from swallowing mouse events - drops them through to the parent widget
-
-    if (isSVG) {
-        if (!extraCSSText) extraCSSText = "";
-        extraCSSText += ";pointer-events:none;"
-    }
-
     // once ever setup
+
     var template = isSVG ? this._objTemplate : this._imgTemplate;
     if (!template) {
         this._imgSrc = "<img src='";
@@ -87883,9 +93858,13 @@ imgHTML : function (src, width, height, name, extraStuff, imgDir, activeAreaHTML
                           " draggable='true'";
         this._endImg = "/>";
         this._endObj = "></object>";
+        this._endObjDiv = "></object></div>";
+
 
         if (isSVG) this._objTemplate = template = [this._objSrc];
         else       this._imgTemplate = template = [this._imgSrc];
+
+        this._fixARIA = " role='presentation'";
 
 
 
@@ -87938,6 +93917,20 @@ imgHTML : function (src, width, height, name, extraStuff, imgDir, activeAreaHTML
     if (isSprite)                                              generateSpan = true;
     else if (instance != null && instance.isPrinting || isSVG) generateSpan = false;
 
+    // prevent SVG images from swallowing mouse events if we're not using event forwarding
+
+    var forwardSVGevents, useObjDiv;
+    if (isSVG && !(forwardSVGevents = isc.Canvas._forwardSVGeventsToObject(instance, src))) {
+        if (extraCSSText == null) extraCSSText = "";
+        extraCSSText += ";pointer-events:none;";
+        useObjDiv = eventStuff && !generateSpan;
+    }
+
+    // if we're not generating the "eventStuff" <div>, merge any eventStuff into extraStuff
+    if (!useObjDiv && eventStuff) {
+        extraStuff = extraStuff ? extraStuff + " " + eventStuff : eventStuff;
+    }
+
 
     if (!this._blankURL) this._blankURL = this.getImgURL("[SKIN]/blank.gif");
 
@@ -87948,8 +93941,7 @@ imgHTML : function (src, width, height, name, extraStuff, imgDir, activeAreaHTML
                     " rendered in this browser.");
     } //<DEBUG
 
-    // if we're being asked to return a template, allocate a fresh one that the caller can hang
-    // onto
+    // if we're returning a template, allocate a fresh one that the caller can hang onto
     if (returnTemplate) template = isSVG ? [this._objSrc] : [this._imgSrc];
 
     // fill out the template.
@@ -88020,58 +94012,59 @@ imgHTML : function (src, width, height, name, extraStuff, imgDir, activeAreaHTML
             if (name != null) {
                 template[8] = this._idEquals;
 
-                if (instance) template[9] = instance.getCanvasName() + name;
-                else template[9] = name;
+                if (instance) template[9] = instance.getCanvasName();
+                template[10] = name;
 
             }
-            if (returnTemplate) template._idSlot = 9;
+            if (returnTemplate) template._idSlot = 10;
 
             var mapName;
             if (activeAreaHTML) {
                 mapName = "ISC_IMGMAP_" + this._imgMapId++;
-                template[10] = "' usemap='#" + mapName;
+                template[11] = "' usemap='#" + mapName;
             }
 
-            template[11] = this._closeQuote;
+            template[12] = this._closeQuote;
             if (extraStuff != null) {
-                template[12] = extraStuff;
+                template[13] = extraStuff;
             }
 
             if (src == null) {
-                template[13] = this._spriteInnerSpanStart;
-                template[15] = this._widthColon;
+                template[14] = this._spriteInnerSpanStart;
+                template[16] = this._widthColon;
             } else {
-                template[13] = this._spriteInnerSpanSrcStart;
-                template[14] = URL;
-                template[15] = this._endURLWidthColon;
+                template[14] = this._spriteInnerSpanSrcStart;
+                template[15] = URL;
+                template[16] = this._endURLWidthColon;
             }
 
-            template[16] = spriteOrigWidth;
-            template[17] = this._pxHeightColon;
-            template[18] = spriteOrigHeight;
-            template[19] = this._pxSemi;
+            template[17] = spriteOrigWidth;
+            template[18] = this._pxHeightColon;
+            template[19] = spriteOrigHeight;
+            template[20] = this._pxSemi;
 
 
 
             if (spriteOffsetLeft || spriteOffsetTop) {
-                template[20] = ";background-position:" + spriteOffsetLeft + "px " + spriteOffsetTop + "px";
+                template[21] = ";background-position:" + spriteOffsetLeft + "px " +
+                                                         spriteOffsetTop  + "px";
             } else {
-                template[20] = "";
+                template[21] = "";
             }
 
-            template[21] = ";transform:scale(" + scaleX + ", " + scaleY + ");";
+            template[22] = ";transform:scale(" + scaleX + ", " + scaleY + ");";
 
 
 
             if (cssClass != null) {
-                template[22] = this._quoteClassEquals;
-                template[23] = cssClass;
+                template[23] = this._quoteClassEquals;
+                template[24] = cssClass;
             }
 
-            template[24] = this._endScaledSpriteString;
+            template[25] = this._endScaledSpriteString;
 
             if (activeAreaHTML) {
-                template[25] = "<map name='" + mapName + "'>" + activeAreaHTML + "</map>";
+                template[26] = "<map name='" + mapName + "'>" + activeAreaHTML + "</map>";
             }
             if (returnTemplate) {
                 return template;
@@ -88145,6 +94138,7 @@ imgHTML : function (src, width, height, name, extraStuff, imgDir, activeAreaHTML
 
 
             if (cssClass != null) {
+                if (template[13] == null) template[13] = "";
                 template[13] += "' class='" + cssClass;
             }
 
@@ -88155,14 +94149,15 @@ imgHTML : function (src, width, height, name, extraStuff, imgDir, activeAreaHTML
 
         if (fixARIA) {
 
-            if (isSVG) {
-                template[0] = "<object role='presentation' data='";
-            } else {
-                template[0] = "<img role='presentation' src='";
-            }
-        } else {
-            template[0] = (isSVG ? this._objSrc : this._imgSrc);
+            if (extraStuff) extraStuff += this._fixARIA;
+            else            extraStuff  = this._fixARIA;
         }
+
+        // open the tag(s) for the image HTML
+
+        template[0] = useObjDiv ? "<div " + eventStuff + "><object data='" :
+                      (isSVG ? this._objSrc : this._imgSrc);
+
         if (!fixPNG) {
             template[1] = URL;
         } else {
@@ -88195,11 +94190,24 @@ imgHTML : function (src, width, height, name, extraStuff, imgDir, activeAreaHTML
 
 
         if (cssClass != null) {
+            if (template[13] == null) template[13] = "";
             template[13] += "' class='" + cssClass;
         }
 
         template[20] = this._draggable;
-        template[21] = isSVG ? this._endObj : this._endImg;
+
+        // run instance handler, if required, after SVG load to ensure canvas is sized properly
+        if (instance && instance._fixOverflowForSVG(URL)) {
+            template[20] += isc.SB.concat(" onload='", instance.getID(),
+                "._SVGcontainerObjectLoaded(", forwardSVGevents ? "this" : null, ")'");
+
+        // otherwise, directly set up event forwarding from the SVG to the object if appropriate
+        } else if (forwardSVGevents) {
+            template[20] += " onload='isc.EH._forwardSVGeventsToObject(this)'";
+        }
+
+        // close the tag(s) for the image HTML
+        template[21] = useObjDiv ? this._endObjDiv : (isSVG ? this._endObj : this._endImg);
     }
 
     if (name) {
@@ -88328,27 +94336,29 @@ _nonSpriteSrc:{},
 _$IDEquals:"ID='",
 _$singleQuote:"'",
 _$absmiddle:"absmiddle",
-_$valueIconExtraStuffTemplate: [
+_$valueIconEventStuffTemplate: [
     ,                                                   // [0] ID=', or null
     ,                                                   // [1] ID, or null
     ,                                                   // [2] ', or null
     " eventpart='valueicon' ",                          // [3]
-    null                                                // [4] extraExtraStuff
+    null                                                // [4] extraEventStuff
 ],
 _$marginLeftColon: "margin-left:",
 _$pxMarginRightColon: "px;margin-right:",
-_getValueIconHTML : function (src, prefix, cssClass, width, height, leftPad, rightPad, ID, instance, extraExtraStuff, extraCSSText) {
+_getValueIconHTML : function (src, prefix, cssClass, width, height, leftPad, rightPad, ID,
+                              instance, extraExtraStuff, extraCSSText, extraEventStuff)
+{
     // Apply ID and custom styling to the image through the 'extraStuff' parameter
-    var extraStuffTemplate = this._$valueIconExtraStuffTemplate;
+    var eventStuffTemplate = this._$valueIconEventStuffTemplate;
     if (ID != null) {
-        extraStuffTemplate[0] = this._$IDEquals;
-        extraStuffTemplate[1] = ID;
-        extraStuffTemplate[2] = this._$singleQuote;
+        eventStuffTemplate[0] = this._$IDEquals;
+        eventStuffTemplate[1] = ID;
+        eventStuffTemplate[2] = this._$singleQuote;
     } else {
-        extraStuffTemplate[0] = extraStuffTemplate[1] = extraStuffTemplate[2] = null;
+        eventStuffTemplate[0] = eventStuffTemplate[1] = eventStuffTemplate[2] = null;
     }
 
-    extraStuffTemplate[4] = extraExtraStuff;
+    eventStuffTemplate[4] = extraEventStuff;
     // If we were passed a src URL in the format 'sprite:<...>', build a sprite
     // configuration object and update the properties of that rather than
     // blindly manipulating the string.
@@ -88376,7 +94386,8 @@ _getValueIconHTML : function (src, prefix, cssClass, width, height, leftPad, rig
         iconObj.align = this._$absmiddle; // prevent default "text-top"
     }
     iconObj.imgDir = prefix;
-    iconObj.extraStuff = extraStuffTemplate.join(isc.emptyString);
+    iconObj.extraStuff = extraExtraStuff;
+    iconObj.eventStuff = eventStuffTemplate.join(isc.emptyString);
     iconObj.extraCSSText = this._$marginLeftColon + (leftPad || 0) +
                            this._$pxMarginRightColon + (rightPad || 0) + isc.px;
     if (extraCSSText != null) iconObj.extraCSSText += ";" + extraCSSText;
@@ -88464,11 +94475,43 @@ _isPNG : function (src) {
     return (src && this._$pngSuffixes[src.substring(src.lastIndexOf(isc.dot) + 1)]);
 },
 
-// allow any capitalization of trailing suffix .svg to be recognized as an SVG image
+// should src image be rendered in an object tag to allow SVG CSS to work properly?
 
 _isSVG : function (src, skipPrototype) {
-    if (!skipPrototype && this._instancePrototype.useImageForSVG) return false;
-    return isc.Browser.isDOM && src && src.toLowerCase().endsWith(".svg");
+    // object tag support requires a DOM browser - consult the prototype if there's no instance
+    if (!isc.Browser.isDOM || !src || !skipPrototype && this._instancePrototype.useImageForSVG)
+    {
+        return false;
+    }
+    // support ?tag=image query param to force use of image tag
+    var queryIndex = src.indexOf("?");
+    if (queryIndex >= 0) {
+        var tag = src.substring(queryIndex).match(/tag=([^&]*)/);
+        if (tag && tag[1] != "object") return false;
+        src = src.substring(0, queryIndex);
+    }
+    // default logic - use object tag if image is SVG
+    return src.toLowerCase().endsWith(".svg");
+},
+
+// helper to determine whether to forward SVG events to object container
+_forwardSVGeventsToObject : function (canvas, src) {
+
+    if (isc.Browser.isEdge) return true;
+    // for IE, allow only IE11+ to simplify event handling code
+    if (isc.Browser.isIE && isc.Browser.version < 11) return false;
+
+    // support ?events=none query param to control event forwarding
+    var queryIndex = src.indexOf("?");
+    if (queryIndex >= 0) {
+        var tag = src.substring(queryIndex).match(/events=([^&]*)/);
+        if (tag) return tag[1] == "forward";
+        src = src.substring(0, queryIndex);
+    }
+
+    // pick up property from canvas or the prototype
+    if (!canvas) canvas = this._instancePrototype;
+    return canvas.forwardSVGeventsToObject;
 },
 
 // Helper method to update an image element written out by imgHTML with new media / css
@@ -89129,6 +95172,8 @@ _forceNativeTabOrderUpdate : function () {
 // in the same parent as a widget (commonly required for zIndices)
 // Reuse indices so we don't end up with a massive array full of nulls if the page's
 // layout changes a lot
+// We do this lazily on draw(), so this list doesn't contain all undrawn top level widgets.
+
 _freeTCIndices:[],
 _topCanvii : [],
 _addToTopLevelCanvasList : function (canvas) {
@@ -89224,17 +95269,21 @@ hideClickMask : function (ID) { this.ns.EH.hideClickMask(ID); },
 //          screen.<br>
 //          If 'canOcclude' is true, simply shift this widget over the other widget, so that
 //          it ends up onscreen.  If 'canOcclude' is false, avoid extending offscreen
-///         by positioning this widget on the other side of the other widget.
+//          by positioning this widget on the other side of the other widget.
 // [otherAxisAlign]    (string)
 //   Can be one of "left", "right", "outside-left", "outside-right", "top", "bottom",
 //   "outside-top", "outside-bottom". (Defaults to "left" if side is "top" or "bottom",
 //   "top" if side is "left" or "right").
 //   This property determines how this widget will be aligned with the other widget on the
 //   other axis.
+// [edgeOffset]   (integer)
+//   How close can rectangle be placed near the edge of the page?
+//   (Note that only right and bottom edges are checked for excess included edgeOffset.
+//    However, if rectangle shifts to other side the edgeOffset will be applied.)
 // If there isn't enough room to avoid the widget going offscreen on one axis or the other,
 // allow it to push offscreen on the bottom / left side, since we can always scroll in that
 // direction.
-_placeRect : function (width, height, adjacentRect, side, canOcclude, otherAxisAlign) {
+_placeRect : function (width, height, adjacentRect, side, canOcclude, otherAxisAlign, edgeOffset) {
     // Default any optional params / normalize into expected structures
     if (isc.isAn.Array(adjacentRect)) {
         adjacentRect = {left:adjacentRect[0], top:adjacentRect[1],
@@ -89257,6 +95306,11 @@ _placeRect : function (width, height, adjacentRect, side, canOcclude, otherAxisA
     // default canOcclude to true
     if (canOcclude == null) canOcclude = true;
 
+    // default edgeOffset to 0
+    if (edgeOffset == null) edgeOffset = 0;
+
+    if (width == null) width = 0; if (height == null) height = 0;
+
     // we are placing the widget on a particular side; otherAxisAlign specifies where along
     // that side we want the widget to appear.  For example for a widget placed on the top or
     // bottom side, options in left-right order are "outside-left", "left" (aka "inside-left"),
@@ -89278,6 +95332,19 @@ _placeRect : function (width, height, adjacentRect, side, canOcclude, otherAxisA
             otherAxisAlign != "outside-bottom" &&
             otherAxisAlign != "outside-top") otherAxisAlign = "top";
     }
+
+    // If an edgeOffset was specified adjust the area in which we can place the
+    // target now
+    var pageWidth = isc.Page.getWidth() - (edgeOffset*2),
+        pageHeight = isc.Page.getHeight() - (edgeOffset*2),
+        // param will give us negative origin coords if we're in RTL mode
+        pageScrollLeft = isc.Page.getScrollLeft(true) + edgeOffset,
+        pageScrollTop = isc.Page.getScrollTop() + edgeOffset;
+    ;
+
+
+    // determine the left/top that matches the side/otherAxisAlign
+    // with no 'offscreen' adjustment considerations
 
     var left = adjacentRect.left;
     if (vertical) {
@@ -89304,129 +95371,106 @@ _placeRect : function (width, height, adjacentRect, side, canOcclude, otherAxisA
 
     // left / top now represent the desired position.  Adjust this to avoid the placed rect
     // from sticking offscreen if necessary.
-    // Note: If canOcclude is true, this is simple, we will just move it back as far as
-    // necessary to avoid being clipped by the browser viewport.
-    // If canOcclude is false, we must "jump" across the adjacentRect to avoid covering it,
-    // so we will try placing it on the opposite side, instead.
-    var pageWidth = isc.Page.getWidth(),
-        pageHeight = isc.Page.getHeight(),
-        // param will give us negative origin coords if we're in RTL mode
-        pageScrollLeft = isc.Page.getScrollLeft(true),
-        pageScrollTop = isc.Page.getScrollTop()
-    ;
 
-    // calculate how much we're jutting out beyond the browser viewport in each dimension
+    // calculate how much we're jutting out beyond the browser viewport
     var leftExcess = pageScrollLeft - left,
         rightExcess = left + width - (pageWidth + pageScrollLeft),
         topExcess = pageScrollTop - top,
         bottomExcess = top + height - (pageHeight + pageScrollTop);
     ;
-
-    // Shortcut: if the rectangle will be completely onscreen, just return it:
+    // If the rectangle will be completely onscreen, just return it:
     if (leftExcess <=0 && rightExcess <=0 && topExcess <=0 && bottomExcess <=0) {
         return [left, top];
     }
 
-    // for each direction we extend out of the viewport:
-    // - if we are allowing occlusion, just move top and left until not sticking out of the
-    //   viewport
-    // - otherwise, try moving to the other side of the adjacent rect, and use that position if
-    //   it prevents sticking out of the viewport.  If moving to the other side still has us
-    //   sticking out of the viewport, always prefer sticking out to the right/bottom, since
-    //   the user can scroll in that direction.
-
-    // -- HORIZONTAL ADJUSTMENTS:
-    // jutting out to the left
-    if (leftExcess > 0) {
-        // If we're on the left side, and canOcclude is false, we want to jump to the right
-        // side of the adjacentRect
-        if (side == "left" && !canOcclude) {
-            // Edge cases [no pun intended]:
-            // - the adjacentRect is completely offscreen to the left
-            //   * In this case, we will move past the right edge to ensure our rect is
-            //     onscreen [move to pageScrollLeft]
-            // - positioning at the right edge of adjacentRect will push our new rect offscreen
-            //   to the right
-            //   * This is ok - preferable to be offscreen on the right since the user can
-            //     always scroll to reach it
-            // - right edge of adjacentRect is offscreen on the right
-            //   * not clear what's the best behavior here - for now we'll position at the
-            //     right edge of adjacentRect, even though that is offscreen, as we know we
-            //     can scroll it into view.
-            if (adjacentRect.left + adjacentRect.width < pageScrollLeft) {
-                left = pageScrollLeft;
-            } else {
-                left = adjacentRect.left + adjacentRect.width;
-            }
-        } else {
-            // Just slide into view on the page
-            left = pageScrollLeft;
+    // canOcclude:true - if offscreen in either direction, we will just move it back as far as
+    // necessary to avoid being clipped by the browser viewport.
+    if (canOcclude) {
+        // Note - if excess is unavoidable (the rect exceeds the page size), overflow
+        // on the bottom/right edges so the user can scroll get at content
+        if (leftExcess > 0) {
+            left += leftExcess;
+        } else if (rightExcess > 0) {
+            left = Math.max(pageScrollLeft, left - rightExcess);
         }
 
-    // jutting out to the right
-    } else if (rightExcess > 0) {
+        if (topExcess > 0) {
+            top += topExcess;
+        } else if (bottomExcess > 0) {
+            top = Math.max(pageScrollTop, top - bottomExcess);
+        }
 
-        // if we're on the right edge, and can't occlude, jump over the adjacentRect and
-        // put on the left edge (unless this would push it out of the viewport to the left)
-        if (side == "right" && !canOcclude) {
-            if ((adjacentRect.left - width) >= pageScrollLeft) {
-                // if the adjacent rect is completely offscreen to the right, slide into view
-                // on the right edge of the screen
-                if (adjacentRect.left > (pageScrollLeft + pageWidth))
-                    left = (pageScrollLeft + pageWidth) - width;
-                else left = adjacentRect.left - width;
+    // canOcclude:false - avoid overlapping the adjacentRect at all costs.
+    // - otherAxis: simply shift along the otherAxis as necessary - in other words if vertical
+    //   is true and we have right-excess we can shift to the left without covering the
+    //   rectangle
+    // - main axis excess (E.G: specified side is 'bottom' and we have bottom excess):
+    //   1) If the otherAxisAlign is 'outside-xxx', we can move the rect up the
+    //      other side without occluding. Try this first
+    //   2) Otherwise, Attempt to 'jump' to the opposite side - if there's enough space there,
+    //      use it
+    //   As with canOcclude:true, if excess is unavoidable ensure it's on the bottom/right
+    //   so user can scroll to content
+    } else {
+        var canShiftOnMainAxis = otherAxisAlign.startsWith("outside-");
+        // Shift on 'other' axis first
+        if (vertical) {
+            if (leftExcess > 0) {
+                left += leftExcess;
+                canShiftOnMainAxis = false;
+            } else if (rightExcess > 0) {
+                left = Math.max(pageScrollLeft, left - rightExcess);
+                canShiftOnMainAxis = false;
             }
-            // If putting on the left edge would push the element out of the viewport on the
-            // left, just leave on the right edge.
         } else {
-            // If the object is wider than the page, just plonk it on the left edge of the
-            // page (will continue to jut out to the right)
-            // Otherwise align the right edge with the right edge of the page
-            if (pageWidth < width) {
-                left = pageScrollLeft;
-            } else {
-                left = pageScrollLeft + pageWidth - width;
+
+            if (topExcess > 0) {
+                top += topExcess;
+                canShiftOnMainAxis = false;
+            } else if (bottomExcess > 0) {
+                top = Math.max(pageScrollTop, top - bottomExcess);
+                canShiftOnMainAxis = false;
             }
         }
-    }
-
-    // -- VERTICAL ADJUSTMENTS:
-    // [see comments on horizontal adjustments - identical logic]
-    // Clipped by top of viewport
-    if (topExcess > 0) {
-        if (side == "top" && !canOcclude) {
-            if (adjacentRect.top + adjacentRect.height < pageScrollTop) {
-                top = pageScrollTop;
+        // shift or "jump" on main axis
+        if (canShiftOnMainAxis) {
+            if (vertical) {
+                if (topExcess > 0) {
+                    top += topExcess;
+                } else if (bottomExcess > 0) {
+                    top = Math.max(pageScrollTop, top - bottomExcess);
+                }
             } else {
+                if (leftExcess > 0) {
+                    left += leftExcess;
+                } else if (rightExcess > 0) {
+                    left = Math.max(pageScrollLeft, left - rightExcess);
+                }
+            }
+        } else {
+            // if we're poking off the top or right, always jump below
+            // Even if we poke offscreen there at least the user can scroll us back into view
+            if (topExcess > 0 && side == "top") {
                 top = adjacentRect.top + adjacentRect.height;
-            }
-        } else {
-            // Just slide into view on the page
-            top = pageScrollTop;
-        }
-
-    // clipped by bottom of viewport
-    } else if (bottomExcess > 0) {
-
-        if (side == "bottom" && !canOcclude) {
-            if ((adjacentRect.top - height) >= pageScrollTop) {
-
-                if (adjacentRect.top > (pageScrollTop + pageHeight))
-                    top = (pageScrollTop + pageHeight) - height;
-                else top = adjacentRect.top - height;
-            }
-            // If putting on the top edge would push the element out of the viewport on the
-            // top, just leave on the bottom edge.
-        } else {
-
-            if (pageHeight < height) {
-                top = pageScrollTop;
+            } else if (leftExcess > 0 && side == "left") {
+                left = adjacentRect.left + adjacentRect.width;
+            // If we're below or to the right jump to the other side iff there's space
             } else {
-                top = pageScrollTop + pageHeight - height;
+                if (bottomExcess > 0 && side == "bottom") {
+                    // only jump if we know there's space
+                    if ((adjacentRect.top - height) >= pageScrollTop) {
+                        top = adjacentRect.top - height;
+                    }
+                } else if (rightExcess > 0 && side == "right") {
+                    // only jump if we know there's space
+                    if ((adjacentRect.left - width) >= pageScrollLeft) {
+                        left = adjacentRect.left - width;
+                    }
+                }
             }
         }
     }
-    return [left, top];
+    return [left,top];
 
 },
 
@@ -89532,17 +95576,21 @@ _getTopLevelWidget : function(globals) {
     // Note: globalEvalWithCapture return globalIDs in the order they were created.
     // Typically the top-level container is declared last since it incorporates other
     // Canvii declared before it, so we count down from the last created Canvas here.
+
+
+    var lastCanvas = null;
     for (var ri = globalKeys.length; ri > 0; --ri) {
         var global = globalKeys[ri - 1];
         var obj = window[global]; // globals are IDs, dereference
 
         if (obj && isc.isA.Canvas(obj) && !obj.destroyed && obj._screenEligible &&
-            obj.parentElement == null  &&  obj.masterElement == null)
+            obj.parentElement == null  &&  obj.masterElement == null && obj.creator == null)
         {
-            return obj;
+            if (obj.visibility != isc.Canvas.HIDDEN && obj.autoDraw !== false) return obj;
+            else if (!lastCanvas) lastCanvas = obj;
         }
     }
-    return null;
+    return lastCanvas;
 },
 
 // ------------------------
@@ -89726,6 +95774,12 @@ isc.Canvas.registerStringMethods({
     deparented:"oldParent,name",
     depeered:"oldMaster,name",
 
+    //> @method canvas.drawn()
+    // Notification method fired when a canvas has been drawn into the page.
+    // @visibility external
+    //<
+    drawn:"",
+
     //> @method canvas.parentMoved()
     // Notification method fire when an ancestor of this component's position changes.
     // @param parent (Canvas) the ancestor that moved
@@ -89779,8 +95833,8 @@ isc.Canvas.registerStringMethods({
     tabIndexUpdated:"",
 
     //> @method canvas.scrolled()
-    // Notification that this component has just scrolled.  Use with
-    // +link{class.observe,observation}.
+    // Notification that this component has just scrolled. <smartclient>Use with
+    // +link{class.observe,observation}.</smartclient>
     // <P>
     // Fires for both CSS and +link{Scrollbar,"synthetic" scrollbars}.
     //
@@ -90209,6 +96263,22 @@ isc.setAutoDraw = function (enable) {
 
 isc.allowDuplicateStyles = true;
 
+
+//isc.disableRuleScope = true;
+
+//> @class AbsoluteContainer
+// This class is a synonym for Canvas that can be used to make intent clearer.
+// It is used by some development tools for that purpose.
+// @inheritsFrom Canvas
+// @treeLocation Client Reference/Foundation
+// @visibility external
+//<
+isc.ClassFactory.defineClass("AbsoluteContainer", "Canvas").addProperties({
+    snapVGap: 10,
+    snapHGap: 10,
+    snapHDirection: "nearest"
+});
+
 //  END package Canvas
 //
 ////////////////////
@@ -90328,6 +96398,15 @@ isc.allowDuplicateStyles = true;
 // suffix to the image URL.  See the +link{group:skinning,Skinning Overview} for more
 // information on statefulness and the +link{Img.src} documentation for information on how
 // stateful image URLs are formed.
+// <P>
+// <b>SVG Images</b>
+// <P>
+// If the URL represents an SVG image, you may specify <code>tag</code> as a query param to
+// control whether it's rendered in an object or image tag, provided
+// +link{Canvas.useImageForSVG} isn't set.  If that query param is present and has any value
+// other than <code>object</code>, then the SVG image will be rendered in an image tag.
+// Otherwise, it will be rendered in an object tag.  For example, an <code>SCImgURL</code> of
+// "circle.svg?tag=image" will render in an image tag.
 //
 // @baseType URL
 // @visibility external
@@ -90395,6 +96474,10 @@ isc.allowDuplicateStyles = true;
 // sprite config strings along with statefulness.
 // Live updating of the generated HTML element is handled by the '_updateImage()' method.
 
+// Note: In addition to these options we have a configuration object for stateful images
+// "SCStatefulImgConfig" which allows devs to define a series of stateful image URLs directly
+// in a single property
+// (That is documented in Img.js)
 
 //> @groupDef skinning
 //
@@ -90970,8 +97053,8 @@ resized : function () {
     if (this.useExplicitHeight) {
         var handle = this.getIFrameHandle();
         if (handle) {
-            handle.style.width = this.getInnerWidth();
-            handle.style.height = this.getInnerHeight();
+            handle.style.width = this.getInnerWidth() + "px";
+            handle.style.height = this.getInnerHeight() + "px";
         }
     }
 },
@@ -92151,7 +98234,7 @@ _validateFieldNames : function (fields, caller) {
         // Every field must have a name that is a valid JavaScript identifier (except that
         // if the fields are from a DynamicForm (and hence the fields are FormItems) then a
         // field does not need to have a name if its shouldSaveValue property is set to false).
-        var valid = ((isForm && field.shouldSaveValue === false && field.name == null) || String.isValidID(field.name));
+        var valid = ((isForm && field.shouldSaveValue === false && field.name == null && field.autoName == null) || String.isValidID(field.name || field.autoName));
 
         if (!valid && isc.Canvas._numInvalidFieldNameWarningsShown++ < isc.Canvas.maxNumInvalidFieldNameWarnings) {
             message = "'" + field.name + "' is not a valid JavaScript identifier. DataSource and " +
@@ -92570,6 +98653,10 @@ _getDataPathFromField : function (field, component) {
                 field._trimmedDataPath = dataPath = this._trimDataPath(field.dataPath, component);
             }
         }
+
+   } else if (field.type == "summary") {
+       dataPath = component._getRecordSummaryAttributeProperty(field);
+
     } else {
         dataPath = field.name;
     }
@@ -93093,7 +99180,7 @@ getRuleScopeDataSources : function (targetRuleScope) {
 // is included in list.
 getAllRuleScopeDataSources : function (targetRuleScope) {
     var currentForm = (isc.isA.String(targetRuleScope) ? window[targetRuleScope] : targetRuleScope),
-        currentFormDS = (currentForm.getDataSource ? currentForm.getDataSource() : null)
+        currentFormDS = (currentForm && currentForm.getDataSource ? currentForm.getDataSource() : null)
     ;
     if (!currentFormDS && isc.isA.DataBoundComponent(currentForm)) {
         currentFormDS = currentForm.makeDataSourceFromFields();
@@ -93136,6 +99223,195 @@ getRuleScopeDataSourceOwners : function (targetRuleScope) {
         }
     }
     return owners;
+},
+
+// Returns a single DataSource with other nested DataSources to
+// describe the current state of the ruleScope/ruleContext.
+getCurrentRuleScopeSchema : function (targetRuleScope) {
+    if (!targetRuleScope) return null;
+    targetRuleScope = (isc.isA.String(targetRuleScope) ? window[targetRuleScope] : targetRuleScope);
+    var dataSources = isc.Canvas.getAllRuleScopeDataSources(targetRuleScope);
+
+    var fields = [],
+        tempDataSources = []
+    ;
+    for (var i = 0; i < dataSources.length; i++) {
+        var ds = dataSources[i];
+        if (ds._tempScope) tempDataSources.add(ds);
+
+        if (ds.criteriaBasePath) {
+            // Break criteriaBasePath into parts to create intermediate DataSources
+            var parts = ds.criteriaBasePath.split("."),
+                innerDSProperties = []
+            ;
+
+            for (var j = 0; j < parts.length-1; j++) {
+                var dsID = isc.ClassFactory.getNextGlobalIDForClass("DataSource");
+                if (innerDSProperties.length > 0) {
+                    innerDSProperties[innerDSProperties.length-1].fields = [ { name: parts[j], type: dsID } ];
+                }
+                innerDSProperties.add({ addGlobalId: false, ID: dsID, clientOnly: true });
+            }
+
+            var firstDS = ds;
+            if (innerDSProperties.length > 0) {
+                innerDSProperties[innerDSProperties.length-1].fields = [ { name: parts[j], type: ds.ID } ];
+            }
+
+            for (var j = innerDSProperties.length-1; j >= 0; j--) {
+                firstDS = isc.DS.create(innerDSProperties[j]);
+                tempDataSources.add(firstDS);
+            }
+
+            fields.add({ name: parts[0], type: firstDS.ID });
+        } else {
+            fields.add({ name: ds.name, type: ds.ID });
+        }
+    }
+
+    var schemaID = isc.ClassFactory.getNextGlobalIDForClass("DataSource");
+    var schema = isc.DS.create({
+        addGlobalId: false,
+        ID: schemaID,
+        clientOnly: true,
+        fields: fields,
+
+        _tempDataSources: tempDataSources,
+
+        destroy : function () {
+            if (!this.destroyed) {
+                if (this._tempDataSources) {
+                    // Destroy auto-generated DataSources.
+                    for (var i = 0; i < this._tempDataSources.length; i++) {
+                        this._tempDataSources[i].destroy();
+                    }
+                    this._tempDataSources = null;
+                }
+                this.Super("destroy", arguments);
+                this.destroyed = true;
+            }
+        }
+    });
+
+    targetRuleScope.registerRuleScopeSchema(schema);
+
+    return schema;
+},
+
+// Returns a new DataSource with name and title fields representing
+// the fields in the 'dataSources' DataSources. 'dataSources' is typically
+// populated by DBC.getRuleScopeDataSources or DBC.getAllRuleScopeDataSources
+// for the target ruleScope.
+//
+// Caller is responsible for destroying the DataSource after use.
+//
+// @param targetRuleScope (Canvas | String) ruleScope being targeted
+// @param dataSources (Array of DataSource) see description above
+// @param [targetComponent] (Canvas)
+// @param [excludedRuleScope] (Array of String) list of DataPaths to exclude
+// @param [fieldFormat] (MultiDSFieldFormat)
+getMultiDSFieldDataSource : function (targetRuleScope, dataSources, targetComponent, excludedRuleScope, fieldFormat) {
+    if (!targetRuleScope) return null;
+    targetRuleScope = (isc.isA.String(targetRuleScope) ? window[targetRuleScope] : targetRuleScope);
+
+    var ruleContext = targetRuleScope.getRuleContext(),
+        owners = isc.Canvas.getRuleScopeDataSourceOwners(targetRuleScope),
+        targetComponentData = [],
+        targetComponentLocalData = [],
+        suppressTargetComponentData = false,
+        testData = [],
+        lastDsID = ""
+    ;
+    for (var i = 0; i < dataSources.length; i++) {
+        var dataSource = dataSources[i];
+        if (isc.isA.String(dataSource)) dataSource = isc.DataSource.get(dataSource);
+        if (dataSource == null) {
+            this.logWarn("getMultiDSFieldDataSource() - unable to locate dataSource:" + dataSources[i]);
+            continue;
+        }
+        var dsID = dataSource.getID(),
+            dsFields = dataSource.getFieldNames(),
+            separatedFormat = (fieldFormat == "separated")
+        ;
+
+        // Fields from the targetComponent should be shown first
+        var data = testData;
+        if (targetComponent) {
+            if (dataSource.criteriaBasePath) {
+                var componentID = dataSource.criteriaBasePath.split(".")[0];
+                if (componentID == targetComponent.ID) {
+                    data = targetComponentLocalData;
+                }
+            } else if (targetComponent.dataSource) {
+                var ID = (isc.isA.String(targetComponent.dataSource) ? targetComponent.dataSource : targetComponent.dataSource.getID());
+                if (ID == dsID) data = targetComponentData;
+            }
+        }
+
+        if (separatedFormat && lastDsID != dsID) {
+            var titlePrefix = (dataSource.criteriaBasePath ? "" : "<i>"),
+                titleSuffix = (dataSource.criteriaBasePath ? "" : "</i>"),
+                dsTitle = dataSource.pluralTitle || dataSource.title || dsID,
+                title = titlePrefix + (data == targetComponentData && dataSource.criteriaBasePath ? "Current Component" : dsTitle) + titleSuffix + " Fields",
+                owner = owners[dataSource.ID],
+                source = (owner ? isc.Canvas.getRuleScopeSourceFromComponent(owner) : null)
+            ;
+            if (owner && source) title += " (" + source + " in <i>" + owner.getID() + "</i>)";
+
+            // Suppress standard DS fields if current component is the provider. This
+            // gives preferences to simple, local fields instead.
+            if (owner == targetComponent && source) suppressTargetComponentData = true;
+
+            data[data.length] = { name: dsID, title: title, type: "text", enabled: false };
+            lastDsID = dsID;
+        }
+
+        for (var j = 0; j < dsFields.length; j++) {
+            var fieldName = dsID + "." + dsFields[j],
+                field = dataSource.getField(dsFields[j]),
+                fieldTitle = (separatedFormat ? field.title || field.name : fieldName)
+            ;
+            var record = { name: fieldName, title: fieldTitle, type: field.type };
+            if (dataSource.criteriaBasePath) {
+                record.criteriaPath = field.criteriaPath || fieldName.replace(dsID, dataSource.criteriaBasePath);
+                if (excludedRuleScope && excludedRuleScope.contains(record.criteriaPath)) {
+                    continue;
+                }
+                // Localize criteriaPath for targetComponent fields
+                // This will be applied to valuePath selections
+                if (data == targetComponentData && !field.criteriaPath) {
+                    var criteriaBasePath = field.criteriaBasePath || dataSource.criteriaBasePath;
+                    record.criteriaPath = record.criteriaPath.replace(criteriaBasePath, "");
+                    if (record.criteriaPath.startsWith(".")) record.criteriaPath = record.criteriaPath.substring(1)
+                }
+            } else if (excludedRuleScope && excludedRuleScope.contains(fieldName)) {
+                continue;
+            }
+
+            if (ruleContext) {
+                record.value = isc.DataSource.getPathValue(ruleContext, fieldName);
+            }
+            data[data.length] = record;
+        }
+    }
+
+    if (!suppressTargetComponentData && targetComponentData.length > (separatedFormat ? 1 : 0)) {
+        testData.addListAt(targetComponentData, 0);
+    }
+    if (targetComponentLocalData.length > (separatedFormat ? 1 : 0)) {
+        testData.addListAt(targetComponentLocalData, 0);
+    }
+
+    var ds = isc.DS.create({
+        _isMultiDSFieldDS: true,    // identification to use during destroy
+        clientOnly: true,
+        fields: [
+             { name: "name", type: "text" },
+             { name: "title", type: "text" }
+        ],
+        testData: testData
+    });
+    return ds;
 }
 
 
@@ -94320,6 +100596,11 @@ bindToDataSource : function (fields, hideExtraDSFields) {
 
                 if (fields[i] == null) continue;
 
+                // Use autoName field (from VB) if no explicit name is provided
+                if (fields[i].name == null && fields[i].autoName) {
+                    fields[i].name = fields[i].autoName;
+                }
+
                 // For items with editorType set to DateItem or date, default the data type
                 // to date also so we pick up type validators etc.
 
@@ -94449,6 +100730,12 @@ bindToDataSource : function (fields, hideExtraDSFields) {
         for (var i = fields.length - 1; i >= 0; i--) {
             var field = fields[i];
             if (field == null) continue;
+
+            // Use autoName field (from VB) if no explicit name is provided
+            if (fields[i].name == null && fields[i].autoName) {
+                fields[i].name = fields[i].autoName;
+            }
+
             // Drop any field marked canView: false from the DBC, even if it was explicitly
             // included.  Fields that have been manually marked in this way are intended as
             // "server-only" fields; also, the security system can mark fields canView: false,
@@ -94815,7 +101102,7 @@ shouldUseField : function (field, ds, isLocal) {
     // don't use the field if the field is marked as a detail field and the component is not a
     // detail component
 
-    if (field.detail && !this.showDetailFields) return false;
+    if (ds && !isLocal && field.detail && !this.showDetailFields) return false;
 
     if (!this.showComplexFields && ds.fieldIsComplexType(field.name)) return false;
 
@@ -94980,6 +101267,17 @@ getMaxFileSizeValidator : function (field, ds) {
 // doc'd at ListGrid level
 getAllFields : function () {
     return this.completeFields || this.fields;
+},
+
+// fieldName -> field map enables O(1) lookup
+_getFieldMap : function () {
+    var map = {},
+        fields = this.fields,
+        fieldIdProperty = this.fieldIdProperty;
+    for (var i = 0; i < fields.length; i++) {
+        map[fields[i][fieldIdProperty]] = fields[i];
+    }
+    return map;
 },
 
 //>    @method    dataBoundComponent.getField()
@@ -95470,6 +101768,9 @@ bind : function (dataSource, fields) {
 },
 
 getDataSource : function () {
+    if (isc.isAn.Array(this.dataSource) && this.dataSource.length == 1) {
+        this.dataSource = this.dataSource[0];
+    }
     if (isc.isA.String(this.dataSource)) {
         if (this.serviceNamespace || this.serviceName) {
             this.dataSource = this.lookupSchema();
@@ -95516,7 +101817,7 @@ makeDataSourceFromFields : function (id) {
         } while (isc.DataSource.get(testDsID));
         dsID = testDsID;
     }
-    var properties = { ID: dsID, clientOnly: true, criteriaBasePath: criteriaBasePathSuffix, title: title, pluralTitle: title };
+    var properties = { addGlobalId: false, _tempScope: true, ID: dsID, clientOnly: true, criteriaBasePath: criteriaBasePathSuffix, title: title, pluralTitle: title };
 
     var fields = this.fields || this.items;
     if (fields) {
@@ -95773,7 +102074,7 @@ addField : function (field, index, fields) {
 
     // if this field already exists, replace it
 
-    var existingField = isc.Class.getArrayItem(field.name, this.getAllFields(), this.fieldIdProperty);
+    var existingField = isc.Class.getArrayItem(field.name || field.autoName, this.getAllFields(), this.fieldIdProperty);
     if (existingField) fields.remove(existingField);
 
     // If index wasn't passed, add at the end (Array.addAt() defaults to the beginning)
@@ -95795,6 +102096,9 @@ removeField : function (fieldName, fields) {
     var name = fieldName.name ? fieldName.name : fieldName;
     fields.remove(fields.find("name", name));
     this.setFields(fields);
+
+    // If the DBC supports a field state, notify observers of change
+    if (this.handleFieldStateChanged) this.handleFieldStateChanged();
 },
 
 // DataBound Component Methods
@@ -96512,7 +102816,7 @@ getInitialFetchContext : function () {
 
 getImplicitCriteria : function () {
     if (!this.implicitCriteria) return null;
-    return isc.shallowClone(this.implicitCriteria);
+    return isc.DataSource.copyCriteria(this.implicitCriteria);
 },
 
 setImplicitCriteria : function (crit, invalidate) {
@@ -96537,17 +102841,18 @@ setImplicitCriteria : function (crit, invalidate) {
             invalidate = true;
         }
     } else {
+        var DS = isc.DataSource;
         if (isRS) {
-            var result = d.compareCriteria && d.compareCriteria(crit, this.implicitCriteria);
+            var result = d.compareCriteria && d.compareCriteria(crit, this.getImplicitCriteria());
             // new crit is less restrictive - invalidate
             if (result < 0) invalidate = true;
             if (result != 0) {
-                this.implicitCriteria = isc.shallowClone(crit);
-                d.dbcImplicitCriteria = isc.shallowClone(crit);
+                this.implicitCriteria = DS.copyCriteria(crit);
+                d.dbcImplicitCriteria = DS.copyCriteria(crit);
                 if (d.context) d.context.dbcImplicitCriteria = d.dbcImplicitCriteria;
             }
         } else {
-            this.implicitCriteria = isc.shallowClone(crit);
+            this.implicitCriteria = DS.copyCriteria(crit);
         }
     }
     if (invalidate) this.invalidateCache();
@@ -96567,6 +102872,8 @@ setImplicitCriteria : function (crit, invalidate) {
 // a given "order", call fetchRelatedData() on the component bound to "orderItems", pass the
 // "orders" DataSource as the "schema" and pass a record from the "orders" DataSource as the
 // "record" argument.
+// <P>
+// Note that multiple foreign keys into the schema are supported by this method.
 //
 // @param record              (ListGridRecord) DataSource record
 // @param schema              (Canvas | DataSource | ID) schema of the DataSource record, or
@@ -96577,21 +102884,52 @@ setImplicitCriteria : function (crit, invalidate) {
 //
 // @visibility internal
 //<
-fetchRelatedData : function (record, schema, callback, requestProperties) {
-    var otherDS = isc.isA.DataSource(schema) ? schema :
-            isc.isA.String(schema) ? isc.DS.get(schema) :
-            isc.isA.Canvas(schema) ? schema.dataSource : null;
-    if (!otherDS) {
-        this.logWarn("schema not understood: " + this.echoLeaf(schema));
+
+fetchRelatedData : function (record, schema, callback, requestProperties, returnWillFetch) {
+    var logLevel = returnWillFetch ? isc.Log.INFO : isc.Log.Warn;
+    // validate that we have a DS
+    var ds = this.getDataSource();
+    if (!isc.isA.DataSource(ds)) {
+        this.logMessage(logLevel, "fetchRelatedData(): component not bound to DataSource");
         return;
     }
-    var relationship = this.getDataSource().getTreeRelationship(otherDS);
+    // validate that the schema resolves to a valid DS
+    var otherDS = isc.isA.DataSource(schema) ? schema :
+            isc.isA.String(schema) ? isc.DS.get(schema) :
+            isc.isA.Canvas(schema) ? isc.DS.get(schema.dataSource) : null;
+    if (!otherDS) {
+        this.logMessage(logLevel, "fetchRelatedData(): schema not understood: " +
+                        this.echoLeaf(schema) +
+                        "; schema must be a DataSource or component bound to a DataSource");
+        return;
+    }
+    // validate the relationship between the DataSources; relationship may be null
+    var relationship = ds.getTreeRelationship(otherDS, null, true);
+    if (!relationship) {
+        this.logMessage(logLevel, "fetchRelatedData(): no relationship exists between " +
+                        "DataSources " + ds + " and " + otherDS);
+        return;
+    }
+    var parentIdFields = relationship.parentIdFields,
+        idFields = relationship.idFields
+    ;
 
     // form criteria to find related records
     var criteria = {};
-    criteria[relationship.parentIdField] = record[relationship.idField];
+    for (var i = 0; i < parentIdFields.length; i++) {
+        criteria[parentIdFields[i]] = record[idFields[i]];
+    }
+
+    // if requested, check wilLFetchData() here since we already have the criteria
+    var willFetch;
+    if (returnWillFetch) {
+        var textMatchStyle = requestProperties ? requestProperties.textMatchStyle : null;
+        willFetch = this.willFetchData(criteria, textMatchStyle);
+    }
 
     this.fetchData(criteria, callback, requestProperties);
+
+    return willFetch;
 },
 
 //>    @method dataBoundComponent.clearCriteria()
@@ -96617,7 +102955,7 @@ _filter : function (type, criteria, callback, requestProperties) {
 
     if (this.implicitCriteria) {
         if (!requestProperties) requestProperties = {};
-        requestProperties.dbcImplicitCriteria = isc.shallowClone(this.implicitCriteria);
+        requestProperties.dbcImplicitCriteria = this.getImplicitCriteria();
     }
 
     requestProperties = this.buildRequest(requestProperties, type, callback);
@@ -96694,7 +103032,7 @@ filterWithCriteria : function (criteria, operation, context) {
     context.prompt = (context.prompt || isc.RPCManager.fetchDataPrompt);
 
     // push the DBC's local implicitCriteria to the dataModel, so it and DS can use it later
-    //if (this.implicitCriteria) context.dbcImplicitCriteria = this.implicitCriteria;
+    //if (this.implicitCriteria) context.dbcImplicitCriteria = this.getImplicitCriteria();
 
     // get rid of empty criteria that come from raw form values
     var filterCriteria = criteria;
@@ -96717,12 +103055,16 @@ filterWithCriteria : function (criteria, operation, context) {
     if (this.useExistingDataModel(criteria, operation, context)) {
         var updatedModel = this.updateDataModel(filterCriteria, operation, context);
         if (updatedModel != null) dataModel = updatedModel;
+
+        if (this.dataModelInitialized(updatedModel) && !context._filterChanged) return;
     } else {
         dataModel = this.createDataModel(filterCriteria, operation, context);
     }
 
     // push the DBC's local implicitCriteria to the dataModel, so it and DS can use it later
-    if (this.implicitCriteria) dataModel.dbcImplicitCriteria = this.implicitCriteria;
+    if (this.implicitCriteria) {
+        dataModel.dbcImplicitCriteria = this.getImplicitCriteria();
+    }
 
     // we will ask the result set for the data we currently need to display,
     // which will cause data to be fetched
@@ -96737,6 +103079,15 @@ filterWithCriteria : function (criteria, operation, context) {
         this.requestVisibleRows();
         data.fetchDelay = fetchDelay;
     }
+},
+
+dataModelInitialized : function (dataObject) {
+    if (isc.ResultSet && isc.isA.ResultSet(dataObject)) {
+        return dataObject.lengthIsKnown();
+    } else if (isc.ResultTree && isc.isA.ResultTree(dataObject)) {
+        return !dataObject.isLoading(dataObject.root);
+    }
+    return false;
 },
 
 shouldFilterLocalData : function () {
@@ -96859,7 +103210,8 @@ updateDataModel : function (filterCriteria, operation, context) {
     // If we don't clear it here, the next time a fetch occurs (EG via 'invalidateCache()') the
     // callback will occur (once) when that fetch completes.
     if (!resultSet.willFetchData(filterCriteria)) delete context.afterFlowCallback;
-    resultSet.setCriteria(filterCriteria);
+    // setCriteria() will return whether the filter has actually changed
+    context._filterChanged = resultSet.setCriteria(filterCriteria, true);
 
     return resultSet;
 },
@@ -96932,27 +103284,34 @@ invalidateCache : function () {
 
 //> @method dataBoundComponent.refreshData(callback)
 // Unlike +link{listGrid.invalidateCache,invalidateCache} this will perform an asynchronous
-// (background) refresh of this components data and then call the provided callback method on
-// completion.
+// (background) refresh of this component's data and then call the provided callback method on
+// completion.  A grid needs to have a +link{DataSource} associated with it to use this method.
 // <p>
-// If refreshData is called while the grid is waiting for a response from +link{listGrid.fetchData}
-// the refreshData call will be aborted. This is because the fetch has higher priority.
+// If <code>refreshData()</code> is called while the grid is waiting for a response from
+// +link{listGrid.fetchData()} the <code>refreshData()</code> call will be aborted. This is
+// because the fetch has higher priority.
 // <p>
-// If +link{listGrid.fetchData} is called while the grid is waiting for a response from refreshData
-// and the fetchData call has altered the criteria or sort specifiers, the refreshData call will
-// be aborted.
+// If +link{listGrid.fetchData()} is called while the grid is waiting for a response from
+// <code>refreshData()</code>  and the <code>fetchData()</code> call has altered the criteria
+// or sort specifiers, the <code>refreshData()</code> call will be aborted.
 // <p>
-// If data is being edited or has been edited without being saved when refreshData is called, the
-// data will be retained so you can save it after the refresh is complete. If you however want
-// to throw away your edited but unsaved data when calling refreshData you first need to call
-// +link{listGrid.discardAllEdits} which will discard any unsaved edited data.
+// If data is being edited or has been edited without being saved when
+// <code>refreshData()</code> is called, the data will be retained so you can save it after the
+// refresh is complete. If you however want to throw away your edited but unsaved data when
+// calling <code>refreshData()</code> you first need to call +link{listGrid.discardAllEdits}
+// which will discard any unsaved edited data.
 // <p>
 // Note that for a TreeGrid with +link{treeGrid.loadDataOnDemand}: true, all currently opened
 // parent nodes will be re-fetched, except for +link{treeGrid.dataFetchMode,paged} TreeGrids,
 // for which only opened parent nodes that are <i>visible</i> or contain <i>visible</i> children
 // are re-fetched.  We do this in a single queued batch of fetches to maximize efficiency.
 // <p>
-// In order to use refreshData() this grid needs to have a +link{DataSource} associated with it.
+// By design, +link{listGrid.dataChanged(),dataChanged()} is not fired after
+// <code>refreshData()</code>, as the Framework is not in a position to know if data has
+// actually changed (which would require traversing the entire dataset to determine) and
+// whether criteria, sort or other specifiers of the dataset also have not changed.
+// Applications that need to take action on <code>refreshData()</code> should use the callback
+// to do so.
 //
 // @param [callback]    (DSCallback) callback method to run once the refresh completes.
 //
@@ -96963,7 +103322,7 @@ invalidateCache : function () {
 //<
 refreshData : function (callback) {
     if (!this.getDataSource()) {
-        this.logWarn("A dataSource must be specified in order to refresh data.");
+        this.logWarn("A dataSource must be specified in order to refresh data.", "refreshData");
         return;
     }
 
@@ -96972,7 +103331,8 @@ refreshData : function (callback) {
     if (!this.dataObjectSupportsFilter(resultSet)) resultSet = this.originalData;
 
     if (resultSet && resultSet.fetchIsPending && resultSet.fetchIsPending()) {
-        this.logWarn("A fetch for this component is currently pending, please try again later.");
+        this.logWarn("A fetch for this component is currently pending, please try again later.",
+                     "refreshData");
         return;
     }
 
@@ -96990,15 +103350,19 @@ refreshData : function (callback) {
         selectedState = this.getSelectedState();
 
     var request = {
-        sortBy: this.getSort(),
         showPrompt: false,
+        willHandleError: true,
         componentId: this.getID()
     };
 
     var dataFetchMode = this.dataFetchMode || resultSet.fetchMode;
+
     if (dataFetchMode != null && dataFetchMode != "paged") {
         request.dataFetchMode = dataFetchMode;
     } else {
+        // paged results - sort on server
+        request.sortBy = this.getSort();
+
         // request one page's worth of data on either side of the current viewport
         var startRow = visibleRows[0] - resultSet.resultSize,
             endRow = visibleRows[1] + resultSet.resultSize;
@@ -97015,13 +103379,13 @@ refreshData : function (callback) {
     if (context && context.operationId) request.operationId = context.operationId;
 
     if (this.implicitCriteria) {
-        request.dbcImplicitCriteria = isc.shallowClone(this.implicitCriteria);
+        request.dbcImplicitCriteria = this.getImplicitCriteria();
     }
 
 
-    var oldCriteria = isc.clone(resultSet.getCriteria());
+    var oldCriteria = isc.DataSource.copyCriteria(resultSet.getCriteria());
     oldCriteria = isc.DS.compressNestedCriteria(
-        isc.DS.combineCriteria(oldCriteria, isc.shallowClone(this.implicitCriteria))
+        isc.DS.combineCriteria(oldCriteria, this.getImplicitCriteria())
     );
     var oldSort = isc.clone(resultSet.getSort());
 
@@ -97031,6 +103395,12 @@ refreshData : function (callback) {
     ;
 
     dataSource.fetchData(fetchCriteria, function (dsResponse, data, dsRequest) {
+
+        // failed to refresh data - report error and fire user callback
+        if (dsResponse.status != 0) {
+            if (callback) callback(dsResponse, data, dsRequest);
+            return this._handleRefreshDataError(dsResponse, dsRequest);
+        }
 
         var d = this.getData();
         // Handle the grid being grouped
@@ -97049,7 +103419,7 @@ refreshData : function (callback) {
             ;
             if (criteriaOrSortChanged) {
                 this.logDebug("refreshData() aborted as a fetch had been issued while " +
-                              "waiting for refreshData() to complete.");
+                              "waiting for refreshData() to complete.", "refreshData");
                 return;
             }
         }
@@ -97105,6 +103475,21 @@ refreshData : function (callback) {
             callback(dsResponse, data, dsRequest);
         }
     }.bind(this), request);
+},
+
+_handleRefreshDataError : function (response, request) {
+    var status = response.status;
+
+    var failureMessage = "refreshData() failed with status " + status + " response from server";
+    if (response.data && isc.isA.String(response.data)) failureMessage += ": " + response.data;
+
+    // run default handling if we hit an actual error (e.g., not rpcResponse.STATUS_OFFLINE)
+    if (status < 0) {
+        this.logWarn(failureMessage, "refreshData");
+        return isc.RPCManager._handleError(response, request);
+    } else {
+        this.logInfo(failureMessage, "refreshData");
+    }
 },
 
 //> @method dataBoundComponent.willFetchData()
@@ -97221,7 +103606,9 @@ _performDSOperation : function (operationType, data, callback, requestProperties
     requestProperties = isc.DataSource.dupRequest(requestProperties) || {};
 
     // push the DBC's local implicitCriteria to the request, so DS can use it later
-    if (this.implicitCriteria) requestProperties.dbcImplicitCriteria = this.implicitCriteria;
+    if (this.implicitCriteria) {
+        requestProperties.dbcImplicitCriteria = this.getImplicitCriteria();
+    }
 
     // Call buildRequest - this will hang the default operationID (as well as various other
     // properties) onto the request.
@@ -97586,9 +103973,9 @@ getSelectionObject : function() {
 // @group selection
 // @visibility external
 //<
-isSelected : function (record) {
+isSelected : function (record, recordNum) {
     if (!record || !this.selectionManager) return false;
-    return this.selectionManager.isSelected(record);
+    return this.selectionManager.isSelected(record, recordNum);
 },
 
 //> @method listGrid.isPartiallySelected()
@@ -99587,7 +105974,7 @@ updateDataViaDataSource : function(record, ds, updateProperties, sourceWidget, s
 
         isc.Log.logDebug("Found client-side duplicate, skipping update for '" +
                      record[isc.firstKey(record)] + "'", "dragDrop");
-        this._transferExceptionList.add(this.getCleanRecordData(record));
+        this._transferExceptionList.add(isc.Tree.isANodeLocator(record) ? record : this.getCleanRecordData(record));
     } else {
         // If we have a full cache, we can go ahead and update now
         if (this.data.allMatchingRowsCached()) {
@@ -99608,7 +105995,8 @@ updateDataViaDataSource : function(record, ds, updateProperties, sourceWidget, s
 
                         isc.Log.logDebug("Found server-side duplicate, skipping update for '" +
                                      record[isc.firstKey(record)] + "'", "dragDrop");
-                        _listGrid._transferExceptionList.add(_listGrid.getCleanRecordData(data[0]));
+                        _listGrid._transferExceptionList.add(isc.Tree.isANodeLocator(data[0]) ?
+                                    data[0] : _listGrid.getCleanRecordData(data[0]));
                     } else {
                         if (!sourceWidget._updatesSent) sourceWidget._updatesSent = 0;
                         sourceWidget._updatesSent++;
@@ -99646,6 +106034,17 @@ _addIfNotDuplicate : function (record, sourceDS, sourceWidget, foreignKeys, inde
         pks,
         _listGrid = this,
         addProps = {};
+
+    var thisData = this.data;
+    if (this.creator && this.creator.data && this.creator.data.columnTree) {
+        thisData = this.creator.data;
+    }
+
+    var nodeLocator;
+    if (isc.Tree.isANodeLocator(record)) {
+        nodeLocator = record;
+        record = nodeLocator.node;
+    }
 
     if (this.addOperation) {
         isc.addProperties(addProps, {operationId: this.addOperation});
@@ -99704,19 +106103,20 @@ _addIfNotDuplicate : function (record, sourceDS, sourceWidget, foreignKeys, inde
                 sourceWidget._updateComplete(dsResponse, data, dsRequest);
             }, addProps);
         } else {
-            if (isc.Tree && isc.isA.Tree(this.data)) {
-                this.data.add(record, folder, index);
-            } else if (isc.ResultSet && isc.isA.ResultSet(this.data)) {
-                if (this.data.allRows != null) {
-                    if (index != null) this.data.allRows.addAt(record, index);
-                    else this.data.allRows.add(record);
-                    this.data.filterLocalData();
+            if (isc.Tree && isc.isA.Tree(thisData)) {
+                // XXX - multi-link trees?
+                thisData.add(record, folder, index);
+            } else if (isc.ResultSet && isc.isA.ResultSet(thisData)) {
+                if (thisData.allRows != null) {
+                    if (index != null) thisData.allRows.addAt(record, index);
+                    else thisData.allRows.add(record);
+                    thisData.filterLocalData();
                 } else {
                     isc.logWarn("Unable to add data to resultSet - allRows is not set");
                 }
             } else {
-                if (index != null) this.data.addAt(record, index);
-                else this.data.add(record);
+                if (index != null) thisData.addAt(record, index);
+                else thisData.add(record);
             }
         }
         return true;
@@ -99727,28 +106127,30 @@ _addIfNotDuplicate : function (record, sourceDS, sourceWidget, foreignKeys, inde
         isc.Log.logDebug("Found client-side duplicate, adding '" +
                          record[isc.firstKey(record)] +
                          "' to exception list", "dragDrop");
-        this._transferExceptionList.add(this.getCleanRecordData(record));
+        this._transferExceptionList.add(isc.Tree.isANodeLocator(record)
+                                                        ? record
+                                                        : this.getCleanRecordData(record));
         return false;
     } else {
         if (!ds) {
             // Simplest case - no DS and no dup on client-side, so go ahead and add the record to
             // the underlying data model
-            if (isc.Tree && isc.isA.Tree(this.data)) {
-                this.data.add(record, folder, index);
-            }  else if (isc.ResultSet && isc.isA.ResultSet(this.data)) {
-                if (this.data.allRows != null) {
-                    if (index != null) this.data.allRows.addAt(record, index);
-                    else this.data.allRows.add(record);
+            if (isc.Tree && isc.isA.Tree(thisData)) {
+                thisData.add(record, folder, index);
+            }  else if (isc.ResultSet && isc.isA.ResultSet(thisData)) {
+                if (thisData.allRows != null) {
+                    if (index != null) thisData.allRows.addAt(record, index);
+                    else thisData.allRows.add(record);
                 } else {
                     isc.logWarn("Unable to add data to resultSet - allRows is not set");
                 }
             } else {
-                if (index != null) this.data.addAt(record, index);
-                else this.data.add(record);
+                if (index != null) thisData.addAt(record, index);
+                else thisData.add(record);
             }
             return true;
         } else {
-            if (!isc.ResultSet || !isc.isA.ResultSet(this.data)) {
+            if (!isc.ResultSet || !isc.isA.ResultSet(thisData)) {
 
                 if (!sourceWidget._updatesSent) sourceWidget._updatesSent = 0;
                 sourceWidget._updatesSent++;
@@ -99765,8 +106167,8 @@ _addIfNotDuplicate : function (record, sourceDS, sourceWidget, foreignKeys, inde
                 // complete cache for the current filter criteria, we don't need to query the server.
                 // This is not true for other copying scenarios, where we need a complete, unfiltered
                 // cache to avoid the server query.
-                if (this.data.allRowsCached() ||
-                    (foreignKeys && isc.firstKey(foreignKeys) && this.data.allMatchingRowsCached())) {
+                if (thisData.allRowsCached() ||
+                    (foreignKeys && isc.firstKey(foreignKeys) && thisData.allMatchingRowsCached())) {
                     if (!sourceWidget._updatesSent) sourceWidget._updatesSent = 0;
                     sourceWidget._updatesSent++;
                     this.addData(record, function (dsResponse, data, dsRequest) {
@@ -99787,7 +106189,7 @@ _addIfNotDuplicate : function (record, sourceDS, sourceWidget, foreignKeys, inde
                     }
                 } else if (foreignKeys && isc.firstKey(foreignKeys)) {
                     // Source DS and target DS are different but related via a foreign key
-                    criteria = isc.addProperties({}, this.data.getCriteria());
+                    criteria = isc.addProperties({}, thisData.getCriteria());
                     isc.addProperties(criteria, foreignKeys);
                 } else if (ds && pks && isc.firstKey(pks) != null) {
                     // Target DS exists and has PKs defined, but either there is no source DS, or the
@@ -99807,7 +106209,9 @@ _addIfNotDuplicate : function (record, sourceDS, sourceWidget, foreignKeys, inde
                         isc.Log.logDebug("Found server-side duplicate, adding '" +
                                      record[isc.firstKey(record)] +
                                      "' to exception list", "dragDrop");
-                        _listGrid._transferExceptionList.add(_listGrid.getCleanRecordData(record));
+                        _listGrid._transferExceptionList.add(isc.Tree.isANodeLocator(record)
+                                                            ? record
+                                                            : this.getCleanRecordData(record));
                     } else {
                         if (!sourceWidget._updatesSent) sourceWidget._updatesSent = 0;
                         sourceWidget._updatesSent++;
@@ -99915,9 +106319,12 @@ getCleanRecordData : function (record) {
         isTileGrid = isc.TileGrid && isc.isA.TileGrid(this)
     ;
     for (var key in record) {
-        // These are just the properties that LG scribbles onto its records. If you have others, it's
-        // safe to exclude them in-place below, or just override this method.
+        // These are just the properties that LG scribbles onto its records. If you have
+        // others, it's safe to exclude them in-place below, or just override this method.
         if (key.startsWith("_selection_")) continue;
+
+        // embeddedComponent settings
+        if (key.startsWith("_embeddedComponents_")) continue;
 
         // this is from TileGrid
         if (isTileGrid && key.startsWith("_tileID_")) continue;
@@ -100180,7 +106587,12 @@ transferDragData : function (transferExceptionList, targetWidget) {
 // records.<p>
 //
 // This method is consulted by +link{ListGrid.willAcceptDrop()}.
-
+// <p>
+// NOTE: If this component is a +link{Tree.isMultiLinkTree(),multi-linked} <code>TreeGrid</code>,
+// this method returns a list of +link{object:NodeLocator}s rather than a list of records.  Each
+// <code>nodeLocator</code> contains a pointer to the associated record in its <code>node</code>
+// property.
+//
 // @param source (DataBoundComponent) source component from which the records will be transferred
 //
 // @group    dragging, data
@@ -100190,9 +106602,8 @@ transferDragData : function (transferExceptionList, targetWidget) {
 // @visibility external
 //<
 getDragData : function () {
-    var selection = (this.selectionManager && this.selectionManager.getSelection) ?
-                                              this.selectionManager.getSelection() : null;
-    return selection;
+    return this.selectionManager && this.selectionManager.getSelection ?
+                                            this.selectionManager.getSelection() : null;
 },
 
 //>    @method    dataBoundComponent.cloneDragData()    (A)
@@ -100394,9 +106805,15 @@ setDragTracker : function () {
 // @return (Object) Properties apply to the drag tracker, or null
 //<
 getDragTrackerProperties : function () {
-    var props = isc.addProperties({}, this.dragTrackerProperties);
-    props.styleName = this.dragTrackerStyle;
+    var props = {
+        showShadow:true,
+        styleName:this.dragTrackerStyle
+
+    };
     if (this.dragTrackerMode == "record") props.opacity = 50;
+
+    // allow simple override of these defaults via dragTrackerProperties
+    isc.addProperties(props, this.dragTrackerProperties);
     return props;
 },
 
@@ -100978,6 +107395,9 @@ userFieldCallback : function (builder) {
 
     // if the DBC supports resorting, do that now
     if (this.resort) this.resort();
+
+    // If the DBC supports a field state, notify observers of change
+    if (this.handleFieldStateChanged) this.handleFieldStateChanged();
 },
 
 // for a field with a userSummary, get the function that will generate summary output for a
@@ -101412,6 +107832,23 @@ addDetailedExportFieldValue : function(exportObject, exportProp, record, exportF
 
     if (isc.isA.Number(record[exportField.name])) {
         formatProperties.rawValue = record[exportField.name];
+    }
+
+    if (formatProperties && formatProperties.rawValue) {
+        var exportRawNumbers = exportField.exportRawNumbers;
+        if (exportRawNumbers == null) exportRawNumbers = this.exportRawNumbers;
+
+        if (exportRawNumbers == null) {
+            if (settings.exportAs == "xls" || settings.exportAs == "ooxml") {
+                formatProperties.exportRawNumbers = true;
+            } else if (settings.exportAs == "csv") {
+                formatProperties.exportRawNumbers = false;
+            }
+        } else if(exportRawNumbers == true) {
+            formatProperties.exportRawNumbers = true;
+        } else {
+            formatProperties.exportRawNumbers = false;
+        }
     }
 
     if (formatProperties && isc.getKeys(formatProperties).length == 0) {
@@ -102188,11 +108625,13 @@ exportWidthScale : 0.12,
 // If your ListGrid has custom formatters, formatted values will be exported by default, with
 // HTML normalized to text where possible.  Since some levels of HTML normalizing aren't
 // possible, this may result in missing or incorrect export values.  In this case, you have
-// two options:<ul>
+// three options:<ul>
 // <li>Set +link{listGridField.exportRawValues,exportRawValues} on the field.  This will export
 //     the raw underlying value of the field; your formatter will not be called</li>
 // <li>Have your formatter call +link{listGrid.isExportingClientData(),isExportingClientData()}
 //     and perform whatever alternative formatting you require if that method returns true</li>
+// <li>Set +link{listGridField.exportRawNumbers,exportRawNumbers} on the field.  This will export
+//     the raw underlying number of the field; your formatter will not be called</li>
 // </ul>
 // <P>
 // To export data from this component's dataSource,
@@ -102210,6 +108649,7 @@ exportWidthScale : 0.12,
 // @visibility external
 //<
 exportClientData : function (requestProperties, callback) {
+    if (!requestProperties) requestProperties = {};
     this._exportingClientData = true;
     if (callback) requestProperties.__callback = callback;
     this.getClientExportData(requestProperties,
@@ -103265,11 +109705,22 @@ _handleServerValidationReply : function (dsResponse, data, dsRequest) {
 
     // If request marked pending fields, clear them now.
     if (pendingFields) {
+
         component._clearAsyncValidation(pendingFields);
     }
 
-
     if (dsResponse.errors) {
+
+        var editRowNum = context.rowNum;
+        if (context.callerContext && context.callerContext.editValuesID != null) {
+            var liveRowNum = component.getEditSessionRowNum(context.callerContext.editValuesID);
+            if (liveRowNum != editRowNum) {
+                //  component.logWarn("Edit row remapped during async validation - was "
+                //            + editRowNum + ", now:" + liveRowNum)
+                editRowNum = liveRowNum;
+            }
+        }
+
         // Show server errors
         for (var fieldName in errors) {
             var fieldErrors = errors[fieldName],
@@ -103281,9 +109732,10 @@ _handleServerValidationReply : function (dsResponse, data, dsRequest) {
                 if (!isc.isAn.Array(fieldErrors)) fieldErrors = [fieldErrors];
                 var stopOnError = null;
                 for (var i = 0; i < fieldErrors.length; i++) {
-                    component.addFieldErrors(fieldName, fieldErrors[i].errorMessage, false, context.rowNum);
+                    component.addFieldErrors(fieldName, fieldErrors[i].errorMessage, false, editRowNum);
                     if (fieldErrors[i].stopOnError) stopOnError = true;
                 }
+
                 if (field.redraw) field.redraw();
 
                 stopOnError = component._resolveStopOnError(stopOnError, field.stopOnError,
@@ -104707,7 +111159,7 @@ getInnerHTML : function () {
             if (isc.Browser.isTouch) {
                 imgProps.extraCSSText = ((imgProps.extraCSSText == null ? "" : imgProps.extraCSSText + ";") +
                                          "-webkit-touch-callout:none");
-                imgProps.extraStuff = " oncontextmenu='javascript:return false;'";
+                imgProps.eventStuff = " oncontextmenu='javascript:return false;'";
             }
         }
         imgProps.src = baseURL;
@@ -105297,6 +111749,14 @@ isc.Hover.addClassProperties({
     //<
     topOffset:15,
 
+    //>@classAttr Hover.edgeOffset (number : 5 : RW)
+    // When positioning the hover canvas, this will be the minimum offset from page edge.
+    // The hover is always positioned not to show outside the page but this offset keeps the
+    // canvas from possibly being positioned adjoining the page edge.
+    // @visibility external
+    //<
+    edgeOffset:5,
+
     //>    @classAttr    canvas.hoverCanvas        (Canvas : null : RA)
     // Reference to the hoverCanvas currently visible.  Null if none.
     //<
@@ -105379,6 +111839,26 @@ isc.Hover.addClassMethods({
 // @param [targetCanvas] (Canvas) Passed in by canvas.showHover() - allows us to track which canvas
 //     showed the hover and handle cases such as that canvas being destroyed etc.
 show : function (contents, properties, rect, targetCanvas) {
+
+    // If a hover is currently showing, Hover.show() is the documented way to update the
+    // content of the hoverCanvas with new content (and styling etc)
+    // In this case, avoid repositioning the hover, or setting properties based on defaults
+    // rather than properties explicitly passed in
+    var updateInPlace = this.hoverCanvas && this.hoverCanvas.isDrawn()
+                                    && this.hoverCanvas.isVisible();
+
+    // If we're passed a new canvas as the first arg, don't attempt to update in place.
+    if (updateInPlace &&
+        isc.isA.Canvas(contents) && contents == this.hoverCanvas)
+    {
+        updateInPlace = false;
+    }
+    // If we're explicitly passed a target canvas and it differs from the current targetCanvas
+    // don't attempt to update in place
+    if (updateInPlace && (targetCanvas != null) && (targetCanvas != this.lastHoverCanvas)) {
+        updateInPlace = true;
+    }
+
     if (this.canvasObserver == null) {
         // observe resizes so the canvas can be moved back on-screen if it has async content
         // that changes it's size after draw - use a dummy instance because observe() isn't static
@@ -105389,11 +111869,12 @@ show : function (contents, properties, rect, targetCanvas) {
             }
         });
     }
-    if (this.hoverCanvas && this.canvasObserver.isObserving(this.hoverCanvas, "resized")) {
+    if (!updateInPlace && this.hoverCanvas && this.canvasObserver.isObserving(this.hoverCanvas, "resized"))
+    {
         this.canvasObserver.ignore(this.hoverCanvas, "resized");
     }
 
-    if (isc.isA.Canvas(contents)) {
+    if (isc.isA.Canvas(contents) && !updateInPlace) {
         // we've been passed a Canvas as content for the hover - this will now become the
         // hoverCanvas, rather than being the content for a newly created hoverCanvas
         this.showingHoverComponent = true;
@@ -105418,40 +111899,75 @@ show : function (contents, properties, rect, targetCanvas) {
         return;
     }
 
-    if (this._hideOnMouseDownEvent) {
-        isc.Page.clearEvent("mouseDown", this._hideOnMouseDownEvent);
+    // remember which target showed the canvas
+    // (Cleared on hoverCanvas.hide())
+    if (!updateInPlace) this.lastHoverCanvas = targetCanvas;
+
+    // set the hover to display the new contents
+    if (!this.showingHoverComponent) hoverCanvas.setContents(contents);
+
+    if (properties == null) properties = {};
+
+    // Hide on mouseDown (or, if focused, hide on mouseDown outside the hover canvas) by default
+
+    var hideOnMouseDown = properties.hideOnMouseDown;
+    if (hideOnMouseDown == null && !updateInPlace) {
+        hideOnMouseDown = true;
     }
-    if (targetCanvas && targetCanvas.hideHoverOnMouseDown) {
+    if (hideOnMouseDown != null) {
+        this._hideOnMouseDown = hideOnMouseDown;
+    }
+    if (!this._hideOnMouseDownEvent) {
+
         this._hideOnMouseDownEvent = isc.Page.setEvent(
             "mouseDown",
             this,
-            "once",
+            null,
             "hideHoverOnMouseDown"
         );
     }
 
-    // remember which target showed the canvas
-    // (Cleared on hoverCanvas.hide())
-    this.lastHoverCanvas = targetCanvas;
-
-    // set the hover to display the new contents
-    if (!this.showingHoverComponent) hoverCanvas.setContents(contents);
-    if (properties == null) properties = {};
-
-
+    // If a focusKey was specified, set up an event to listen for it, and
+    // on keypress, give the hover "focus", so it stays up and the user can interact with it
+    var focusKey = properties.focusKey;
+    if (!updateInPlace || focusKey != null) {
+        this._focusKey = focusKey;
+    }
+    if (focusKey != null && !this._focusOnKeyEvent) {
+        this._focusOnKeyEvent = isc.Page.setEvent(
+            "keyPress",
+            this,
+            null,
+            "focusOnKeyHandler"
+        );
+    }
     // Apply the properties to the hoverCanvas (except for positioning props)
 
     var defaults = this.hoverCanvasDefaults;
 
-    if (hoverCanvas.isA("Button") && hoverCanvas.setAlign) hoverCanvas.setAlign(properties.align || defaults.align);
-    if (hoverCanvas.isA("Button") && hoverCanvas.setVAlign) hoverCanvas.setVAlign(properties.valign || defaults.valign);
-    if (hoverCanvas.setBaseStyle) hoverCanvas.setBaseStyle(properties.baseStyle || defaults.baseStyle);
-    if (hoverCanvas.setOpacity) hoverCanvas.setOpacity(properties.opacity || defaults.opacity);
-    if (hoverCanvas.setWrap) hoverCanvas.setWrap(properties.wrap != null ? properties.wrap : defaults.wrap);
+    var align = properties.align;
+    if (!updateInPlace && align == null) align = defaults.align;
+    if (align != null && hoverCanvas.isA("Button") && hoverCanvas.setAlign) hoverCanvas.setAlign(align);
+
+    var valign = properties.valign;
+    if (!updateInPlace && valign == null) valign = defaults.valign;
+    if (valign != null && hoverCanvas.isA("Button") && hoverCanvas.setVAlign) hoverCanvas.setVAlign(valign);
+
+    var baseStyle = properties.baseStyle;
+    if (!updateInPlace && baseStyle == null) baseStyle = defaults.baseStyle;
+    if (baseStyle && hoverCanvas.setBaseStyle) hoverCanvas.setBaseStyle(baseStyle);
+
+    var opacity = properties.opacity;
+    if (!updateInPlace && opacity == null) opacity = defaults.opacity;
+    if (opacity != null && hoverCanvas.setOpacity) hoverCanvas.setOpacity(opacity);
+
+    var wrap = properties.wrap;
+    if (!updateInPlace && wrap == null) wrap = defaults.wrap;
+    if (hoverCanvas.setWrap) hoverCanvas.setWrap(wrap);
 
     // Should we move the hover canvas around with the mouse
     if (properties.moveWithMouse != null) this._shouldMoveWithMouse = properties.moveWithMouse
-    else this._shouldMoveWithMouse = this.moveWithMouse;
+    else if (!updateInPlace) this._shouldMoveWithMouse = this.moveWithMouse;
 
     // set properties of new hoverCanvas.
     // placement: by default, offset from mouse (no occlusion by mouse), and on-screen (if
@@ -105464,47 +111980,27 @@ show : function (contents, properties, rect, targetCanvas) {
         left = properties.left,
         top = properties.top,
         // NOTE: boolean check OK because width and height can't validly be zero
-        width = properties.width || (this.showingHoverComponent ? hoverCanvas.width : defaults.defaultWidth),
-        height = properties.height || (this.showingHoverComponent ? hoverCanvas.height : defaults.defaultHeight);
+        width = properties.width,
+        height = properties.height;
 
+    if (!updateInPlace) {
+        if (width == null) width = this.showingHoverComponent ? hoverCanvas.width : defaults.defaultWidth;
+        if (height == null) height = this.showingHoverComponent ? hoverCanvas.height : defaults.defaultHeight;
+    }
+    // apply content autofitting
     if (properties.autoFitWidth) {
         // warn if autoFitWidth+wrap:false are set. It's not invalid but it is
         // weird and quite possible a dev has misunderstood the settings.
         if (properties.wrap == false) {
-            this.logWarn("Hover.show(): autoFitWidth:true specified in conjunction with wrap:false. " +
-                "These settings are usually not intended to be used in conjunction - hovers with " +
-                "autoFitWidth enabled, and wrapping enabled will allow content to wrap if the unwrapped content " +
-                "would exceed autoFitMaxWidth.");
+            this.logWarn("Hover.show(): autoFitWidth:true specified in conjunction with " +
+                "wrap:false.  These settings are usually not intended to be used in " +
+                "conjunction - hovers with autoFitWidth enabled, and wrapping enabled will " +
+                "allow content to wrap if the unwrapped content would exceed autoFitMaxWidth.");
         }
-
-        var contentString = contents,
-            baseStyle = hoverCanvas.baseStyle;
-
-
-        if (isc.Button && isc.isA.Button(hoverCanvas)) {
-            contentString = hoverCanvas._getSizeTestHTML(contents, false);
-            baseStyle = null;
-        }
-        var wrapWidth = isc.Canvas.measureContent(contentString, baseStyle, false, true);
-
-        if (properties.autoFitMaxWidth != null) {
-            var maxWidth = properties.autoFitMaxWidth;
-            if (isc.isA.String(maxWidth)) {
-                if (maxWidth.endsWith("%")) {
-                    var percentWidth = parseInt(maxWidth);
-                    maxWidth = Math.round(isc.Page.getWidth() * (percentWidth/100));
-                } else {
-                    maxWidth = parseInt(maxWidth);
-                    if (isNaN(maxWidth)) {
-                        maxWidth = wrapWidth;
-                    }
-                }
-            }
-            wrapWidth = Math.min(wrapWidth, maxWidth);
-        }
+        var wrapWidth = this._getAutoFitWidth(properties, hoverCanvas, contents);
         if (wrapWidth > width) {
-            this.logDebug("Hover shown with autoFitMaxWidth enabled. Hover will expand" +
-                " from specified width:" + width + " to content width:" + wrapWidth);
+            this.logDebug("Hover shown with autoFitWidth enabled. Hover will expand " +
+                          "from specified width:" + width + " to content width:" + wrapWidth);
             width = wrapWidth;
         }
     }
@@ -105515,7 +112011,7 @@ show : function (contents, properties, rect, targetCanvas) {
         // default left and top if they weren't specified in the properties argument
         left = left ? left : lastX + this.leftOffset;
         top = top ? top : lastY + this.topOffset;
-    } else {
+    } else if (!updateInPlace) {
 
         //this.logWarn("sizing hover to: " + [width, height]);
         hoverCanvas.setRect(null, -9999, width, height);
@@ -105533,31 +112029,97 @@ show : function (contents, properties, rect, targetCanvas) {
         // itself to the right/bottom of the position returned by placeRect()
         var hoverRect = hoverCanvas.getPeerRect();
         var pos = isc.Canvas._placeRect(hoverRect[2], hoverRect[3], avoidRect,
-            "bottom", false, "outside-right"
+            "bottom", false, "outside-right", isc.Hover.edgeOffset
         );
         left = pos[0];
         top = pos[1];
     }
-    hoverCanvas.setRect(left, top, width, height);
+    // If updateInPlace is true, respect left/top/width/height iff passed
+    if (left != null || height != null || width != null || height != null) {
+        hoverCanvas.setRect(left, top, width, height);
+    }
     hoverCanvas.bringToFront();
 
     // show the hoverCanvas
     if (!hoverCanvas.isDrawn() || !hoverCanvas.isVisible()) hoverCanvas.show();
 
     // set a page-level mouseMove handler to move the hoverCanvas
-    if (this._shouldMoveWithMouse) {
+    if (this._shouldMoveWithMouse && !this._mouseMoveHandler) {
         this._mouseMoveHandler =
             isc.Page.setEvent("mouseMove", function () { isc.Hover._moveWithMouse() });
     }
 
     // observe resized on the hoverCanvas, so it can be moved back on-screen
-    this.canvasObserver.observe(this.hoverCanvas, "resized", "observer.hoverCanvasResized()");
+    if (!updateInPlace) {
+        this.canvasObserver.observe(
+            this.hoverCanvas, "resized", "observer.hoverCanvasResized()"
+        );
+    }
 
     return;
 },
 
+focusOnKeyHandler : function () {
+
+    var key = isc.EH.getKeyName();
+    if (key == this._focusKey) {
+        // This flag is checked by EventHandler logic that would normally hide
+        // the hover as the user rolls off the hover target.
+        this._hoverHasFocus = true;
+
+        // (Stop listening for this key)
+        isc.Page.clearEvent("keyPress", this._focusOnKeyEvent);
+        delete this._focusOnKeyEvent;
+        delete this._focusKey;
+
+    }
+},
+
+_getAutoFitWidth : function (configProps, canvas, contents) {
+    var contentString = contents,
+        baseStyle = canvas.baseStyle
+    ;
+
+
+    if (isc.Button && isc.isA.Button(canvas)) {
+        contentString = canvas._getSizeTestHTML(contents, false);
+        baseStyle = null;
+    }
+    var wrapWidth = isc.Canvas.measureContent(contentString, baseStyle, false, true);
+
+    var autoFitMaxWidth = configProps.autoFitMaxWidth;
+    if (autoFitMaxWidth != null) {
+        var maxWidth = autoFitMaxWidth;
+        if (isc.isA.String(maxWidth)) {
+            if (maxWidth.endsWith("%")) {
+                var percentWidth = parseInt(maxWidth);
+                maxWidth = Math.round(isc.Page.getWidth() * (percentWidth / 100));
+            } else {
+                maxWidth = parseInt(maxWidth);
+                if (isNaN(maxWidth)) {
+                    maxWidth = wrapWidth;
+                }
+            }
+        }
+        wrapWidth = Math.min(wrapWidth, maxWidth);
+    }
+
+    return wrapWidth;
+},
+
 hideHoverOnMouseDown : function () {
-    delete this._hideOnMouseDownEvent;
+
+    // If the mouse went down inside a focused hover-canvas, allow it to stay up
+    // User may be scrolling, clicking on a link in hover text, etc.
+    if (this._hoverHasFocus && this.hoverCanvas.containsEvent()) {
+        return;
+    }
+    // If hideOnMouseDown was explicitly set to false when the hover was shown, just bail
+    if (!this._hideOnMouseDown) {
+        return;
+    }
+
+    // Hiding will also clear the mouseDown event
     this.hide();
 },
 
@@ -105575,6 +112137,11 @@ hoverCanvasHidden : function () {
         isc.Page.clearEvent("mouseDown", this._hideOnMouseDownEvent);
         delete this._hideOnMouseDownEvent;
     }
+    if (this._focusOnKeyEvent != null) {
+        isc.Page.clearEvent("keyPress", this._focusOnKeyEvent);
+        delete this._focusOnKeyEvent;
+    }
+    delete this._hoverHasFocus;
 },
 
 
@@ -105583,6 +112150,7 @@ hoverCanvasHidden : function () {
 // @visibility external
 //<
 hide : function () {
+
     var hoverCanvas = isc.Hover.hoverCanvas;
     if (hoverCanvas != null) {
         if (this.canvasObserver.isObserving(hoverCanvas, "resized")) {
@@ -105629,6 +112197,9 @@ _makeHoverCanvas : function () {
 },
 
 _moveWithMouse : function () {
+
+    if (this._hoverHasFocus) return;
+
     // call getPeerRect to take into account dropShadow
     var hoverRect = this.hoverCanvas.getPeerRect();
     var pos = isc.Canvas._placeRect(
@@ -106116,12 +112687,12 @@ isc.ClassFactory.defineClass("JSONEncoder");
 isc.JSONEncoder.addClassProperties({
 
 //>    @classMethod    JSONEncoder._serialize_remember()    (A)
-//            Remember an object that has just been serialized it, so we don't
+//            Remember an object that has just been serialized, so we don't
 //             attempt to serialize it again (and thus get into an endless loop).
 //        @group    serialization
 //
 //        @param    objRefs    (Array of Object[])    array of objects that have been serialized already so
-//        @param    object    (Any)        object o serialize
+//        @param    object    (Any)        object to serialize
 //        @param    path    (String)    global variable path to this object, for serializing object references
 //<
 // helper function to remember that we've already output a particular object in this serialize pass
@@ -106712,8 +113283,20 @@ isc.Comm.addClassMethods({
 // (Number, String, etc) are just preserved by reference.
 // <P>
 // Only JavaScript built-in types may be cloned.  SmartClient UI widgets do not support
-// cloning, instead, use +link{Class.create()} to make a new component with similar
-// configuration.
+// cloning but must be created explicitly via +link{Class.create()}.<br>
+// Note that you also can't duplicate a live canvas by passing into <i>create()</i> as an
+// argument. If you need to create multiple components with similar configuration, some common
+// patterns inclulde:<ul>
+// <li>Create a new SmartClient class with the desired default configuration, and
+//     create instances of this class as needed.</li>
+// <li>For components created by some specific instance, the +link{AutoChild} system may be used.
+//     Developers can specify a standard configuration in
+//     <code><i>autoChildName</i>Defaults</code> and
+//     <code><i>autoChildName</i>Properties</code>, and use +link{Class.createAutoChild()}
+//     to create a number of standard auto child components.</li>
+// <li>A less formal approach might be to have a simple <i>getter</i> type method which
+//     created and returned a new component each time it was called, passing in a standard
+//     configuration block.</li></ul>
 // <P>
 // Does not handle looping references (will infinite loop).
 //
@@ -108205,9 +114788,11 @@ isc.AutoTest.addClassMethods({
                 coords = [isc.EH.getX(), isc.EH.getY()];
             }
         }
+
         var canvas;
         if (isc.isA.Canvas(DOMElement)) {
             canvas = DOMElement;
+            if (canvas.destroyed) return "";
             DOMElement = canvas.getHandle();
         } else {
             canvas = isc.AutoTest.locateCanvasFromDOMElement(DOMElement);
@@ -108220,6 +114805,81 @@ isc.AutoTest.addClassMethods({
         }
         return locator;
 
+    },
+
+    //> @object QualityIndicatedLocator
+    // An object returned from +link{AutoTest.getLocatorWithIndicators} that includes the
+    // locator and properties that describe the quality of the locator.
+    //
+    // @treeLocation Concepts/Automated Testing/AutoTest
+    // @visibility external
+    // @group autoTest
+    //<
+
+    //> @attr qualityIndicatedLocator.locator (AutoTestLocator : null : IR)
+    // The +link{type:AutoTestLocator} associated with some DOM element in a SmartClient
+    // application page.
+    //
+    // @visibility external
+    //<
+
+    //> @attr qualityIndicatedLocator.containsGlobalId (boolean : null : IR)
+    // True if the returned +link{qualityIndicatedLocator.locator,locator} includes
+    // a reference using an auto-generated global ID.
+    //
+    // @visibility external
+    //<
+
+    //> @attr qualityIndicatedLocator.globalID (String : null : IR)
+    // The ID of the component within the locator segments that has an auto-generated global
+    // ID.
+    //
+    // @visibility external
+    //<
+
+    //> @attr qualityIndicatedLocator.containsIndices (boolean : null : IR)
+    // True if the returned +link{qualityIndicatedLocator.locator,locator} includes
+    // references using index positions.
+    //
+    // @visibility external
+    //<
+
+    //> @attr qualityIndicatedLocator.firstParentOfIndex (String : null : IR)
+    // The ID of the first parent within the locator segments that has a child referenced
+    // by index. Note that a child component with an explicit
+    // +link{canvas.locatorName,locatorName} will be excluded since the name is a reliable
+    // means to locate the component.
+    //
+    // @visibility external
+    //<
+
+    //> @classMethod AutoTest.getLocatorWithIndicators()
+    // Returns the +link{object:QualityIndicatedLocator} associated with some DOM element in a
+    // SmartClient application page.  If coords, representing the page position, is passed in,
+    // the locator
+    // may be generated with a specific trailing "target area" identifer that will map back to
+    // the appropriate, potentially different, physical coordinates, even if the widget is
+    // moved.  The coords argument will only have an effect in cases where the mouse position
+    // over the target could potentially change behavior.
+    // @param DOMElement (DOMElement) DOM element within in the page. If null the locator for
+    //  the last mouse event target will be generated
+    // @param [checkForNativeHandling] (boolean) If this parameter is passed in, check whether
+    //  the target element responds to native browser events directly rather than going through
+    //  the SmartClient widget/event handling model. If we detect this case, return null rather
+    //  than a live locator.  This allows us to differentiate between (for example) an event on
+    //  a Canvas handle, and an event occurring directly on a simple
+    //  <code>&lt;a href=...&gt;</code> tag written inside a Canvas handle.
+    // @param [coords] (Array) X, Y page position
+    // @return (QualityIndicatedLocator) Locator details allowing the AutoTest subsystem to find
+    //   an equivalent DOM element on subsequent page loads.
+    // @visibility external
+    // @group autoTest
+    //<
+    getLocatorWithIndicators : function (DOMElement, checkForNativeHandling, coords) {
+        this._locatorDetails = {};
+        var locator = this.getLocator(DOMElement, checkForNativeHandling, coords);
+        this._locatorDetails.locator = locator;
+        return this._locatorDetails;
     },
 
     getTableCellValue : function (DOMElement, row, col) {
@@ -108247,6 +114907,7 @@ isc.AutoTest.addClassMethods({
     //<
 
     getObjectLocator : function (target) {
+        if (target.destroyed || target.destroying) return null;
 
         // We can be passed
         // - a FormItem.
@@ -108333,6 +114994,10 @@ isc.AutoTest.addClassMethods({
 
     locateCanvasFromDOMElement : function (element, locateContainer) {
         var canvas = isc.EH.getEventTargetCanvas(null, element);
+        // don't use a destroyed canvas, as it may not have all the properties we expect
+
+        if (canvas && canvas.destroyed) canvas = null;
+        // if we haven't reached a DF, we're done; just return the canvas
         if (!locateContainer || !isc.isA.DynamicForm(canvas)) return canvas;
         // if we want the container, we must query the item
         var item = this.locateFormItemFromDOMElement(element, canvas);
@@ -108343,7 +115008,7 @@ isc.AutoTest.addClassMethods({
     // element must be a DynamicForm or DOM element - not a locator
     locateFormItemFromDOMElement : function (element, form) {
         if (!form) form = this.locateCanvasFromDOMElement(element);
-        if (!isc.isA.DynamicForm(form)) return null;
+        if (!isc.isA.DynamicForm(form) || form.destroyed) return null;
 
         var itemInfo = isc.DynamicForm._getItemInfoFromElement(element, form);
         return itemInfo ? itemInfo.item : null;
@@ -108505,20 +115170,20 @@ isc.AutoTest.addClassMethods({
     // @visibility external
     // @group autoTest
     //<
-    getObject : function (locator) {
-        return this.getAttribute(locator, isc.Canvas._$Object);
+    getObject : function (locator, moreAttributes) {
+        return this.getAttribute(locator, isc.Canvas._$Object, moreAttributes);
     },
 
 
-    getObjectContext : function (locator) {
-        var targetObject = isc.AutoTest.getObject(locator);
-        if (targetObject == null) return null;
 
+    getObjectContext : function (locator, suppressWarnings) {
+        var targetObject = isc.AutoTest.getObject(locator, { suppressWarnings: suppressWarnings });
+        if (targetObject == null) return null;
         return this._getObjectContext(targetObject, locator);
     },
 
-    getRelativeObjectContext : function (baseComponent, locator) {
-        var targetObject = isc.AutoTest.resolveRelativeObjectLocator(baseComponent, locator);
+    getRelativeObjectContext : function (baseComponent, locator, suppressWarnings) {
+        var targetObject = isc.AutoTest.resolveRelativeObjectLocator(baseComponent, locator, { suppressWarnings: suppressWarnings });
         if (targetObject == null) return null;
 
         return this._getObjectContext(targetObject, locator);
@@ -108593,7 +115258,7 @@ isc.AutoTest.addClassMethods({
         return this.getAttribute(locator, isc.Canvas._$Selected);
     },
 
-    getAttribute : function (locator, attribute) {
+    getAttribute : function (locator, attribute, moreAttributes) {
         if (!locator) return null;
 
 
@@ -108622,7 +115287,7 @@ isc.AutoTest.addClassMethods({
         // knock off the baseComponent
         locatorArray = locatorArray.slice(1);
 
-        var configuration = {attribute: attribute},
+        var configuration = isc.addProperties({attribute: attribute}, moreAttributes),
             baseComponent = this.getBaseComponentFromLocatorSubstring(baseComponentID,
                                                                       configuration);
         if (!baseComponent) return null;
@@ -108663,11 +115328,11 @@ isc.AutoTest.addClassMethods({
     //
     // @visibility rules
     //<
-    resolveRelativeObjectLocator : function (baseComponent, relativeLocator) {
+    resolveRelativeObjectLocator : function (baseComponent, relativeLocator, moreAttributes) {
         var splitLocator = isc.isAn.Array(relativeLocator) ? relativeLocator :
                                                              relativeLocator.split("/");
-        return baseComponent.getAttributeFromSplitLocator(splitLocator,
-                                                          {attribute:isc.Canvas._$Object});
+        var configuration = isc.addProperties({attribute: isc.Canvas._$Object}, moreAttributes);
+        return baseComponent.getAttributeFromSplitLocator(splitLocator, configuration);
     },
 
     //> @classMethod AutoTest.getPageCoords()
@@ -108758,26 +115423,22 @@ isc.AutoTest.addClassMethods({
     // implement user-extensions.js Selenium v1 focus strategy for use by WebDriver
     locatorFocus : function (locator) {
         var element = this.getElement(locator),
-            canvas = isc.AutoTest.locateCanvasFromDOMElement(element),
-            masked = isc.isA.Canvas(canvas) && canvas.isMasked()
+            canvas = isc.AutoTest.locateCanvasFromDOMElement(element, true)
         ;
-        // if the canvas is masked, don't focus
-        if (!canvas || canvas.isMasked()) return;
+        // if no canvas or masked, just bail out
+        if (!canvas || canvas.isMasked()) return false;
 
         // for a formitem, give the form focus rather than the containWidget
         var object = isc.AutoTest.getObject(locator);
-        if (isc.FormItem && isc.isA.FormItem(object) && object.form != canvas) {
-            isc.EH.focusInCanvas(object.form);
-            return;
+        if (isc.FormItem && isc.isA.FormItem(object)) {
+            if (object.isDrawn()) {
+                canvas = object.form;
+                canvas.setFocusItem(object);
+            }
         }
-        // basic Selenium v1 focus
-        if (element.focus) element.focus();
 
-        // explicitly focus on any focus element
-        var focusElement = canvas.getFocusHandle();
-        if (focusElement && focusElement.onfocus) {
-            focusElement.focus()
-        }
+        // focus in canvas containing element
+        canvas.setFocus(true, "Selenium");
     },
 
     // getBaseComponentFromLocatorSubstring: This actually gets the *base* component from
@@ -108954,7 +115615,8 @@ isc.AutoTest.addClassMethods({
     // matching FormItem can be found.
     // @param (Locator) Locator String previously returned by +link{AutoTest.getLocator()}
     // @return (Canvas) Canvas associated with this locator
-    // @visibility autoTest
+    // @visibility internal
+    // @group autoTest
     //<
     getLocatorFormItem : function (locator) {
         // Simply get the DOM element and pick up the DynamicForm/ FormItem from it.
@@ -109260,9 +115922,39 @@ isc.AutoTest.addClassMethods({
         case isc.Canvas._$Value:
         case isc.Canvas._$Selected: return;
         }
+    },
+
+
+
+    _logUnboundModuleMethod : function (instance, methodName) {
+        instance.logWarn(methodName + "() isn't yet bound to a valid AutoTest function.  " +
+            "Wait for page load or, if you know all needed SmartClient modules have already " +
+            "been loaded, call isc.ApplyAutoTestMethods() to attach AutoTest APIs to modules");
+    },
+
+    _getCheckedModuleMethods : function (methodNames) {
+        var methods = {},
+            AutoTest = this
+        ;
+        methodNames.map(function (methodName) {
+            methods[methodName] = function () {AutoTest._logUnboundModuleMethod(this, methodName);};
+        });
+        return methods;
     }
 
 });
+
+
+
+
+isc.Class.addMethods(isc.AutoTest._getCheckedModuleMethods([
+    "getLocator", "getObjectLocator", "getLocatorParent", "getLocatorRoot",
+    "getAutoTestLocatorCoords", "getAttributeFromSplitLocator",
+    "getCanvasFromFallbackLocator", "getCanvasLocatorFallbackPath"]));
+
+isc.Class.addClassMethods(isc.AutoTest._getCheckedModuleMethods([
+    "getCanvasFromFallbackLocator", "getCanvasLocatorFallbackPath"]));
+
 
 isc.ApplyAutoTestMethods = function () {
     // Only apply methods once
@@ -109455,6 +116147,12 @@ isc.Canvas.addClassMethods({
         // either strategy is "index" or we didn't find a title/name match
         default:
 
+            // normally back off to index but try "locatorName" first.
+            // it is a user-supplied ID that is unique within the parent.
+            match = this.getFallbackPropertyMatch("locatorName", config, candidates,
+                                                  substring, typeStrategy);
+            if (match) return match;
+
             // back off to index
             // We captured index per class name, per scClass and per role as well as the
             // raw index in the array.
@@ -109547,7 +116245,7 @@ isc.Canvas.addClassMethods({
 
                     if (locatorMatching == "restrictConfig") break;
 
-                    isc.AutoTest.logRobustLocatorWarning();
+                    if (mode == null || !mode.suppressWarnings) isc.AutoTest.logRobustLocatorWarning();
                 }
 
                 var match = classIndexMatch || scClassIndexMatch || roleIndexMatch;
@@ -109560,10 +116258,12 @@ isc.Canvas.addClassMethods({
                 }
 
                 if (match) {
-                    this.logWarn("Locator string:" + substring +
-                        " matching by index gave " + match +
-                        ". Reliability cannot be guaranteed for matching by index if the underlying " +
-                        "application undergoes any changes.", "AutoTest");
+                    if (mode == null || !mode.suppressWarnings) {
+                        this.logWarn("Locator string:" + substring +
+                            " matching by index gave " + match +
+                            ". Reliability cannot be guaranteed for matching by index if the underlying " +
+                            "application undergoes any changes.", "AutoTest");
+                    }
                     return match;
                 }
 
@@ -109610,6 +116310,7 @@ isc.Class.addClassMethods({
         if (mask.title == null) mask.title = "title";
         if (mask.scRole == null) mask.scRole = "ariaRole";
         if (mask.name == null) mask.name = "name";
+        if (mask.locatorName == null) mask.locatorName = "locatorName";
 
         // ClassName / scClassName - this is more complex than just looking at attributes on
         // the widget:
@@ -109638,6 +116339,12 @@ isc.Class.addClassMethods({
             properties.index = sourceArray.indexOf(canvas);
             properties.length = sourceArray.length;
 
+            if (isc.AutoTest._locatorDetails && !canvas.locatorName) {
+                if (!isc.AutoTest._locatorDetails.firstParentOfIndex) {
+                    isc.AutoTest._locatorDetails.firstParentOfIndex = canvas.parentElement.ID;
+                }
+                isc.AutoTest._locatorDetails.containsIndices = true;
+            }
             // position within widgets of this class in the array
             // Use case: the developer adds something like a 'status label' at the top
             // of an array of buttons
@@ -109665,7 +116372,6 @@ isc.Class.addClassMethods({
                 properties.roleLength = matchingRoles.length;
             }
         }
-
         return isc.AutoTest.getObjectLocatorFallbackPath(name, canvas, properties, mask);
     }
 
@@ -109912,10 +116618,12 @@ isc.Class.addMethods({
 isc.Canvas.addMethods({
 
     //> @method canvas.getLocator()
-    // Get an abstract Locator String for an element contained within this Canvas
-    // @param (DOMElement) DOM element contained within this Canvas
-    // @return (Locator) abstract Locator String
-    // @visibility autoTest
+    // Returns an +link{type:AutoTestLocator} associated with some DOM element contained within
+    // this Canvas.
+    // @param DOMElement (DOMElement) DOM element within this Canvas
+    // @return (AutoTestLocator) Locator string allowing the AutoTest subsystem to find
+    // an equivalent DOM element on subsequent page loads.
+    // @visibility internal
     //<
     // No apparent need to expose this directly, unless we are ready to support developers
     // writing their own locator logic in addition to the defaults
@@ -109988,6 +116696,12 @@ isc.Canvas.addMethods({
             } else if (!this.hasStableID() && this.parentElement == null) {
                 this.locatorRoot = "//" +
                     isc.Canvas.getCanvasLocatorFallbackPath("autoID", this, isc.Canvas._topCanvii);
+                if (isc.AutoTest._locatorDetails) {
+                    if (isc.AutoTest._locatorDetails.globalID == null) {
+                        isc.AutoTest._locatorDetails.globalID = this.ID;
+                    }
+                    isc.AutoTest._locatorDetails.containsGlobalId = true;
+                }
             } else {
                 this._locatorRootTemplate[1] = this.getClassName();
                 this._locatorRootTemplate[3] = this.getID();
@@ -110292,11 +117006,24 @@ isc.Canvas.addMethods({
 
     },
 
+    //> @attr Canvas.locatorName (String : null : IRWA)
+    // Local name for referencing this canvas from an autoTest locator string. It will be
+    // used instead of <code>index</code> if found. This name must by unique within the parent
+    // component.
+    // <p>
+    // By setting a static ID on certain top-level components and then using locatorName
+    // in contained components, stable locators can be created for these components without
+    // the need to pervasively assign IDs.
+    //
+    // @visibility external
+    // @group autoTest
+    //<
+
     //> @type LocatorStrategy
     // The AutoTest subsystem relies on generating and parsing identifier strings to identify
     // components on the page. A very common pattern is identifying a specific component
     // within a list of possible candidates. There are many many cases where this pattern
-    // is used, for example - members in a layout,tabs in a tabset, sections in a section stack.
+    // is used, for example - members in a layout, tabs in a tabset, sections in a section stack.
     // <P>
     // In order to make these identifiers as robust as possible across minor
     // changes to an application, (such as skin changes, minor layout changes, etc) the
@@ -111208,6 +117935,8 @@ if (isc.DynamicForm) {
         getLocatorInternal : function formItem_getLocatorInternal (ignoreTestRoot,
                                                                    skipAbsoluteLocator)
         {
+            // bail if the item's invalid
+            if (this.destroyed || this.destroying) return null;
             var form = this.form;
             return form.getLocatorInternal(ignoreTestRoot, skipAbsoluteLocator) + "/" +
                 form.getItemLocator(this);
@@ -111391,7 +118120,7 @@ if (isc.DynamicForm) {
     isc.HeaderItem.addProperties({
         //> @attr HeaderItem.locateItemBy (String : "value" : IRWA)
         // Default to locating header items by value
-        // @visibility autoTest
+        // @visibility internal
         //<
         locateItemBy: "value"
     });
@@ -112221,6 +118950,7 @@ getLocatorRoot : function menu_getLocatorRoot() {
         this._menuLocatorTemplate[1] = level;
         this.locatorRoot = this._menuLocatorTemplate.join(isc.emptyString);
     }
+
     return this.locatorRoot;
 },
 
@@ -113314,6 +120044,124 @@ if (isc.DateChooser) {
             this.logWarn("DateChooser, unable to find element for inner locator:"+
                 locatorArray + " returning handle");
             return handle;
+        }
+    });
+}
+
+if (isc.WorkflowEditor) {
+
+    isc.WorkflowEditor.addMethods({
+
+        getItemLocator : function workflowEditor_getItemLocator (item) {
+            var name,
+                itemIdentifiers = {},
+                node = item._node || {}
+            ;
+
+            // the node id is primary means of locating element
+            if (node.id != null) {
+                name = "element";
+                itemIdentifiers.id = node.id;
+            } else {
+                // An add element has no associated node
+                name = "addElement";
+                itemIdentifiers.elementSegment = item.segmentId;
+                itemIdentifiers.elementRow = item.rowId;
+            }
+
+
+            if (item.elementType != null) itemIdentifiers.elementType = item.elementType;
+            if (node._sequence != null) itemIdentifiers.sequence = node._sequence;
+            if (item.title != null) itemIdentifiers.title = item.title;
+
+            var IDString = isc.AutoTest.createLocatorFallbackPath(name, itemIdentifiers);
+            return IDString;
+        },
+
+        getElementFromSplitLocator : function workflowEditor_getItemFromSplitLocator (locatorArray) {
+            var fullItemID = locatorArray[0],
+                className;
+
+            var itemConfig = isc.AutoTest.parseLocatorFallbackPath(fullItemID);
+
+            if (itemConfig && itemConfig.name == "element" && itemConfig.config != null) {
+                var config = itemConfig.config;
+
+                // className is stored even if we don't identify by it.
+                className = config.Class;
+
+                // if we have a valid id, always have it take precedence
+                var item;
+                if (config.id != null) {
+                    //this.logWarn("locating by id " + config.id);
+                    item = this.getElementByID(config.id);
+                } else {
+                    // Combination of element details doesn't make it unique.
+                    // Using the node properties does but it takes a number of
+                    // different attributes on a per-type basis to do so.
+                }
+                if (!item) {
+                    this.logWarn("AutoTest.getElement(): Unable to find element from " +
+                        "locator string:" + fullItemID);
+                    return null;
+                }
+                if (!isc.isA[className] || !isc.isA[className](item)) {
+                    this.logWarn("AutoTest.getElement(): identifier:"+ fullItemID +
+                                " returned an element of class:"+ item.getClassName());
+                }
+                return item;
+            } else if (itemConfig && itemConfig.name == "addElement" && itemConfig.config != null) {
+                var config = itemConfig.config;
+
+                // className is stored even if we don't identify by it.
+                className = config.Class;
+
+                var item = this.getAddElement(config.elementSegment, config.elementRow);
+                return item;
+            }
+
+            return null;
+        },
+
+        getInnerAttributeFromSplitLocator : function
+        workflowEditor_getInnerAttributeFromSplitLocator (locatorArray, configuration)
+        {
+            if (!this.emptyLocatorArray(locatorArray)) {
+                var item = this.getElementFromSplitLocator(locatorArray);
+                if (item != null) {
+                    locatorArray.removeAt(0);
+                    return item.getAttributeFromSplitLocator(locatorArray, configuration);
+                }
+                // support event-parts in all canvii
+                if (locatorArray.length == 1) {
+                    var undef, element = this._getEventPartElement(locatorArray);
+                    if (undef !== element) return element;
+                }
+
+                if (configuration.locatorMatching != "permitSuffix") {
+                    this.setLogFailureText(true, "the trailing locator suffix '" +
+                        locatorArray.join("/") + "' does not identify any WorkflowEditorElement in",
+                                           "and permitSuffix mode is not active");
+                    return null;
+                }
+            }
+            return isc.AutoTest.getAttributeDefault(this, configuration.attribute);
+        }
+
+
+    });
+}
+
+if (isc.WorkflowEditorElement) {
+
+    isc.WorkflowEditorElement.addMethods({
+
+        getLocatorInternal : function workflowEditorElement_getLocatorInternal (ignoreTestRoot,
+                skipAbsoluteLocator)
+        {
+            var editor = this.editor;
+            return editor.getLocatorInternal(ignoreTestRoot, skipAbsoluteLocator) + "/" +
+                editor.getItemLocator(this);
         }
     });
 }
@@ -114549,6 +121397,31 @@ isc.AutoTest.addClassMethods({
         return true;
     },
 
+    // ensure that Framework focus is consistent with browser
+    _isFocusConsistent : function () {
+        var focusCanvas = isc.EH.getFocusCanvas(),
+            activeElement = this.getActiveElement()
+        ;
+        if (focusCanvas) {
+            // if focused in a DF, check that focused item's focus element is activeElement
+            if (isc.DynamicForm && isc.isA.DynamicForm(focusCanvas)) {
+                var item = focusCanvas.getFocusSubItem(),
+                    expectedElement = item ? item._getCurrentFocusElement() : null;
+                if (expectedElement != activeElement) return false;
+
+            // otherwise, the focus handle of the focused canvas should be the activeElement
+            } else {
+                if (focusCanvas.getFocusHandle() != activeElement) return false;
+            }
+
+        // if no canvas is focused, make sure that the activeElement is not inside any canvas
+        } else if (activeElement != null) {
+            if (isc.EH.getEventTargetCanvas(null, activeElement)) return false;
+        }
+
+        return true;
+    },
+
     //> @classMethod AutoTest.isElementClickable()
     // Returns whether the <smartclient>DOM element</smartclient><smartgwt>instance</smartgwt>
     // is ready to be clicked on by a Selenium test.  Returns null if the
@@ -114695,6 +121568,20 @@ isc.AutoTest.addClassMethods({
             return null;
         }
 
+        // ensure there are no pending redraws - if a redraw fires, we'll lose focus
+        var redrawQueue = isc.Canvas._redrawQeuue;
+        if (isc.isAn.Array(redrawQueue) && redrawQueue.length > 0) {
+            this.setLogFailureText(false, "the redraw queue contains " + redrawQueue.length +
+                                   " canvii, which means that focus is unstable");
+            return false;
+        }
+
+        // check whether Framework focus is consistent with DOM
+        if (!this._isFocusConsistent()) {
+            this.setLogFailureText(false, "focus of Framework isn't consistent with DOM");
+            return false;
+        }
+
         // text-based elements must have focus to accept keyPresses
         if (this._isTextBased(element) && element != document.activeElement) {
             canvas.setLogFailureText(true, "the text field in",
@@ -114761,6 +121648,8 @@ isc.AutoTest.addClassMethods({
             this._isSystemDoneLog = "there are " + redrawQueue.length + " pending redraws";
             return false;
         }
+
+
 
         // check each canvas in the global list for being "done""
         for (var i = 0; i < isc.Canvas._canvasList.length; i++) {
@@ -114932,7 +121821,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version v12.0p_2018-09-15/LGPL Deployment (2018-09-15)
+  Version SNAPSHOT_v12.1d_2019-05-29/LGPL Deployment (2019-05-29)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

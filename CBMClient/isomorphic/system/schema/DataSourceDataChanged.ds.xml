@@ -17,7 +17,8 @@
 	<field name="operationId"></field>
 	<field name="userId"></field>
 	<field name="timestamp"></field>
+	<field name="threadIgnored"></field>
     <!-- data is the record as modified -->
-    <field name="data" type="text" length="1000000"></field>
+    <field name="data" type="json" length="1000000"></field>
   </fields>
 </DataSource>

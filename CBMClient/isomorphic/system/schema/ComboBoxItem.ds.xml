@@ -1,5 +1,7 @@
 <DataSource	ID="ComboBoxItem" inheritsFrom="TextItem" Constructor="ComboBoxItem" >
 	<fields>
+		<field name="valueMap" type="ValueMap" title="Value Map" basic="true" readOnlyIfOptionDataSource="true"/>
+
         <field name="pickerIconHeight"  type="number"/>
         <field name="pickerIconWidth"   type="number" />
         <field name="pickerIconSrc"     type="string" />

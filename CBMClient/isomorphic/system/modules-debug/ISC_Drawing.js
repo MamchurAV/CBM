@@ -1,7 +1,7 @@
 /*
 
   SmartClient Ajax RIA system
-  Version v12.0p_2018-09-15/LGPL Deployment (2018-09-15)
+  Version SNAPSHOT_v12.1d_2019-05-29/LGPL Deployment (2019-05-29)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.
@@ -38,9 +38,9 @@ else if(isc._preLog)isc._preLog[isc._preLog.length]=isc._pTM;
 else isc._preLog=[isc._pTM]}isc.definingFramework=true;
 
 
-if (window.isc && isc.version != "v12.0p_2018-09-15/LGPL Deployment" && !isc.DevUtil) {
+if (window.isc && isc.version != "SNAPSHOT_v12.1d_2019-05-29/LGPL Deployment" && !isc.DevUtil) {
     isc.logWarn("SmartClient module version mismatch detected: This application is loading the core module from "
-        + "SmartClient version '" + isc.version + "' and additional modules from 'v12.0p_2018-09-15/LGPL Deployment'. Mixing resources from different "
+        + "SmartClient version '" + isc.version + "' and additional modules from 'SNAPSHOT_v12.1d_2019-05-29/LGPL Deployment'. Mixing resources from different "
         + "SmartClient packages is not supported and may lead to unpredictable behavior. If you are deploying resources "
         + "from a single package you may need to clear your browser cache, or restart your browser."
         + (isc.Browser.isSGWT ? " SmartGWT developers may also need to clear the gwt-unitCache and run a GWT Compile." : ""));
@@ -7059,11 +7059,12 @@ isc.DrawItem.addClassProperties({
     _titleAutoFitRotation: 90,
 
     // "line dash" definitions for possible linePatterns - used for "bitmap" drawingType
+
     _$solidArray:     [],
     _$dotArray:       [1,  10],
     _$dashArray:      [10, 10],
     _$longDashArray:  [20, 10],
-    _$shortDotArray:  [1,  5],
+    _$shortDotArray:  [1,  4], // previous [1, 5] looks worse with 20x20 snap-to-grid lines
     _$shortDashArray: [10, 5],
 
 
@@ -10436,7 +10437,8 @@ moveSelection : function (deltaX, deltaY) {
 },
 
 //> @method drawItem.resized()
-// Observable method called whenever a DrawItem changes size.
+// <smartclient>Observable method</smartclient><smartgwt>Method</smartgwt> called whenever
+// a DrawItem changes size.
 // @visibility drawing
 //<
 resized : function () {},
@@ -24889,7 +24891,7 @@ _quadTreeItemCompareFunc : function (item1, item2) {
                 return index1 - index2;
             } else {
 
-                return item1._addOrder - index2._addOrder;
+                return item1._addOrder - item2._addOrder;
             }
         }
     }
@@ -25369,8 +25371,9 @@ isc.defineClass("DrawKnob", "Canvas").addProperties({
     },
 
     //> @method drawKnob.updatePoints()
-    // Method called in response to the user dragging this DrawKnob. May be observed or overridden
-    // to allow drawItems to react to user drag interactions on this knob.
+    // Method called in response to the user dragging this DrawKnob.
+    // <smartclient>May be observed or overridden
+    // to allow drawItems to react to user drag interactions on this knob.</smartclient>
     // <P>
     // Note that the default implementation does nothing. When working with draw knobs directly this
     // is typically where you would both update the shape being controlled by the draw knob, and
@@ -26552,7 +26555,7 @@ isc._debugModules = (isc._debugModules != null ? isc._debugModules : []);isc._de
 /*
 
   SmartClient Ajax RIA system
-  Version v12.0p_2018-09-15/LGPL Deployment (2018-09-15)
+  Version SNAPSHOT_v12.1d_2019-05-29/LGPL Deployment (2019-05-29)
 
   Copyright 2000 and beyond Isomorphic Software, Inc. All rights reserved.
   "SmartClient" is a trademark of Isomorphic Software, Inc.

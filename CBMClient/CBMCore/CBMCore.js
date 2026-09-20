@@ -291,6 +291,9 @@ function generateDStext(forView, futherActions) {
   if (conceptRec.IsHierarchy === true) {
     resultDS += "isHierarchy: " + conceptRec.IsHierarchy + ", ";
   }
+  if (conceptRec.EditByCopy === true) {
+    resultDS += "editByCopy: " + conceptRec.EditByCopy + ", ";
+  }
   if (viewRec.CanExpandRecords && viewRec.CanExpandRecords === true) {
     resultDS += "canExpandRecords: true, ";
   }
@@ -993,10 +996,10 @@ function getRelationsForConceptName(conceptName, callback) {
   var conceptRecord = conceptDS.getCacheData().find(filter);
   var conceptID = conceptRecord.ID;
   getRelationsForConcept(conceptID, 
-      function (rel) {
-        isc.DataSource.get(conceptName).relations = rel;
+      function (rels) {
+        isc.DataSource.get(conceptName).relations = rels;
         if (callback) {
-          callback(rel); 
+          callback(rels); 
         }
       }
   );
@@ -1016,11 +1019,11 @@ function getRelationsForViewConcept(forView, callback) {
   
 //  if (viewRec) {
     getRelationsForConcept(viewRec.ForConcept, 
-        function (rel) {
+        function (rels) {
           var ds = isc.DataSource.get(conceptName);
-          if(ds) { ds.relations = rel; }
+          if(ds) { ds.relations = rels; }
           if (callback) {
-            callback(rel); 
+            callback(rels); 
           }
         }
     );
@@ -1381,7 +1384,7 @@ isc.CBMDataSource.addProperties({
   // resultBatchSize:100, // <<< TODO  optimization here
   inheritsFrom: BaseDataSource,
   useParentFieldOrder: true,
-  allowAdvancedCriteria : true,
+  allowAdvancedCriteria: true,
   //~ nullStringValue: "",
   //~ nullIntegerValue: "", 
   //~ nullFloatValue: "", 
@@ -1393,6 +1396,7 @@ isc.CBMDataSource.addProperties({
   relations: null,
   abstr: false,
   isHierarchy: false,
+  editByCopy: false,
   rec: null,
   // run-time client-defined flag that linkes-kind relations DataSourses are actual
   hasResolvedLinks: false,
@@ -1422,22 +1426,42 @@ isc.CBMDataSource.addProperties({
   getRelation: function (fldName) {
     // If this.relations is null - initialise it (once!)
     if (this.relations === null) {
-//      this.relations = relationRS.findAll({ForConcept: this.getConcept().ID});
-     getRelationsForViewConcept(this.ID, null);
-   }
-    var rel = this.relations.find({SysCode: fldName});
-    return (rel ? rel : {} );
+      this.relations = relationRS.findAll({ForConcept: this.getConcept().ID});
+      if (this.relations === null) {
+        getRelationsForViewConcept(this.ID, null);
+      }
+    }
+    if (this.relations) {
+      var rel = this.relations.find({SysCode: fldName});
+      return (rel ? rel : {} );
+    }
+    return {};
   },
 
 
   // --- Return CBM-metadata Relation record for this isc DataSource field ---
-  findRelation: function (criteria) {
+  findRelation: function (criteria, callback) {
     // If this.relations is null - initialise it (once!)
     if (this.relations === null) {
-      getRelationsForViewConcept(this.ID, null);
+      var that = this;
+      getRelationsForViewConcept(this.ID, 
+      function(rels) {
+          var rel = that.relations.find(criteria);
+          rel = rel ? rel : {};
+          if (callback) {
+            callback(rel);
+          }
+        });
+    } else {
+      var rel = this.relations.find(criteria);
+      rel = rel ? rel : {};
+      if (callback) {
+        callback(rel);
+      } else {
+        return rel;
+      }
     }
-    var rel = this.relations.find(criteria);
-    return (rel ? rel : {} );
+    return {};
   },
 
 
@@ -1507,7 +1531,7 @@ isc.CBMDataSource.addProperties({
   // },
 
   
-  // --- Ensure existing DataSources for link attributes to one level in depth.
+  // --- Ensure existing Views (for iSC - means DataSource) for link attributes to one level in depth.
   // (DataSources if needed are generated in cycle asyncroniously, result callback maybe called earlier)
   resolveLinks: function (callback){
     that = this;
@@ -1531,9 +1555,24 @@ isc.CBMDataSource.addProperties({
                   || relation.RelationKind === "Aggregate")
               {
                 var conceptDS = isc.DataSource.get("Concept");
-                var filter = {ID: relation.RelatedConcept };
+                var filter = {ID: relation.RelatedConcept};
                 var conceptRecord = conceptDS.getCacheData().find(filter);
-                var forView = conceptRecord.SysCode;
+                // Use default View for just found Concept
+                var viewDS = isc.DataSource.get("PrgView");
+                var cretin = {
+                  _constructor: "AdvancedCriteria",
+                  operator: "and",
+                  criteria: [
+                    {fieldName: "ForConcept", operator: "equals", value: conceptRecord.ID},
+                    {fieldName: "Role", operator: "equals", value: 'Default'},
+                  ]
+                }
+                var viewRecord = viewDS.getCacheData().find(cretin);
+                if (viewRecord) {
+                  var forView = viewRecord.SysCode;
+                } else {
+                  var forView = conceptRecord.SysCode;
+                }
                 
                 if (forView !== that.ID) {
                   var ds = isc.DataSource.getDataSource(forView); 
@@ -1617,7 +1656,7 @@ isc.CBMDataSource.addProperties({
     }
   },
 
-  // --- Constructing initial empty record of this DataSource - type
+  // --- Constructing initial empty record of type of this DataSource
   constructNull: function (record) {
     var atrNames = this.getFieldNames(false);
     var n = atrNames.length;
@@ -1952,6 +1991,8 @@ isc.CBMDataSource.addProperties({
             } catch (e) {
               if (e instanceof SyntaxError || e instanceof ReferenceError) {
                 // Simply ignore
+                // If not evaluated - assign explicit value
+                items[j][0].defaultValue = this.getField(atrNames[i]).defaultValue;
               } else {
                 throw(e);
               }
@@ -2295,7 +2336,7 @@ isc.CBMDataSource.addProperties({
       case "copy":
         stateTitle = isc.CBMStrings.InfoState_copy;
         break;
-      case "loaded":
+      case "edit":
         stateTitle = isc.CBMStrings.InfoState_loaded;
         break;
       case "deleted":
@@ -2381,28 +2422,27 @@ var CBMobject = {
   // ----------------- Link this object (record) with some transaction -------------------------
   store: function (trans) {
     //TODO: Transactions seemed to be processed not on by-record basis
-    // if (trans) {
-    // this.curentTransaction = trans;
-    // }
-    // if (!this.curentTransaction) {
-    // this.curentTransaction = TransactionManager.getTransaction()
-    // }
-//    TransactionManager.add(this, this.curentTransaction)
+    if (trans) {
+      this.curentTransaction = trans;
+    }
+    if (!this.curentTransaction) {
+    this.curentTransaction = TransactionManager.getTransaction()
+    }
+    TransactionManager.add(this, this.curentTransaction)
 
     this.save(false);
   },
 
   // ----------------- Complete record save to persistent storage -------------------------
+  // ----------------- or, to cache (if real == false) -------------------------
   save: function (real, context, contextField, callback) {
     var that = this;
-    if (!this.ds) {
-      this.ds = isc.DataSource.get(this.Concept);
-    }
+    ds = isc.DataSource.get(this.Concept);
     // Save main object
     if (this.infoState === "new" || this.infoState === "copy") {
       // If Data Source contains unsaved data of <this> object 
       //   - remove it, and then add with normal save
-      if (this.ds.getCacheData() && this.ds.getCacheData().find({ID: this.ID})) {
+      if (ds.getCacheData() && ds.getCacheData().find({ID: this.ID})) {
         removeDataFromCache(this);
       }
       // - If context defined - set new record to context's collection
@@ -2412,22 +2452,24 @@ var CBMobject = {
       }
 
       if (real) {
-        this.ds.addData(this.getPersistentChanged(),
+        ds.addData(this.getPersistentChanged(),
+                  // Record already stored to cache - for immediate updates of UI (like Relations list)
                   function(){
-                    if (that.ds.getCacheData() && !that.ds.getCacheData().find({ID:that.ID})) {
+                    if (ds.getCacheData() && !ds.getCacheData().find({ID:that.ID})) {
                       addDataToCache(that); 
+                      this.infoState = "loaded";  
                     }
                   }
                 );
         this.infoState = "loaded";  
-        addDataToCache(this); // <<< uncommented - was good for relations refresh
+        addDataToCache(this); // <<< Don't wait for record saved - was good for relations refresh
       } else {
         addDataToCache(this);
       }
     } else if (this.infoState === "changed") {
       if (real) {
         var that = this;
-        this.ds.updateData(this.getPersistentChanged(), 
+        ds.updateData(this.getPersistentChanged(), 
                     function(){ 
                       //Quick update
                       updateDataInCache(that.fullRecord); 
@@ -2440,7 +2482,7 @@ var CBMobject = {
       }
     } else if (this.infoState === "deleted") {
       if (real) {
-        this.ds.removeData(this);
+        ds.removeData(this);
         removeDataFromCache(this); // <<< More likely redundant. Remove after tests...
       } else {
         removeDataFromCache(this);
@@ -2455,18 +2497,21 @@ var CBMobject = {
   
   // Defaults setting
   setDefaults: function(){
-    if (!this.ds) {
-      this.ds = isc.DataSource.get(this.Concept);
-    }
-    var flds = this.ds.getFields(false);
+    ds = isc.DataSource.get(this.Concept);
+    
+    var flds = ds.getFields(false);
     for (var fld  in flds) {
       if (flds.hasOwnProperty(fld)) {
         if (flds[fld].defaultValue) {
+          var defValue = flds[fld].defaultValue;
           try{
-            this[fld] = eval(flds[fld].defaultValue);
+            this[fld] = eval(defValue);
           } catch (e) {
             if (e instanceof SyntaxError || e instanceof ReferenceError) {
-            // Simply ignore
+              if (typeof defValue === 'string' || defValue instanceof String) {
+                this[fld] = defValue;
+              }
+              // else - Simply ignore
             } else {
               throw(e);
             }
@@ -2543,9 +2588,7 @@ var CBMobject = {
 
   // -------- Compete record retrieval from DS (/persistent storage) and construction ----------
   /*  loadRecord: function(ID, callback){
-   if (!this.ds) {
-   this.ds = isc.DataSource.get(this.Concept);
-   }
+   ds = isc.DataSource.get(this.Concept);
    var atrNames = this.ds.getFieldNames(false);
    ////// TODO Recursive in callback fields initialisation
    for (var i = 0; i < atrNames.length; i++) {
@@ -2568,16 +2611,14 @@ var CBMobject = {
   // -------- Returns object that has only persistent fields ---------
   // TODO: Will be better to drop this and use only getPersistentChanged() below
   getPersistent: function () {
-    if (!this.ds) {
-      this.ds = isc.DataSource.get(this.Concept);
-    }
+    ds = isc.DataSource.get(this.Concept); 
     // Get CBM metadata descriptions (we need it to discover really persistent fields)
     var rec = {}; // Object.create();
-    var atrNames = this.ds.getFieldNames(false);
+    var atrNames = ds.getFieldNames(false);
     var n = atrNames.length;
     for (var i = 0; i < n; i++) {
-      var rel = this.ds.getRelation(atrNames[i]);
-      var fld = this.ds.getFields()[atrNames[i]];
+      var rel = ds.getRelation(atrNames[i]);
+      var fld = ds.getFields()[atrNames[i]];
       // Copy to returned "rec" only persistent fields
       if (rel && ((rel.DBColumn && rel.DBColumn !== null && rel.DBTable && rel.DBTable !== null)
          /* TODO >>> What for ??? || rel.RelationKind === "Value" || rel.RelationKind === "Link"*/)
@@ -2592,15 +2633,14 @@ var CBMobject = {
 
   // -------- Returns object that has only persistent fields ---------
   getPersistentChanged: function () {
-    if (!this.ds) {
-      this.ds = isc.datasource.get(this.concept);
-    }
+    ds = isc.DataSource.get(this.Concept);
+
     // get cbm metadata descriptions (we need it to discover really persistent fields)
     var rec = {};
     
     for (var existingFld in this) {
-      var rel = this.ds.getRelation(existingFld);
-      var fld = this.ds.getFields()[existingFld];
+      var rel = ds.getRelation(existingFld);
+      var fld = ds.getFields()[existingFld];
       // copy to returned "rec" only persistent fields
       if (rel && ((rel.DBColumn && rel.DBColumn !== null && rel.DBTable && rel.DBTable !== null))
           // and - field is not explicitly marked as not-persistent
@@ -2714,7 +2754,6 @@ function editRecords(records, context, conceptRecord, trans) {
     (typeof(cls) == "undefined" || cls === null || cls === "loading" || records.getLength() > 1) || !cls.SysCode) 
   { // DS by Context
     ds = context.getDataSource();
-    records[0].ds = ds;
     if (records.getLength() === 1) {
       ds.edit(records[0], context);
     } else {
@@ -2722,7 +2761,6 @@ function editRecords(records, context, conceptRecord, trans) {
     }
   } else if (records.getLength() === 1) { // DS by exact record Class
     ds = isc.DataSource.getDataSource(cls.SysCode);
-    records[0].ds = ds;
     // --- Load concrete class instance data, if record's class not equal (is subclass) of context class (DataSource)
     if (context.dataSource != cls["SysCode"] && records[0]["infoState"] == "loaded") {
       var currentRecordRS = isc.ResultSet.create({
@@ -2744,7 +2782,6 @@ function editRecords(records, context, conceptRecord, trans) {
       });
       currentRecordRS.getRange(0, 1);
     } else {
-      records[0].ds = ds;
       ds.edit(records[0], context);
     }
   }
@@ -2786,10 +2823,10 @@ function createFrom(srcRecords, resultClass, initFunc, context) {
         // mainObjID and mainConcept exists, Sync record to context placement
         initFunc(record, srcRecords[iteration], mainObjID, mainConcept);
         if (context) {
-          //////BETTER record.store();
-          //////BETTER context.data.add(record);
-            record =  record.getPersistent();       // <<< To change to BETTER 
-            setTimeout(context.addData(record), 0); // <<< To change to BETTER
+          record.store(); // BETTER 
+          context.data.add(record); // BETTER 
+          //  record =  record.getPersistent();       // <<< To change to BETTER 
+          //  setTimeout(context.addData(record), 0); // <<< To change to BETTER
         }
       } else {
         // No mainObjID and mainConcept exists, Async to context placement
@@ -3517,7 +3554,7 @@ isc.LinkControl.addProperties({
   //~ },
 
   init: function() {
-  this.setProperty("icons", [ {
+    this.setProperty("icons", [ {
 	    src: isc.Page.getAppImgDir() + "deleteLink.png",
 	    showFocused: true,
 	    showOver: false,
@@ -3545,10 +3582,10 @@ isc.LinkControl.addProperties({
       showIf: function(form,item) {
                 return !item.getValue();
               },
-        click: function(form, item) {
-			     var ds = isc.DataSource.get(item.relatedConcept);
-			     var record = ds.createInstance(item);
-				 record.infoState = "new";
+      click: function(form, item) {
+        var ds = isc.DataSource.get(item.relatedConcept);
+			  var record = ds.createInstance(item);
+        record.infoState = "new";
 				//~ // If hierarchy - set parent value as in selected record (if any selected)
 				//~ var hierarchyLink = ds.findRelation({HierarchyLink: true}).SysCode; 
 				//~ if (hierarchyLink && this.getSelection().length > 0) {
@@ -3562,10 +3599,8 @@ isc.LinkControl.addProperties({
 				  //~ }
 				//~ }
 				// var that = this;
-				editRecords([record], item, conceptRS.find("SysCode", ds.ID));
-				
-            
-             }
+        editRecords([record], item, conceptRS.find("SysCode", ds.ID));
+      }
 	  },{
 	    src: isc.Page.getAppImgDir() + "list.png",
 	    showFocused: true,
@@ -3582,8 +3617,8 @@ isc.LinkControl.addProperties({
                     }); // filter, rootIdValue, afterCreate)
              }
 	  }
-   ]);
-  return this.Super("init", arguments);
+    ]);
+    return this.Super("init", arguments);
   },
 
 // useClientFiltering : true,
@@ -3697,7 +3732,7 @@ var defaultContextMenuData = [{
 }, {
   icon: isc.Page.getAppImgDir() + "edit.png",
   click: function () {
-    this.context.callObjectsEdit("loaded");
+    this.context.callObjectsEdit("edit");
     return false;
   }
 }, {
@@ -3750,7 +3785,7 @@ var binContextMenuData = [{
 }, {
   icon: isc.Page.getAppImgDir() + "edit.png",
   click: function () {
-    this.context.callObjectsEdit("loaded");
+    this.context.callObjectsEdit("edit");
     return false;
   }
 }];
@@ -3865,7 +3900,7 @@ isc.InnerGrid.addProperties({
           // TODO: Set some user action to inline record editing
 //          recordDoubleClick: function () {
 //            if(that.grid.getSelectedRecord() != null) {
-//              that.grid.callObjectsEdit("loaded");
+//              that.grid.callObjectsEdit("edit");
 //              return false;
 //            }
 //          },
@@ -3948,7 +3983,7 @@ isc.InnerGrid.addProperties({
           // TODO: Set some user action to inline record editing
           recordDoubleClick: function () {
             if (that.grid.getSelectedRecord() != null) {
-              that.grid.callObjectsEdit("loaded");
+              that.grid.callObjectsEdit("edit");
               return false;
             }
           },
@@ -4024,15 +4059,55 @@ isc.InnerGrid.addProperties({
       //         this.grid.cellContextClick = function (record, row, cell) {
       //          return this.showContextMenu();
       //        };
-
+      
+      // Call records editing from InnerGrid //
       that.grid.callObjectsEdit = function (mode) {
         'use strict';
         var ds = this.getDataSource();
         var records = [];
 
-        // !!! TODO: --- VVV Provide full View properties (in favor of Concept!!!)
         var viewRecord = viewRS.find("SysCode", (this.dataSource.ID ? this.dataSource.ID : this.dataSource));
+        var that = this;
+        var contextLinkRelation;
 
+        // --- If class defined with editByCopy == true, change "edit" mode to "copy"
+        // Do it only if:
+        // The concept is Historic,
+        // OR
+        // The concept has "Actual" property
+        // OR 
+        //The concept has context, and context link is different to current edition value (need change)
+        if (mode === "edit" && ds.editByCopy) {
+          records = this.getSelectedRecords();
+          // Test if context-dependency link varies ---
+          // (that link MUST follow name agreement: to be "For{context_concept_name}" or "{context_concept_name}" )
+          if (that.innerGrid.context && that.innerGrid.context.dataSource) {
+            var contextDsCode = that.innerGrid.context.dataSource.ID;
+            if (that.getFieldByName("For" + contextDsCode) 
+                && that.getFieldByName("For" + contextDsCode).type === contextDsCode) {
+                  contextLinkRelation = that.getFieldByName("For" + contextDsCode);
+            } else {
+              if (that.getFieldByName(contextDsCode) // that.getFieldByName("For" + contextDsCode) 
+                  && that.getFieldByName(contextDsCode).type === contextDsCode) {
+                    contextLinkRelation = that.getFieldByName(contextDsCode);
+              }
+            }  
+            if (contextLinkRelation) {
+              if (records[0][contextLinkRelation.name] != that.innerGrid.context.valuesManager.values.ID) {
+                mode = "copy";
+              }
+            }
+          }
+          //Test if concept is Historic
+          // TODO
+          // Test if concept has "Actual" property
+          if (that.getFieldByName("Actual")) {
+            // TODO finish...
+            //records[0]["Actual"] = false;
+            mode = "copy";
+          }
+        }
+        
         // --- Edit New record ---
         if (mode == "new") {
           //        this.selection.deselectAll();
@@ -4059,7 +4134,7 @@ isc.InnerGrid.addProperties({
               ]
             }
 
-            var that = this;
+            //var that = this;
             var newChild = function (record) {
               var dsNew = isc.DataSource.getDataSource(record[0].SysCode);
               if (dsNew == null) {
@@ -4077,48 +4152,87 @@ isc.InnerGrid.addProperties({
                   records[0][fld] = criter[fld];
                 }
               }
+            
+              // --- Set context-dependency link ---
+              // --- (that link MUST follow name agreement: to be "For{context_concept_name}" or "{context_concept_name}" ) ---
+              if (this.innerGrid.context 
+                  && this.innerGrid.context.dataSource) {
+                var contextDsCode = this.innerGrid.context.dataSource.ID;
+                var contextLinkRelation;
+                if (this.getFieldByName("For" + contextDsCode) 
+                    && this.getFieldByName("For" + contextDsCode).type === contextDsCode) {
+                      contextLinkRelation = this.getFieldByName("For" + contextDsCode);
+                } else {
+                  if (this.getFieldByName("For" + contextDsCode) 
+                      && this.getFieldByName(contextDsCode).type === contextDsCode) {
+                        contextLinkRelation = this.getFieldByName(contextDsCode);
+                  }
+                }  
+                if (contextLinkRelation) {
+                  records[0][contextLinkRelation.name] = this.innerGrid.context.valuesManager.values.ID;
+                }
+              }
+            
               if (records != null && records.getLength() > 0) {
-                editRecords(records, that /*this*/, conceptRecord); // <<< 11.22 try
+                editRecords(records, that, conceptRecord);
               }
             }
             var table = createTable("Concept", this, newChild, cretin, dsRecord["ID"]);
             return;
           } else {
+            var thatInnerGrid = this;
             // Not superclass - create instance directly
             records[0] = ds.createInstance(this);
             records[0]["infoState"] = "new";
-            // If hierarchy - set parent value as in selected record (if any selected)
-            var hierarchyLink = ds.findRelation({HierarchyLink: true}).SysCode; 
-            if (hierarchyLink && this.getSelection().length > 0) {
-              records[0][hierarchyLink] = this.getSelection()[0][hierarchyLink];
-            }
+            
             // --- Set fields partisipating in criteria to criteria value ---
-            var criter = this.getCriteria();
+            var criter = thatInnerGrid.getCriteria();
             for (var fld in criter) {
               if (records[0].hasOwnProperty(fld)) {
                 records[0][fld] = criter[fld];
               }
             }
-            var that = this;
-            editRecords(records, that, conceptRS.find("SysCode", ds.ID));
+            
+            // --- Set context-dependency link ---
+            // --- (that link MUST follow name agreement: to be "For{Concept}" or "{Concept}" ) ---
+            if (this.innerGrid.context 
+                && this.innerGrid.context.dataSource) {
+              var contextDsCode = this.innerGrid.context.dataSource.ID;
+              //var contextLinkRelation;
+              if (this.getFieldByName("For" + contextDsCode) 
+                  && this.getFieldByName("For" + contextDsCode).type === contextDsCode) {
+                    contextLinkRelation = this.getFieldByName("For" + contextDsCode);
+              } else {
+                if (this.getFieldByName(contextDsCode) 
+                    && this.getFieldByName(contextDsCode).type === contextDsCode) {
+                      contextLinkRelation = this.getFieldByName(contextDsCode);
+                }
+              }  
+              if (contextLinkRelation) {
+                records[0][contextLinkRelation.name] = this.innerGrid.context.valuesManager.values.ID;
+              }
+            }
+            
+            // --- If hierarchy - set parent value as in selected record (if any selected) ---
+            ds.findRelation({HierarchyLink: true}, 
+              function(hierarchyRelation) {
+                var hierarchyLink = hierarchyRelation.SysCode; 
+                if (hierarchyLink && thatInnerGrid.getSelection().length > 0) {
+                  records[0][hierarchyLink] = thatInnerGrid.getSelection()[0][hierarchyLink];
+                  // ??? Update HierCode field 
+ //                 if ((thatInnerGrid.getSelection()[0]).hierCode != 'undefined') {
+ //                   records[0][hierCode] = thatInnerGrid.getSelection()[0][hierCode];
+ //                 }
+                }
+                editRecords(records, thatInnerGrid, conceptRS.find("SysCode", ds.ID));
+              }
+            );
           }
-          this.selection.deselectAll();
-        }
-
-        // --- Copy Selected record ---
-        else if (mode == "copy") {
-          records[0] = this.getSelectedRecord();
-          //        records[0]["infoState"] = "copy"; // <<<<<<<<<<< ???????? Here? Not in cloneInstance() ???
-          var that = this;
-          var editCopy = function (records) {
-            editRecords(records, that);
-          }
-          ds.cloneInstance(records[0], editCopy);
           this.selection.deselectAll();
         }
 
         // --- Edit Selected record[s] ---
-        else if (mode == "loaded") {
+        else if (mode === "edit") {
           records = this.getSelectedRecords();
           for (var i = 0; i < records.getLength(); i++) {
             records[i]["infoState"] = "loaded";
@@ -4134,6 +4248,39 @@ isc.InnerGrid.addProperties({
           } else {
             isc.warn(isc.CBMStrings.InnerGrid_NoSelection);
           }
+        }
+
+        // --- Copy Selected record ---
+        if (mode == "copy") {
+          records[0] = this.getSelectedRecord();
+          //        records[0]["infoState"] = "copy"; // <<<<<<<<<<< ???????? Here? Not in cloneInstance() ???
+          //var that = this;
+          var editCopy = function (records) {
+                        
+            // --- Set context-dependency link ---
+            // --- (that link MUST follow name agreement: to be "For{context_concept_name}" or "{context_concept_name}" ) ---
+            if (that.innerGrid.context 
+                && that.innerGrid.context.dataSource) {
+              var contextDsCode = that.innerGrid.context.dataSource.ID;
+              var contextLinkRelation;
+              if (that.getFieldByName("For" + contextDsCode) 
+                  && that.getFieldByName("For" + contextDsCode).type === contextDsCode) {
+                    contextLinkRelation = that.getFieldByName("For" + contextDsCode);
+              } else {
+                if (that.getFieldByName(contextDsCode) // that.getFieldByName("For" + contextDsCode) 
+                    && that.getFieldByName(contextDsCode).type === contextDsCode) {
+                      contextLinkRelation = that.getFieldByName(contextDsCode);
+                }
+              }  
+              if (contextLinkRelation) {
+                records[0][contextLinkRelation.name] = that.innerGrid.context.valuesManager.values.ID;
+              }
+            }
+
+            editRecords(records, that);
+          }
+          ds.cloneInstance(records[0], editCopy);
+          this.selection.deselectAll();
         }
       };
 
@@ -4235,7 +4382,7 @@ isc.InnerGrid.addProperties({
           prompt: isc.CBMStrings.InnerGrid_Edit,
           hoverWidth: 120,
           click: function () {
-            this.parentElement.parentElement.parentElement.grid.callObjectsEdit("loaded");
+            this.parentElement.parentElement.parentElement.grid.callObjectsEdit("edit");
             return false;
           }
         }),
@@ -4397,7 +4544,7 @@ isc.InnerGrid.addProperties({
           prompt: isc.CBMStrings.InnerGrid_Edit,
           hoverWidth: 120,
           click: function () {
-            this.parentElement.parentElement.parentElement.grid.callObjectsEdit("loaded");
+            this.parentElement.parentElement.parentElement.grid.callObjectsEdit("edit");
             return false;
           }
         })
@@ -4627,7 +4774,7 @@ isc.RelationsAggregateControl.addProperties({
     [
       {
         fieldName: ["SysCode", "Description", "ForConcept", "RelatedConcept", "PrgNotes", "DBTable", "DBColumn"],
-        cssText: "background-color:#C8E0F0;", 
+        cssText: "background-color:#CFE7F7;", // more dark >>> #C8E0F0;"
         criteria: {
           fieldName: "_inherited", 
           operator: "equals", 
@@ -4660,7 +4807,7 @@ isc.RelationsAggregateControl.addProperties({
       }
     ];
     this.innerGrid.grid.hilites = hiliteArray;
-     return this.innerGrid;
+    return this.innerGrid;
   },
   
   // showValue() function overriden
@@ -5105,9 +5252,9 @@ isc.TableWindow.addProperties({
   
       this.addItems(
         [
-        // TODO Activate Filter by special button
-        // isc.FilterBuilder.create({ dataSource: this.dataSource, topOperator: "and" }),
-        this.innerGrid
+          // TODO Activate Filter by special button
+          isc.FilterBuilder.create({ dataSource: this.dataSource, topOperator: "and" }),
+          this.innerGrid
         ]);
     
       var titleDS = this.getDataSource().title;
@@ -5145,9 +5292,9 @@ isc.TableWindow.addProperties({
 
 
 //---- Stand-along independent function, that creates TableWindow from elsewhere for entity view (DS) type ----
-function createTable(forType, context, callback, filter, rootIdValue, afterCreate) {
+function createTable(forView, context, callback, filter, rootIdValue, afterCreate) {
   // Dynamic DS creation if needed
-  testCreateDS(forType, 
+  testCreateDS(forView, 
     function(){
       
       var initCreatedTable = function(table){
@@ -5158,7 +5305,7 @@ function createTable(forType, context, callback, filter, rootIdValue, afterCreat
         if (rootIdValue) {
           table.innerGrid.treeRoot = rootIdValue;
         }
-
+        
         // TODO here - add previous stored Filters if any
         //    filter = {Del:false};
         if (context === undefined) {
@@ -5173,10 +5320,10 @@ function createTable(forType, context, callback, filter, rootIdValue, afterCreat
         }
         
         table.innerGrid.grid.fetchData(filter, function (dsResponse, data, dsRequest) {
-		  if(!context.innerGrid || !context.getDataSource()) {
-			  // Context isn't of grid nature - do nothing
-			  return;
-		  }
+          if(!context.innerGrid || !context.getDataSource()) {
+            // Context isn't of grid nature - do nothing
+            return;
+          }
           if (context.getDataSource === undefined) {
             if (!context.innerGrid.grid.hasAllData()) {
               context.innerGrid.grid.setCacheData(data);
@@ -5187,6 +5334,16 @@ function createTable(forType, context, callback, filter, rootIdValue, afterCreat
             }
           }
         });
+        
+		var viewRec = viewRS.find("SysCode", forView);
+        //if (viewRec === null) {
+        //  isc.warn(isc.CBMStrings.MD_NoPrgViewFound + forView, null);
+        //  return;
+        //}
+        if (viewRec.ExprTextFormat) {
+          this.innerGrid.grid.hilites = eval(viewRec.ExprTextFormat);
+        }
+
         table.show();
         if (afterCreate){
           afterCreate(table);
@@ -5195,7 +5352,7 @@ function createTable(forType, context, callback, filter, rootIdValue, afterCreat
       }
       
       var table = isc.TableWindow.create({
-        dataSource: forType,
+        dataSource: forView,
         context: context,
         callback: callback,
         treeRoot: rootIdValue,

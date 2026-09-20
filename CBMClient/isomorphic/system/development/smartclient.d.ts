@@ -49803,7 +49803,7 @@ dragTrackerStyle: CSSStyleName;
 *  Note that screen readers vary widely on which punctuation symbols are read aloud, and
 *  sometimes it depends on the context of the punctuation. However, the widely-used JAWS, NVDA,
 *  and VoiceOver screen readers all read the forward slash '/' as "slash".
-*  See Why Donâ€™t Screen Readers Always Read Whatâ€™s on the Screen? Part 1: Punctuation and Typographic Symbols
+*  See Why Donât Screen Readers Always Read Whatâs on the Screen? Part 1: Punctuation and Typographic Symbols
 *  for a table of findings on which punctuation symbols are read aloud by JAWS, NVDA,
 *  and VoiceOver.
 * @type {HTMLString}
@@ -49824,7 +49824,7 @@ screenReaderCellSeparator: HTMLString;
 *  Note that screen readers vary widely on which punctuation symbols are read aloud, and
 *  sometimes it depends on the context of the punctuation. However, the widely-used JAWS, NVDA,
 *  and VoiceOver screen readers all pause briefly for a comma ',' that is within text.
-*  See Why Donâ€™t Screen Readers Always Read Whatâ€™s on the Screen? Part 1: Punctuation and Typographic Symbols
+*  See Why Donât Screen Readers Always Read Whatâs on the Screen? Part 1: Punctuation and Typographic Symbols
 *  for a table of findings on which punctuation symbols are read aloud by JAWS, NVDA,
 *  and VoiceOver.
 * @type {HTMLString}
@@ -84338,7 +84338,7 @@ deviceMode: DeviceMode;
 pageOrientation: PageOrientation;
 
 /**
-* LeftLayoutâ€™s initial size
+* LeftLayoutâs initial size
 * @type {Integer}
 * @default "320"
 */
