@@ -1,6 +1,0 @@
-<DataSource ID="GridStartEditingTask" inheritsFrom="ComponentTask" Constructor="GridStartEditingTask">
-    <fields>
-        <field name="initialValues" type="Record"/>
-    </fields>
-</DataSource>
-

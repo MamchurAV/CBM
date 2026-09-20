@@ -1,3 +1,0 @@
-<DataSource ID="GridSaveAllEditsTask" inheritsFrom="ComponentTask" Constructor="GridSaveAllEditsTask">
-</DataSource>
-

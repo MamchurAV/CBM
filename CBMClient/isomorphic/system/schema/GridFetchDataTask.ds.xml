@@ -1,7 +1,0 @@
-<DataSource ID="GridFetchDataTask" inheritsFrom="ComponentTask" Constructor="GridFetchDataTask">
-    <fields>
-        <field name="criteria" type="Criterion" />
-        <field name="requestProperties" type="DSRequest" />
-    </fields>
-</DataSource>
-

@@ -1,3 +1,0 @@
-<DataSource ID="DSFetchTask" inheritsFrom="ServiceTask" Constructor="DSFetchTask">
-</DataSource>
-

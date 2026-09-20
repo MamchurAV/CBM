@@ -1,6 +1,0 @@
-<DataSource ID="NavigateListPaneTask" inheritsFrom="ComponentTask" Constructor="NavigateListPaneTask">
-    <fields>
-        <field name="title" type="text"/>
-    </fields>
-</DataSource>
-

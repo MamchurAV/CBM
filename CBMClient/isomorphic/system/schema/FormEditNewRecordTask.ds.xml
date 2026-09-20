@@ -1,6 +1,0 @@
-<DataSource ID="FormEditNewRecordTask" inheritsFrom="ComponentTask" Constructor="FormEditNewRecordTask">
-    <fields>
-        <field name="initialValues" type="Record"/>
-    </fields>
-</DataSource>
-

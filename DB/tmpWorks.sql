@@ -1,1 +1,0 @@
-﻿Select * from cbm.concept where hiercode like '7270c64b-7c2d-4a81-8e48-5ea84f4c0730,%';

@@ -1,6 +1,0 @@
-<DataSource ID="SetLabelTextTask" inheritsFrom="ComponentTask" Constructor="SetLabelTextTask">
-    <fields>
-        <field name="value" type="text"/>
-    </fields>
-</DataSource>
-

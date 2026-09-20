@@ -1,6 +1,0 @@
-<DataSource ID="FormEditSelectedTask" inheritsFrom="ComponentTask" Constructor="FormEditSelectedTask">
-    <fields>
-        <field name="selectionComponentId" type="string" xmlAttribute="true" />
-    </fields>
-</DataSource>
-

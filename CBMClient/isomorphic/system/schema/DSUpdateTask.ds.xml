@@ -1,3 +1,0 @@
-<DataSource ID="DSUpdateTask" inheritsFrom="ServiceTask" Constructor="DSUpdateTask">
-</DataSource>
-

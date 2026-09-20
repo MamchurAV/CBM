@@ -1,5 +1,0 @@
-<DataSource ID="AskForValueTask" inheritsFrom="UserConfirmationGateway" Constructor="AskForValueTask">
-    <fields>
-        <field name="defaultValue" type="string" />
-    </fields>
-</DataSource>

@@ -1,8 +1,0 @@
-<DataSource ID="StartProcessTask" inheritsFrom="ScriptTask" Constructor="StartProcessTask">
-    <fields>
-        <field name="process" type="Process" />
-        <field name="isAsync" type="boolean" inapplicable="true" />
-        <field name="execute" type="string" inapplicable="true" />
-    </fields>
-</DataSource>
-
