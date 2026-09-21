@@ -314,12 +314,6 @@ isc.CBMDataSource.create({
       }
     }
   }, {
-    name: "HierCode",
-    type: "text",
-    title: "Hirarchy Root",
-  //  hidden: true,
-    length: 2367
-  }, {
     name: "Primitive",
     type: "boolean",
     defaultValue: false,
@@ -329,6 +323,12 @@ isc.CBMDataSource.create({
     type: "boolean",
     defaultValue: false,
     title: "Abstract class"
+  }, {
+    name: "Significance",
+    type: "text",
+    valueMap: ["Root", "Ordinary", "Slave"],
+    defaultValue: "Ordinary",
+    title: "Significance of Concept"
   }, {
     name: "AbnormalInherit",
     type: "boolean",
@@ -455,6 +455,18 @@ isc.CBMDataSource.create({
       type: "boolean",
       defaultValue: false,
       title: "Hierarchical",
+      UIPath: "Information System aspects"
+    }, {
+      name: "HierCode",
+      type: "text",
+      title: "Hirarchy Root",
+      hidden: true,
+    length: 2367
+    }, {
+     name: "EditByCopy",
+      type: "boolean",
+      defaultValue: false,
+      title: "Edit by Copy",
       UIPath: "Information System aspects"
     }, {
       name: "Views",
@@ -710,7 +722,8 @@ isc.CBMDataSource.create({
 //  	cacheAllData: true, 
   titleField: "SysCode",
   infoField: "Description",
-
+  editByCopy: true,
+  
   fields: [{
     name: "Del",
     type: "boolean",
@@ -761,12 +774,49 @@ isc.CBMDataSource.create({
     }],
     inList: true,
     //hidden: true
-  }, { // VVVVVVVVVVVV  Does ForConceptSysCode used for any purpose?
-    name: "ForConceptSysCode",
-    type: "text",
-    title: "Belongs to Concept (string Code)",
-    length: 100,
-    hidden: true
+  //}, { // VVVVVVVVVVVV  Does ForConceptSysCode used for any purpose?
+    //name: "ForConceptSysCode",
+    //type: "text",
+    //title: "Belongs to Concept (string Code)",
+    //length: 100,
+    //hidden: true
+  }, {
+    name: "RelationKind",
+    type: "RelationKind",
+    title: "Relation Kind",
+    foreignKey: "RelationKind.SysCode",
+    editorType: "LinkControl",
+    required: true,
+    optionDataSource: "RelationKind",
+    valueField: "SysCode",
+    displayField: "SysCode",
+    pickListWidth: 550,
+    pickListFields: [{
+      name: "SysCode",
+      width: 100
+    }, {
+      name: "Description",
+      width: 450
+    }],
+    inList: true
+  }, {
+    name: "RelatedConcept",
+    type: "Concept",
+    title: "Relation value Type",
+    foreignKey: "Concept.ID",
+    editorType: "LinkControl",
+    required: true,
+    optionDataSource: "Concept",
+    valueField: "ID",
+    displayField: "SysCode",
+    pickListWidth: 450,
+    pickListFields: [{
+      name: "SysCode",
+      width: 100
+    }, {
+      name: "Description"
+    }],
+    inList: true
   }, {
     // Property provide very imortant (in most cases ignored) aspect
     // of Semantic meaning of Relation.
@@ -788,43 +838,6 @@ isc.CBMDataSource.create({
     }, {
       name: "Description"
     }]
-  }, {
-    name: "RelatedConcept",
-    type: "Concept",
-    title: "Relation value Type",
-    foreignKey: "Concept.ID",
-    editorType: "LinkControl",
-    required: true,
-    optionDataSource: "Concept",
-    valueField: "ID",
-    displayField: "SysCode",
-    pickListWidth: 450,
-    pickListFields: [{
-      name: "SysCode",
-      width: 100
-    }, {
-      name: "Description"
-    }],
-    inList: true
-  }, {
-    name: "RelationKind",
-    type: "RelationKind",
-    title: "Relation Kind",
-    foreignKey: "RelationKind.SysCode",
-    editorType: "LinkControl",
-    required: true,
-    optionDataSource: "RelationKind",
-    valueField: "SysCode",
-    displayField: "SysCode",
-    pickListWidth: 550,
-    pickListFields: [{
-      name: "SysCode",
-      width: 100
-    }, {
-      name: "Description",
-      width: 450
-    }],
-    inList: true
   }, {
     name: "Countable",
     type: "boolean",
@@ -1231,12 +1244,18 @@ isc.CBMDataSource.create({
     name: "Role",
     type: "text",
     title: "View role",
+    valueMap: ["Default", "Simple", "..."],
     inList: true
   }, {
     name: "CanExpandRecords",
     type: "boolean",
     defaultValue: false,
     title: "Records can be expanded"
+  }, {
+    name: "MainTabName",
+    type: "multiLangText",
+    title: "Name for main (first) tab",
+    Prompt: "Optional substitution for localized config-based tab title"
   }, {
     name: "ExpandedConcept",
     type: "text",
@@ -1254,11 +1273,19 @@ isc.CBMDataSource.create({
     valueMap: [null, "related", "detailField", "details", "detailRelated", "editor"],
     editorType: "select"
   }, {
-    name: "MainTabName",
-    type: "multiLangText",
-    title: "Name for main (first) tab",
-    Prompt: "Optional substitution for localized config-based tab title"
-  }, {
+    name: "ExprTextFormat",
+    type: "text",
+    title: "Text format expression",
+    Prompt: "Expression for color and text modificetions of fields in grid row",
+    length: 2000,
+	 colSpan: 2
+  }, /*{
+    name: "ExprBackFormat",
+    type: "text",
+    title: "Background color expression",
+    Prompt: "Expression for color of background in fields of row",
+    length: 2000
+  },*/ {
     name: "Fields",
     type: "PrgViewField",
     copyLinked: true,
@@ -1755,7 +1782,6 @@ isc.CBMDataSource.create({
   ID: "PrgComponent",
   titleField: "SysCode",
   fields: [{
-// Doubled field? Below is another Concept field.
     name: "Concept",
     type: "text",
     defaultValue: "PrgComponent",
@@ -1823,3 +1849,90 @@ isc.CBMDataSource.create({
 });
 
 // =====^^^===== END Core DS definitions =====^^^=====
+/*
+isc.CBMDataSource.create({
+	ID: "HumanGroup",
+	title: "Human Group",
+	titleField: "Description",
+	infoField: "Description",
+	fields: [{
+		name: "ID",
+		kind: "Value",
+		title: "ID",
+		showTitle: false,
+		hidden: true,
+		required: true,
+		canEdit: false,
+		colSpan: 1,
+		rowSpan: 1,
+		align: "left",
+		emptyDisplayValue: "",
+		type: "text"
+	}, {
+		name: "Concept",
+		kind: "Value",
+		title: "Is of the Kind",
+		showTitle: true,
+		length: 1000,
+		inList: true,
+		colSpan: 1,
+		rowSpan: 1,
+		prompt: "Even if we imagine something absolutely unique, not belongs to any analogues - it will form its own concept, and this will be pointer to that.?If something combines features of several concepts - ??? ...",
+		align: "left",
+		copyValue: true,
+		emptyDisplayValue: "",
+		type: "text"
+	}, {
+		name: "EntityKind",
+		kind: "Link",
+		title: "Thing Type",
+		showTitle: true,
+		length: 100,
+		inList: true,
+		colSpan: 1,
+		rowSpan: 1,
+		align: "left",
+		copyValue: true,
+		emptyDisplayValue: "",
+		type: "EntityKind",
+		editorType: "LinkControl",
+		optionDataSource: "EntityKind",
+		valueField: "ID",
+		displayField: "Description",
+		pickListWidth: 400
+	}, {
+		name: "Description",
+		kind: "Value",
+		title: "Any kind of human-acceptable representation of the thing",
+		showTitle: true,
+		length: 1000,
+		inList: true,
+		colSpan: 1,
+		rowSpan: 1,
+		prompt: "Description",
+		align: "left",
+		copyValue: true,
+		emptyDisplayValue: "",
+		type: "text"
+	}, {
+		name: "Paticipants",
+		kind: "Link",
+		title: "Paticipants",
+		showTitle: true,
+		canSave: false,
+		canEdit: true,
+		inList: true,
+		colSpan: 1,
+		rowSpan: 1,
+		align: "left",
+		copyValue: true,
+		emptyDisplayValue: "",
+		type: "Participant",
+		editorType: "LinkControl",
+		optionDataSource: "Participant",
+		valueField: "ID",
+		displayField: "Description",
+		pickListWidth: 400
+	}]
+})
+*/
